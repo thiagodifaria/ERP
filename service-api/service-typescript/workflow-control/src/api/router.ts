@@ -2,6 +2,7 @@
 import { IncomingMessage, ServerResponse } from "node:http";
 import { HealthResponse, ReadinessResponse } from "./dto/health.js";
 import { CreateWorkflowDefinitionRequest } from "./dto/create-workflow-definition-request.js";
+import { UpdateWorkflowDefinitionRequest } from "./dto/update-workflow-definition-request.js";
 import { UpdateWorkflowDefinitionStatusRequest } from "./dto/update-workflow-definition-status-request.js";
 import { runtime, services } from "../config/container.js";
 
@@ -94,6 +95,66 @@ export async function route(request: IncomingMessage, response: ServerResponse):
 
     json(response, 200, definition);
     return;
+  }
+
+  if (
+    request.method === "PATCH" &&
+    segments.length === 4 &&
+    segments[0] === "api" &&
+    segments[1] === "workflow-control" &&
+    segments[2] === "definitions"
+  ) {
+    try {
+      const payload = await readJson<UpdateWorkflowDefinitionRequest>(request);
+      const updated = await services.updateWorkflowDefinition.execute(segments[3], payload);
+
+      json(response, 200, updated);
+      return;
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "unexpected_error";
+
+      if (code === "invalid_json") {
+        json(response, 400, {
+          code: "invalid_json",
+          message: "Request body must be a valid JSON object."
+        });
+        return;
+      }
+
+      if (code === "workflow_definition_not_found") {
+        json(response, 404, {
+          code,
+          message: "Workflow definition was not found."
+        });
+        return;
+      }
+
+      if (
+        code === "workflow_definition_update_required" ||
+        code === "workflow_definition_name_required" ||
+        code === "workflow_definition_trigger_required"
+      ) {
+        json(response, 400, {
+          code,
+          message: "Workflow definition payload is invalid."
+        });
+        return;
+      }
+
+      if (code === "workflow_definition_tenant_not_found") {
+        json(response, 500, {
+          code,
+          message: "Workflow bootstrap tenant was not found."
+        });
+        return;
+      }
+
+      json(response, 500, {
+        code: "unexpected_error",
+        message: "Unexpected error."
+      });
+      return;
+    }
   }
 
   if (

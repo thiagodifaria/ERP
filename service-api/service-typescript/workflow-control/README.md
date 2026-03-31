@@ -20,6 +20,7 @@ Public routes:
 - `GET /api/workflow-control/definitions`
 - `GET /api/workflow-control/definitions/{key}`
 - `POST /api/workflow-control/definitions`
+- `PATCH /api/workflow-control/definitions/{key}`
 - `PATCH /api/workflow-control/definitions/{key}/status`
 
 Container-first validation:
@@ -33,6 +34,7 @@ Current unit scope:
 
 - health and readiness routes
 - workflow definition list, create, detail and status transitions
+- workflow definition metadata update
 
 Current contract scope:
 

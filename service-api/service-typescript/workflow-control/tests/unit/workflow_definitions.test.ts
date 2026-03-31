@@ -133,6 +133,57 @@ test("workflow definition status should update created resource", async () => {
   assert.equal(updatePayload.status, "active");
 });
 
+test("workflow definition update should persist metadata changes", async () => {
+  const key = `profile-${randomUUID()}`;
+  const createResponse = await request("/api/workflow-control/definitions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      key,
+      name: "Profile Flow",
+      description: "Descricao inicial do fluxo.",
+      trigger: "lead.created"
+    })
+  });
+
+  assert.equal(createResponse.status, 201);
+
+  const updateResponse = await request(`/api/workflow-control/definitions/${key}`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      name: "Profile Flow Prime",
+      description: "Descricao refinada para operacao comercial.",
+      trigger: "lead.qualified"
+    })
+  });
+  const updatePayload = await updateResponse.json();
+
+  assert.equal(updateResponse.status, 200);
+  assert.equal(updatePayload.key, key);
+  assert.equal(updatePayload.name, "Profile Flow Prime");
+  assert.equal(updatePayload.description, "Descricao refinada para operacao comercial.");
+  assert.equal(updatePayload.trigger, "lead.qualified");
+});
+
+test("workflow definition update should reject empty payload", async () => {
+  const response = await request("/api/workflow-control/definitions/lead-follow-up", {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({})
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(payload.code, "workflow_definition_update_required");
+});
+
 test("workflow definition status should reject invalid transitions payload", async () => {
   const response = await request("/api/workflow-control/definitions/lead-follow-up/status", {
     method: "PATCH",

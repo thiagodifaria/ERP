@@ -1,6 +1,7 @@
 import { CreateWorkflowDefinition } from "../application/create-workflow-definition.js";
 import { GetWorkflowDefinitionByKey } from "../application/get-workflow-definition-by-key.js";
 import { ListWorkflowDefinitions } from "../application/list-workflow-definitions.js";
+import { UpdateWorkflowDefinition } from "../application/update-workflow-definition.js";
 import { UpdateWorkflowDefinitionStatus } from "../application/update-workflow-definition-status.js";
 import { WorkflowDefinitionRepository } from "../domain/workflow-definition-repository.js";
 import { loadConfig } from "./env.js";
@@ -40,6 +41,7 @@ export const services = {
   createWorkflowDefinition: new CreateWorkflowDefinition(repository),
   getWorkflowDefinitionByKey: new GetWorkflowDefinitionByKey(repository),
   listWorkflowDefinitions: new ListWorkflowDefinitions(repository),
+  updateWorkflowDefinition: new UpdateWorkflowDefinition(repository),
   updateWorkflowDefinitionStatus: new UpdateWorkflowDefinitionStatus(repository)
 };
 

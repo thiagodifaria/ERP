@@ -92,6 +92,28 @@ export class PostgresWorkflowDefinitionRepository implements WorkflowDefinitionR
     return this.mapRow(result.rows[0]);
   }
 
+  public async updateDefinition(key: string, definition: WorkflowDefinition): Promise<WorkflowDefinition> {
+    const tenantId = await this.resolveTenantId();
+    const result = await this.pool.query<WorkflowDefinitionRow>(
+      `
+        UPDATE workflow_control.workflow_definitions
+        SET name = $3,
+            description = $4,
+            trigger = $5
+        WHERE tenant_id = $1
+          AND key = $2
+        RETURNING id, key, name, description, status, trigger
+      `,
+      [tenantId, key.trim().toLowerCase(), definition.name, definition.description, definition.trigger]
+    );
+
+    if (result.rowCount === 0) {
+      throw new Error("workflow_definition_not_found");
+    }
+
+    return this.mapRow(result.rows[0]);
+  }
+
   public async updateStatus(key: string, status: WorkflowDefinitionStatus): Promise<WorkflowDefinition> {
     const tenantId = await this.resolveTenantId();
     const result = await this.pool.query<WorkflowDefinitionRow>(

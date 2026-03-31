@@ -32,6 +32,21 @@ export class InMemoryWorkflowDefinitionRepository implements WorkflowDefinitionR
     return definition;
   }
 
+  public async updateDefinition(key: string, definition: WorkflowDefinition): Promise<WorkflowDefinition> {
+    const normalizedKey = key.trim().toLowerCase();
+    const currentDefinition = this.definitions.find((candidate) => candidate.key === normalizedKey);
+
+    if (!currentDefinition) {
+      throw new Error("workflow_definition_not_found");
+    }
+
+    currentDefinition.name = definition.name;
+    currentDefinition.description = definition.description;
+    currentDefinition.trigger = definition.trigger;
+
+    return currentDefinition;
+  }
+
   public async updateStatus(key: string, status: WorkflowDefinitionStatus): Promise<WorkflowDefinition> {
     const normalizedKey = key.trim().toLowerCase();
     const definition = this.definitions.find((candidate) => candidate.key === normalizedKey);

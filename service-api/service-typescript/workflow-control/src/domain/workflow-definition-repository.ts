@@ -4,6 +4,7 @@ export interface WorkflowDefinitionRepository {
   list(): Promise<WorkflowDefinition[]>;
   findByKey(key: string): Promise<WorkflowDefinition | null>;
   add(definition: WorkflowDefinition): Promise<WorkflowDefinition>;
+  updateDefinition(key: string, definition: WorkflowDefinition): Promise<WorkflowDefinition>;
   updateStatus(key: string, status: WorkflowDefinitionStatus): Promise<WorkflowDefinition>;
   nextId(): Promise<number>;
 }
