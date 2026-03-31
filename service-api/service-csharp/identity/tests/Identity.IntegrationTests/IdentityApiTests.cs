@@ -133,6 +133,35 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
   }
 
   [Fact]
+  public async Task TeamMembersEndpointShouldReturnMembersForKnownTeam()
+  {
+    var teamsResponse = await _client.GetAsync("/api/identity/tenants/bootstrap-ops/teams");
+    var teamsPayload = await teamsResponse.Content.ReadFromJsonAsync<TeamResponse[]>();
+
+    Assert.NotNull(teamsPayload);
+
+    var response = await _client.GetAsync(
+      $"/api/identity/tenants/bootstrap-ops/teams/{teamsPayload![0].PublicId}/members");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<TeamMembershipResponse[]>();
+
+    Assert.NotNull(payload);
+    Assert.NotEmpty(payload);
+    Assert.Contains(payload, member => member.UserEmail == "owner@bootstrap-ops.local");
+  }
+
+  [Fact]
+  public async Task TeamMembersEndpointShouldReturnNotFoundForUnknownTeam()
+  {
+    var response = await _client.GetAsync(
+      $"/api/identity/tenants/bootstrap-ops/teams/{Guid.NewGuid()}/members");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
+
+  [Fact]
   public async Task CreateTenantShouldReturnCreatedTenant()
   {
     var request = new CreateTenantRequest(
@@ -188,6 +217,17 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
     Assert.NotNull(teamsPayload);
     Assert.Single(teamsPayload);
     Assert.Equal("Core", teamsPayload[0].Name);
+
+    var membersResponse = await _client.GetAsync(
+      $"/api/identity/tenants/{payload.Slug}/teams/{teamsPayload[0].PublicId}/members");
+
+    Assert.Equal(HttpStatusCode.OK, membersResponse.StatusCode);
+
+    var membersPayload = await membersResponse.Content.ReadFromJsonAsync<TeamMembershipResponse[]>();
+
+    Assert.NotNull(membersPayload);
+    Assert.Single(membersPayload);
+    Assert.Equal($"owner@{payload.Slug}.local", membersPayload[0].UserEmail);
   }
 
   [Fact]
@@ -464,5 +504,82 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
 
     Assert.NotNull(payload);
     Assert.Equal("invalid_team_name", payload.Code);
+  }
+
+  [Fact]
+  public async Task AddTeamMemberShouldReturnCreatedMembership()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With Membership");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var teamsResponse = await _client.GetAsync($"/api/identity/tenants/{tenantPayload!.Slug}/teams");
+    var teamsPayload = await teamsResponse.Content.ReadFromJsonAsync<TeamResponse[]>();
+
+    Assert.NotNull(teamsPayload);
+
+    var userResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users",
+      new CreateUserRequest("member@tenant-membership.local", "Member User", null, null));
+
+    var userPayload = await userResponse.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(userPayload);
+
+    var response = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/teams/{teamsPayload![0].PublicId}/members",
+      new AddTeamMemberRequest(userPayload!.PublicId));
+
+    Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<TeamMembershipResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal(userPayload.PublicId, payload.UserPublicId);
+  }
+
+  [Fact]
+  public async Task AddTeamMemberShouldReturnConflictForDuplicateMembership()
+  {
+    var teamsPayload = await _client.GetFromJsonAsync<TeamResponse[]>("/api/identity/tenants/bootstrap-ops/teams");
+    var usersPayload = await _client.GetFromJsonAsync<UserResponse[]>("/api/identity/tenants/bootstrap-ops/users");
+
+    Assert.NotNull(teamsPayload);
+    Assert.NotNull(usersPayload);
+
+    var response = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/bootstrap-ops/teams/{teamsPayload![0].PublicId}/members",
+      new AddTeamMemberRequest(usersPayload![0].PublicId));
+
+    Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("team_membership_conflict", payload.Code);
+  }
+
+  [Fact]
+  public async Task AddTeamMemberShouldReturnBadRequestForEmptyUserPublicId()
+  {
+    var teamsPayload = await _client.GetFromJsonAsync<TeamResponse[]>("/api/identity/tenants/bootstrap-ops/teams");
+
+    Assert.NotNull(teamsPayload);
+
+    var response = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/bootstrap-ops/teams/{teamsPayload![0].PublicId}/members",
+      new AddTeamMemberRequest(Guid.Empty));
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("invalid_user_public_id", payload.Code);
   }
 }

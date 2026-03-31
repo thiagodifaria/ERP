@@ -39,6 +39,32 @@ public sealed class InMemoryUserRepository : IUserRepository
     }
   }
 
+  public User? FindByTenantIdAndId(long tenantId, long userId)
+  {
+    lock (_sync)
+    {
+      if (!_usersByTenantId.TryGetValue(tenantId, out var users))
+      {
+        return null;
+      }
+
+      return users.FirstOrDefault(user => user.Id == userId);
+    }
+  }
+
+  public User? FindByTenantIdAndPublicId(long tenantId, Guid publicId)
+  {
+    lock (_sync)
+    {
+      if (!_usersByTenantId.TryGetValue(tenantId, out var users))
+      {
+        return null;
+      }
+
+      return users.FirstOrDefault(user => user.PublicId == publicId);
+    }
+  }
+
   public User? FindByTenantIdAndEmail(long tenantId, string email)
   {
     lock (_sync)

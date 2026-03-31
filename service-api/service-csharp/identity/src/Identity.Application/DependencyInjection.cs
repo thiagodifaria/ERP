@@ -8,11 +8,13 @@ public static class DependencyInjection
 {
   public static IServiceCollection AddIdentityApplication(this IServiceCollection services)
   {
+    services.AddScoped<AddBootstrapTeamMember>();
     services.AddScoped<CreateBootstrapCompany>();
     services.AddScoped<CreateBootstrapTenant>();
     services.AddScoped<CreateBootstrapTeam>();
     services.AddScoped<CreateBootstrapUser>();
     services.AddScoped<ListBootstrapCompanies>();
+    services.AddScoped<ListBootstrapTeamMembers>();
     services.AddScoped<ListBootstrapTeams>();
     services.AddScoped<GetBootstrapTenantBySlug>();
     services.AddScoped<ListBootstrapTenants>();

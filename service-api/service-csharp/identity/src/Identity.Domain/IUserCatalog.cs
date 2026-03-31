@@ -5,5 +5,9 @@ public interface IUserCatalog
 {
   IReadOnlyCollection<User> ListByTenantId(long tenantId);
 
+  User? FindByTenantIdAndId(long tenantId, long userId);
+
+  User? FindByTenantIdAndPublicId(long tenantId, Guid publicId);
+
   User? FindByTenantIdAndEmail(long tenantId, string email);
 }

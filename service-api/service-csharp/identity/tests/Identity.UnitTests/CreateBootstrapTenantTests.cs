@@ -15,8 +15,18 @@ public sealed class CreateBootstrapTenantTests
     var companyRepository = new InMemoryCompanyRepository();
     var userRepository = new InMemoryUserRepository();
     var teamRepository = new InMemoryTeamRepository();
+    var teamMembershipRepository = new InMemoryTeamMembershipRepository(
+      repository,
+      teamRepository,
+      userRepository);
     var roleRepository = new InMemoryRoleRepository();
-    var useCase = new CreateBootstrapTenant(repository, companyRepository, userRepository, teamRepository, roleRepository);
+    var useCase = new CreateBootstrapTenant(
+      repository,
+      companyRepository,
+      userRepository,
+      teamRepository,
+      teamMembershipRepository,
+      roleRepository);
 
     var result = useCase.Execute(new CreateTenantRequest("tenant-lab", "Tenant Lab"));
 
@@ -27,6 +37,9 @@ public sealed class CreateBootstrapTenantTests
     Assert.Single(companyRepository.ListByTenantId(result.Tenant.Id));
     Assert.Single(userRepository.ListByTenantId(result.Tenant.Id));
     Assert.Single(teamRepository.ListByTenantId(result.Tenant.Id));
+    Assert.Single(teamMembershipRepository.ListByTenantIdAndTeamId(
+      result.Tenant.Id,
+      teamRepository.ListByTenantId(result.Tenant.Id).First().Id));
     Assert.Equal(5, roleRepository.ListByTenantSlug("tenant-lab").Count);
   }
 
@@ -37,8 +50,18 @@ public sealed class CreateBootstrapTenantTests
     var companyRepository = new InMemoryCompanyRepository();
     var userRepository = new InMemoryUserRepository();
     var teamRepository = new InMemoryTeamRepository();
+    var teamMembershipRepository = new InMemoryTeamMembershipRepository(
+      repository,
+      teamRepository,
+      userRepository);
     var roleRepository = new InMemoryRoleRepository();
-    var useCase = new CreateBootstrapTenant(repository, companyRepository, userRepository, teamRepository, roleRepository);
+    var useCase = new CreateBootstrapTenant(
+      repository,
+      companyRepository,
+      userRepository,
+      teamRepository,
+      teamMembershipRepository,
+      roleRepository);
 
     var result = useCase.Execute(new CreateTenantRequest("bootstrap-ops", "Another Name"));
 
