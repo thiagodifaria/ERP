@@ -95,3 +95,5 @@
 - `v0.0.46`: [UPDATE 31/03/2026 - 14:00 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O runtime do `crm` passou a carregar um `LeadNoteRepository` em memoria para sustentar a trilha inicial de notas enquanto a persistencia relacional entra nos proximos commits.
 - `v0.0.47`: [UPDATE 31/03/2026 - 14:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou `POST /api/crm/leads/{publicId}/notes`, permitindo registrar follow-ups e observacoes operacionais no bootstrap do servico.
 - `v0.0.47`: [UPDATE 31/03/2026 - 14:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Cobertura do `crm` foi ampliada para validar criacao de nota, normalizacao de payload e erro `400` para body vazio.
+- `v0.0.48`: [UPDATE 31/03/2026 - 14:05 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Contexto `service-postgresql/crm` ganhou a tabela `lead_notes`, com ownership por tenant, relacionamento com `crm.leads` e remocao em cascata.
+- `v0.0.48`: [UPDATE 31/03/2026 - 14:05 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Seeds relacionais do `crm` passaram a provisionar uma nota bootstrap por lead, preparando o runtime PostgreSQL para a nova trilha de historico operacional.

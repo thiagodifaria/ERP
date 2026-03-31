@@ -13,5 +13,6 @@ Current scope:
 Current relational focus:
 
 - bootstrap lead storage
+- bootstrap lead notes storage
 - tenant-owned lead status lifecycle
 - owner user reference by public identifier
