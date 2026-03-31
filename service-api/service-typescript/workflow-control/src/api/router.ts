@@ -2,6 +2,7 @@
 import { IncomingMessage, ServerResponse } from "node:http";
 import { HealthResponse, ReadinessResponse } from "./dto/health.js";
 import { CreateWorkflowDefinitionRequest } from "./dto/create-workflow-definition-request.js";
+import { UpdateWorkflowDefinitionStatusRequest } from "./dto/update-workflow-definition-status-request.js";
 import { services } from "../config/container.js";
 
 function json(response: ServerResponse, statusCode: number, body: unknown): void {
@@ -96,6 +97,55 @@ export async function route(request: IncomingMessage, response: ServerResponse):
 
     json(response, 200, definition);
     return;
+  }
+
+  if (
+    request.method === "PATCH" &&
+    segments.length === 5 &&
+    segments[0] === "api" &&
+    segments[1] === "workflow-control" &&
+    segments[2] === "definitions" &&
+    segments[4] === "status"
+  ) {
+    try {
+      const payload = await readJson<UpdateWorkflowDefinitionStatusRequest>(request);
+      const updated = services.updateWorkflowDefinitionStatus.execute(segments[3], payload.status);
+
+      json(response, 200, updated);
+      return;
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "unexpected_error";
+
+      if (code === "invalid_json") {
+        json(response, 400, {
+          code: "invalid_json",
+          message: "Request body must be a valid JSON object."
+        });
+        return;
+      }
+
+      if (code === "workflow_definition_not_found") {
+        json(response, 404, {
+          code,
+          message: "Workflow definition was not found."
+        });
+        return;
+      }
+
+      if (code === "workflow_definition_status_invalid") {
+        json(response, 400, {
+          code,
+          message: "Workflow definition status is invalid."
+        });
+        return;
+      }
+
+      json(response, 500, {
+        code: "unexpected_error",
+        message: "Unexpected error."
+      });
+      return;
+    }
   }
 
   if (request.method === "POST" && request.url === "/api/workflow-control/definitions") {

@@ -9,6 +9,16 @@ export type WorkflowDefinition = {
   trigger: string;
 };
 
+export function ensureWorkflowDefinitionStatus(value: string): WorkflowDefinitionStatus {
+  const normalizedValue = value.trim().toLowerCase();
+
+  if (normalizedValue !== "draft" && normalizedValue !== "active" && normalizedValue !== "archived") {
+    throw new Error("workflow_definition_status_invalid");
+  }
+
+  return normalizedValue;
+}
+
 export function createWorkflowDefinition(input: {
   id: number;
   key: string;
@@ -38,7 +48,7 @@ export function createWorkflowDefinition(input: {
     key,
     name,
     description: input.description?.trim() || null,
-    status: input.status ?? "draft",
+    status: ensureWorkflowDefinitionStatus(input.status ?? "draft"),
     trigger
   };
 }

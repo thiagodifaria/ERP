@@ -1,4 +1,4 @@
-import { WorkflowDefinition, createWorkflowDefinition } from "../domain/workflow-definition.js";
+import { WorkflowDefinition, WorkflowDefinitionStatus, createWorkflowDefinition } from "../domain/workflow-definition.js";
 
 export class InMemoryWorkflowDefinitionRepository {
   private readonly definitions: WorkflowDefinition[];
@@ -28,6 +28,18 @@ export class InMemoryWorkflowDefinitionRepository {
 
   public add(definition: WorkflowDefinition): WorkflowDefinition {
     this.definitions.push(definition);
+    return definition;
+  }
+
+  public updateStatus(key: string, status: WorkflowDefinitionStatus): WorkflowDefinition {
+    const normalizedKey = key.trim().toLowerCase();
+    const definition = this.definitions.find((candidate) => candidate.key === normalizedKey);
+
+    if (!definition) {
+      throw new Error("workflow_definition_not_found");
+    }
+
+    definition.status = status;
     return definition;
   }
 

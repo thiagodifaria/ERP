@@ -18,6 +18,7 @@ Public routes:
 - `GET /api/workflow-control/definitions`
 - `GET /api/workflow-control/definitions/{key}`
 - `POST /api/workflow-control/definitions`
+- `PATCH /api/workflow-control/definitions/{key}/status`
 
 Container-first validation:
 

@@ -145,3 +145,5 @@
 - `v0.0.71`: [UPDATE 31/03/2026 - 15:46 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A API passou a tratar `invalid_json`, campos obrigatorios e conflito por `key` duplicada na primeira escrita publica da stack `TypeScript`.
 - `v0.0.72`: [UPDATE 31/03/2026 - 15:49 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/definitions/{key}` para leitura pontual de definicoes pelo identificador natural do dominio.
 - `v0.0.72`: [UPDATE 31/03/2026 - 15:49 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack `TypeScript` passou a responder `workflow_definition_not_found` quando a `key` consultada nao existe no catalogo bootstrap.
+- `v0.0.73`: [UPDATE 31/03/2026 - 15:55 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `PATCH /api/workflow-control/definitions/{key}/status`, permitindo ativar, arquivar ou devolver definicoes para `draft`.
+- `v0.0.73`: [UPDATE 31/03/2026 - 15:55 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O catalogo em memoria passou a suportar transicao de estado sem recriar a definicao inteira, preparando o servico para fluxos operacionais reais.
