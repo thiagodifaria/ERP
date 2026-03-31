@@ -43,4 +43,22 @@ public sealed class User
   public string? FamilyName { get; }
 
   public string Status { get; }
+
+  public User ReviseProfile(
+    string email,
+    string displayName,
+    string? givenName,
+    string? familyName)
+  {
+    return new User(
+      Id,
+      TenantId,
+      CompanyId,
+      PublicId,
+      email,
+      displayName,
+      givenName,
+      familyName,
+      Status);
+  }
 }

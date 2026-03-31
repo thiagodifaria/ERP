@@ -95,6 +95,32 @@ public sealed class InMemoryUserRepository : IUserRepository
     }
   }
 
+  public User Update(User user)
+  {
+    lock (_sync)
+    {
+      if (!_usersByTenantId.TryGetValue(user.TenantId, out var users))
+      {
+        users = [];
+        _usersByTenantId[user.TenantId] = users;
+      }
+
+      for (var index = 0; index < users.Count; index++)
+      {
+        if (users[index].PublicId != user.PublicId)
+        {
+          continue;
+        }
+
+        users[index] = user;
+        return user;
+      }
+
+      users.Add(user);
+      return user;
+    }
+  }
+
   public long NextId()
   {
     lock (_sync)

@@ -5,6 +5,8 @@ public interface IUserRepository : IUserCatalog
 {
   User Add(User user);
 
+  User Update(User user);
+
   long NextId();
 
   IReadOnlyCollection<User> SeedDefaults(Tenant tenant);

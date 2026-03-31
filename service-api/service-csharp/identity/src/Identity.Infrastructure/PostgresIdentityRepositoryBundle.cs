@@ -344,6 +344,35 @@ public sealed class PostgresIdentityRepositoryBundle :
     return MapUser(reader);
   }
 
+  User IUserRepository.Update(User user)
+  {
+    const string sql = """
+      UPDATE identity.users
+      SET email = @email,
+          display_name = @display_name,
+          given_name = @given_name,
+          family_name = @family_name,
+          status = @status
+      WHERE tenant_id = @tenant_id
+        AND public_id = @public_id
+      RETURNING id, tenant_id, company_id, public_id, email::text, display_name, given_name, family_name, status;
+      """;
+
+    using var connection = OpenConnection();
+    using var command = new NpgsqlCommand(sql, connection);
+    command.Parameters.AddWithValue("tenant_id", user.TenantId);
+    command.Parameters.AddWithValue("public_id", user.PublicId);
+    command.Parameters.AddWithValue("email", user.Email);
+    command.Parameters.AddWithValue("display_name", user.DisplayName);
+    command.Parameters.AddWithValue("given_name", (object?)user.GivenName ?? DBNull.Value);
+    command.Parameters.AddWithValue("family_name", (object?)user.FamilyName ?? DBNull.Value);
+    command.Parameters.AddWithValue("status", user.Status);
+    using var reader = command.ExecuteReader();
+    reader.Read();
+
+    return MapUser(reader);
+  }
+
   long IUserRepository.NextId()
   {
     return NextId("identity.users");
