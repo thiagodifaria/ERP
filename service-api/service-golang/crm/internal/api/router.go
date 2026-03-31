@@ -17,6 +17,7 @@ func NewRouter(logger *telemetry.Logger, leadRepository repository.LeadRepositor
 	mux := http.NewServeMux()
 	leadHandler := handler.NewLeadHandler(
 		query.NewListLeads(leadRepository),
+		query.NewGetLeadPipelineSummary(leadRepository),
 		query.NewGetLeadByPublicID(leadRepository),
 		command.NewCreateLead(leadRepository),
 		command.NewUpdateLeadStatus(leadRepository),
@@ -25,6 +26,7 @@ func NewRouter(logger *telemetry.Logger, leadRepository repository.LeadRepositor
 	mux.HandleFunc("/health/live", handler.Live)
 	mux.HandleFunc("/health/ready", handler.Ready)
 	mux.HandleFunc("/health/details", handler.Details)
+	mux.HandleFunc("GET /api/crm/leads/summary", leadHandler.Summary)
 	mux.HandleFunc("GET /api/crm/leads", leadHandler.List)
 	mux.HandleFunc("POST /api/crm/leads", leadHandler.Create)
 	mux.HandleFunc("GET /api/crm/leads/{publicId}", leadHandler.GetByPublicID)

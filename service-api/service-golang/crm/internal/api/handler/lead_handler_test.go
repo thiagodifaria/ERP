@@ -126,6 +126,70 @@ func TestListShouldFilterUnassignedLeads(t *testing.T) {
 	}
 }
 
+func TestSummaryShouldReturnPipelineSnapshot(t *testing.T) {
+	repository := persistence.NewInMemoryLeadRepository()
+	createLead := command.NewCreateLead(repository)
+	updateLeadStatus := command.NewUpdateLeadStatus(repository)
+	handler := newLeadHandlerForTest(repository)
+
+	ana := createLead.Execute(command.CreateLeadInput{
+		Name:        "Ana Souza",
+		Email:       "ana@example.com",
+		Source:      "meta-ads",
+		OwnerUserID: "owner-ana",
+	})
+	bruno := createLead.Execute(command.CreateLeadInput{
+		Name:   "Bruno Lima",
+		Email:  "bruno@example.com",
+		Source: "organic",
+	})
+	if ana.Lead == nil || bruno.Lead == nil {
+		t.Fatalf("expected created leads for summary setup")
+	}
+
+	contacted := updateLeadStatus.Execute(command.UpdateLeadStatusInput{
+		PublicID: ana.Lead.PublicID,
+		Status:   "contacted",
+	})
+	qualified := updateLeadStatus.Execute(command.UpdateLeadStatusInput{
+		PublicID: bruno.Lead.PublicID,
+		Status:   "qualified",
+	})
+	if contacted.Lead == nil || qualified.Lead == nil {
+		t.Fatalf("expected updated leads for summary setup")
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/summary", nil)
+	recorder := httptest.NewRecorder()
+
+	handler.Summary(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response dto.LeadSummaryResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.Total != 3 {
+		t.Fatalf("expected total 3, got %d", response.Total)
+	}
+
+	if response.Assigned != 2 || response.Unassigned != 1 {
+		t.Fatalf("expected assigned/unassigned 2/1, got %d/%d", response.Assigned, response.Unassigned)
+	}
+
+	if response.ByStatus["captured"] != 1 || response.ByStatus["contacted"] != 1 || response.ByStatus["qualified"] != 1 {
+		t.Fatalf("expected status buckets captured/contacted/qualified to be 1")
+	}
+
+	if response.BySource["manual"] != 1 || response.BySource["meta-ads"] != 1 || response.BySource["organic"] != 1 {
+		t.Fatalf("expected source buckets manual/meta-ads/organic to be 1")
+	}
+}
+
 func TestCreateShouldReturnCreatedLead(t *testing.T) {
 	handler := newLeadHandlerForTest(persistence.NewInMemoryLeadRepository())
 	body := bytes.NewBufferString(`{"name":"Ana Souza","email":"ana@example.com","source":"meta-ads","ownerUserId":"owner-ana"}`)
@@ -204,6 +268,7 @@ func TestUpdateStatusShouldReturnUpdatedLead(t *testing.T) {
 func newLeadHandlerForTest(repository *persistence.InMemoryLeadRepository) LeadHandler {
 	return NewLeadHandler(
 		query.NewListLeads(repository),
+		query.NewGetLeadPipelineSummary(repository),
 		query.NewGetLeadByPublicID(repository),
 		command.NewCreateLead(repository),
 		command.NewUpdateLeadStatus(repository),

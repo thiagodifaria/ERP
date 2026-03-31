@@ -13,6 +13,7 @@ import (
 
 type LeadHandler struct {
 	listLeads         query.ListLeads
+	getLeadSummary    query.GetLeadPipelineSummary
 	getLeadByPublicID query.GetLeadByPublicID
 	createLead        command.CreateLead
 	updateLeadStatus  command.UpdateLeadStatus
@@ -20,12 +21,14 @@ type LeadHandler struct {
 
 func NewLeadHandler(
 	listLeads query.ListLeads,
+	getLeadSummary query.GetLeadPipelineSummary,
 	getLeadByPublicID query.GetLeadByPublicID,
 	createLead command.CreateLead,
 	updateLeadStatus command.UpdateLeadStatus,
 ) LeadHandler {
 	return LeadHandler{
 		listLeads:         listLeads,
+		getLeadSummary:    getLeadSummary,
 		getLeadByPublicID: getLeadByPublicID,
 		createLead:        createLead,
 		updateLeadStatus:  updateLeadStatus,
@@ -49,6 +52,26 @@ func (handler LeadHandler) List(writer http.ResponseWriter, request *http.Reques
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(writer).Encode(response)
+}
+
+func (handler LeadHandler) Summary(writer http.ResponseWriter, request *http.Request) {
+	summary := handler.getLeadSummary.Execute(query.LeadFilters{
+		Status:      request.URL.Query().Get("status"),
+		Source:      request.URL.Query().Get("source"),
+		OwnerUserID: request.URL.Query().Get("ownerUserId"),
+		Search:      request.URL.Query().Get("q"),
+		Assigned:    request.URL.Query().Get("assigned"),
+	})
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(writer).Encode(dto.LeadSummaryResponse{
+		Total:      summary.Total,
+		Assigned:   summary.Assigned,
+		Unassigned: summary.Unassigned,
+		ByStatus:   summary.ByStatus,
+		BySource:   summary.BySource,
+	})
 }
 
 func (handler LeadHandler) GetByPublicID(writer http.ResponseWriter, request *http.Request) {

@@ -67,6 +67,30 @@ func TestRouterShouldExposeLeadList(t *testing.T) {
 	}
 }
 
+func TestRouterShouldExposeLeadSummary(t *testing.T) {
+	router := NewRouter(
+		telemetry.New("crm-test"),
+		persistence.NewInMemoryLeadRepository(),
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/summary", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response dto.LeadSummaryResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.Total != 1 {
+		t.Fatalf("expected total 1, got %d", response.Total)
+	}
+}
+
 func TestRouterShouldExposeLeadByPublicID(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),

@@ -65,3 +65,5 @@
 - `v0.0.31`: [UPDATE 31/03/2026 - 06:25 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Documentacao operacional atualizada para refletir comandos reais de `crm` no banco e no smoke, incluindo `migrate crm`, `seed crm` e `summary crm`.
 - `v0.0.32`: [UPDATE 31/03/2026 - 06:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou filtros operacionais em `GET /api/crm/leads`, com leitura por `status`, `source`, `ownerUserId`, `assigned` e busca textual via `q`.
 - `v0.0.32`: [UPDATE 31/03/2026 - 06:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Cobertura do `crm` ampliada para validar combinacao de filtros e leitura de leads sem owner em container.
+- `v0.0.33`: [UPDATE 31/03/2026 - 06:36 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou `GET /api/crm/leads/summary`, consolidando total de leads, buckets por status e source, alem de contagem de atribuicao.
+- `v0.0.33`: [UPDATE 31/03/2026 - 06:36 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Testes do `crm` ampliados para validar snapshot de funil e exposicao da rota publica via router em container.
