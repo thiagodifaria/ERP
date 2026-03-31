@@ -37,6 +37,32 @@ public static class Server
           $"/api/identity/tenants/{result.Tenant!.Slug}",
           result.Tenant);
       });
+    app.MapPost(
+      "/api/identity/tenants/{slug}/companies",
+      Results<Created<CompanyResponse>, BadRequest<ErrorResponse>, NotFound<ErrorResponse>, Conflict<ErrorResponse>>
+      (string slug, CreateCompanyRequest request, CreateBootstrapCompany useCase) =>
+      {
+        var result = useCase.Execute(slug, request);
+
+        if (result.IsBadRequest)
+        {
+          return TypedResults.BadRequest(result.Error!);
+        }
+
+        if (result.IsNotFound)
+        {
+          return TypedResults.NotFound(result.Error!);
+        }
+
+        if (result.IsConflict)
+        {
+          return TypedResults.Conflict(result.Error!);
+        }
+
+        return TypedResults.Created(
+          $"/api/identity/tenants/{slug}/companies/{result.Company!.PublicId}",
+          result.Company);
+      });
     app.MapGet(
       "/api/identity/tenants",
       (ListBootstrapTenants useCase) => TypedResults.Ok(useCase.Execute()));

@@ -114,6 +114,16 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
     Assert.NotNull(rolesPayload);
     Assert.Equal(5, rolesPayload.Length);
     Assert.Contains(rolesPayload, role => role.Code == "owner");
+
+    var companiesResponse = await _client.GetAsync($"/api/identity/tenants/{payload.Slug}/companies");
+
+    Assert.Equal(HttpStatusCode.OK, companiesResponse.StatusCode);
+
+    var companiesPayload = await companiesResponse.Content.ReadFromJsonAsync<CompanyResponse[]>();
+
+    Assert.NotNull(companiesPayload);
+    Assert.Single(companiesPayload);
+    Assert.Equal(request.DisplayName, companiesPayload[0].DisplayName);
   }
 
   [Fact]
@@ -166,5 +176,87 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
     var response = await _client.GetAsync("/api/identity/tenants/unknown/roles");
 
     Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
+
+  [Fact]
+  public async Task CreateCompanyShouldReturnCreatedCompany()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With Branch");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var request = new CreateCompanyRequest(
+      "Tenant With Branch Filial",
+      "Tenant With Branch Filial LTDA",
+      "12345678901234");
+
+    var response = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/companies",
+      request);
+
+    Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<CompanyResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal(request.DisplayName, payload.DisplayName);
+    Assert.Equal(request.LegalName, payload.LegalName);
+    Assert.Equal(request.TaxId, payload.TaxId);
+  }
+
+  [Fact]
+  public async Task CreateCompanyShouldReturnConflictForDuplicateDisplayName()
+  {
+    var request = new CreateCompanyRequest("Bootstrap Ops", null, null);
+
+    var response = await _client.PostAsJsonAsync(
+      "/api/identity/tenants/bootstrap-ops/companies",
+      request);
+
+    Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("company_display_name_conflict", payload.Code);
+  }
+
+  [Fact]
+  public async Task CreateCompanyShouldReturnNotFoundForUnknownTenant()
+  {
+    var request = new CreateCompanyRequest("Missing Tenant Company", null, null);
+
+    var response = await _client.PostAsJsonAsync(
+      "/api/identity/tenants/missing-tenant/companies",
+      request);
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("tenant_not_found", payload.Code);
+  }
+
+  [Fact]
+  public async Task CreateCompanyShouldReturnBadRequestForBlankDisplayName()
+  {
+    var request = new CreateCompanyRequest("   ", null, null);
+
+    var response = await _client.PostAsJsonAsync(
+      "/api/identity/tenants/bootstrap-ops/companies",
+      request);
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("invalid_display_name", payload.Code);
   }
 }

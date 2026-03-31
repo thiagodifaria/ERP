@@ -7,11 +7,16 @@ namespace Identity.Application;
 public sealed class CreateBootstrapTenant
 {
   private readonly ITenantRepository _tenantRepository;
+  private readonly ICompanyRepository _companyRepository;
   private readonly IRoleRepository _roleRepository;
 
-  public CreateBootstrapTenant(ITenantRepository tenantRepository, IRoleRepository roleRepository)
+  public CreateBootstrapTenant(
+    ITenantRepository tenantRepository,
+    ICompanyRepository companyRepository,
+    IRoleRepository roleRepository)
   {
     _tenantRepository = tenantRepository;
+    _companyRepository = companyRepository;
     _roleRepository = roleRepository;
   }
 
@@ -52,6 +57,7 @@ public sealed class CreateBootstrapTenant
       "active");
 
     var createdTenant = _tenantRepository.Add(tenant);
+    _companyRepository.SeedDefaults(createdTenant);
     _roleRepository.SeedDefaults(createdTenant);
 
     return CreateBootstrapTenantResult.Success(new TenantResponse(

@@ -12,8 +12,9 @@ public sealed class CreateBootstrapTenantTests
   public void ExecuteShouldCreateTenantForValidPayload()
   {
     var repository = new InMemoryTenantRepository();
+    var companyRepository = new InMemoryCompanyRepository();
     var roleRepository = new InMemoryRoleRepository();
-    var useCase = new CreateBootstrapTenant(repository, roleRepository);
+    var useCase = new CreateBootstrapTenant(repository, companyRepository, roleRepository);
 
     var result = useCase.Execute(new CreateTenantRequest("tenant-lab", "Tenant Lab"));
 
@@ -21,6 +22,7 @@ public sealed class CreateBootstrapTenantTests
     Assert.NotNull(result.Tenant);
     Assert.Equal("tenant-lab", result.Tenant!.Slug);
     Assert.Equal("Tenant Lab", result.Tenant.DisplayName);
+    Assert.Single(companyRepository.ListByTenantId(result.Tenant.Id));
     Assert.Equal(5, roleRepository.ListByTenantSlug("tenant-lab").Count);
   }
 
@@ -28,8 +30,9 @@ public sealed class CreateBootstrapTenantTests
   public void ExecuteShouldRejectDuplicateSlug()
   {
     var repository = new InMemoryTenantRepository();
+    var companyRepository = new InMemoryCompanyRepository();
     var roleRepository = new InMemoryRoleRepository();
-    var useCase = new CreateBootstrapTenant(repository, roleRepository);
+    var useCase = new CreateBootstrapTenant(repository, companyRepository, roleRepository);
 
     var result = useCase.Execute(new CreateTenantRequest("bootstrap-ops", "Another Name"));
 
