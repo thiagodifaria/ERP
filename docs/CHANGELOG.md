@@ -13,3 +13,5 @@
 - `v0.0.4`: [UPDATE 31/03/2026 - 01:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Scripts `build.sh`, `up.sh`, `down.sh` e `logs.sh` criados para operar o ambiente local com compose, sem espalhar comandos pelo repositorio.
 - `v0.0.5`: [UPDATE 31/03/2026 - 01:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Scripts `db.sh` e `test.sh` criados para aplicar migrations e validar servicos em modo container-first, sem depender de instalacao local das stacks.
 - `v0.0.5`: [UPDATE 31/03/2026 - 01:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Contexto `identity` aprofundado com migrations de `users`, `teams`, `roles`, `team_memberships` e `user_roles`, mais os modelos iniciais correspondentes em C#.
+- `v0.0.6`: [UPDATE 31/03/2026 - 01:51 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Primeiros testes reais adicionados para `edge` em Go, `identity` em C# e `webhook-hub` em Rust, cobrindo health endpoints e contrato basico do agregado `Tenant`.
+- `v0.0.6`: [UPDATE 31/03/2026 - 01:51 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh` atualizado para executar o projeto de testes do `identity` em container, substituindo a validacao apenas por build.

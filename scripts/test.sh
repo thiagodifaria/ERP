@@ -26,7 +26,7 @@ run_dotnet_build() {
     -v "$ROOT_DIR/service-api/service-csharp/identity:/workspace" \
     -w /workspace \
     mcr.microsoft.com/dotnet/sdk:8.0 \
-    dotnet build src/Identity.Api/Identity.Api.csproj -c Release
+    dotnet test tests/Identity.UnitTests/Identity.UnitTests.csproj -c Release
 }
 
 run_rust_unit() {

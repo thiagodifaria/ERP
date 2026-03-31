@@ -1,2 +1,8 @@
 PLANEJAMENTO.md
 .TEMP/
+**/bin/
+**/obj/
+**/target/
+**/.pytest_cache/
+**/__pycache__/
+**/coverage/

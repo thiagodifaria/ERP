@@ -27,3 +27,32 @@ impl HealthResponse {
         Self { service, status }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::build_router;
+    use axum::http::{Request, StatusCode};
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn live_route_should_return_ok() {
+        let app = build_router();
+        let response = app
+            .oneshot(Request::builder().uri("/health/live").body(axum::body::Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn ready_route_should_return_ok() {
+        let app = build_router();
+        let response = app
+            .oneshot(Request::builder().uri("/health/ready").body(axum::body::Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+}
