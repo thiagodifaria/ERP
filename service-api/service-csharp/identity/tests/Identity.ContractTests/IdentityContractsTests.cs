@@ -226,6 +226,53 @@ public sealed class IdentityContractsTests : IClassFixture<WebApplicationFactory
   }
 
   [Fact]
+  public async Task RemoveTeamMemberContractShouldReturnRemovedResourceShape()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Contract Membership Removal");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var teamsResponse = await _client.GetAsync($"/api/identity/tenants/{tenantPayload!.Slug}/teams");
+    var teamsPayload = await teamsResponse.Content.ReadFromJsonAsync<TeamResponse[]>();
+
+    Assert.NotNull(teamsPayload);
+
+    var createUserResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users",
+      new CreateUserRequest(
+        $"contract.membership.remove@{tenantPayload.Slug}.local",
+        "Contract Membership Remove",
+        "Contract",
+        "Remove"));
+
+    var createdUser = await createUserResponse.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(createdUser);
+
+    await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/teams/{teamsPayload![0].PublicId}/members",
+      new AddTeamMemberRequest(createdUser!.PublicId));
+
+    var response = await _client.DeleteAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/teams/{teamsPayload[0].PublicId}/members/{createdUser.PublicId}");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<TeamMembershipResponse>();
+
+    Assert.NotNull(payload);
+    Assert.NotEqual(Guid.Empty, payload!.TeamPublicId);
+    Assert.NotEqual(Guid.Empty, payload.UserPublicId);
+    Assert.False(string.IsNullOrWhiteSpace(payload.UserEmail));
+    Assert.False(string.IsNullOrWhiteSpace(payload.UserDisplayName));
+  }
+
+  [Fact]
   public async Task ErrorContractShouldExposeCodeAndMessage()
   {
     var response = await _client.PostAsJsonAsync(

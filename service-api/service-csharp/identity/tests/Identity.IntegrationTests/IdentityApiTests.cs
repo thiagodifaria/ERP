@@ -777,6 +777,90 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
   }
 
   [Fact]
+  public async Task RemoveTeamMemberShouldReturnRemovedMembership()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With Membership Removal");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var teamResponse = await _client.GetAsync($"/api/identity/tenants/{tenantPayload!.Slug}/teams");
+    var teamPayload = await teamResponse.Content.ReadFromJsonAsync<TeamResponse[]>();
+
+    Assert.NotNull(teamPayload);
+
+    var userResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users",
+      new CreateUserRequest("member.remove@tenant-membership-removal.local", "Member Remove", null, null));
+
+    var userPayload = await userResponse.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(userPayload);
+
+    await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/teams/{teamPayload![0].PublicId}/members",
+      new AddTeamMemberRequest(userPayload!.PublicId));
+
+    var response = await _client.DeleteAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/teams/{teamPayload[0].PublicId}/members/{userPayload.PublicId}");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<TeamMembershipResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal(userPayload.PublicId, payload!.UserPublicId);
+
+    var membersResponse = await _client.GetAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/teams/{teamPayload[0].PublicId}/members");
+
+    var membersPayload = await membersResponse.Content.ReadFromJsonAsync<TeamMembershipResponse[]>();
+
+    Assert.NotNull(membersPayload);
+    Assert.DoesNotContain(membersPayload, member => member.UserPublicId == userPayload.PublicId);
+  }
+
+  [Fact]
+  public async Task RemoveTeamMemberShouldReturnNotFoundForMissingMembership()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With Missing Membership");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var teamResponse = await _client.GetAsync($"/api/identity/tenants/{tenantPayload!.Slug}/teams");
+    var teamPayload = await teamResponse.Content.ReadFromJsonAsync<TeamResponse[]>();
+
+    Assert.NotNull(teamPayload);
+
+    var userResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users",
+      new CreateUserRequest("missing.membership@tenant-membership-removal.local", "Missing Membership", null, null));
+
+    var userPayload = await userResponse.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(userPayload);
+
+    var response = await _client.DeleteAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/teams/{teamPayload![0].PublicId}/members/{userPayload!.PublicId}");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("team_membership_not_found", payload.Code);
+  }
+
+  [Fact]
   public async Task AddTeamMemberShouldReturnConflictForDuplicateMembership()
   {
     var teamsPayload = await _client.GetFromJsonAsync<TeamResponse[]>("/api/identity/tenants/bootstrap-ops/teams");

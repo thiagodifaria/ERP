@@ -316,6 +316,7 @@ run_identity_runtime_smoke() {
   local updated_team_response
   local created_team_public_id
   local members_response
+  local removed_member_response
   local assign_role_response
   local revoke_role_response
   local user_roles_response
@@ -470,6 +471,16 @@ run_identity_runtime_smoke() {
     exit 1
   fi
 
+  removed_member_response="$(curl -fsS \
+    -X DELETE \
+    "$base_url/api/identity/tenants/$tenant_slug/teams/$created_team_public_id/members/$created_user_public_id")"
+  echo "[test] identity api remove member => $removed_member_response"
+
+  if [[ "$removed_member_response" != *"\"userPublicId\":\"$created_user_public_id\""* ]]; then
+    echo "[test] runtime identity team membership removal did not persist"
+    exit 1
+  fi
+
   assign_role_response="$(curl -fsS \
     -X POST \
     -H "Content-Type: application/json" \
@@ -519,7 +530,7 @@ run_identity_runtime_smoke() {
   snapshot_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/snapshot")"
   echo "[test] identity api snapshot => $snapshot_response"
 
-  if [[ "$snapshot_response" != *'"companies":2'* || "$snapshot_response" != *'"users":2'* || "$snapshot_response" != *'"teams":2'* || "$snapshot_response" != *'"roles":5'* || "$snapshot_response" != *'"teamMemberships":2'* || "$snapshot_response" != *'"userRoles":1'* || "$snapshot_response" != *'"name":"Field Ops Prime"'* ]]; then
+  if [[ "$snapshot_response" != *'"companies":2'* || "$snapshot_response" != *'"users":2'* || "$snapshot_response" != *'"teams":2'* || "$snapshot_response" != *'"roles":5'* || "$snapshot_response" != *'"teamMemberships":1'* || "$snapshot_response" != *'"userRoles":1'* || "$snapshot_response" != *'"name":"Field Ops Prime"'* ]]; then
     echo "[test] runtime identity snapshot did not reflect live updates"
     exit 1
   fi

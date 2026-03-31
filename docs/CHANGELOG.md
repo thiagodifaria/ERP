@@ -119,3 +119,5 @@
 - `v0.0.58`: [UPDATE 31/03/2026 - 14:46 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `identity` foi ampliado para renomear o time criado em runtime real no PostgreSQL e refletir o novo nome no snapshot consolidado.
 - `v0.0.59`: [UPDATE 31/03/2026 - 14:51 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou `DELETE /api/identity/tenants/{slug}/teams/{teamPublicId}/members/{userPublicId}` para remover memberships sem excluir usuario ou time.
 - `v0.0.59`: [UPDATE 31/03/2026 - 14:51 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A remocao de team-membership foi ligada em memoria e PostgreSQL, com cobertura unitaria para sucesso, user invalido, user inexistente e membership ausente.
+- `v0.0.60`: [UPDATE 31/03/2026 - 14:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Integration e contract tests do `identity` passaram a validar a remocao de membership e a ausencia do vinculo na leitura subsequente.
+- `v0.0.60`: [UPDATE 31/03/2026 - 14:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `identity` foi ampliado para remover o membro adicionado em runtime real no PostgreSQL e confirmar o snapshot consolidado com `teamMemberships=1`.
