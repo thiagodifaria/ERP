@@ -6,5 +6,7 @@ public interface ICompanyCatalog
 {
   IReadOnlyCollection<Company> ListByTenantId(long tenantId);
 
+  Company? FindByTenantIdAndPublicId(long tenantId, Guid publicId);
+
   Company? FindByTenantIdAndDisplayName(long tenantId, string displayName);
 }

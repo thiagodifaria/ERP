@@ -139,11 +139,59 @@ public sealed class PostgresIdentityRepositoryBundle :
       : null;
   }
 
+  Company? ICompanyCatalog.FindByTenantIdAndPublicId(long tenantId, Guid publicId)
+  {
+    const string sql = """
+      SELECT id, tenant_id, public_id, display_name, legal_name, tax_id, status
+      FROM identity.companies
+      WHERE tenant_id = @tenant_id
+        AND public_id = @public_id
+      LIMIT 1;
+      """;
+
+    using var connection = OpenConnection();
+    using var command = new NpgsqlCommand(sql, connection);
+    command.Parameters.AddWithValue("tenant_id", tenantId);
+    command.Parameters.AddWithValue("public_id", publicId);
+    using var reader = command.ExecuteReader();
+
+    return reader.Read()
+      ? MapCompany(reader)
+      : null;
+  }
+
   Company ICompanyRepository.Add(Company company)
   {
     const string sql = """
       INSERT INTO identity.companies (tenant_id, public_id, display_name, legal_name, tax_id, status)
       VALUES (@tenant_id, @public_id, @display_name, @legal_name, @tax_id, @status)
+      RETURNING id, tenant_id, public_id, display_name, legal_name, tax_id, status;
+      """;
+
+    using var connection = OpenConnection();
+    using var command = new NpgsqlCommand(sql, connection);
+    command.Parameters.AddWithValue("tenant_id", company.TenantId);
+    command.Parameters.AddWithValue("public_id", company.PublicId);
+    command.Parameters.AddWithValue("display_name", company.DisplayName);
+    command.Parameters.AddWithValue("legal_name", (object?)company.LegalName ?? DBNull.Value);
+    command.Parameters.AddWithValue("tax_id", (object?)company.TaxId ?? DBNull.Value);
+    command.Parameters.AddWithValue("status", company.Status);
+    using var reader = command.ExecuteReader();
+    reader.Read();
+
+    return MapCompany(reader);
+  }
+
+  Company ICompanyRepository.Update(Company company)
+  {
+    const string sql = """
+      UPDATE identity.companies
+      SET display_name = @display_name,
+          legal_name = @legal_name,
+          tax_id = @tax_id,
+          status = @status
+      WHERE tenant_id = @tenant_id
+        AND public_id = @public_id
       RETURNING id, tenant_id, public_id, display_name, legal_name, tax_id, status;
       """;
 

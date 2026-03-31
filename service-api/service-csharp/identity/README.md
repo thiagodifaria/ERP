@@ -11,6 +11,7 @@ Current scope:
 - team memberships and direct user-role assignments
 - consolidated tenant access snapshot
 - selectable repository driver with PostgreSQL-backed runtime support
+- company update path started for existing tenant structure records
 - runtime smoke now exercises the live HTTP API against PostgreSQL
 - unit, integration and contract coverage in container-first flow
 

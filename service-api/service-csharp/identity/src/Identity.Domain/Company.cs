@@ -35,4 +35,19 @@ public sealed class Company
   public string? TaxId { get; }
 
   public string Status { get; }
+
+  public Company ReviseProfile(
+    string displayName,
+    string? legalName,
+    string? taxId)
+  {
+    return new Company(
+      Id,
+      TenantId,
+      PublicId,
+      displayName,
+      legalName,
+      taxId,
+      Status);
+  }
 }

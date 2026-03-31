@@ -53,6 +53,19 @@ public sealed class InMemoryCompanyRepository : ICompanyRepository
     }
   }
 
+  public Company? FindByTenantIdAndPublicId(long tenantId, Guid publicId)
+  {
+    lock (_sync)
+    {
+      if (!_companiesByTenantId.TryGetValue(tenantId, out var companies))
+      {
+        return null;
+      }
+
+      return companies.FirstOrDefault(company => company.PublicId == publicId);
+    }
+  }
+
   public Company Add(Company company)
   {
     lock (_sync)
@@ -65,6 +78,32 @@ public sealed class InMemoryCompanyRepository : ICompanyRepository
 
       companies.Add(company);
 
+      return company;
+    }
+  }
+
+  public Company Update(Company company)
+  {
+    lock (_sync)
+    {
+      if (!_companiesByTenantId.TryGetValue(company.TenantId, out var companies))
+      {
+        companies = [];
+        _companiesByTenantId[company.TenantId] = companies;
+      }
+
+      for (var index = 0; index < companies.Count; index++)
+      {
+        if (companies[index].PublicId != company.PublicId)
+        {
+          continue;
+        }
+
+        companies[index] = company;
+        return company;
+      }
+
+      companies.Add(company);
       return company;
     }
   }

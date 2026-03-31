@@ -64,6 +64,30 @@ public static class Server
           $"/api/identity/tenants/{slug}/companies/{result.Company!.PublicId}",
           result.Company);
       });
+    app.MapPatch(
+      "/api/identity/tenants/{slug}/companies/{companyPublicId:guid}",
+      Results<Ok<CompanyResponse>, BadRequest<ErrorResponse>, NotFound<ErrorResponse>, Conflict<ErrorResponse>>
+      (string slug, Guid companyPublicId, UpdateCompanyRequest request, UpdateBootstrapCompany useCase) =>
+      {
+        var result = useCase.Execute(slug, companyPublicId, request);
+
+        if (result.IsBadRequest)
+        {
+          return TypedResults.BadRequest(result.Error!);
+        }
+
+        if (result.IsNotFound)
+        {
+          return TypedResults.NotFound(result.Error!);
+        }
+
+        if (result.IsConflict)
+        {
+          return TypedResults.Conflict(result.Error!);
+        }
+
+        return TypedResults.Ok(result.Company!);
+      });
     app.MapPost(
       "/api/identity/tenants/{slug}/users",
       Results<Created<UserResponse>, BadRequest<ErrorResponse>, NotFound<ErrorResponse>, Conflict<ErrorResponse>>

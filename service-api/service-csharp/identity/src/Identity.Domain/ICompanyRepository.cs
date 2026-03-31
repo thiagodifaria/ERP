@@ -5,6 +5,8 @@ public interface ICompanyRepository : ICompanyCatalog
 {
   Company Add(Company company);
 
+  Company Update(Company company);
+
   long NextId();
 
   IReadOnlyCollection<Company> SeedDefaults(Tenant tenant);
