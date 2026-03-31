@@ -35,6 +35,13 @@ type readinessResponse struct {
 	Dependencies []dependencyResponse `json:"dependencies"`
 }
 
+type leadNoteResponse struct {
+	PublicID     string `json:"publicId"`
+	LeadPublicID string `json:"leadPublicId"`
+	Body         string `json:"body"`
+	Category     string `json:"category"`
+}
+
 type dependencyResponse struct {
 	Name   string `json:"name"`
 	Status string `json:"status"`
@@ -216,6 +223,79 @@ func TestLeadProfileContractShouldReturnUpdatedResource(t *testing.T) {
 	}
 }
 
+func TestLeadNotesContractShouldExposeBootstrapHistory(t *testing.T) {
+	response := performRequest(
+		t,
+		newContractRouter(),
+		http.MethodGet,
+		"/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/notes",
+		nil,
+	)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, response.Code)
+	}
+
+	var payload []leadNoteResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if len(payload) == 0 {
+		t.Fatalf("expected at least one lead note")
+	}
+
+	if payload[0].LeadPublicID != persistence.BootstrapLeadPublicID {
+		t.Fatalf("expected bootstrap lead public id, got %s", payload[0].LeadPublicID)
+	}
+}
+
+func TestCreateLeadNoteContractShouldReturnCreatedResource(t *testing.T) {
+	router := newContractRouter()
+
+	createLeadResponse := performRequest(
+		t,
+		router,
+		http.MethodPost,
+		"/api/crm/leads",
+		bytes.NewBufferString(`{"name":"Contract Note","email":"contract.note@example.com","source":"whatsapp"}`),
+	)
+
+	if createLeadResponse.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, createLeadResponse.Code)
+	}
+
+	var leadPayload leadResponse
+	if err := json.Unmarshal(createLeadResponse.Body.Bytes(), &leadPayload); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	createNoteResponse := performRequest(
+		t,
+		router,
+		http.MethodPost,
+		"/api/crm/leads/"+leadPayload.PublicID+"/notes",
+		bytes.NewBufferString(`{"body":"Cliente pediu comparativo com plano premium.","category":"follow-up"}`),
+	)
+
+	if createNoteResponse.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, createNoteResponse.Code)
+	}
+
+	var payload leadNoteResponse
+	if err := json.Unmarshal(createNoteResponse.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if payload.Category != "follow-up" {
+		t.Fatalf("expected category follow-up, got %s", payload.Category)
+	}
+
+	if payload.LeadPublicID != leadPayload.PublicID {
+		t.Fatalf("expected created note lead public id %s, got %s", leadPayload.PublicID, payload.LeadPublicID)
+	}
+}
+
 func TestHealthDetailsContractShouldExposeDependencyShape(t *testing.T) {
 	response := performRequest(
 		t,
@@ -309,6 +389,7 @@ func newContractRouter() http.Handler {
 	return api.NewRouterWithRuntime(
 		telemetry.New("crm-contract"),
 		persistence.NewInMemoryLeadRepository(),
+		persistence.NewInMemoryLeadNoteRepository(),
 		"postgres",
 	)
 }

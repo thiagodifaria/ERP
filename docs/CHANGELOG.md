@@ -99,3 +99,5 @@
 - `v0.0.48`: [UPDATE 31/03/2026 - 14:05 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Seeds relacionais do `crm` passaram a provisionar uma nota bootstrap por lead, preparando o runtime PostgreSQL para a nova trilha de historico operacional.
 - `v0.0.49`: [UPDATE 31/03/2026 - 14:07 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou `PostgresLeadNoteRepository`, cobrindo listagem e criacao de notas por lead dentro do tenant bootstrap.
 - `v0.0.49`: [UPDATE 31/03/2026 - 14:07 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O bootstrap do runtime passou a ligar `LeadNoteRepository` ao PostgreSQL quando `CRM_REPOSITORY_DRIVER=postgres`, fechando a persistencia real da nova trilha de historico.
+- `v0.0.50`: [UPDATE 31/03/2026 - 14:08 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Contract tests do `crm` passaram a validar leitura de notas bootstrap e criacao de nova nota por lead no contrato HTTP publico.
+- `v0.0.50`: [UPDATE 31/03/2026 - 14:08 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh smoke` foi ampliado para confirmar notas bootstrap e criacao/leitura de nota em runtime real do `crm` sobre PostgreSQL.

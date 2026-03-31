@@ -21,5 +21,6 @@ Initial scope:
 - bootstrap endpoint `GET /api/crm/leads/{publicId}/notes` for read-side relationship context
 - bootstrap endpoint `POST /api/crm/leads/{publicId}/notes` for operational follow-up capture
 - selectable repository driver now covers lead notes as well when `crm` runs on PostgreSQL
+- contract and smoke coverage now exercise live lead note history over HTTP
 - contract coverage for public HTTP routes and public error shape
 - unit validation for bootstrap and domain basics

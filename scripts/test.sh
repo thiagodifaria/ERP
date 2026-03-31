@@ -157,10 +157,14 @@ wait_for_http_ready() {
 
 run_crm_runtime_smoke() {
   local base_url="http://localhost:${CRM_HTTP_PORT:-8083}"
+  local bootstrap_lead_public_id
   local owner_public_id
   local lead_list
+  local bootstrap_notes_response
   local create_response
   local created_public_id
+  local created_note_response
+  local notes_response
   local profile_response
   local owner_response
   local status_response
@@ -170,10 +174,22 @@ run_crm_runtime_smoke() {
   wait_for_http_ready "$base_url/health/ready"
 
   local details_response
+  bootstrap_lead_public_id="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT lead.public_id::text
+      FROM crm.leads AS lead
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = lead.tenant_id
+      WHERE tenant.slug = 'bootstrap-ops'
+        AND lead.email = 'lead@bootstrap-ops.local'
+      LIMIT 1;
+    ")"
   lead_list="$(curl -fsS "$base_url/api/crm/leads")"
   details_response="$(curl -fsS "$base_url/health/details")"
+  bootstrap_notes_response="$(curl -fsS "$base_url/api/crm/leads/$bootstrap_lead_public_id/notes")"
   echo "[test] crm api list => $lead_list"
   echo "[test] crm health details => $details_response"
+  echo "[test] crm bootstrap notes => $bootstrap_notes_response"
 
   if [[ "$lead_list" != *'"email":"lead@bootstrap-ops.local"'* ]]; then
     echo "[test] bootstrap CRM lead was not returned by the live API"
@@ -182,6 +198,11 @@ run_crm_runtime_smoke() {
 
   if [[ "$details_response" != *'"name":"postgresql","status":"ready"'* ]]; then
     echo "[test] crm health details did not report postgresql ready"
+    exit 1
+  fi
+
+  if [[ "$bootstrap_notes_response" != *'"category":"qualification"'* ]]; then
+    echo "[test] bootstrap CRM note was not returned by the live API"
     exit 1
   fi
 
@@ -210,6 +231,26 @@ run_crm_runtime_smoke() {
   created_public_id="$(echo "$create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
   if [[ -z "$created_public_id" ]]; then
     echo "[test] runtime lead public id was not returned by create response"
+    exit 1
+  fi
+
+  created_note_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"body":"Cliente pediu comparativo com onboarding premium.","category":"follow-up"}' \
+    "$base_url/api/crm/leads/$created_public_id/notes")"
+  echo "[test] crm api create note => $created_note_response"
+
+  if [[ "$created_note_response" != *'"category":"follow-up"'* ]]; then
+    echo "[test] runtime lead note create did not persist"
+    exit 1
+  fi
+
+  notes_response="$(curl -fsS "$base_url/api/crm/leads/$created_public_id/notes")"
+  echo "[test] crm api list notes => $notes_response"
+
+  if [[ "$notes_response" != *'"body":"Cliente pediu comparativo com onboarding premium."'* ]]; then
+    echo "[test] runtime lead notes read did not return the created note"
     exit 1
   fi
 
