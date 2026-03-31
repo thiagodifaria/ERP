@@ -316,6 +316,7 @@ run_identity_runtime_smoke() {
   local created_team_public_id
   local members_response
   local assign_role_response
+  local revoke_role_response
   local user_roles_response
   local roles_response
   local snapshot_response
@@ -476,6 +477,24 @@ run_identity_runtime_smoke() {
     exit 1
   fi
 
+  revoke_role_response="$(curl -fsS \
+    -X DELETE \
+    "$base_url/api/identity/tenants/$tenant_slug/users/$created_user_public_id/roles/viewer")"
+  echo "[test] identity api revoke role => $revoke_role_response"
+
+  if [[ "$revoke_role_response" != *'"roleCode":"viewer"'* ]]; then
+    echo "[test] runtime identity role revoke did not persist"
+    exit 1
+  fi
+
+  user_roles_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/users/$created_user_public_id/roles")"
+  echo "[test] identity api user roles after revoke => $user_roles_response"
+
+  if [[ "$user_roles_response" == *'"roleCode":"viewer"'* ]]; then
+    echo "[test] runtime identity user role read still returned revoked viewer"
+    exit 1
+  fi
+
   roles_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/roles")"
   echo "[test] identity api roles => $roles_response"
 
@@ -487,7 +506,7 @@ run_identity_runtime_smoke() {
   snapshot_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/snapshot")"
   echo "[test] identity api snapshot => $snapshot_response"
 
-  if [[ "$snapshot_response" != *'"companies":2'* || "$snapshot_response" != *'"users":2'* || "$snapshot_response" != *'"teams":2'* || "$snapshot_response" != *'"roles":5'* || "$snapshot_response" != *'"teamMemberships":2'* || "$snapshot_response" != *'"userRoles":2'* ]]; then
+  if [[ "$snapshot_response" != *'"companies":2'* || "$snapshot_response" != *'"users":2'* || "$snapshot_response" != *'"teams":2'* || "$snapshot_response" != *'"roles":5'* || "$snapshot_response" != *'"teamMemberships":2'* || "$snapshot_response" != *'"userRoles":1'* ]]; then
     echo "[test] runtime identity snapshot did not reflect live updates"
     exit 1
   fi

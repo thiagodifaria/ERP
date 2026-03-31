@@ -152,6 +152,48 @@ public sealed class IdentityContractsTests : IClassFixture<WebApplicationFactory
   }
 
   [Fact]
+  public async Task RevokeUserRoleContractShouldReturnRevokedResourceShape()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Contract Role Revoke");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var createUserResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/users",
+      new CreateUserRequest(
+        $"contract.revoke@{tenantPayload.Slug}.local",
+        "Contract Revoke User",
+        "Contract",
+        "Revoke"));
+
+    var createdUser = await createUserResponse.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(createdUser);
+
+    await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{createdUser!.PublicId}/roles",
+      new AssignUserRoleRequest("viewer"));
+
+    var response = await _client.DeleteAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{createdUser.PublicId}/roles/viewer");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<UserRoleResponse>();
+
+    Assert.NotNull(payload);
+    Assert.NotEqual(Guid.Empty, payload!.UserPublicId);
+    Assert.NotEqual(Guid.Empty, payload.RolePublicId);
+    Assert.Equal("viewer", payload.RoleCode);
+    Assert.False(string.IsNullOrWhiteSpace(payload.RoleDisplayName));
+  }
+
+  [Fact]
   public async Task ErrorContractShouldExposeCodeAndMessage()
   {
     var response = await _client.PostAsJsonAsync(

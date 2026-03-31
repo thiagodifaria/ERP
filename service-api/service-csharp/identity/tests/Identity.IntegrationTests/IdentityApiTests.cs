@@ -796,6 +796,67 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
   }
 
   [Fact]
+  public async Task RevokeUserRoleShouldReturnRevokedRoleAssignment()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With Role Revoke");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var userResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/users",
+      new CreateUserRequest("revoke.role@tenant-role-revoke.local", "Revoke Role User", null, null));
+
+    var userPayload = await userResponse.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(userPayload);
+
+    await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{userPayload!.PublicId}/roles",
+      new AssignUserRoleRequest("viewer"));
+
+    var response = await _client.DeleteAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{userPayload.PublicId}/roles/viewer");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<UserRoleResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("viewer", payload!.RoleCode);
+
+    var rolesResponse = await _client.GetAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{userPayload.PublicId}/roles");
+
+    var rolesPayload = await rolesResponse.Content.ReadFromJsonAsync<UserRoleResponse[]>();
+
+    Assert.NotNull(rolesPayload);
+    Assert.Empty(rolesPayload);
+  }
+
+  [Fact]
+  public async Task RevokeUserRoleShouldReturnNotFoundForMissingAssignment()
+  {
+    var usersPayload = await _client.GetFromJsonAsync<UserResponse[]>("/api/identity/tenants/bootstrap-ops/users");
+
+    Assert.NotNull(usersPayload);
+
+    var response = await _client.DeleteAsync(
+      $"/api/identity/tenants/bootstrap-ops/users/{usersPayload![0].PublicId}/roles/viewer");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("user_role_not_found", payload.Code);
+  }
+
+  [Fact]
   public async Task AssignUserRoleShouldReturnConflictForDuplicateRole()
   {
     var usersPayload = await _client.GetFromJsonAsync<UserResponse[]>("/api/identity/tenants/bootstrap-ops/users");
