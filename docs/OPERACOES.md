@@ -33,10 +33,13 @@ Cada servico critico deve documentar:
 - `./scripts/logs.sh <servico>` consulta logs do servico informado
 - `./scripts/db.sh migrate all` aplica a base `common`, `identity` e `crm`
 - `./scripts/db.sh migrate crm` aplica apenas o contexto relacional de CRM
+- `./scripts/db.sh migrate workflow-control` aplica apenas o contexto relacional de workflow-control
 - `./scripts/db.sh seed identity` aplica o bootstrap relacional do contexto `identity`
 - `./scripts/db.sh seed crm` aplica o bootstrap relacional do contexto `crm`
+- `./scripts/db.sh seed workflow-control` aplica o bootstrap relacional do contexto `workflow-control`
 - `./scripts/db.sh summary identity <tenant-slug>` resume companies, users, teams, roles e bindings do tenant
 - `./scripts/db.sh summary crm <tenant-slug>` resume total de leads, distribuicao por status e ownership por tenant
+- `./scripts/db.sh summary workflow-control <tenant-slug>` resume total de definicoes e distribuicao por status por tenant
 - `./scripts/test.sh unit` executa Go, TypeScript, .NET e Rust em modo container-first
 - `./scripts/test.sh integration` executa a suite HTTP do `identity`
 - `./scripts/test.sh contract` executa as suites publicas de contratos de `workflow-control`, `crm` e `identity`

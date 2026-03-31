@@ -18,10 +18,13 @@ Useful commands:
 - `./scripts/logs.sh identity`
 - `./scripts/db.sh migrate all`
 - `./scripts/db.sh migrate crm`
+- `./scripts/db.sh migrate workflow-control`
 - `./scripts/db.sh seed identity`
 - `./scripts/db.sh seed crm`
+- `./scripts/db.sh seed workflow-control`
 - `./scripts/db.sh summary identity smoke-identity-bootstrap`
 - `./scripts/db.sh summary crm smoke-identity-bootstrap`  `# total, status e ownership`
+- `./scripts/db.sh summary workflow-control bootstrap-ops`  `# total e distribuicao por status`
 - `./scripts/test.sh unit`
 - `./scripts/test.sh integration`
 - `./scripts/test.sh contract`  `# contratos HTTP publicos de workflow-control, crm e identity`

@@ -68,12 +68,15 @@ Usage:
   ./scripts/db.sh migrate common
   ./scripts/db.sh migrate identity
   ./scripts/db.sh migrate crm
+  ./scripts/db.sh migrate workflow-control
   ./scripts/db.sh migrate all
   ./scripts/db.sh seed identity
   ./scripts/db.sh seed crm
+  ./scripts/db.sh seed workflow-control
   ./scripts/db.sh seed all
   ./scripts/db.sh summary identity [tenant-slug]
   ./scripts/db.sh summary crm [tenant-slug]
+  ./scripts/db.sh summary workflow-control [tenant-slug]
   ./scripts/db.sh psql
 EOF
 }
@@ -98,10 +101,14 @@ main() {
         crm)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/migrations"
           ;;
+        workflow-control)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/migrations"
+          ;;
         all)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/common/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/migrations"
           ;;
         *)
           usage
@@ -118,9 +125,13 @@ main() {
         crm)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/seeds"
           ;;
+        workflow-control)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/seeds"
+          ;;
         all)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/seeds"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/seeds"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/seeds"
           ;;
         *)
           usage
@@ -171,6 +182,26 @@ main() {
               (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.status = 'disqualified') AS disqualified,
               (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.owner_user_public_id IS NOT NULL) AS assigned,
               (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.owner_user_public_id IS NULL) AS unassigned
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
+          ;;
+        workflow-control)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id) AS definitions,
+              (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id AND definition.status = 'draft') AS draft,
+              (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id AND definition.status = 'active') AS active,
+              (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id AND definition.status = 'archived') AS archived
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;

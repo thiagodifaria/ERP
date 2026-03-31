@@ -159,3 +159,5 @@
 - `v0.0.78`: [UPDATE 31/03/2026 - 16:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O catalogo relacional passou a nascer com `updated_at` automatizado, `key` unica por tenant e checks de status alinhados ao dominio TypeScript.
 - `v0.0.79`: [UPDATE 31/03/2026 - 16:38 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contexto relacional de `workflow-control` ganhou seed bootstrap de `lead-follow-up` para tenants operacionais e de smoke.
 - `v0.0.79`: [UPDATE 31/03/2026 - 16:38 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O catalogo inicial do banco ficou alinhado ao bootstrap historico do servico `TypeScript`, preparando a troca de driver sem regressao funcional.
+- `v0.0.80`: [UPDATE 31/03/2026 - 16:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/db.sh` passou a migrar, semear e resumir `workflow-control`, integrando o novo contexto relacional ao fluxo oficial do monorepo.
+- `v0.0.80`: [UPDATE 31/03/2026 - 16:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional foi atualizada para incluir o summary de definicoes por status, facilitando diagnostico rapido do catalogo de workflows.
