@@ -27,6 +27,7 @@ Container-first validation:
 - `docker run --rm -v ${PWD}:/workspace -w /workspace/service-api/service-typescript/workflow-control node:22-alpine sh -lc "npm install && npm run test:unit"`
 - `docker run --rm -v ${PWD}:/workspace -w /workspace/service-api/service-typescript/workflow-control node:22-alpine sh -lc "npm install && npm run test:contract"`
 - `docker build -t erp-workflow-control ./service-api/service-typescript/workflow-control`
+- `WORKFLOW_CONTROL_REPOSITORY_DRIVER=postgres` habilita o catalogo relacional em cima do contexto `workflow_control`
 
 Current unit scope:
 

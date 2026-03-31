@@ -40,6 +40,7 @@ Cada servico critico deve documentar:
 - `./scripts/db.sh summary identity <tenant-slug>` resume companies, users, teams, roles e bindings do tenant
 - `./scripts/db.sh summary crm <tenant-slug>` resume total de leads, distribuicao por status e ownership por tenant
 - `./scripts/db.sh summary workflow-control <tenant-slug>` resume total de definicoes e distribuicao por status por tenant
+- `workflow-control` no compose local sobe em `postgres`, usando `bootstrap-ops` como tenant bootstrap do catalogo inicial
 - `./scripts/test.sh unit` executa Go, TypeScript, .NET e Rust em modo container-first
 - `./scripts/test.sh integration` executa a suite HTTP do `identity`
 - `./scripts/test.sh contract` executa as suites publicas de contratos de `workflow-control`, `crm` e `identity`

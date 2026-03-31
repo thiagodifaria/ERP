@@ -93,6 +93,7 @@ run_identity_database_smoke() {
   local smoke_slug="smoke-identity-bootstrap"
   local summary
   local crm_summary
+  local workflow_control_summary
 
   bash "$ROOT_DIR/scripts/db.sh" up
   bash "$ROOT_DIR/scripts/db.sh" migrate all
@@ -151,6 +152,25 @@ run_identity_database_smoke() {
 
   if [[ "$crm_summary" != "$smoke_slug|1|1|0|0|0|1|0" ]]; then
     echo "[test] unexpected crm db smoke summary"
+    exit 1
+  fi
+
+  workflow_control_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        tenant.slug || '|' ||
+        (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id AND definition.status = 'draft') || '|' ||
+        (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id AND definition.status = 'active') || '|' ||
+        (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id AND definition.status = 'archived')
+      FROM identity.tenants AS tenant
+      WHERE tenant.slug = '$smoke_slug';
+    ")" 
+
+  echo "[test] workflow-control db smoke => $workflow_control_summary"
+
+  if [[ "$workflow_control_summary" != "$smoke_slug|1|0|1|0" ]]; then
+    echo "[test] unexpected workflow-control db smoke summary"
     exit 1
   fi
 }
@@ -317,6 +337,7 @@ run_crm_runtime_smoke() {
 
 run_workflow_control_runtime_smoke() {
   local base_url="http://localhost:${WORKFLOW_CONTROL_HTTP_PORT:-8084}"
+  local list_response
   local create_response
   local created_key="runtime-flow"
   local detail_response
@@ -329,8 +350,16 @@ run_workflow_control_runtime_smoke() {
   health_details_response="$(curl -fsS "$base_url/health/details")"
   echo "[test] workflow-control health details => $health_details_response"
 
-  if [[ "$health_details_response" != *'"name":"definitions-catalog","status":"pending-runtime-wiring"'* ]]; then
-    echo "[test] workflow-control health details did not expose the expected in-memory catalog dependency"
+  if [[ "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"definitions-catalog","status":"ready"'* ]]; then
+    echo "[test] workflow-control health details did not expose the expected postgresql-backed catalog dependencies"
+    exit 1
+  fi
+
+  list_response="$(curl -fsS "$base_url/api/workflow-control/definitions")"
+  echo "[test] workflow-control list => $list_response"
+
+  if [[ "$list_response" != *'"key":"lead-follow-up"'* || "$list_response" != *'"status":"active"'* ]]; then
+    echo "[test] workflow-control bootstrap catalog was not returned by the live API"
     exit 1
   fi
 

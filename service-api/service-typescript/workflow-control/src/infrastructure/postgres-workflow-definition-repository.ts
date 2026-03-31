@@ -113,14 +113,11 @@ export class PostgresWorkflowDefinitionRepository implements WorkflowDefinitionR
   }
 
   public async nextId(): Promise<number> {
-    const tenantId = await this.resolveTenantId();
     const result = await this.pool.query<{ next_id: number }>(
       `
         SELECT COALESCE(MAX(id), 0) + 1 AS next_id
         FROM workflow_control.workflow_definitions
-        WHERE tenant_id = $1
-      `,
-      [tenantId]
+      `
     );
 
     return Number(result.rows[0]?.next_id ?? 1);
