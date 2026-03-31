@@ -51,6 +51,16 @@ public static class Server
           : TypedResults.Ok(tenant);
       });
     app.MapGet(
+      "/api/identity/tenants/{slug}/companies",
+      Results<Ok<IReadOnlyCollection<CompanyResponse>>, NotFound> (string slug, ListBootstrapCompanies useCase) =>
+      {
+        var companies = useCase.Execute(slug);
+
+        return companies is null
+          ? TypedResults.NotFound()
+          : TypedResults.Ok(companies);
+      });
+    app.MapGet(
       "/api/identity/tenants/{slug}/roles",
       Results<Ok<IReadOnlyCollection<RoleResponse>>, NotFound> (string slug, ListBootstrapRoles useCase) =>
       {

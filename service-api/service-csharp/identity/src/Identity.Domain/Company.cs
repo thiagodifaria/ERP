@@ -4,12 +4,21 @@ namespace Identity.Domain;
 
 public sealed class Company
 {
-  public Company(long id, long tenantId, Guid publicId, string displayName, string status)
+  public Company(
+    long id,
+    long tenantId,
+    Guid publicId,
+    string displayName,
+    string? legalName,
+    string? taxId,
+    string status)
   {
     Id = id;
     TenantId = tenantId;
     PublicId = publicId;
     DisplayName = displayName;
+    LegalName = legalName;
+    TaxId = taxId;
     Status = status;
   }
 
@@ -20,6 +29,10 @@ public sealed class Company
   public Guid PublicId { get; }
 
   public string DisplayName { get; }
+
+  public string? LegalName { get; }
+
+  public string? TaxId { get; }
 
   public string Status { get; }
 }

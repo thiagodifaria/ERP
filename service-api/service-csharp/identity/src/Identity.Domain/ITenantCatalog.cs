@@ -5,4 +5,6 @@ namespace Identity.Domain;
 public interface ITenantCatalog
 {
   IReadOnlyCollection<Tenant> List();
+
+  Tenant? FindBySlug(string slug);
 }

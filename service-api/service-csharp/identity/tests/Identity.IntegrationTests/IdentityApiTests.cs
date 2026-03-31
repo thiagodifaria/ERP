@@ -67,6 +67,28 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
   }
 
   [Fact]
+  public async Task TenantCompaniesEndpointShouldReturnCompaniesForKnownTenant()
+  {
+    var response = await _client.GetAsync("/api/identity/tenants/bootstrap-ops/companies");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<CompanyResponse[]>();
+
+    Assert.NotNull(payload);
+    Assert.NotEmpty(payload);
+    Assert.Contains(payload, company => company.DisplayName == "Bootstrap Ops");
+  }
+
+  [Fact]
+  public async Task TenantCompaniesEndpointShouldReturnNotFoundForUnknownTenant()
+  {
+    var response = await _client.GetAsync("/api/identity/tenants/missing-tenant/companies");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
+
+  [Fact]
   public async Task CreateTenantShouldReturnCreatedTenant()
   {
     var request = new CreateTenantRequest(

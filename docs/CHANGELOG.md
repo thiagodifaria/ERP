@@ -31,3 +31,5 @@
 - `v0.0.13`: [UPDATE 31/03/2026 - 03:01 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Catalogo de roles em memoria evoluido para repositorio mutavel com seed de defaults por tenant, com validacao executada em container.
 - `v0.0.14`: [UPDATE 31/03/2026 - 03:11 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou leitura individual de tenant por slug com `GET /api/identity/tenants/{slug}` e comportamento `404` para slug inexistente.
 - `v0.0.14`: [UPDATE 31/03/2026 - 03:11 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Testes unitarios e de integracao ampliados para cobrir leitura individual de tenant e erro `400` por slug invalido no `POST /api/identity/tenants`, com validacao executada em container.
+- `v0.0.15`: [UPDATE 31/03/2026 - 02:53 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou catalogo bootstrap de `companies`, com contratos publicos dedicados, adapter em memoria e alinhamento do agregado `Company` com `legal_name` e `tax_id`.
+- `v0.0.15`: [UPDATE 31/03/2026 - 02:53 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Endpoint `GET /api/identity/tenants/{slug}/companies` adicionado com cobertura unitaria e de integracao validada em container.

@@ -3,8 +3,6 @@ namespace Identity.Domain;
 
 public interface ITenantRepository : ITenantCatalog
 {
-  Tenant? FindBySlug(string slug);
-
   Tenant Add(Tenant tenant);
 
   long NextId();
