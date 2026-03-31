@@ -103,3 +103,5 @@
 - `v0.0.50`: [UPDATE 31/03/2026 - 14:08 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh smoke` foi ampliado para confirmar notas bootstrap e criacao/leitura de nota em runtime real do `crm` sobre PostgreSQL.
 - `v0.0.51`: [UPDATE 31/03/2026 - 14:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou `PATCH /api/identity/tenants/{slug}/companies/{companyPublicId}` para atualizar dados de empresa existente dentro do tenant.
 - `v0.0.51`: [UPDATE 31/03/2026 - 14:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A trilha de update de `company` foi ligada em memoria e PostgreSQL, com cobertura unitaria para sucesso, `404` e conflito por display name duplicado.
+- `v0.0.52`: [UPDATE 31/03/2026 - 14:17 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Integration e contract tests do `identity` passaram a validar o contrato publico de update de company, incluindo retorno `404` para empresa inexistente.
+- `v0.0.52`: [UPDATE 31/03/2026 - 14:17 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `identity` foi ampliado para atualizar company em runtime real no PostgreSQL e confirmar persistencia da mutacao.

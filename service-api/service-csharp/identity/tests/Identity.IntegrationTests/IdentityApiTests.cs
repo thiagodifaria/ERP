@@ -108,7 +108,9 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
 
     Assert.NotNull(payload);
     Assert.NotEmpty(payload);
-    Assert.Contains(payload, company => company.DisplayName == "Bootstrap Ops");
+    Assert.Contains(payload, company =>
+      company.TenantId == 1 &&
+      !string.IsNullOrWhiteSpace(company.DisplayName));
   }
 
   [Fact]
@@ -395,6 +397,43 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
     Assert.Equal(request.DisplayName, payload.DisplayName);
     Assert.Equal(request.LegalName, payload.LegalName);
     Assert.Equal(request.TaxId, payload.TaxId);
+  }
+
+  [Fact]
+  public async Task UpdateCompanyShouldReturnUpdatedCompany()
+  {
+    var companiesResponse = await _client.GetAsync("/api/identity/tenants/bootstrap-ops/companies");
+    var companiesPayload = await companiesResponse.Content.ReadFromJsonAsync<CompanyResponse[]>();
+
+    Assert.NotNull(companiesPayload);
+
+    var response = await _client.PatchAsJsonAsync(
+      $"/api/identity/tenants/bootstrap-ops/companies/{companiesPayload![0].PublicId}",
+      new UpdateCompanyRequest("Bootstrap Ops Prime", "Bootstrap Ops Prime LTDA", "12345678901234"));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<CompanyResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("Bootstrap Ops Prime", payload!.DisplayName);
+    Assert.Equal("Bootstrap Ops Prime LTDA", payload.LegalName);
+    Assert.Equal("12345678901234", payload.TaxId);
+  }
+
+  [Fact]
+  public async Task UpdateCompanyShouldReturnNotFoundForUnknownCompany()
+  {
+    var response = await _client.PatchAsJsonAsync(
+      $"/api/identity/tenants/bootstrap-ops/companies/{Guid.NewGuid()}",
+      new UpdateCompanyRequest("Bootstrap Ops Prime", null, null));
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("company_not_found", payload.Code);
   }
 
   [Fact]

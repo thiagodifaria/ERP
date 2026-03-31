@@ -86,6 +86,29 @@ public sealed class IdentityContractsTests : IClassFixture<WebApplicationFactory
   }
 
   [Fact]
+  public async Task UpdateCompanyContractShouldReturnUpdatedResourceShape()
+  {
+    var companies = await _client.GetFromJsonAsync<CompanyResponse[]>("/api/identity/tenants/bootstrap-ops/companies");
+
+    Assert.NotNull(companies);
+    Assert.NotEmpty(companies);
+
+    var response = await _client.PatchAsJsonAsync(
+      $"/api/identity/tenants/bootstrap-ops/companies/{companies![0].PublicId}",
+      new UpdateCompanyRequest("Bootstrap Ops Contract", "Bootstrap Ops Contract LTDA", "12345678901234"));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<CompanyResponse>();
+
+    Assert.NotNull(payload);
+    Assert.NotEqual(Guid.Empty, payload!.PublicId);
+    Assert.Equal("Bootstrap Ops Contract", payload.DisplayName);
+    Assert.Equal("Bootstrap Ops Contract LTDA", payload.LegalName);
+    Assert.Equal("12345678901234", payload.TaxId);
+  }
+
+  [Fact]
   public async Task ErrorContractShouldExposeCodeAndMessage()
   {
     var response = await _client.PostAsJsonAsync(

@@ -26,6 +26,7 @@ Public routes:
 - `GET /api/identity/tenants/{slug}/snapshot`
 - `GET /api/identity/tenants/{slug}/companies`
 - `POST /api/identity/tenants/{slug}/companies`
+- `PATCH /api/identity/tenants/{slug}/companies/{companyPublicId}`
 - `GET /api/identity/tenants/{slug}/users`
 - `POST /api/identity/tenants/{slug}/users`
 - `GET /api/identity/tenants/{slug}/users/{userPublicId}/roles`

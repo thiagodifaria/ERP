@@ -306,6 +306,7 @@ run_identity_runtime_smoke() {
   local create_tenant_response
   local companies_response
   local create_company_response
+  local updated_company_response
   local users_response
   local create_user_response
   local created_user_public_id
@@ -366,6 +367,25 @@ run_identity_runtime_smoke() {
 
   if [[ "$create_company_response" != *'"displayName":"Runtime Identity Branch"'* ]]; then
     echo "[test] runtime identity company create did not persist"
+    exit 1
+  fi
+
+  local created_company_public_id
+  created_company_public_id="$(echo "$create_company_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$created_company_public_id" ]]; then
+    echo "[test] runtime identity company public id was not returned"
+    exit 1
+  fi
+
+  updated_company_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d '{"displayName":"Runtime Identity Branch Prime","legalName":"Runtime Identity Branch Prime LTDA","taxId":"55544433322211"}' \
+    "$base_url/api/identity/tenants/$tenant_slug/companies/$created_company_public_id")"
+  echo "[test] identity api update company => $updated_company_response"
+
+  if [[ "$updated_company_response" != *'"displayName":"Runtime Identity Branch Prime"'* || "$updated_company_response" != *'"taxId":"55544433322211"'* ]]; then
+    echo "[test] runtime identity company update did not persist"
     exit 1
   fi
 
