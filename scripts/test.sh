@@ -112,14 +112,20 @@ run_identity_database_smoke() {
     psql -U "$DB_USER" -d "$DB_NAME" -At -c "
       SELECT
         tenant.slug || '|' ||
-        (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id)
+        (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.status = 'captured') || '|' ||
+        (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.status = 'contacted') || '|' ||
+        (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.status = 'qualified') || '|' ||
+        (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.status = 'disqualified') || '|' ||
+        (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.owner_user_public_id IS NOT NULL) || '|' ||
+        (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.owner_user_public_id IS NULL)
       FROM identity.tenants AS tenant
       WHERE tenant.slug = '$smoke_slug';
     ")"
 
   echo "[test] crm db smoke => $crm_summary"
 
-  if [[ "$crm_summary" != "$smoke_slug|1" ]]; then
+  if [[ "$crm_summary" != "$smoke_slug|1|1|0|0|0|1|0" ]]; then
     echo "[test] unexpected crm db smoke summary"
     exit 1
   fi

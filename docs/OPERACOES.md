@@ -35,7 +35,7 @@ Cada servico critico deve documentar:
 - `./scripts/db.sh seed identity` aplica o bootstrap relacional do contexto `identity`
 - `./scripts/db.sh seed crm` aplica o bootstrap relacional do contexto `crm`
 - `./scripts/db.sh summary identity <tenant-slug>` resume companies, users, teams, roles e bindings do tenant
-- `./scripts/db.sh summary crm <tenant-slug>` resume a quantidade de leads por tenant
+- `./scripts/db.sh summary crm <tenant-slug>` resume total de leads, distribuicao por status e ownership por tenant
 - `./scripts/test.sh unit` executa Go, .NET e Rust em modo container-first
 - `./scripts/test.sh integration` executa a suite HTTP do `identity`
 - `./scripts/test.sh contract` executa a suite publica de contratos do `identity`

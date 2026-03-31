@@ -21,7 +21,7 @@ Useful commands:
 - `./scripts/db.sh seed identity`
 - `./scripts/db.sh seed crm`
 - `./scripts/db.sh summary identity smoke-identity-bootstrap`
-- `./scripts/db.sh summary crm smoke-identity-bootstrap`
+- `./scripts/db.sh summary crm smoke-identity-bootstrap`  `# total, status e ownership`
 - `./scripts/test.sh unit`
 - `./scripts/test.sh integration`
 - `./scripts/test.sh contract`

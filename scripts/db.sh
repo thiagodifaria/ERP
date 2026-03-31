@@ -152,7 +152,13 @@ main() {
           run_psql_query "
             SELECT
               tenant.slug,
-              (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id) AS leads
+              (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id) AS leads,
+              (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.status = 'captured') AS captured,
+              (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.status = 'contacted') AS contacted,
+              (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.status = 'qualified') AS qualified,
+              (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.status = 'disqualified') AS disqualified,
+              (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.owner_user_public_id IS NOT NULL) AS assigned,
+              (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.owner_user_public_id IS NULL) AS unassigned
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;
