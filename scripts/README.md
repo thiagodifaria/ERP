@@ -25,7 +25,7 @@ Useful commands:
 - `./scripts/test.sh unit`
 - `./scripts/test.sh integration`
 - `./scripts/test.sh contract`
-- `./scripts/test.sh smoke`
+- `./scripts/test.sh smoke`  `# reset relacional + bootstrap + smoke HTTP do crm`
 - `./scripts/test.sh all`
 
 Rules:

@@ -131,11 +131,110 @@ run_identity_database_smoke() {
   fi
 }
 
+wait_for_http_ready() {
+  local url="$1"
+  local attempts=0
+
+  until curl -fsS "$url" >/dev/null 2>&1; do
+    attempts=$((attempts + 1))
+
+    if [[ "$attempts" -ge 30 ]]; then
+      echo "[test] http endpoint did not become ready: $url"
+      exit 1
+    fi
+
+    sleep 1
+  done
+}
+
+run_crm_runtime_smoke() {
+  local base_url="http://localhost:${CRM_HTTP_PORT:-8083}"
+  local owner_public_id
+  local lead_list
+  local create_response
+  local created_public_id
+  local owner_response
+  local status_response
+  local summary_response
+
+  "${COMPOSE_CMD[@]}" up -d --build crm
+  wait_for_http_ready "$base_url/health/ready"
+
+  lead_list="$(curl -fsS "$base_url/api/crm/leads")"
+  echo "[test] crm api list => $lead_list"
+
+  if [[ "$lead_list" != *'"email":"lead@bootstrap-ops.local"'* ]]; then
+    echo "[test] bootstrap CRM lead was not returned by the live API"
+    exit 1
+  fi
+
+  owner_public_id="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT \"user\".public_id::text
+      FROM identity.users AS \"user\"
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = \"user\".tenant_id
+      WHERE tenant.slug = 'bootstrap-ops'
+        AND \"user\".email = 'owner@bootstrap-ops.local';
+    ")"
+
+  if [[ -z "$owner_public_id" ]]; then
+    echo "[test] bootstrap CRM owner public id was not found"
+    exit 1
+  fi
+
+  create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"name":"Runtime Lead","email":"runtime.lead@example.com","source":"whatsapp"}' \
+    "$base_url/api/crm/leads")"
+  echo "[test] crm api create => $create_response"
+
+  created_public_id="$(echo "$create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$created_public_id" ]]; then
+    echo "[test] runtime lead public id was not returned by create response"
+    exit 1
+  fi
+
+  owner_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d "{\"ownerUserId\":\"$owner_public_id\"}" \
+    "$base_url/api/crm/leads/$created_public_id/owner")"
+  echo "[test] crm api owner => $owner_response"
+
+  if [[ "$owner_response" != *"\"ownerUserId\":\"$owner_public_id\""* ]]; then
+    echo "[test] runtime lead owner update did not persist"
+    exit 1
+  fi
+
+  status_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d '{"status":"contacted"}' \
+    "$base_url/api/crm/leads/$created_public_id/status")"
+  echo "[test] crm api status => $status_response"
+
+  if [[ "$status_response" != *'"status":"contacted"'* ]]; then
+    echo "[test] runtime lead status update did not persist"
+    exit 1
+  fi
+
+  summary_response="$(curl -fsS "$base_url/api/crm/leads/summary")"
+  echo "[test] crm api summary => $summary_response"
+
+  if [[ "$summary_response" != *'"total":2'* || "$summary_response" != *'"assigned":2'* || "$summary_response" != *'"contacted":1'* ]]; then
+    echo "[test] runtime CRM summary did not reflect live updates"
+    exit 1
+  fi
+}
+
 run_smoke() {
   trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
   bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
   "${COMPOSE_CMD[@]}" ps
   run_identity_database_smoke
+  run_crm_runtime_smoke
 }
 
 usage() {
