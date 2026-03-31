@@ -9,3 +9,5 @@
 - `v0.0.2`: [UPDATE 31/03/2026 - 01:21 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `docs/FASES.md` removido da documentacao publica e migrado para a trilha privada de contexto em `.TEMP/`.
 - `v0.0.3`: [UPDATE 31/03/2026 - 01:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `Dockerfile` iniciais criados para `edge`, `identity` e `webhook-hub`, preparando os primeiros servicos para execucao padronizada em container.
 - `v0.0.3`: [UPDATE 31/03/2026 - 01:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Primeiras migrations SQL criadas para `common` e `identity`, com extensoes compartilhadas e base inicial de `tenants` e `companies`.
+- `v0.0.4`: [UPDATE 31/03/2026 - 01:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `infra/docker-compose.yml` criado com `service-postgresql`, `service-redis`, `edge`, `identity` e `webhook-hub` como primeiro ecossistema local.
+- `v0.0.4`: [UPDATE 31/03/2026 - 01:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Scripts `build.sh`, `up.sh`, `down.sh` e `logs.sh` criados para operar o ambiente local com compose, sem espalhar comandos pelo repositorio.

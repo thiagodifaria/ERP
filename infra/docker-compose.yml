@@ -1,0 +1,74 @@
+services:
+  service-postgresql:
+    image: postgres:16-alpine
+    container_name: erp-postgresql
+    environment:
+      POSTGRES_DB: ${ERP_POSTGRES_DB}
+      POSTGRES_USER: ${ERP_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${ERP_POSTGRES_PASSWORD}
+      TZ: ${ERP_TZ}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - erp-postgresql-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  service-redis:
+    image: redis:7-alpine
+    container_name: erp-redis
+    ports:
+      - "${REDIS_PORT}:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - erp-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  edge:
+    build:
+      context: ../service-api/service-golang/edge
+    container_name: erp-edge
+    environment:
+      EDGE_HTTP_ADDRESS: ":8080"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+      service-redis:
+        condition: service_healthy
+    ports:
+      - "${EDGE_HTTP_PORT}:8080"
+
+  identity:
+    build:
+      context: ../service-api/service-csharp/identity
+    container_name: erp-identity
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+    ports:
+      - "${IDENTITY_HTTP_PORT}:8080"
+
+  webhook-hub:
+    build:
+      context: ../service-api/service-rust/webhook-hub
+    container_name: erp-webhook-hub
+    environment:
+      WEBHOOK_HUB_HTTP_ADDRESS: "0.0.0.0:8082"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+      service-redis:
+        condition: service_healthy
+    ports:
+      - "${WEBHOOK_HUB_HTTP_PORT}:8082"
+
+volumes:
+  erp-postgresql-data:
+  erp-redis-data:
