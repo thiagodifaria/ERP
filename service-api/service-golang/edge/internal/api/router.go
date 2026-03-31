@@ -14,6 +14,7 @@ func NewRouter(logger *telemetry.Logger) http.Handler {
   mux := http.NewServeMux()
   mux.HandleFunc("/health/live", handler.Live)
   mux.HandleFunc("/health/ready", handler.Ready)
+  mux.HandleFunc("/health/details", handler.Details)
 
   return middleware.WithCorrelation(logger, mux)
 }

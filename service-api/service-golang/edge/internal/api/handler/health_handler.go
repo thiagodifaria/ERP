@@ -23,6 +23,29 @@ func Ready(writer http.ResponseWriter, request *http.Request) {
   })
 }
 
+func Details(writer http.ResponseWriter, request *http.Request) {
+  writer.Header().Set("Content-Type", "application/json")
+  writer.WriteHeader(http.StatusOK)
+  _ = json.NewEncoder(writer).Encode(dto.ReadinessResponse{
+    Service: "edge",
+    Status:  "ready",
+    Dependencies: []dto.DependencyResponse{
+      {
+        Name:   "router",
+        Status: "ready",
+      },
+      {
+        Name:   "postgresql",
+        Status: "pending-runtime-wiring",
+      },
+      {
+        Name:   "redis",
+        Status: "pending-runtime-wiring",
+      },
+    },
+  })
+}
+
 func respond(writer http.ResponseWriter, response dto.HealthResponse) {
   writer.Header().Set("Content-Type", "application/json")
   writer.WriteHeader(http.StatusOK)

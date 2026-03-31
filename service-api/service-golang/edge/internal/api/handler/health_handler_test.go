@@ -56,3 +56,31 @@ func TestReadyReturnsEdgeServiceStatus(t *testing.T) {
     t.Fatalf("expected status ready, got %s", response.Status)
   }
 }
+
+func TestDetailsReturnsReadinessPayload(t *testing.T) {
+  request := httptest.NewRequest(http.MethodGet, "/health/details", nil)
+  recorder := httptest.NewRecorder()
+
+  Details(recorder, request)
+
+  if recorder.Code != http.StatusOK {
+    t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+  }
+
+  var response dto.ReadinessResponse
+  if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+    t.Fatalf("unexpected decode error: %v", err)
+  }
+
+  if response.Service != "edge" {
+    t.Fatalf("expected service edge, got %s", response.Service)
+  }
+
+  if response.Status != "ready" {
+    t.Fatalf("expected status ready, got %s", response.Status)
+  }
+
+  if len(response.Dependencies) != 3 {
+    t.Fatalf("expected 3 dependencies, got %d", len(response.Dependencies))
+  }
+}

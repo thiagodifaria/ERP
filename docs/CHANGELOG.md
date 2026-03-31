@@ -25,3 +25,5 @@
 - `v0.0.10`: [UPDATE 31/03/2026 - 02:28 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Testes unitarios e de integracao adicionados para a leitura de roles, incluindo retorno `404` para tenant desconhecido, com validacao em container.
 - `v0.0.11`: [UPDATE 31/03/2026 - 02:40 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` recebeu contrato de repositorio para tenants, geracao de `public_id` em UUIDv7 e fluxo inicial de criacao com `POST /api/identity/tenants`.
 - `v0.0.11`: [UPDATE 31/03/2026 - 02:40 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Testes unitarios e de integracao ampliados para cobrir criacao de tenant e conflito de slug, com validacao executada em container.
+- `v0.0.12`: [UPDATE 31/03/2026 - 02:52 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `edge` e `webhook-hub` ganharam endpoint `GET /health/details` com readiness detalhado e dependencias observaveis no bootstrap.
+- `v0.0.12`: [UPDATE 31/03/2026 - 02:52 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Smoke coverage adicionada para `edge` e `webhook-hub`, com validacao de router e rotas de health executada em container.
