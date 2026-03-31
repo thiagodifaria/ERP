@@ -123,3 +123,5 @@
 - `v0.0.60`: [UPDATE 31/03/2026 - 14:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `identity` foi ampliado para remover o membro adicionado em runtime real no PostgreSQL e confirmar o snapshot consolidado com `teamMemberships=1`.
 - `v0.0.61`: [UPDATE 31/03/2026 - 15:00 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou `GET /api/identity/tenants/{slug}/companies/{companyPublicId}` para leitura pontual de empresa por `publicId`.
 - `v0.0.61`: [UPDATE 31/03/2026 - 15:00 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A trilha de lookup individual de `company` foi ligada sobre os catalogs existentes com cobertura unitaria para sucesso e `404`.
+- `v0.0.62`: [UPDATE 31/03/2026 - 15:04 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Integration e contract tests do `identity` passaram a validar o contrato publico de leitura individual de company por `publicId`.
+- `v0.0.62`: [UPDATE 31/03/2026 - 15:04 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `identity` foi ampliado para consultar a company criada em runtime real no PostgreSQL e confirmar a mutacao persistida.

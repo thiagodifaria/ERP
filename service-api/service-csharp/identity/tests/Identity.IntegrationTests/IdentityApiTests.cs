@@ -122,6 +122,54 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
   }
 
   [Fact]
+  public async Task CompanyByPublicIdEndpointShouldReturnCompanyForKnownTenant()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With Company Lookup");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var companiesResponse = await _client.GetAsync($"/api/identity/tenants/{tenantPayload!.Slug}/companies");
+    var companiesPayload = await companiesResponse.Content.ReadFromJsonAsync<CompanyResponse[]>();
+
+    Assert.NotNull(companiesPayload);
+    Assert.NotEmpty(companiesPayload);
+
+    var response = await _client.GetAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/companies/{companiesPayload![0].PublicId}");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<CompanyResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal(companiesPayload[0].PublicId, payload!.PublicId);
+    Assert.Equal(tenantPayload.DisplayName, payload.DisplayName);
+  }
+
+  [Fact]
+  public async Task CompanyByPublicIdEndpointShouldReturnNotFoundForUnknownCompany()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With Missing Company");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var response = await _client.GetAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/companies/{Guid.NewGuid()}");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
+
+  [Fact]
   public async Task TenantUsersEndpointShouldReturnUsersForKnownTenant()
   {
     var response = await _client.GetAsync("/api/identity/tenants/bootstrap-ops/users");

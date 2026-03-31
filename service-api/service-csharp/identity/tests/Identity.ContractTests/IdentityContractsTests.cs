@@ -109,6 +109,37 @@ public sealed class IdentityContractsTests : IClassFixture<WebApplicationFactory
   }
 
   [Fact]
+  public async Task CompanyDetailContractShouldExposePublicFields()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Contract Company Detail");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var companiesResponse = await _client.GetAsync($"/api/identity/tenants/{tenantPayload!.Slug}/companies");
+    var companiesPayload = await companiesResponse.Content.ReadFromJsonAsync<CompanyResponse[]>();
+
+    Assert.NotNull(companiesPayload);
+    Assert.NotEmpty(companiesPayload);
+
+    var response = await _client.GetAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/companies/{companiesPayload![0].PublicId}");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<CompanyResponse>();
+
+    Assert.NotNull(payload);
+    Assert.NotEqual(Guid.Empty, payload!.PublicId);
+    Assert.Equal(tenantPayload.DisplayName, payload.DisplayName);
+    Assert.Equal("active", payload.Status);
+  }
+
+  [Fact]
   public async Task UpdateUserContractShouldReturnUpdatedResourceShape()
   {
     var tenantRequest = new CreateTenantRequest(
