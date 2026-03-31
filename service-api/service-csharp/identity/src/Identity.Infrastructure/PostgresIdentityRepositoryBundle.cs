@@ -783,6 +783,24 @@ public sealed class PostgresIdentityRepositoryBundle :
     return MapUserRole(reader);
   }
 
+  bool IUserRoleRepository.RemoveByTenantIdAndUserIdAndRoleId(long tenantId, long userId, long roleId)
+  {
+    const string sql = """
+      DELETE FROM identity.user_roles
+      WHERE tenant_id = @tenant_id
+        AND user_id = @user_id
+        AND role_id = @role_id;
+      """;
+
+    using var connection = OpenConnection();
+    using var command = new NpgsqlCommand(sql, connection);
+    command.Parameters.AddWithValue("tenant_id", tenantId);
+    command.Parameters.AddWithValue("user_id", userId);
+    command.Parameters.AddWithValue("role_id", roleId);
+
+    return command.ExecuteNonQuery() > 0;
+  }
+
   long IUserRoleRepository.NextId()
   {
     return NextId("identity.user_roles");

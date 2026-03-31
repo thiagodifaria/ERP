@@ -216,6 +216,25 @@ public static class Server
           $"/api/identity/tenants/{slug}/users/{userPublicId}/roles/{result.UserRole!.RoleCode}",
           result.UserRole);
       });
+    app.MapDelete(
+      "/api/identity/tenants/{slug}/users/{userPublicId:guid}/roles/{roleCode}",
+      Results<Ok<UserRoleResponse>, BadRequest<ErrorResponse>, NotFound<ErrorResponse>>
+      (string slug, Guid userPublicId, string roleCode, RevokeBootstrapUserRole useCase) =>
+      {
+        var result = useCase.Execute(slug, userPublicId, roleCode);
+
+        if (result.IsBadRequest)
+        {
+          return TypedResults.BadRequest(result.Error!);
+        }
+
+        if (result.IsNotFound)
+        {
+          return TypedResults.NotFound(result.Error!);
+        }
+
+        return TypedResults.Ok(result.UserRole!);
+      });
     app.MapGet(
       "/api/identity/tenants",
       (ListBootstrapTenants useCase) => TypedResults.Ok(useCase.Execute()));

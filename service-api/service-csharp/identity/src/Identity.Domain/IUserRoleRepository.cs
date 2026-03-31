@@ -5,5 +5,7 @@ public interface IUserRoleRepository : IUserRoleCatalog
 {
   UserRole Add(UserRole userRole);
 
+  bool RemoveByTenantIdAndUserIdAndRoleId(long tenantId, long userId, long roleId);
+
   long NextId();
 }

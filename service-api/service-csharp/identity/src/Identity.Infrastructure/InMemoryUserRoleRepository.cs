@@ -73,6 +73,26 @@ public sealed class InMemoryUserRoleRepository : IUserRoleRepository
     }
   }
 
+  public bool RemoveByTenantIdAndUserIdAndRoleId(long tenantId, long userId, long roleId)
+  {
+    lock (_sync)
+    {
+      if (!_userRolesByUser.TryGetValue((tenantId, userId), out var userRoles))
+      {
+        return false;
+      }
+
+      var removed = userRoles.RemoveAll(userRole => userRole.RoleId == roleId);
+
+      if (userRoles.Count == 0)
+      {
+        _userRolesByUser.Remove((tenantId, userId));
+      }
+
+      return removed > 0;
+    }
+  }
+
   public long NextId()
   {
     lock (_sync)

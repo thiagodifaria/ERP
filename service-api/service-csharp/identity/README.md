@@ -33,6 +33,7 @@ Public routes:
 - `PATCH /api/identity/tenants/{slug}/users/{userPublicId}`
 - `GET /api/identity/tenants/{slug}/users/{userPublicId}/roles`
 - `POST /api/identity/tenants/{slug}/users/{userPublicId}/roles`
+- `DELETE /api/identity/tenants/{slug}/users/{userPublicId}/roles/{roleCode}`
 - `GET /api/identity/tenants/{slug}/teams`
 - `POST /api/identity/tenants/{slug}/teams`
 - `GET /api/identity/tenants/{slug}/teams/{teamPublicId}/members`
