@@ -229,12 +229,168 @@ run_crm_runtime_smoke() {
   fi
 }
 
+run_identity_runtime_smoke() {
+  local base_url="http://localhost:${IDENTITY_HTTP_PORT:-8081}"
+  local tenant_slug="runtime-identity-lab"
+  local tenants_response
+  local create_tenant_response
+  local companies_response
+  local create_company_response
+  local users_response
+  local create_user_response
+  local created_user_public_id
+  local teams_response
+  local create_team_response
+  local created_team_public_id
+  local members_response
+  local assign_role_response
+  local user_roles_response
+  local roles_response
+  local snapshot_response
+
+  "${COMPOSE_CMD[@]}" up -d --build identity
+  wait_for_http_ready "$base_url/health/ready"
+
+  tenants_response="$(curl -fsS "$base_url/api/identity/tenants")"
+  echo "[test] identity api tenants => $tenants_response"
+
+  if [[ "$tenants_response" != *'"slug":"bootstrap-ops"'* ]]; then
+    echo "[test] bootstrap identity tenants were not returned by the live API"
+    exit 1
+  fi
+
+  create_tenant_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"slug\":\"$tenant_slug\",\"displayName\":\"Runtime Identity Lab\"}" \
+    "$base_url/api/identity/tenants")"
+  echo "[test] identity api create tenant => $create_tenant_response"
+
+  if [[ "$create_tenant_response" != *"\"slug\":\"$tenant_slug\""* ]]; then
+    echo "[test] runtime identity tenant was not created"
+    exit 1
+  fi
+
+  companies_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/companies")"
+  echo "[test] identity api companies => $companies_response"
+
+  if [[ "$companies_response" != *'"displayName":"Runtime Identity Lab"'* ]]; then
+    echo "[test] default runtime identity company was not provisioned"
+    exit 1
+  fi
+
+  create_company_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"displayName":"Runtime Identity Branch","legalName":"Runtime Identity Branch LTDA","taxId":"12345678901234"}' \
+    "$base_url/api/identity/tenants/$tenant_slug/companies")"
+  echo "[test] identity api create company => $create_company_response"
+
+  if [[ "$create_company_response" != *'"displayName":"Runtime Identity Branch"'* ]]; then
+    echo "[test] runtime identity company create did not persist"
+    exit 1
+  fi
+
+  users_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/users")"
+  echo "[test] identity api users => $users_response"
+
+  if [[ "$users_response" != *"\"email\":\"owner@$tenant_slug.local\""* ]]; then
+    echo "[test] default runtime identity owner was not provisioned"
+    exit 1
+  fi
+
+  create_user_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"runtime.user@$tenant_slug.local\",\"displayName\":\"Runtime User\",\"givenName\":\"Runtime\",\"familyName\":\"User\"}" \
+    "$base_url/api/identity/tenants/$tenant_slug/users")"
+  echo "[test] identity api create user => $create_user_response"
+
+  created_user_public_id="$(echo "$create_user_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$created_user_public_id" ]]; then
+    echo "[test] runtime identity user public id was not returned"
+    exit 1
+  fi
+
+  teams_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/teams")"
+  echo "[test] identity api teams => $teams_response"
+
+  if [[ "$teams_response" != *'"name":"Core"'* ]]; then
+    echo "[test] default runtime identity team was not provisioned"
+    exit 1
+  fi
+
+  create_team_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"name":"Field Ops"}' \
+    "$base_url/api/identity/tenants/$tenant_slug/teams")"
+  echo "[test] identity api create team => $create_team_response"
+
+  created_team_public_id="$(echo "$create_team_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$created_team_public_id" ]]; then
+    echo "[test] runtime identity team public id was not returned"
+    exit 1
+  fi
+
+  members_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"userPublicId\":\"$created_user_public_id\"}" \
+    "$base_url/api/identity/tenants/$tenant_slug/teams/$created_team_public_id/members")"
+  echo "[test] identity api add member => $members_response"
+
+  if [[ "$members_response" != *"\"userPublicId\":\"$created_user_public_id\""* ]]; then
+    echo "[test] runtime identity team membership did not persist"
+    exit 1
+  fi
+
+  assign_role_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"roleCode":"viewer"}' \
+    "$base_url/api/identity/tenants/$tenant_slug/users/$created_user_public_id/roles")"
+  echo "[test] identity api assign role => $assign_role_response"
+
+  if [[ "$assign_role_response" != *'"roleCode":"viewer"'* ]]; then
+    echo "[test] runtime identity role assignment did not persist"
+    exit 1
+  fi
+
+  user_roles_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/users/$created_user_public_id/roles")"
+  echo "[test] identity api user roles => $user_roles_response"
+
+  if [[ "$user_roles_response" != *'"roleCode":"viewer"'* ]]; then
+    echo "[test] runtime identity user role read did not return viewer"
+    exit 1
+  fi
+
+  roles_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/roles")"
+  echo "[test] identity api roles => $roles_response"
+
+  if [[ "$roles_response" != *'"code":"owner"'* || "$roles_response" != *'"code":"viewer"'* ]]; then
+    echo "[test] runtime identity tenant roles did not return default role catalog"
+    exit 1
+  fi
+
+  snapshot_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/snapshot")"
+  echo "[test] identity api snapshot => $snapshot_response"
+
+  if [[ "$snapshot_response" != *'"companies":2'* || "$snapshot_response" != *'"users":2'* || "$snapshot_response" != *'"teams":2'* || "$snapshot_response" != *'"roles":5'* || "$snapshot_response" != *'"teamMemberships":2'* || "$snapshot_response" != *'"userRoles":2'* ]]; then
+    echo "[test] runtime identity snapshot did not reflect live updates"
+    exit 1
+  fi
+}
+
 run_smoke() {
   trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
+  export CRM_HTTP_PORT="${CRM_HTTP_PORT_SMOKE:-18083}"
+  export IDENTITY_HTTP_PORT="${IDENTITY_HTTP_PORT_SMOKE:-18081}"
   bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
   "${COMPOSE_CMD[@]}" ps
   run_identity_database_smoke
   run_crm_runtime_smoke
+  run_identity_runtime_smoke
 }
 
 usage() {
