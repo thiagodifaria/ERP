@@ -11,3 +11,5 @@
 - `v0.0.3`: [UPDATE 31/03/2026 - 01:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Primeiras migrations SQL criadas para `common` e `identity`, com extensoes compartilhadas e base inicial de `tenants` e `companies`.
 - `v0.0.4`: [UPDATE 31/03/2026 - 01:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `infra/docker-compose.yml` criado com `service-postgresql`, `service-redis`, `edge`, `identity` e `webhook-hub` como primeiro ecossistema local.
 - `v0.0.4`: [UPDATE 31/03/2026 - 01:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Scripts `build.sh`, `up.sh`, `down.sh` e `logs.sh` criados para operar o ambiente local com compose, sem espalhar comandos pelo repositorio.
+- `v0.0.5`: [UPDATE 31/03/2026 - 01:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Scripts `db.sh` e `test.sh` criados para aplicar migrations e validar servicos em modo container-first, sem depender de instalacao local das stacks.
+- `v0.0.5`: [UPDATE 31/03/2026 - 01:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Contexto `identity` aprofundado com migrations de `users`, `teams`, `roles`, `team_memberships` e `user_roles`, mais os modelos iniciais correspondentes em C#.

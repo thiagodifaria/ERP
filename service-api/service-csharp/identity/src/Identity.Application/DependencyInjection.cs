@@ -1,5 +1,7 @@
 // Este modulo registra dependencias da camada de aplicacao.
 // Casos de uso e orquestracao entram aqui conforme o servico crescer.
+using Microsoft.Extensions.DependencyInjection;
+
 namespace Identity.Application;
 
 public static class DependencyInjection

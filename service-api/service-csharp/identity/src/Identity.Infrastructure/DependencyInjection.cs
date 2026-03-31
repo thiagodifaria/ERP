@@ -1,5 +1,7 @@
 // Este modulo registra adapters, persistencia e integracoes tecnicas do servico.
 // Dependencias externas nao devem vazar para dominio ou aplicacao.
+using Microsoft.Extensions.DependencyInjection;
+
 namespace Identity.Infrastructure;
 
 public static class DependencyInjection

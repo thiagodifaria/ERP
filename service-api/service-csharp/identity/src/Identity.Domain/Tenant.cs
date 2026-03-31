@@ -4,16 +4,22 @@ namespace Identity.Domain;
 
 public sealed class Tenant
 {
-  public Tenant(long id, Guid publicId, string name)
+  public Tenant(long id, Guid publicId, string slug, string displayName, string status)
   {
     Id = id;
     PublicId = publicId;
-    Name = name;
+    Slug = slug;
+    DisplayName = displayName;
+    Status = status;
   }
 
   public long Id { get; }
 
   public Guid PublicId { get; }
 
-  public string Name { get; }
+  public string Slug { get; }
+
+  public string DisplayName { get; }
+
+  public string Status { get; }
 }

@@ -1,5 +1,8 @@
 // Este arquivo concentra as rotas minimas e o bootstrap HTTP do servico.
 // Crescimento de endpoints deve manter a API fina.
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Routing;
 using Identity.Contracts;
 
 namespace Identity.Api;
