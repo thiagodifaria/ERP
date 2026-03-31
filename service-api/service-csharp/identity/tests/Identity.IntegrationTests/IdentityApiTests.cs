@@ -46,6 +46,27 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
   }
 
   [Fact]
+  public async Task TenantBySlugEndpointShouldReturnTenant()
+  {
+    var response = await _client.GetAsync("/api/identity/tenants/bootstrap-ops");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("bootstrap-ops", payload.Slug);
+  }
+
+  [Fact]
+  public async Task TenantBySlugEndpointShouldReturnNotFoundForUnknownSlug()
+  {
+    var response = await _client.GetAsync("/api/identity/tenants/missing-tenant");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
+
+  [Fact]
   public async Task CreateTenantShouldReturnCreatedTenant()
   {
     var request = new CreateTenantRequest(
@@ -86,6 +107,21 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
 
     Assert.NotNull(payload);
     Assert.Equal("tenant_slug_conflict", payload.Code);
+  }
+
+  [Fact]
+  public async Task CreateTenantShouldReturnBadRequestForInvalidSlug()
+  {
+    var request = new CreateTenantRequest("invalid slug", "Invalid Slug");
+
+    var response = await _client.PostAsJsonAsync("/api/identity/tenants", request);
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("invalid_slug", payload.Code);
   }
 
   [Fact]
