@@ -127,3 +127,5 @@
 - `v0.0.62`: [UPDATE 31/03/2026 - 15:04 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `identity` foi ampliado para consultar a company criada em runtime real no PostgreSQL e confirmar a mutacao persistida.
 - `v0.0.63`: [UPDATE 31/03/2026 - 15:09 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou `GET /api/identity/tenants/{slug}/users/{userPublicId}` para leitura pontual de usuario por `publicId`.
 - `v0.0.63`: [UPDATE 31/03/2026 - 15:09 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Lookup individual de `user` foi validado com cobertura unitaria, integration, contract e smoke HTTP em runtime real contra o PostgreSQL.
+- `v0.0.64`: [UPDATE 31/03/2026 - 15:17 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack `TypeScript` ganhou o primeiro servico real, `workflow-control`, com toolchain propria, bootstrap HTTP e estrutura de pastas alinhada ao monorepo.
+- `v0.0.64`: [UPDATE 31/03/2026 - 15:17 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `.gitignore` passou a ignorar `node_modules` para proteger o fluxo container-first dos proximos miniupdates em `TypeScript`.
