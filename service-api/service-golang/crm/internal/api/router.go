@@ -13,7 +13,11 @@ import (
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/telemetry"
 )
 
-func NewRouter(logger *telemetry.Logger, leadRepository repository.LeadRepository) http.Handler {
+func NewRouter(
+	logger *telemetry.Logger,
+	leadRepository repository.LeadRepository,
+	leadNoteRepository repository.LeadNoteRepository,
+) http.Handler {
 	mux := http.NewServeMux()
 	leadHandler := handler.NewLeadHandler(
 		query.NewListLeads(leadRepository),
@@ -24,6 +28,10 @@ func NewRouter(logger *telemetry.Logger, leadRepository repository.LeadRepositor
 		command.NewUpdateLeadOwner(leadRepository),
 		command.NewUpdateLeadStatus(leadRepository),
 	)
+	leadNoteHandler := handler.NewLeadNoteHandler(
+		query.NewGetLeadByPublicID(leadRepository),
+		query.NewListLeadNotes(leadNoteRepository),
+	)
 
 	mux.HandleFunc("/health/live", handler.Live)
 	mux.HandleFunc("/health/ready", handler.Ready)
@@ -32,6 +40,7 @@ func NewRouter(logger *telemetry.Logger, leadRepository repository.LeadRepositor
 	mux.HandleFunc("GET /api/crm/leads", leadHandler.List)
 	mux.HandleFunc("POST /api/crm/leads", leadHandler.Create)
 	mux.HandleFunc("GET /api/crm/leads/{publicId}", leadHandler.GetByPublicID)
+	mux.HandleFunc("GET /api/crm/leads/{publicId}/notes", leadNoteHandler.List)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}", leadHandler.UpdateProfile)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/owner", leadHandler.UpdateOwner)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/status", leadHandler.UpdateStatus)
@@ -42,6 +51,7 @@ func NewRouter(logger *telemetry.Logger, leadRepository repository.LeadRepositor
 func NewRouterWithRuntime(
 	logger *telemetry.Logger,
 	leadRepository repository.LeadRepository,
+	leadNoteRepository repository.LeadNoteRepository,
 	repositoryDriver string,
 ) http.Handler {
 	mux := http.NewServeMux()
@@ -54,6 +64,10 @@ func NewRouterWithRuntime(
 		command.NewUpdateLeadOwner(leadRepository),
 		command.NewUpdateLeadStatus(leadRepository),
 	)
+	leadNoteHandler := handler.NewLeadNoteHandler(
+		query.NewGetLeadByPublicID(leadRepository),
+		query.NewListLeadNotes(leadNoteRepository),
+	)
 
 	mux.HandleFunc("/health/live", handler.Live)
 	mux.HandleFunc("/health/ready", handler.Ready)
@@ -62,6 +76,7 @@ func NewRouterWithRuntime(
 	mux.HandleFunc("GET /api/crm/leads", leadHandler.List)
 	mux.HandleFunc("POST /api/crm/leads", leadHandler.Create)
 	mux.HandleFunc("GET /api/crm/leads/{publicId}", leadHandler.GetByPublicID)
+	mux.HandleFunc("GET /api/crm/leads/{publicId}/notes", leadNoteHandler.List)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}", leadHandler.UpdateProfile)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/owner", leadHandler.UpdateOwner)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/status", leadHandler.UpdateStatus)

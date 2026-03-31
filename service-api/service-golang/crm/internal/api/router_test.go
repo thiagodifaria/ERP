@@ -16,6 +16,7 @@ func TestRouterShouldExposeHealthDetails(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
+		persistence.NewInMemoryLeadNoteRepository(),
 	)
 	request := httptest.NewRequest(http.MethodGet, "/health/details", nil)
 	recorder := httptest.NewRecorder()
@@ -48,6 +49,7 @@ func TestRouterShouldExposeLeadList(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
+		persistence.NewInMemoryLeadNoteRepository(),
 	)
 	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads", nil)
 	recorder := httptest.NewRecorder()
@@ -72,6 +74,7 @@ func TestRouterShouldExposeLeadSummary(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
+		persistence.NewInMemoryLeadNoteRepository(),
 	)
 	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/summary", nil)
 	recorder := httptest.NewRecorder()
@@ -96,6 +99,7 @@ func TestRouterShouldExposeLeadByPublicID(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
+		persistence.NewInMemoryLeadNoteRepository(),
 	)
 	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/"+persistence.BootstrapLeadPublicID, nil)
 	recorder := httptest.NewRecorder()
@@ -120,6 +124,7 @@ func TestRouterShouldUpdateLeadOwner(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
+		persistence.NewInMemoryLeadNoteRepository(),
 	)
 	request := httptest.NewRequest(
 		http.MethodPatch,
@@ -148,6 +153,7 @@ func TestRouterShouldUpdateLeadProfile(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
+		persistence.NewInMemoryLeadNoteRepository(),
 	)
 	request := httptest.NewRequest(
 		http.MethodPatch,
@@ -169,5 +175,30 @@ func TestRouterShouldUpdateLeadProfile(t *testing.T) {
 
 	if response.Email != "bootstrap.prime@example.com" {
 		t.Fatalf("expected updated email bootstrap.prime@example.com, got %s", response.Email)
+	}
+}
+
+func TestRouterShouldExposeLeadNotes(t *testing.T) {
+	router := NewRouter(
+		telemetry.New("crm-test"),
+		persistence.NewInMemoryLeadRepository(),
+		persistence.NewInMemoryLeadNoteRepository(),
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/notes", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response []dto.LeadNoteResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if len(response) != 1 {
+		t.Fatalf("expected 1 note, got %d", len(response))
 	}
 }
