@@ -1,0 +1,15 @@
+.git
+.gitignore
+.TEMP
+PLANEJAMENTO.md
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/build
+**/.pytest_cache
+**/__pycache__
+**/coverage
+**/.coverage
+**/.idea
+**/.vscode
