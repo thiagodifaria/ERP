@@ -9,10 +9,12 @@ public static class DependencyInjection
   public static IServiceCollection AddIdentityApplication(this IServiceCollection services)
   {
     services.AddScoped<AddBootstrapTeamMember>();
+    services.AddScoped<AssignBootstrapUserRole>();
     services.AddScoped<CreateBootstrapCompany>();
     services.AddScoped<CreateBootstrapTenant>();
     services.AddScoped<CreateBootstrapTeam>();
     services.AddScoped<CreateBootstrapUser>();
+    services.AddScoped<ListBootstrapUserRoles>();
     services.AddScoped<ListBootstrapCompanies>();
     services.AddScoped<ListBootstrapTeamMembers>();
     services.AddScoped<ListBootstrapTeams>();

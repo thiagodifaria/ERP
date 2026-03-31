@@ -12,6 +12,7 @@ public sealed class CreateBootstrapTenant
   private readonly ITeamRepository _teamRepository;
   private readonly ITeamMembershipRepository _teamMembershipRepository;
   private readonly IRoleRepository _roleRepository;
+  private readonly IUserRoleRepository _userRoleRepository;
 
   public CreateBootstrapTenant(
     ITenantRepository tenantRepository,
@@ -19,7 +20,8 @@ public sealed class CreateBootstrapTenant
     IUserRepository userRepository,
     ITeamRepository teamRepository,
     ITeamMembershipRepository teamMembershipRepository,
-    IRoleRepository roleRepository)
+    IRoleRepository roleRepository,
+    IUserRoleRepository userRoleRepository)
   {
     _tenantRepository = tenantRepository;
     _companyRepository = companyRepository;
@@ -27,6 +29,7 @@ public sealed class CreateBootstrapTenant
     _teamRepository = teamRepository;
     _teamMembershipRepository = teamMembershipRepository;
     _roleRepository = roleRepository;
+    _userRoleRepository = userRoleRepository;
   }
 
   public CreateBootstrapTenantResult Execute(CreateTenantRequest request)
@@ -69,10 +72,11 @@ public sealed class CreateBootstrapTenant
     _companyRepository.SeedDefaults(createdTenant);
     var defaultUsers = _userRepository.SeedDefaults(createdTenant);
     var defaultTeams = _teamRepository.SeedDefaults(createdTenant);
-    _roleRepository.SeedDefaults(createdTenant);
+    var defaultRoles = _roleRepository.SeedDefaults(createdTenant);
 
     var defaultUser = defaultUsers.FirstOrDefault();
     var defaultTeam = defaultTeams.FirstOrDefault();
+    var defaultOwnerRole = defaultRoles.FirstOrDefault(role => role.Code == "owner");
 
     if (defaultUser is not null
       && defaultTeam is not null
@@ -86,6 +90,21 @@ public sealed class CreateBootstrapTenant
         createdTenant.Id,
         defaultTeam.Id,
         defaultUser.Id,
+        DateTimeOffset.UtcNow));
+    }
+
+    if (defaultUser is not null
+      && defaultOwnerRole is not null
+      && _userRoleRepository.FindByTenantIdAndUserIdAndRoleId(
+        createdTenant.Id,
+        defaultUser.Id,
+        defaultOwnerRole.Id) is null)
+    {
+      _userRoleRepository.Add(new UserRole(
+        _userRoleRepository.NextId(),
+        createdTenant.Id,
+        defaultUser.Id,
+        defaultOwnerRole.Id,
         DateTimeOffset.UtcNow));
     }
 

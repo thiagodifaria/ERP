@@ -20,13 +20,18 @@ public sealed class CreateBootstrapTenantTests
       teamRepository,
       userRepository);
     var roleRepository = new InMemoryRoleRepository();
+    var userRoleRepository = new InMemoryUserRoleRepository(
+      repository,
+      userRepository,
+      roleRepository);
     var useCase = new CreateBootstrapTenant(
       repository,
       companyRepository,
       userRepository,
       teamRepository,
       teamMembershipRepository,
-      roleRepository);
+      roleRepository,
+      userRoleRepository);
 
     var result = useCase.Execute(new CreateTenantRequest("tenant-lab", "Tenant Lab"));
 
@@ -40,6 +45,9 @@ public sealed class CreateBootstrapTenantTests
     Assert.Single(teamMembershipRepository.ListByTenantIdAndTeamId(
       result.Tenant.Id,
       teamRepository.ListByTenantId(result.Tenant.Id).First().Id));
+    Assert.Single(userRoleRepository.ListByTenantIdAndUserId(
+      result.Tenant.Id,
+      userRepository.ListByTenantId(result.Tenant.Id).First().Id));
     Assert.Equal(5, roleRepository.ListByTenantSlug("tenant-lab").Count);
   }
 
@@ -55,13 +63,18 @@ public sealed class CreateBootstrapTenantTests
       teamRepository,
       userRepository);
     var roleRepository = new InMemoryRoleRepository();
+    var userRoleRepository = new InMemoryUserRoleRepository(
+      repository,
+      userRepository,
+      roleRepository);
     var useCase = new CreateBootstrapTenant(
       repository,
       companyRepository,
       userRepository,
       teamRepository,
       teamMembershipRepository,
-      roleRepository);
+      roleRepository,
+      userRoleRepository);
 
     var result = useCase.Execute(new CreateTenantRequest("bootstrap-ops", "Another Name"));
 

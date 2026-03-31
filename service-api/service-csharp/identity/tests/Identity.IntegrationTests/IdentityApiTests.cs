@@ -111,6 +111,34 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
   }
 
   [Fact]
+  public async Task UserRolesEndpointShouldReturnRolesForKnownUser()
+  {
+    var usersPayload = await _client.GetFromJsonAsync<UserResponse[]>("/api/identity/tenants/bootstrap-ops/users");
+
+    Assert.NotNull(usersPayload);
+
+    var response = await _client.GetAsync(
+      $"/api/identity/tenants/bootstrap-ops/users/{usersPayload![0].PublicId}/roles");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<UserRoleResponse[]>();
+
+    Assert.NotNull(payload);
+    Assert.NotEmpty(payload);
+    Assert.Contains(payload, userRole => userRole.RoleCode == "owner");
+  }
+
+  [Fact]
+  public async Task UserRolesEndpointShouldReturnNotFoundForUnknownUser()
+  {
+    var response = await _client.GetAsync(
+      $"/api/identity/tenants/bootstrap-ops/users/{Guid.NewGuid()}/roles");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
+
+  [Fact]
   public async Task TenantTeamsEndpointShouldReturnTeamsForKnownTenant()
   {
     var response = await _client.GetAsync("/api/identity/tenants/bootstrap-ops/teams");
@@ -207,6 +235,17 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
     Assert.NotNull(usersPayload);
     Assert.Single(usersPayload);
     Assert.Equal($"owner@{payload.Slug}.local", usersPayload[0].Email);
+
+    var userRolesResponse = await _client.GetAsync(
+      $"/api/identity/tenants/{payload.Slug}/users/{usersPayload[0].PublicId}/roles");
+
+    Assert.Equal(HttpStatusCode.OK, userRolesResponse.StatusCode);
+
+    var userRolesPayload = await userRolesResponse.Content.ReadFromJsonAsync<UserRoleResponse[]>();
+
+    Assert.NotNull(userRolesPayload);
+    Assert.Single(userRolesPayload);
+    Assert.Equal("owner", userRolesPayload[0].RoleCode);
 
     var teamsResponse = await _client.GetAsync($"/api/identity/tenants/{payload.Slug}/teams");
 
@@ -581,5 +620,75 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
 
     Assert.NotNull(payload);
     Assert.Equal("invalid_user_public_id", payload.Code);
+  }
+
+  [Fact]
+  public async Task AssignUserRoleShouldReturnCreatedRoleAssignment()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With Extra Role");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var userResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/users",
+      new CreateUserRequest("role.user@tenant-extra-role.local", "Role User", null, null));
+
+    var userPayload = await userResponse.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(userPayload);
+
+    var response = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{userPayload!.PublicId}/roles",
+      new AssignUserRoleRequest("viewer"));
+
+    Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<UserRoleResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("viewer", payload.RoleCode);
+  }
+
+  [Fact]
+  public async Task AssignUserRoleShouldReturnConflictForDuplicateRole()
+  {
+    var usersPayload = await _client.GetFromJsonAsync<UserResponse[]>("/api/identity/tenants/bootstrap-ops/users");
+
+    Assert.NotNull(usersPayload);
+
+    var response = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/bootstrap-ops/users/{usersPayload![0].PublicId}/roles",
+      new AssignUserRoleRequest("owner"));
+
+    Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("user_role_conflict", payload.Code);
+  }
+
+  [Fact]
+  public async Task AssignUserRoleShouldReturnBadRequestForBlankRoleCode()
+  {
+    var usersPayload = await _client.GetFromJsonAsync<UserResponse[]>("/api/identity/tenants/bootstrap-ops/users");
+
+    Assert.NotNull(usersPayload);
+
+    var response = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/bootstrap-ops/users/{usersPayload![0].PublicId}/roles",
+      new AssignUserRoleRequest("   "));
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("invalid_role_code", payload.Code);
   }
 }

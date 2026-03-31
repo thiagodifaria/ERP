@@ -31,12 +31,40 @@ public sealed class InMemoryRoleRepository : IRoleRepository
   {
     lock (_sync)
     {
-      if (_rolesByTenantSlug.TryGetValue(tenantSlug, out var roles))
-      {
-        return roles.ToArray();
-      }
+      return ListByTenantSlugUnsafe(tenantSlug);
+    }
+  }
 
-      return [];
+  public IReadOnlyCollection<Role> ListByTenantId(long tenantId)
+  {
+    lock (_sync)
+    {
+      return _rolesByTenantSlug
+        .SelectMany(entry => entry.Value)
+        .Where(role => role.TenantId == tenantId)
+        .ToArray();
+    }
+  }
+
+  public Role? FindByTenantIdAndId(long tenantId, long roleId)
+  {
+    lock (_sync)
+    {
+      return _rolesByTenantSlug
+        .SelectMany(entry => entry.Value)
+        .FirstOrDefault(role => role.TenantId == tenantId && role.Id == roleId);
+    }
+  }
+
+  public Role? FindByTenantIdAndCode(long tenantId, string code)
+  {
+    lock (_sync)
+    {
+      return _rolesByTenantSlug
+        .SelectMany(entry => entry.Value)
+        .FirstOrDefault(role =>
+          role.TenantId == tenantId
+          && role.Code.Equals(code, StringComparison.OrdinalIgnoreCase));
     }
   }
 
@@ -44,9 +72,10 @@ public sealed class InMemoryRoleRepository : IRoleRepository
   {
     lock (_sync)
     {
-      if (_rolesByTenantSlug.TryGetValue(tenant.Slug, out var existingRoles) && existingRoles.Count > 0)
+      var existingRoles = ListByTenantSlugUnsafe(tenant.Slug);
+      if (existingRoles.Count > 0)
       {
-        return existingRoles.ToArray();
+        return existingRoles;
       }
 
       var nextId = _rolesByTenantSlug
@@ -81,5 +110,15 @@ public sealed class InMemoryRoleRepository : IRoleRepository
       ("operator", "Operator"),
       ("viewer", "Viewer")
     ];
+  }
+
+  private IReadOnlyCollection<Role> ListByTenantSlugUnsafe(string tenantSlug)
+  {
+    if (_rolesByTenantSlug.TryGetValue(tenantSlug, out var roles))
+    {
+      return roles.ToArray();
+    }
+
+    return [];
   }
 }
