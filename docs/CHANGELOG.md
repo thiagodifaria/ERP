@@ -131,3 +131,5 @@
 - `v0.0.64`: [UPDATE 31/03/2026 - 15:17 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `.gitignore` passou a ignorar `node_modules` para proteger o fluxo container-first dos proximos miniupdates em `TypeScript`.
 - `v0.0.65`: [UPDATE 31/03/2026 - 15:24 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /health/live`, `GET /health/ready` e `GET /health/details` como primeira superficie HTTP util da stack `TypeScript`.
 - `v0.0.65`: [UPDATE 31/03/2026 - 15:24 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O README do servico passou a listar as rotas publicas iniciais e o readiness exposto ja distingue `router` de `definitions-catalog`.
+- `v0.0.66`: [UPDATE 31/03/2026 - 15:28 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou a primeira suite unitaria em `TypeScript`, cobrindo `live`, `ready` e `details` com `node:test`.
+- `v0.0.66`: [UPDATE 31/03/2026 - 15:28 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `package.json` do servico passou a expor `npm run test:unit`, alinhando a stack ao fluxo container-first do monorepo.
