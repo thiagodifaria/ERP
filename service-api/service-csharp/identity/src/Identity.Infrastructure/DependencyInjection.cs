@@ -12,6 +12,7 @@ public static class DependencyInjection
     services.AddSingleton<InMemoryTenantRepository>();
     services.AddSingleton<InMemoryCompanyRepository>();
     services.AddSingleton<InMemoryUserRepository>();
+    services.AddSingleton<InMemoryTeamRepository>();
     services.AddSingleton<InMemoryRoleRepository>();
     services.AddSingleton<ITenantCatalog>(serviceProvider => serviceProvider.GetRequiredService<InMemoryTenantRepository>());
     services.AddSingleton<ITenantRepository>(serviceProvider => serviceProvider.GetRequiredService<InMemoryTenantRepository>());
@@ -19,6 +20,8 @@ public static class DependencyInjection
     services.AddSingleton<ICompanyRepository>(serviceProvider => serviceProvider.GetRequiredService<InMemoryCompanyRepository>());
     services.AddSingleton<IUserCatalog>(serviceProvider => serviceProvider.GetRequiredService<InMemoryUserRepository>());
     services.AddSingleton<IUserRepository>(serviceProvider => serviceProvider.GetRequiredService<InMemoryUserRepository>());
+    services.AddSingleton<ITeamCatalog>(serviceProvider => serviceProvider.GetRequiredService<InMemoryTeamRepository>());
+    services.AddSingleton<ITeamRepository>(serviceProvider => serviceProvider.GetRequiredService<InMemoryTeamRepository>());
     services.AddSingleton<IRoleCatalog>(serviceProvider => serviceProvider.GetRequiredService<InMemoryRoleRepository>());
     services.AddSingleton<IRoleRepository>(serviceProvider => serviceProvider.GetRequiredService<InMemoryRoleRepository>());
 

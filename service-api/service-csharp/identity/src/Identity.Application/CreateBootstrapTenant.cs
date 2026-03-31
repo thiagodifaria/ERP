@@ -9,17 +9,20 @@ public sealed class CreateBootstrapTenant
   private readonly ITenantRepository _tenantRepository;
   private readonly ICompanyRepository _companyRepository;
   private readonly IUserRepository _userRepository;
+  private readonly ITeamRepository _teamRepository;
   private readonly IRoleRepository _roleRepository;
 
   public CreateBootstrapTenant(
     ITenantRepository tenantRepository,
     ICompanyRepository companyRepository,
     IUserRepository userRepository,
+    ITeamRepository teamRepository,
     IRoleRepository roleRepository)
   {
     _tenantRepository = tenantRepository;
     _companyRepository = companyRepository;
     _userRepository = userRepository;
+    _teamRepository = teamRepository;
     _roleRepository = roleRepository;
   }
 
@@ -62,6 +65,7 @@ public sealed class CreateBootstrapTenant
     var createdTenant = _tenantRepository.Add(tenant);
     _companyRepository.SeedDefaults(createdTenant);
     _userRepository.SeedDefaults(createdTenant);
+    _teamRepository.SeedDefaults(createdTenant);
     _roleRepository.SeedDefaults(createdTenant);
 
     return CreateBootstrapTenantResult.Success(new TenantResponse(

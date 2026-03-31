@@ -111,6 +111,28 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
   }
 
   [Fact]
+  public async Task TenantTeamsEndpointShouldReturnTeamsForKnownTenant()
+  {
+    var response = await _client.GetAsync("/api/identity/tenants/bootstrap-ops/teams");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<TeamResponse[]>();
+
+    Assert.NotNull(payload);
+    Assert.NotEmpty(payload);
+    Assert.Contains(payload, team => team.Name == "Core");
+  }
+
+  [Fact]
+  public async Task TenantTeamsEndpointShouldReturnNotFoundForUnknownTenant()
+  {
+    var response = await _client.GetAsync("/api/identity/tenants/missing-tenant/teams");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
+
+  [Fact]
   public async Task CreateTenantShouldReturnCreatedTenant()
   {
     var request = new CreateTenantRequest(
@@ -156,6 +178,16 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
     Assert.NotNull(usersPayload);
     Assert.Single(usersPayload);
     Assert.Equal($"owner@{payload.Slug}.local", usersPayload[0].Email);
+
+    var teamsResponse = await _client.GetAsync($"/api/identity/tenants/{payload.Slug}/teams");
+
+    Assert.Equal(HttpStatusCode.OK, teamsResponse.StatusCode);
+
+    var teamsPayload = await teamsResponse.Content.ReadFromJsonAsync<TeamResponse[]>();
+
+    Assert.NotNull(teamsPayload);
+    Assert.Single(teamsPayload);
+    Assert.Equal("Core", teamsPayload[0].Name);
   }
 
   [Fact]
@@ -355,5 +387,82 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
 
     Assert.NotNull(payload);
     Assert.Equal("invalid_email", payload.Code);
+  }
+
+  [Fact]
+  public async Task CreateTeamShouldReturnCreatedTeam()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With Team");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var request = new CreateTeamRequest("Field Ops");
+
+    var response = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/teams",
+      request);
+
+    Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<TeamResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal(request.Name, payload.Name);
+  }
+
+  [Fact]
+  public async Task CreateTeamShouldReturnConflictForDuplicateName()
+  {
+    var request = new CreateTeamRequest("Core");
+
+    var response = await _client.PostAsJsonAsync(
+      "/api/identity/tenants/bootstrap-ops/teams",
+      request);
+
+    Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("team_name_conflict", payload.Code);
+  }
+
+  [Fact]
+  public async Task CreateTeamShouldReturnNotFoundForUnknownTenant()
+  {
+    var request = new CreateTeamRequest("Field Ops");
+
+    var response = await _client.PostAsJsonAsync(
+      "/api/identity/tenants/missing-tenant/teams",
+      request);
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("tenant_not_found", payload.Code);
+  }
+
+  [Fact]
+  public async Task CreateTeamShouldReturnBadRequestForBlankName()
+  {
+    var request = new CreateTeamRequest("   ");
+
+    var response = await _client.PostAsJsonAsync(
+      "/api/identity/tenants/bootstrap-ops/teams",
+      request);
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("invalid_team_name", payload.Code);
   }
 }

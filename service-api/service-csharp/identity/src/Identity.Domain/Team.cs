@@ -3,10 +3,11 @@ namespace Identity.Domain;
 
 public sealed class Team
 {
-  public Team(long id, long tenantId, Guid publicId, string name, string status)
+  public Team(long id, long tenantId, long? companyId, Guid publicId, string name, string status)
   {
     Id = id;
     TenantId = tenantId;
+    CompanyId = companyId;
     PublicId = publicId;
     Name = name;
     Status = status;
@@ -15,6 +16,8 @@ public sealed class Team
   public long Id { get; }
 
   public long TenantId { get; }
+
+  public long? CompanyId { get; }
 
   public Guid PublicId { get; }
 
