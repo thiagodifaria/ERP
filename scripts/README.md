@@ -2,7 +2,7 @@
 
 This directory must stay small and direct.
 
-Target scripts:
+Current scripts:
 
 - `build.sh`
 - `up.sh`
@@ -10,9 +10,20 @@ Target scripts:
 - `logs.sh`
 - `db.sh`
 - `test.sh`
-- `perf.sh`
-- `simulate.sh`
-- `deploy.sh`
+
+Useful commands:
+
+- `./scripts/up.sh`
+- `./scripts/down.sh`
+- `./scripts/logs.sh identity`
+- `./scripts/db.sh migrate all`
+- `./scripts/db.sh seed identity`
+- `./scripts/db.sh summary identity smoke-identity-bootstrap`
+- `./scripts/test.sh unit`
+- `./scripts/test.sh integration`
+- `./scripts/test.sh contract`
+- `./scripts/test.sh smoke`
+- `./scripts/test.sh all`
 
 Rules:
 

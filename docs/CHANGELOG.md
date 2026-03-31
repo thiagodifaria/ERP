@@ -51,3 +51,4 @@
 - `v0.0.23`: [UPDATE 31/03/2026 - 06:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Snapshot validado com cobertura unitaria e de integracao em container, incluindo retorno `404` para tenant inexistente.
 - `v0.0.24`: [UPDATE 31/03/2026 - 06:04 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou o projeto `Identity.ContractTests` com validacoes reais para lista de tenants, criacao de tenant, snapshot consolidado e contrato de erro publico.
 - `v0.0.24`: [UPDATE 31/03/2026 - 06:04 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh contract` deixou de ser placeholder e passou a executar o projeto de contract tests em container, com revalidacao de integracao do `identity`.
+- `v0.0.25`: [UPDATE 31/03/2026 - 06:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Documentacao tecnica atualizada para refletir o estado real do `identity`, incluindo rotas publicas, comandos de validacao e runbook operacional atual dos scripts.
