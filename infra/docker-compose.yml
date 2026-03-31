@@ -69,6 +69,14 @@ services:
     build:
       context: ../service-api/service-csharp/identity
     container_name: erp-identity
+    environment:
+      IDENTITY_REPOSITORY_DRIVER: "postgres"
+      IDENTITY_POSTGRES_HOST: "service-postgresql"
+      IDENTITY_POSTGRES_PORT: "5432"
+      IDENTITY_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      IDENTITY_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      IDENTITY_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      IDENTITY_POSTGRES_SSL_MODE: "Disable"
     depends_on:
       service-postgresql:
         condition: service_healthy

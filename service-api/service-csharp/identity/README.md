@@ -10,6 +10,7 @@ Current scope:
 - company, user and team management in bootstrap mode
 - team memberships and direct user-role assignments
 - consolidated tenant access snapshot
+- selectable repository driver with PostgreSQL-backed runtime support
 - unit, integration and contract coverage in container-first flow
 
 Public routes:

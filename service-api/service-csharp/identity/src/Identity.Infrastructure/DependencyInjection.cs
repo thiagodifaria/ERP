@@ -9,6 +9,29 @@ public static class DependencyInjection
 {
   public static IServiceCollection AddIdentityInfrastructure(this IServiceCollection services)
   {
+    var options = IdentityInfrastructureOptions.Load();
+
+    if (options.RepositoryDriver.Equals("postgres", StringComparison.OrdinalIgnoreCase))
+    {
+      services.AddSingleton(new PostgresIdentityRepositoryBundle(options.PostgresConnectionString));
+      services.AddSingleton<ITenantCatalog>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+      services.AddSingleton<ITenantRepository>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+      services.AddSingleton<ICompanyCatalog>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+      services.AddSingleton<ICompanyRepository>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+      services.AddSingleton<IUserCatalog>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+      services.AddSingleton<IUserRepository>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+      services.AddSingleton<ITeamCatalog>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+      services.AddSingleton<ITeamRepository>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+      services.AddSingleton<ITeamMembershipCatalog>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+      services.AddSingleton<ITeamMembershipRepository>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+      services.AddSingleton<IRoleCatalog>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+      services.AddSingleton<IRoleRepository>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+      services.AddSingleton<IUserRoleCatalog>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+      services.AddSingleton<IUserRoleRepository>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+
+      return services;
+    }
+
     services.AddSingleton<InMemoryTenantRepository>();
     services.AddSingleton<InMemoryCompanyRepository>();
     services.AddSingleton<InMemoryUserRepository>();
