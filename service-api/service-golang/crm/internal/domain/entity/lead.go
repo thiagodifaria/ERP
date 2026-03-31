@@ -9,8 +9,10 @@ import (
 )
 
 var (
-  ErrLeadNameRequired = errors.New("lead name is required")
-  ErrLeadEmailInvalid = errors.New("lead email is invalid")
+  ErrLeadNameRequired             = errors.New("lead name is required")
+  ErrLeadEmailInvalid            = errors.New("lead email is invalid")
+  ErrLeadStatusInvalid           = errors.New("lead status is invalid")
+  ErrLeadStatusTransitionInvalid = errors.New("lead status transition is invalid")
 )
 
 type Lead struct {
@@ -47,4 +49,49 @@ func NewLead(publicID string, name string, email string, source string, ownerUse
     Status:      "captured",
     OwnerUserID: strings.TrimSpace(ownerUserID),
   }, nil
+}
+
+func (lead Lead) TransitionTo(status string) (Lead, error) {
+  targetStatus := normalizeStatus(status)
+  if !isValidStatus(targetStatus) {
+    return Lead{}, ErrLeadStatusInvalid
+  }
+
+  currentStatus := normalizeStatus(lead.Status)
+  if currentStatus == targetStatus {
+    return lead, nil
+  }
+
+  if !canTransition(currentStatus, targetStatus) {
+    return Lead{}, ErrLeadStatusTransitionInvalid
+  }
+
+  lead.Status = targetStatus
+  return lead, nil
+}
+
+func normalizeStatus(status string) string {
+  return strings.ToLower(strings.TrimSpace(status))
+}
+
+func isValidStatus(status string) bool {
+  switch status {
+  case "captured", "contacted", "qualified", "disqualified":
+    return true
+  default:
+    return false
+  }
+}
+
+func canTransition(currentStatus string, targetStatus string) bool {
+  switch currentStatus {
+  case "captured":
+    return targetStatus == "contacted" || targetStatus == "qualified" || targetStatus == "disqualified"
+  case "contacted":
+    return targetStatus == "qualified" || targetStatus == "disqualified"
+  case "qualified":
+    return targetStatus == "disqualified"
+  default:
+    return false
+  }
 }

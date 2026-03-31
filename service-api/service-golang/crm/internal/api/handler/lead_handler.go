@@ -13,14 +13,23 @@ import (
 )
 
 type LeadHandler struct {
-  listLeads  query.ListLeads
-  createLead command.CreateLead
+  listLeads        query.ListLeads
+  getLeadByPublicID query.GetLeadByPublicID
+  createLead       command.CreateLead
+  updateLeadStatus command.UpdateLeadStatus
 }
 
-func NewLeadHandler(listLeads query.ListLeads, createLead command.CreateLead) LeadHandler {
+func NewLeadHandler(
+  listLeads query.ListLeads,
+  getLeadByPublicID query.GetLeadByPublicID,
+  createLead command.CreateLead,
+  updateLeadStatus command.UpdateLeadStatus,
+) LeadHandler {
   return LeadHandler{
-    listLeads:  listLeads,
-    createLead: createLead,
+    listLeads:         listLeads,
+    getLeadByPublicID: getLeadByPublicID,
+    createLead:        createLead,
+    updateLeadStatus:  updateLeadStatus,
   }
 }
 
@@ -35,6 +44,23 @@ func (handler LeadHandler) List(writer http.ResponseWriter, request *http.Reques
   writer.Header().Set("Content-Type", "application/json")
   writer.WriteHeader(http.StatusOK)
   _ = json.NewEncoder(writer).Encode(response)
+}
+
+func (handler LeadHandler) GetByPublicID(writer http.ResponseWriter, request *http.Request) {
+  lead := handler.getLeadByPublicID.Execute(request.PathValue("publicId"))
+  if lead == nil {
+    writer.Header().Set("Content-Type", "application/json")
+    writer.WriteHeader(http.StatusNotFound)
+    _ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+      Code:    "lead_not_found",
+      Message: "Lead was not found.",
+    })
+    return
+  }
+
+  writer.Header().Set("Content-Type", "application/json")
+  writer.WriteHeader(http.StatusOK)
+  _ = json.NewEncoder(writer).Encode(mapLead(*lead))
 }
 
 func (handler LeadHandler) Create(writer http.ResponseWriter, request *http.Request) {
@@ -73,6 +99,44 @@ func (handler LeadHandler) Create(writer http.ResponseWriter, request *http.Requ
     })
   default:
     writer.WriteHeader(http.StatusCreated)
+    _ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
+  }
+}
+
+func (handler LeadHandler) UpdateStatus(writer http.ResponseWriter, request *http.Request) {
+  var payload dto.UpdateLeadStatusRequest
+  if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+    writer.Header().Set("Content-Type", "application/json")
+    writer.WriteHeader(http.StatusBadRequest)
+    _ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+      Code:    "invalid_json",
+      Message: "Request body is invalid.",
+    })
+    return
+  }
+
+  result := handler.updateLeadStatus.Execute(command.UpdateLeadStatusInput{
+    PublicID: request.PathValue("publicId"),
+    Status:   payload.Status,
+  })
+
+  writer.Header().Set("Content-Type", "application/json")
+
+  switch {
+  case result.BadRequest:
+    writer.WriteHeader(http.StatusBadRequest)
+    _ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+      Code:    result.ErrorCode,
+      Message: result.ErrorText,
+    })
+  case result.NotFound:
+    writer.WriteHeader(http.StatusNotFound)
+    _ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+      Code:    result.ErrorCode,
+      Message: result.ErrorText,
+    })
+  default:
+    writer.WriteHeader(http.StatusOK)
     _ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
   }
 }

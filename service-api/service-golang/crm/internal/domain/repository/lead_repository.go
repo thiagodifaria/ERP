@@ -6,6 +6,8 @@ import "github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/dom
 
 type LeadRepository interface {
   List() []entity.Lead
+  FindByPublicID(publicID string) *entity.Lead
   FindByEmail(email string) *entity.Lead
   Save(lead entity.Lead) entity.Lead
+  Update(lead entity.Lead) entity.Lead
 }

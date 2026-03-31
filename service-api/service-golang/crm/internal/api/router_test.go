@@ -66,3 +66,27 @@ func TestRouterShouldExposeLeadList(t *testing.T) {
     t.Fatalf("expected 1 lead, got %d", len(response))
   }
 }
+
+func TestRouterShouldExposeLeadByPublicID(t *testing.T) {
+  router := NewRouter(
+    telemetry.New("crm-test"),
+    persistence.NewInMemoryLeadRepository(),
+  )
+  request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/lead-bootstrap-ops", nil)
+  recorder := httptest.NewRecorder()
+
+  router.ServeHTTP(recorder, request)
+
+  if recorder.Code != http.StatusOK {
+    t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+  }
+
+  var response dto.LeadResponse
+  if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+    t.Fatalf("unexpected decode error: %v", err)
+  }
+
+  if response.PublicID != "lead-bootstrap-ops" {
+    t.Fatalf("expected public id lead-bootstrap-ops, got %s", response.PublicID)
+  }
+}

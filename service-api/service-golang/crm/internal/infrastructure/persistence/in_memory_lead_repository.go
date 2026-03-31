@@ -39,6 +39,20 @@ func (repository *InMemoryLeadRepository) List() []entity.Lead {
   return copied
 }
 
+func (repository *InMemoryLeadRepository) FindByPublicID(publicID string) *entity.Lead {
+  repository.Lock()
+  defer repository.Unlock()
+
+  for _, lead := range repository.leads {
+    if lead.PublicID == publicID {
+      copied := lead
+      return &copied
+    }
+  }
+
+  return nil
+}
+
 func (repository *InMemoryLeadRepository) FindByEmail(email string) *entity.Lead {
   repository.Lock()
   defer repository.Unlock()
@@ -58,6 +72,21 @@ func (repository *InMemoryLeadRepository) FindByEmail(email string) *entity.Lead
 func (repository *InMemoryLeadRepository) Save(lead entity.Lead) entity.Lead {
   repository.Lock()
   defer repository.Unlock()
+
+  repository.leads = append(repository.leads, lead)
+  return lead
+}
+
+func (repository *InMemoryLeadRepository) Update(lead entity.Lead) entity.Lead {
+  repository.Lock()
+  defer repository.Unlock()
+
+  for index, currentLead := range repository.leads {
+    if currentLead.PublicID == lead.PublicID {
+      repository.leads[index] = lead
+      return lead
+    }
+  }
 
   repository.leads = append(repository.leads, lead)
   return lead

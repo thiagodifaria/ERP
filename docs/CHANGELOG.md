@@ -58,3 +58,5 @@
 - `v0.0.27`: [UPDATE 31/03/2026 - 06:14 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Fluxo de criacao de lead validado com regra de nome obrigatorio, e-mail valido, default source e conflito por e-mail em container via `scripts/test.sh unit`.
 - `v0.0.28`: [UPDATE 31/03/2026 - 06:15 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` integrado ao `infra/docker-compose.yml` com porta dedicada e configuracao basica de runtime no stack local.
 - `v0.0.28`: [UPDATE 31/03/2026 - 06:15 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `README.md` raiz atualizado para refletir `crm` como servico ja iniciado, com validacao de compose executada via `docker compose config`.
+- `v0.0.29`: [UPDATE 31/03/2026 - 06:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou leitura individual de lead por `publicId` e transicao controlada de status com `PATCH /api/crm/leads/{publicId}/status`.
+- `v0.0.29`: [UPDATE 31/03/2026 - 06:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Regras de status do agregado `Lead` foram fortalecidas com validacao de transicao, lookup por `publicId` e cobertura executada em container via `scripts/test.sh unit`.

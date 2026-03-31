@@ -47,3 +47,36 @@ func TestNewLeadShouldRejectInvalidEmail(t *testing.T) {
     t.Fatalf("expected ErrLeadEmailInvalid, got %v", err)
   }
 }
+
+func TestTransitionToShouldMoveLeadToQualified(t *testing.T) {
+  lead, err := NewLead("lead-public-id", "Ana Souza", "ana@example.com", "meta-ads", "owner-public-id")
+  if err != nil {
+    t.Fatalf("unexpected error: %v", err)
+  }
+
+  transitionedLead, err := lead.TransitionTo("qualified")
+  if err != nil {
+    t.Fatalf("unexpected transition error: %v", err)
+  }
+
+  if transitionedLead.Status != "qualified" {
+    t.Fatalf("expected status qualified, got %s", transitionedLead.Status)
+  }
+}
+
+func TestTransitionToShouldRejectInvalidTransition(t *testing.T) {
+  lead, err := NewLead("lead-public-id", "Ana Souza", "ana@example.com", "meta-ads", "owner-public-id")
+  if err != nil {
+    t.Fatalf("unexpected error: %v", err)
+  }
+
+  contactedLead, err := lead.TransitionTo("contacted")
+  if err != nil {
+    t.Fatalf("unexpected transition error: %v", err)
+  }
+
+  _, err = contactedLead.TransitionTo("captured")
+  if err != ErrLeadStatusTransitionInvalid {
+    t.Fatalf("expected ErrLeadStatusTransitionInvalid, got %v", err)
+  }
+}

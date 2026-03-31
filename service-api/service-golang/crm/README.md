@@ -8,4 +8,5 @@ Initial scope:
 - health and readiness endpoints
 - first domain entity for `Lead`
 - bootstrap list and creation flow for leads
+- lead lookup by public id and controlled status transitions
 - unit validation for bootstrap and domain basics
