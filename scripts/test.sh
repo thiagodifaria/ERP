@@ -340,6 +340,7 @@ run_workflow_control_runtime_smoke() {
   local list_response
   local create_response
   local created_key="runtime-flow"
+  local profile_response
   local detail_response
   local status_response
   local health_details_response
@@ -375,10 +376,22 @@ run_workflow_control_runtime_smoke() {
     exit 1
   fi
 
+  profile_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d '{"name":"Runtime Flow Prime","description":"Fluxo atualizado no smoke do workflow-control.","trigger":"lead.qualified"}' \
+    "$base_url/api/workflow-control/definitions/$created_key")"
+  echo "[test] workflow-control profile => $profile_response"
+
+  if [[ "$profile_response" != *"\"key\":\"$created_key\""* || "$profile_response" != *'"name":"Runtime Flow Prime"'* || "$profile_response" != *'"trigger":"lead.qualified"'* ]]; then
+    echo "[test] workflow-control metadata update did not persist"
+    exit 1
+  fi
+
   detail_response="$(curl -fsS "$base_url/api/workflow-control/definitions/$created_key")"
   echo "[test] workflow-control detail => $detail_response"
 
-  if [[ "$detail_response" != *"\"key\":\"$created_key\""* || "$detail_response" != *'"trigger":"lead.created"'* ]]; then
+  if [[ "$detail_response" != *"\"key\":\"$created_key\""* || "$detail_response" != *'"name":"Runtime Flow Prime"'* || "$detail_response" != *'"trigger":"lead.qualified"'* ]]; then
     echo "[test] workflow-control detail did not return the created resource"
     exit 1
   fi

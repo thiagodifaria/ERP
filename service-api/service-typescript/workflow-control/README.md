@@ -39,5 +39,5 @@ Current unit scope:
 Current contract scope:
 
 - public payload shape for workflow definition list
-- create/detail/status lifecycle
+- create/update/detail/status lifecycle
 - not found error contract

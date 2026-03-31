@@ -96,6 +96,43 @@ test("workflow definition contract should return created resource", async () => 
   assert.equal(payload.trigger, "lead.created");
 });
 
+test("workflow definition contract should return updated metadata resource", async () => {
+  const key = `contract-update-${randomUUID()}`;
+  const createResponse = await request("/api/workflow-control/definitions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      key,
+      name: "Contract Update Flow",
+      description: "Fluxo inicial para contract de update.",
+      trigger: "lead.created"
+    })
+  });
+
+  assert.equal(createResponse.status, 201);
+
+  const updateResponse = await request(`/api/workflow-control/definitions/${key}`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      name: "Contract Update Flow Prime",
+      description: "Fluxo revisado pelo contract test.",
+      trigger: "lead.qualified"
+    })
+  });
+  const payload = await updateResponse.json() as WorkflowDefinitionResponse;
+
+  assert.equal(updateResponse.status, 200);
+  assert.equal(payload.key, key);
+  assert.equal(payload.name, "Contract Update Flow Prime");
+  assert.equal(payload.description, "Fluxo revisado pelo contract test.");
+  assert.equal(payload.trigger, "lead.qualified");
+});
+
 test("workflow definition contract should expose detail and status update", async () => {
   const key = `contract-status-${randomUUID()}`;
   const createResponse = await request("/api/workflow-control/definitions", {
