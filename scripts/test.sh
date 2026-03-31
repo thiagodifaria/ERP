@@ -309,6 +309,7 @@ run_identity_runtime_smoke() {
   local updated_company_response
   local users_response
   local create_user_response
+  local updated_user_response
   local created_user_public_id
   local teams_response
   local create_team_response
@@ -407,6 +408,18 @@ run_identity_runtime_smoke() {
   created_user_public_id="$(echo "$create_user_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
   if [[ -z "$created_user_public_id" ]]; then
     echo "[test] runtime identity user public id was not returned"
+    exit 1
+  fi
+
+  updated_user_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"runtime.user.prime@$tenant_slug.local\",\"displayName\":\"Runtime User Prime\",\"givenName\":\"Runtime\",\"familyName\":\"Prime\"}" \
+    "$base_url/api/identity/tenants/$tenant_slug/users/$created_user_public_id")"
+  echo "[test] identity api update user => $updated_user_response"
+
+  if [[ "$updated_user_response" != *"\"email\":\"runtime.user.prime@$tenant_slug.local\""* || "$updated_user_response" != *'"familyName":"Prime"'* ]]; then
+    echo "[test] runtime identity user update did not persist"
     exit 1
   fi
 

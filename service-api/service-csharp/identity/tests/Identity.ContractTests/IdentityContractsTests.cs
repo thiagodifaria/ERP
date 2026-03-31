@@ -109,6 +109,49 @@ public sealed class IdentityContractsTests : IClassFixture<WebApplicationFactory
   }
 
   [Fact]
+  public async Task UpdateUserContractShouldReturnUpdatedResourceShape()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Contract User Update");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var createUserResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/users",
+      new CreateUserRequest(
+        $"contract.user@{tenantPayload.Slug}.local",
+        "Contract User",
+        "Contract",
+        "User"));
+
+    var createdUser = await createUserResponse.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(createdUser);
+
+    var response = await _client.PatchAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{createdUser!.PublicId}",
+      new UpdateUserRequest(
+        $"contract.user.prime@{tenantPayload.Slug}.local",
+        "Contract User Prime",
+        "Contract",
+        "Prime"));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(payload);
+    Assert.NotEqual(Guid.Empty, payload!.PublicId);
+    Assert.Equal($"contract.user.prime@{tenantPayload.Slug}.local", payload.Email);
+    Assert.Equal("Contract User Prime", payload.DisplayName);
+    Assert.Equal("Prime", payload.FamilyName);
+  }
+
+  [Fact]
   public async Task ErrorContractShouldExposeCodeAndMessage()
   {
     var response = await _client.PostAsJsonAsync(

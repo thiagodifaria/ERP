@@ -107,3 +107,5 @@
 - `v0.0.52`: [UPDATE 31/03/2026 - 14:17 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `identity` foi ampliado para atualizar company em runtime real no PostgreSQL e confirmar persistencia da mutacao.
 - `v0.0.53`: [UPDATE 31/03/2026 - 14:21 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou `PATCH /api/identity/tenants/{slug}/users/{userPublicId}` para atualizar email e dados basicos de usuario existente.
 - `v0.0.53`: [UPDATE 31/03/2026 - 14:21 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A trilha de update de `user` foi ligada em memoria e PostgreSQL, com cobertura unitaria para sucesso, `404` e conflito por email duplicado.
+- `v0.0.54`: [UPDATE 31/03/2026 - 14:26 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Integration e contract tests do `identity` passaram a validar o contrato publico de update de user sem depender do tenant bootstrap para manter a suite previsivel.
+- `v0.0.54`: [UPDATE 31/03/2026 - 14:26 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `identity` foi ampliado para atualizar user em runtime real no PostgreSQL e confirmar persistencia de email e nome de familia.

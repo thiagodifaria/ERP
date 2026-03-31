@@ -30,6 +30,7 @@ Public routes:
 - `PATCH /api/identity/tenants/{slug}/companies/{companyPublicId}`
 - `GET /api/identity/tenants/{slug}/users`
 - `POST /api/identity/tenants/{slug}/users`
+- `PATCH /api/identity/tenants/{slug}/users/{userPublicId}`
 - `GET /api/identity/tenants/{slug}/users/{userPublicId}/roles`
 - `POST /api/identity/tenants/{slug}/users/{userPublicId}/roles`
 - `GET /api/identity/tenants/{slug}/teams`

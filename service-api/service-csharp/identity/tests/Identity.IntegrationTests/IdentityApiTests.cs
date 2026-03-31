@@ -519,6 +519,63 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
   }
 
   [Fact]
+  public async Task UpdateUserShouldReturnUpdatedUser()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With User Update");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var createResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/users",
+      new CreateUserRequest(
+        $"tenant.user@{tenantPayload.Slug}.local",
+        "Tenant User",
+        "Tenant",
+        "User"));
+
+    var createdUser = await createResponse.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(createdUser);
+
+    var response = await _client.PatchAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{createdUser!.PublicId}",
+      new UpdateUserRequest(
+        $"tenant.user.prime@{tenantPayload.Slug}.local",
+        "Tenant User Prime",
+        "Tenant",
+        "Prime"));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal($"tenant.user.prime@{tenantPayload.Slug}.local", payload!.Email);
+    Assert.Equal("Tenant User Prime", payload.DisplayName);
+    Assert.Equal("Prime", payload.FamilyName);
+  }
+
+  [Fact]
+  public async Task UpdateUserShouldReturnNotFoundForUnknownUser()
+  {
+    var response = await _client.PatchAsJsonAsync(
+      $"/api/identity/tenants/bootstrap-ops/users/{Guid.NewGuid()}",
+      new UpdateUserRequest("owner.prime@bootstrap-ops.local", "Bootstrap Owner Prime", "Bootstrap", "Prime"));
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("user_not_found", payload.Code);
+  }
+
+  [Fact]
   public async Task CreateUserShouldReturnConflictForDuplicateEmail()
   {
     var request = new CreateUserRequest("owner@bootstrap-ops.local", "Duplicate Owner", null, null);
