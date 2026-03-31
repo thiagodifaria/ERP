@@ -181,6 +181,18 @@ public static class Server
           : TypedResults.Ok(tenant);
       });
     app.MapGet(
+      "/api/identity/tenants/{slug}/snapshot",
+      Results<Ok<TenantAccessSnapshotResponse>, NotFound> (
+        string slug,
+        GetBootstrapTenantAccessSnapshot useCase) =>
+      {
+        var snapshot = useCase.Execute(slug);
+
+        return snapshot is null
+          ? TypedResults.NotFound()
+          : TypedResults.Ok(snapshot);
+      });
+    app.MapGet(
       "/api/identity/tenants/{slug}/companies",
       Results<Ok<IReadOnlyCollection<CompanyResponse>>, NotFound> (string slug, ListBootstrapCompanies useCase) =>
       {

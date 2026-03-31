@@ -67,6 +67,37 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
   }
 
   [Fact]
+  public async Task TenantSnapshotEndpointShouldReturnSnapshotForKnownTenant()
+  {
+    var response = await _client.GetAsync("/api/identity/tenants/bootstrap-ops/snapshot");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<TenantAccessSnapshotResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("bootstrap-ops", payload!.Tenant.Slug);
+    Assert.Equal(1, payload.Counts.Companies);
+    Assert.Equal(1, payload.Counts.Users);
+    Assert.Equal(1, payload.Counts.Teams);
+    Assert.Equal(5, payload.Counts.Roles);
+    Assert.Equal(1, payload.Counts.TeamMemberships);
+    Assert.Equal(1, payload.Counts.UserRoles);
+    Assert.Single(payload.Users);
+    Assert.Single(payload.Users.First().Roles);
+    Assert.Single(payload.Teams);
+    Assert.Single(payload.Teams.First().Members);
+  }
+
+  [Fact]
+  public async Task TenantSnapshotEndpointShouldReturnNotFoundForUnknownTenant()
+  {
+    var response = await _client.GetAsync("/api/identity/tenants/missing-tenant/snapshot");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
+
+  [Fact]
   public async Task TenantCompaniesEndpointShouldReturnCompaniesForKnownTenant()
   {
     var response = await _client.GetAsync("/api/identity/tenants/bootstrap-ops/companies");
@@ -267,6 +298,20 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
     Assert.NotNull(membersPayload);
     Assert.Single(membersPayload);
     Assert.Equal($"owner@{payload.Slug}.local", membersPayload[0].UserEmail);
+
+    var snapshotResponse = await _client.GetAsync($"/api/identity/tenants/{payload.Slug}/snapshot");
+
+    Assert.Equal(HttpStatusCode.OK, snapshotResponse.StatusCode);
+
+    var snapshotPayload = await snapshotResponse.Content.ReadFromJsonAsync<TenantAccessSnapshotResponse>();
+
+    Assert.NotNull(snapshotPayload);
+    Assert.Equal(1, snapshotPayload!.Counts.Companies);
+    Assert.Equal(1, snapshotPayload.Counts.Users);
+    Assert.Equal(1, snapshotPayload.Counts.Teams);
+    Assert.Equal(5, snapshotPayload.Counts.Roles);
+    Assert.Equal(1, snapshotPayload.Counts.TeamMemberships);
+    Assert.Equal(1, snapshotPayload.Counts.UserRoles);
   }
 
   [Fact]

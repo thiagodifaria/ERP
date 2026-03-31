@@ -14,6 +14,7 @@ public static class DependencyInjection
     services.AddScoped<CreateBootstrapTenant>();
     services.AddScoped<CreateBootstrapTeam>();
     services.AddScoped<CreateBootstrapUser>();
+    services.AddScoped<GetBootstrapTenantAccessSnapshot>();
     services.AddScoped<ListBootstrapUserRoles>();
     services.AddScoped<ListBootstrapCompanies>();
     services.AddScoped<ListBootstrapTeamMembers>();

@@ -47,3 +47,5 @@
 - `v0.0.21`: [UPDATE 31/03/2026 - 05:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Seeds validados em container no tenant `smoke-identity-bootstrap`, com resultado `1 company`, `1 user`, `1 team`, `5 roles`, `1 membership` e `1 user_role` apos segunda execucao sem novos inserts.
 - `v0.0.22`: [UPDATE 31/03/2026 - 05:32 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/db.sh` ganhou `summary identity [tenant-slug]` para inspecao rapida do bootstrap relacional por tenant.
 - `v0.0.22`: [UPDATE 31/03/2026 - 05:32 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh smoke` deixou de ser apenas `compose ps` e passou a validar migrations, seeds idempotentes e resumo esperado do tenant `smoke-identity-bootstrap` em container.
+- `v0.0.23`: [UPDATE 31/03/2026 - 06:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou o endpoint consolidado `GET /api/identity/tenants/{slug}/snapshot`, reunindo tenant, contagens, companies, users com roles, teams com members e roles do tenant.
+- `v0.0.23`: [UPDATE 31/03/2026 - 06:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Snapshot validado com cobertura unitaria e de integracao em container, incluindo retorno `404` para tenant inexistente.
