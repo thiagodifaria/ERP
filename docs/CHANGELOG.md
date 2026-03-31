@@ -139,3 +139,5 @@
 - `v0.0.68`: [UPDATE 31/03/2026 - 15:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `.env.example` e o README raiz foram atualizados para refletir a primeira stack `TypeScript` realmente iniciada no monorepo.
 - `v0.0.69`: [UPDATE 31/03/2026 - 15:38 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh unit` passou a executar `workflow-control` em container, colocando a stack `TypeScript` no pipeline oficial de validacao.
 - `v0.0.69`: [UPDATE 31/03/2026 - 15:38 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/README.md` e `docs/OPERACOES.md` foram atualizados para refletir o novo escopo do fluxo unitario do monorepo.
+- `v0.0.70`: [UPDATE 31/03/2026 - 15:42 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou o primeiro agregado de dominio, `WorkflowDefinition`, com bootstrap em memoria e normalizacao de `key`, `name` e `trigger`.
+- `v0.0.70`: [UPDATE 31/03/2026 - 15:42 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O servico passou a expor `GET /api/workflow-control/definitions` como primeiro endpoint de controle de workflows na stack `TypeScript`.

@@ -7,6 +7,7 @@ Initial scope:
 - TypeScript service bootstrap
 - layered folder structure aligned with the monorepo standard
 - health and readiness routes
+- bootstrap workflow definition list
 - room for workflow definitions and future control-plane APIs
 
 Public routes:
@@ -14,6 +15,7 @@ Public routes:
 - `GET /health/live`
 - `GET /health/ready`
 - `GET /health/details`
+- `GET /api/workflow-control/definitions`
 
 Container-first validation:
 

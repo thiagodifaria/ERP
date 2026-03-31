@@ -1,6 +1,7 @@
 // This router starts small and grows with public workflow-control routes.
 import { IncomingMessage, ServerResponse } from "node:http";
 import { HealthResponse, ReadinessResponse } from "./dto/health.js";
+import { services } from "../config/container.js";
 
 function json(response: ServerResponse, statusCode: number, body: unknown): void {
   response.writeHead(statusCode, { "content-type": "application/json" });
@@ -45,6 +46,11 @@ export function route(request: IncomingMessage, response: ServerResponse): void 
 
   if (request.url === "/health/details") {
     json(response, 200, details());
+    return;
+  }
+
+  if (request.method === "GET" && request.url === "/api/workflow-control/definitions") {
+    json(response, 200, services.listWorkflowDefinitions.execute());
     return;
   }
 
