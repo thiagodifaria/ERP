@@ -147,3 +147,5 @@
 - `v0.0.72`: [UPDATE 31/03/2026 - 15:49 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack `TypeScript` passou a responder `workflow_definition_not_found` quando a `key` consultada nao existe no catalogo bootstrap.
 - `v0.0.73`: [UPDATE 31/03/2026 - 15:55 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `PATCH /api/workflow-control/definitions/{key}/status`, permitindo ativar, arquivar ou devolver definicoes para `draft`.
 - `v0.0.73`: [UPDATE 31/03/2026 - 15:55 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O catalogo em memoria passou a suportar transicao de estado sem recriar a definicao inteira, preparando o servico para fluxos operacionais reais.
+- `v0.0.74`: [UPDATE 31/03/2026 - 16:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou cobertura unitaria para `list`, `detail`, `create` e `status`, cobrindo o ciclo principal do agregado `WorkflowDefinition`.
+- `v0.0.74`: [UPDATE 31/03/2026 - 16:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A suite passou a validar normalizacao de payload e erro `workflow_definition_status_invalid`, endurecendo a API antes da fase contratual.

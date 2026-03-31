@@ -1,0 +1,150 @@
+import assert from "node:assert/strict";
+import { afterEach, test } from "node:test";
+import { createServer, Server } from "node:http";
+import { randomUUID } from "node:crypto";
+import { AddressInfo } from "node:net";
+import { route } from "../../src/api/router.js";
+
+const activeServers: Server[] = [];
+
+afterEach(async () => {
+  while (activeServers.length > 0) {
+    const server = activeServers.pop();
+
+    if (server) {
+      await new Promise<void>((resolve, reject) => {
+        server.close((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+
+          resolve();
+        });
+      });
+    }
+  }
+});
+
+async function request(pathname: string, init?: RequestInit): Promise<Response> {
+  const server = createServer((incoming, outgoing) => {
+    void route(incoming, outgoing);
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", () => resolve());
+  });
+
+  activeServers.push(server);
+
+  const address = server.address() as AddressInfo;
+
+  return fetch(`http://127.0.0.1:${address.port}${pathname}`, init);
+}
+
+test("workflow definitions list should expose bootstrap catalog", async () => {
+  const response = await request("/api/workflow-control/definitions");
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.ok(Array.isArray(payload));
+  assert.ok(payload.some((definition) => definition.key === "lead-follow-up"));
+});
+
+test("workflow definition detail should expose created resource by key", async () => {
+  const key = `detail-${randomUUID()}`;
+  const createResponse = await request("/api/workflow-control/definitions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      key,
+      name: "Detail Flow",
+      description: "Fluxo criado para teste unitario de leitura por chave.",
+      trigger: "lead.qualified"
+    })
+  });
+
+  assert.equal(createResponse.status, 201);
+
+  const detailResponse = await request(`/api/workflow-control/definitions/${key}`);
+  const detailPayload = await detailResponse.json();
+
+  assert.equal(detailResponse.status, 200);
+  assert.equal(detailPayload.key, key);
+  assert.equal(detailPayload.name, "Detail Flow");
+  assert.equal(detailPayload.trigger, "lead.qualified");
+});
+
+test("workflow definition create should normalize payload and return draft status", async () => {
+  const key = `create-${randomUUID()}`;
+  const response = await request("/api/workflow-control/definitions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      key: `  ${key.toUpperCase()}  `,
+      name: "  Create Flow  ",
+      description: "  Fluxo criado para validar normalizacao.  ",
+      trigger: "  LEAD.CREATED  "
+    })
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 201);
+  assert.equal(payload.key, key);
+  assert.equal(payload.name, "Create Flow");
+  assert.equal(payload.description, "Fluxo criado para validar normalizacao.");
+  assert.equal(payload.trigger, "lead.created");
+  assert.equal(payload.status, "draft");
+});
+
+test("workflow definition status should update created resource", async () => {
+  const key = `status-${randomUUID()}`;
+  const createResponse = await request("/api/workflow-control/definitions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      key,
+      name: "Status Flow",
+      trigger: "lead.contacted"
+    })
+  });
+
+  assert.equal(createResponse.status, 201);
+
+  const updateResponse = await request(`/api/workflow-control/definitions/${key}/status`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      status: "active"
+    })
+  });
+  const updatePayload = await updateResponse.json();
+
+  assert.equal(updateResponse.status, 200);
+  assert.equal(updatePayload.key, key);
+  assert.equal(updatePayload.status, "active");
+});
+
+test("workflow definition status should reject invalid transitions payload", async () => {
+  const response = await request("/api/workflow-control/definitions/lead-follow-up/status", {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      status: "paused"
+    })
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(payload.code, "workflow_definition_status_invalid");
+});

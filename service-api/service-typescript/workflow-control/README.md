@@ -24,3 +24,8 @@ Container-first validation:
 
 - `docker run --rm -v ${PWD}:/workspace -w /workspace/service-api/service-typescript/workflow-control node:22-alpine sh -lc "npm install && npm run test:unit"`
 - `docker build -t erp-workflow-control ./service-api/service-typescript/workflow-control`
+
+Current unit scope:
+
+- health and readiness routes
+- workflow definition list, create, detail and status transitions
