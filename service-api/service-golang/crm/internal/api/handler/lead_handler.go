@@ -1,153 +1,158 @@
-// LeadHandler expõe a API minima de leads do CRM.
-// Regras de negocio devem ficar nos casos de uso.
+// LeadHandler exposes the first operational lead endpoints of the CRM.
 package handler
 
 import (
-  "encoding/json"
-  "net/http"
+	"encoding/json"
+	"net/http"
 
-  "github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/api/dto"
-  "github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/application/command"
-  "github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/application/query"
-  "github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/entity"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/api/dto"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/application/command"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/application/query"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/entity"
 )
 
 type LeadHandler struct {
-  listLeads        query.ListLeads
-  getLeadByPublicID query.GetLeadByPublicID
-  createLead       command.CreateLead
-  updateLeadStatus command.UpdateLeadStatus
+	listLeads         query.ListLeads
+	getLeadByPublicID query.GetLeadByPublicID
+	createLead        command.CreateLead
+	updateLeadStatus  command.UpdateLeadStatus
 }
 
 func NewLeadHandler(
-  listLeads query.ListLeads,
-  getLeadByPublicID query.GetLeadByPublicID,
-  createLead command.CreateLead,
-  updateLeadStatus command.UpdateLeadStatus,
+	listLeads query.ListLeads,
+	getLeadByPublicID query.GetLeadByPublicID,
+	createLead command.CreateLead,
+	updateLeadStatus command.UpdateLeadStatus,
 ) LeadHandler {
-  return LeadHandler{
-    listLeads:         listLeads,
-    getLeadByPublicID: getLeadByPublicID,
-    createLead:        createLead,
-    updateLeadStatus:  updateLeadStatus,
-  }
+	return LeadHandler{
+		listLeads:         listLeads,
+		getLeadByPublicID: getLeadByPublicID,
+		createLead:        createLead,
+		updateLeadStatus:  updateLeadStatus,
+	}
 }
 
 func (handler LeadHandler) List(writer http.ResponseWriter, request *http.Request) {
-  leads := handler.listLeads.Execute()
-  response := make([]dto.LeadResponse, 0, len(leads))
+	leads := handler.listLeads.Execute(query.LeadFilters{
+		Status:      request.URL.Query().Get("status"),
+		Source:      request.URL.Query().Get("source"),
+		OwnerUserID: request.URL.Query().Get("ownerUserId"),
+		Search:      request.URL.Query().Get("q"),
+		Assigned:    request.URL.Query().Get("assigned"),
+	})
+	response := make([]dto.LeadResponse, 0, len(leads))
 
-  for _, lead := range leads {
-    response = append(response, mapLead(lead))
-  }
+	for _, lead := range leads {
+		response = append(response, mapLead(lead))
+	}
 
-  writer.Header().Set("Content-Type", "application/json")
-  writer.WriteHeader(http.StatusOK)
-  _ = json.NewEncoder(writer).Encode(response)
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(writer).Encode(response)
 }
 
 func (handler LeadHandler) GetByPublicID(writer http.ResponseWriter, request *http.Request) {
-  lead := handler.getLeadByPublicID.Execute(request.PathValue("publicId"))
-  if lead == nil {
-    writer.Header().Set("Content-Type", "application/json")
-    writer.WriteHeader(http.StatusNotFound)
-    _ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-      Code:    "lead_not_found",
-      Message: "Lead was not found.",
-    })
-    return
-  }
+	lead := handler.getLeadByPublicID.Execute(request.PathValue("publicId"))
+	if lead == nil {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    "lead_not_found",
+			Message: "Lead was not found.",
+		})
+		return
+	}
 
-  writer.Header().Set("Content-Type", "application/json")
-  writer.WriteHeader(http.StatusOK)
-  _ = json.NewEncoder(writer).Encode(mapLead(*lead))
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(writer).Encode(mapLead(*lead))
 }
 
 func (handler LeadHandler) Create(writer http.ResponseWriter, request *http.Request) {
-  var payload dto.CreateLeadRequest
-  if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
-    writer.Header().Set("Content-Type", "application/json")
-    writer.WriteHeader(http.StatusBadRequest)
-    _ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-      Code:    "invalid_json",
-      Message: "Request body is invalid.",
-    })
-    return
-  }
+	var payload dto.CreateLeadRequest
+	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    "invalid_json",
+			Message: "Request body is invalid.",
+		})
+		return
+	}
 
-  result := handler.createLead.Execute(command.CreateLeadInput{
-    Name:        payload.Name,
-    Email:       payload.Email,
-    Source:      payload.Source,
-    OwnerUserID: payload.OwnerUserID,
-  })
+	result := handler.createLead.Execute(command.CreateLeadInput{
+		Name:        payload.Name,
+		Email:       payload.Email,
+		Source:      payload.Source,
+		OwnerUserID: payload.OwnerUserID,
+	})
 
-  writer.Header().Set("Content-Type", "application/json")
+	writer.Header().Set("Content-Type", "application/json")
 
-  switch {
-  case result.BadRequest:
-    writer.WriteHeader(http.StatusBadRequest)
-    _ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-      Code:    result.ErrorCode,
-      Message: result.ErrorText,
-    })
-  case result.Conflict:
-    writer.WriteHeader(http.StatusConflict)
-    _ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-      Code:    result.ErrorCode,
-      Message: result.ErrorText,
-    })
-  default:
-    writer.WriteHeader(http.StatusCreated)
-    _ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
-  }
+	switch {
+	case result.BadRequest:
+		writer.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    result.ErrorCode,
+			Message: result.ErrorText,
+		})
+	case result.Conflict:
+		writer.WriteHeader(http.StatusConflict)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    result.ErrorCode,
+			Message: result.ErrorText,
+		})
+	default:
+		writer.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
+	}
 }
 
 func (handler LeadHandler) UpdateStatus(writer http.ResponseWriter, request *http.Request) {
-  var payload dto.UpdateLeadStatusRequest
-  if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
-    writer.Header().Set("Content-Type", "application/json")
-    writer.WriteHeader(http.StatusBadRequest)
-    _ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-      Code:    "invalid_json",
-      Message: "Request body is invalid.",
-    })
-    return
-  }
+	var payload dto.UpdateLeadStatusRequest
+	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    "invalid_json",
+			Message: "Request body is invalid.",
+		})
+		return
+	}
 
-  result := handler.updateLeadStatus.Execute(command.UpdateLeadStatusInput{
-    PublicID: request.PathValue("publicId"),
-    Status:   payload.Status,
-  })
+	result := handler.updateLeadStatus.Execute(command.UpdateLeadStatusInput{
+		PublicID: request.PathValue("publicId"),
+		Status:   payload.Status,
+	})
 
-  writer.Header().Set("Content-Type", "application/json")
+	writer.Header().Set("Content-Type", "application/json")
 
-  switch {
-  case result.BadRequest:
-    writer.WriteHeader(http.StatusBadRequest)
-    _ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-      Code:    result.ErrorCode,
-      Message: result.ErrorText,
-    })
-  case result.NotFound:
-    writer.WriteHeader(http.StatusNotFound)
-    _ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-      Code:    result.ErrorCode,
-      Message: result.ErrorText,
-    })
-  default:
-    writer.WriteHeader(http.StatusOK)
-    _ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
-  }
+	switch {
+	case result.BadRequest:
+		writer.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    result.ErrorCode,
+			Message: result.ErrorText,
+		})
+	case result.NotFound:
+		writer.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    result.ErrorCode,
+			Message: result.ErrorText,
+		})
+	default:
+		writer.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
+	}
 }
 
 func mapLead(lead entity.Lead) dto.LeadResponse {
-  return dto.LeadResponse{
-    PublicID:    lead.PublicID,
-    Name:        lead.Name,
-    Email:       lead.Email,
-    Source:      lead.Source,
-    Status:      lead.Status,
-    OwnerUserID: lead.OwnerUserID,
-  }
+	return dto.LeadResponse{
+		PublicID:    lead.PublicID,
+		Name:        lead.Name,
+		Email:       lead.Email,
+		Source:      lead.Source,
+		Status:      lead.Status,
+		OwnerUserID: lead.OwnerUserID,
+	}
 }

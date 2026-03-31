@@ -3,18 +3,18 @@
 package main
 
 import (
-  "log"
+	"log"
 
-  "github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/bootstrap"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/bootstrap"
 )
 
 func main() {
-  app, err := bootstrap.NewApp()
-  if err != nil {
-    log.Fatalf("bootstrap error: %v", err)
-  }
+	app, err := bootstrap.NewApp()
+	if err != nil {
+		log.Fatalf("bootstrap error: %v", err)
+	}
 
-  if err := app.Run(); err != nil {
-    app.Logger.Printf("server stopped with error: %v", err)
-  }
+	if err := app.Run(); err != nil {
+		app.Logger.Printf("server stopped with error: %v", err)
+	}
 }

@@ -3,12 +3,12 @@
 package telemetry
 
 import (
-  "log"
-  "os"
+	"log"
+	"os"
 )
 
 type Logger = log.Logger
 
 func New(serviceName string) *Logger {
-  return log.New(os.Stdout, serviceName+" ", log.Ldate|log.Ltime|log.LUTC)
+	return log.New(os.Stdout, serviceName+" ", log.Ldate|log.Ltime|log.LUTC)
 }

@@ -3,34 +3,34 @@
 package bootstrap
 
 import (
-  "net/http"
+	"net/http"
 
-  "github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/api"
-  "github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/config"
-  "github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/infrastructure/persistence"
-  "github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/telemetry"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/api"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/config"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/infrastructure/persistence"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/telemetry"
 )
 
 type App struct {
-  Config config.Config
-  Logger *telemetry.Logger
-  Server *http.Server
+	Config config.Config
+	Logger *telemetry.Logger
+	Server *http.Server
 }
 
 func NewApp() (*App, error) {
-  cfg := config.Load()
-  logger := telemetry.New(cfg.ServiceName)
-  leadRepository := persistence.NewInMemoryLeadRepository()
-  server := api.NewServer(cfg, logger, leadRepository)
+	cfg := config.Load()
+	logger := telemetry.New(cfg.ServiceName)
+	leadRepository := persistence.NewInMemoryLeadRepository()
+	server := api.NewServer(cfg, logger, leadRepository)
 
-  return &App{
-    Config: cfg,
-    Logger: logger,
-    Server: server,
-  }, nil
+	return &App{
+		Config: cfg,
+		Logger: logger,
+		Server: server,
+	}, nil
 }
 
 func (app *App) Run() error {
-  app.Logger.Printf("starting %s on %s", app.Config.ServiceName, app.Config.HTTPAddress)
-  return app.Server.ListenAndServe()
+	app.Logger.Printf("starting %s on %s", app.Config.ServiceName, app.Config.HTTPAddress)
+	return app.Server.ListenAndServe()
 }

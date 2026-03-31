@@ -63,3 +63,5 @@
 - `v0.0.30`: [UPDATE 31/03/2026 - 06:23 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Contexto `service-postgresql/crm` ganhou migrations de `leads`, trigger de `updated_at` e seed bootstrap alinhado ao lead inicial do servico `crm`.
 - `v0.0.30`: [UPDATE 31/03/2026 - 06:23 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/db.sh` e `scripts/test.sh` passaram a suportar `crm` em migrate, seed, summary e smoke relacional, com validacao executada em container para o tenant `smoke-identity-bootstrap`.
 - `v0.0.31`: [UPDATE 31/03/2026 - 06:25 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Documentacao operacional atualizada para refletir comandos reais de `crm` no banco e no smoke, incluindo `migrate crm`, `seed crm` e `summary crm`.
+- `v0.0.32`: [UPDATE 31/03/2026 - 06:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou filtros operacionais em `GET /api/crm/leads`, com leitura por `status`, `source`, `ownerUserId`, `assigned` e busca textual via `q`.
+- `v0.0.32`: [UPDATE 31/03/2026 - 06:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Cobertura do `crm` ampliada para validar combinacao de filtros e leitura de leads sem owner em container.

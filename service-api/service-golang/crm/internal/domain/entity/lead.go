@@ -3,95 +3,95 @@
 package entity
 
 import (
-  "errors"
-  "net/mail"
-  "strings"
+	"errors"
+	"net/mail"
+	"strings"
 )
 
 var (
-  ErrLeadNameRequired             = errors.New("lead name is required")
-  ErrLeadEmailInvalid            = errors.New("lead email is invalid")
-  ErrLeadStatusInvalid           = errors.New("lead status is invalid")
-  ErrLeadStatusTransitionInvalid = errors.New("lead status transition is invalid")
+	ErrLeadNameRequired            = errors.New("lead name is required")
+	ErrLeadEmailInvalid            = errors.New("lead email is invalid")
+	ErrLeadStatusInvalid           = errors.New("lead status is invalid")
+	ErrLeadStatusTransitionInvalid = errors.New("lead status transition is invalid")
 )
 
 type Lead struct {
-  PublicID    string
-  Name        string
-  Email       string
-  Source      string
-  Status      string
-  OwnerUserID string
+	PublicID    string
+	Name        string
+	Email       string
+	Source      string
+	Status      string
+	OwnerUserID string
 }
 
 func NewLead(publicID string, name string, email string, source string, ownerUserID string) (Lead, error) {
-  normalizedName := strings.TrimSpace(name)
-  normalizedEmail := strings.ToLower(strings.TrimSpace(email))
-  normalizedSource := strings.TrimSpace(source)
+	normalizedName := strings.TrimSpace(name)
+	normalizedEmail := strings.ToLower(strings.TrimSpace(email))
+	normalizedSource := strings.TrimSpace(source)
 
-  if normalizedName == "" {
-    return Lead{}, ErrLeadNameRequired
-  }
+	if normalizedName == "" {
+		return Lead{}, ErrLeadNameRequired
+	}
 
-  if _, err := mail.ParseAddress(normalizedEmail); err != nil {
-    return Lead{}, ErrLeadEmailInvalid
-  }
+	if _, err := mail.ParseAddress(normalizedEmail); err != nil {
+		return Lead{}, ErrLeadEmailInvalid
+	}
 
-  if normalizedSource == "" {
-    normalizedSource = "manual"
-  }
+	if normalizedSource == "" {
+		normalizedSource = "manual"
+	}
 
-  return Lead{
-    PublicID:    publicID,
-    Name:        normalizedName,
-    Email:       normalizedEmail,
-    Source:      normalizedSource,
-    Status:      "captured",
-    OwnerUserID: strings.TrimSpace(ownerUserID),
-  }, nil
+	return Lead{
+		PublicID:    publicID,
+		Name:        normalizedName,
+		Email:       normalizedEmail,
+		Source:      normalizedSource,
+		Status:      "captured",
+		OwnerUserID: strings.TrimSpace(ownerUserID),
+	}, nil
 }
 
 func (lead Lead) TransitionTo(status string) (Lead, error) {
-  targetStatus := normalizeStatus(status)
-  if !isValidStatus(targetStatus) {
-    return Lead{}, ErrLeadStatusInvalid
-  }
+	targetStatus := normalizeStatus(status)
+	if !isValidStatus(targetStatus) {
+		return Lead{}, ErrLeadStatusInvalid
+	}
 
-  currentStatus := normalizeStatus(lead.Status)
-  if currentStatus == targetStatus {
-    return lead, nil
-  }
+	currentStatus := normalizeStatus(lead.Status)
+	if currentStatus == targetStatus {
+		return lead, nil
+	}
 
-  if !canTransition(currentStatus, targetStatus) {
-    return Lead{}, ErrLeadStatusTransitionInvalid
-  }
+	if !canTransition(currentStatus, targetStatus) {
+		return Lead{}, ErrLeadStatusTransitionInvalid
+	}
 
-  lead.Status = targetStatus
-  return lead, nil
+	lead.Status = targetStatus
+	return lead, nil
 }
 
 func normalizeStatus(status string) string {
-  return strings.ToLower(strings.TrimSpace(status))
+	return strings.ToLower(strings.TrimSpace(status))
 }
 
 func isValidStatus(status string) bool {
-  switch status {
-  case "captured", "contacted", "qualified", "disqualified":
-    return true
-  default:
-    return false
-  }
+	switch status {
+	case "captured", "contacted", "qualified", "disqualified":
+		return true
+	default:
+		return false
+	}
 }
 
 func canTransition(currentStatus string, targetStatus string) bool {
-  switch currentStatus {
-  case "captured":
-    return targetStatus == "contacted" || targetStatus == "qualified" || targetStatus == "disqualified"
-  case "contacted":
-    return targetStatus == "qualified" || targetStatus == "disqualified"
-  case "qualified":
-    return targetStatus == "disqualified"
-  default:
-    return false
-  }
+	switch currentStatus {
+	case "captured":
+		return targetStatus == "contacted" || targetStatus == "qualified" || targetStatus == "disqualified"
+	case "contacted":
+		return targetStatus == "qualified" || targetStatus == "disqualified"
+	case "qualified":
+		return targetStatus == "disqualified"
+	default:
+		return false
+	}
 }
