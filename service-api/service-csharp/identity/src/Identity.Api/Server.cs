@@ -1,0 +1,16 @@
+// Este arquivo concentra as rotas minimas e o bootstrap HTTP do servico.
+// Crescimento de endpoints deve manter a API fina.
+using Identity.Contracts;
+
+namespace Identity.Api;
+
+public static class Server
+{
+  public static IEndpointRouteBuilder MapIdentityRoutes(this IEndpointRouteBuilder app)
+  {
+    app.MapGet("/health/live", () => TypedResults.Ok(new HealthResponse("identity", "live")));
+    app.MapGet("/health/ready", () => TypedResults.Ok(new HealthResponse("identity", "ready")));
+
+    return app;
+  }
+}

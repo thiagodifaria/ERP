@@ -14,14 +14,13 @@
 
 ---
 
-## Documentation
+## Documentation / Documentacao
 
-- Architecture: [docs/ARQUITETURA.md](docs/ARQUITETURA.md)
-- Standards: [docs/PADROES.md](docs/PADROES.md)
-- Integrations: [docs/INTEGRACOES.md](docs/INTEGRACOES.md)
-- Operations: [docs/OPERACOES.md](docs/OPERACOES.md)
-- Delivery phases: [docs/FASES.md](docs/FASES.md)
-- Changelog: [docs/CHANGELOG.md](docs/CHANGELOG.md)
+**Architecture Reference:** [docs/ARQUITETURA.md](docs/ARQUITETURA.md)  
+**Engineering Standards:** [docs/PADROES.md](docs/PADROES.md)  
+**Integration Map:** [docs/INTEGRACOES.md](docs/INTEGRACOES.md)  
+**Operations Reference:** [docs/OPERACOES.md](docs/OPERACOES.md)  
+**Changelog:** [docs/CHANGELOG.md](docs/CHANGELOG.md)
 
 ---
 
@@ -41,53 +40,50 @@ The platform is intentionally polyglot:
 
 ---
 
-## Current Status
+## Key Highlights
 
-The repository is in **Phase 0 - Architectural Foundation**.
+- multi-tenant architecture from day one
+- polyglot backend split by service responsibility
+- strong domain ownership across transactional services and PostgreSQL structures
+- workflow separation between control plane and runtime plane
+- external integrations isolated through adapters
+- auditability, observability and idempotent event processing as core platform concerns
 
-This update establishes:
-
-- the root monorepo layout
-- the backend split by language under `service-api`
-- the committed documentation baseline under `docs`
-- the initial versioning policy through `docs/CHANGELOG.md`
-- the local-only workspace rules for private planning and progress artifacts
-
----
-
-## Repository Layout
+### What Makes It Special?
 
 ```text
-ERP/
-  README.md
-  .env.example
-  .gitignore
-  .dockerignore
-  .editorconfig
-
-  service-api/
-    service-golang/
-    service-csharp/
-    service-elixir/
-    service-typescript/
-    service-python/
-    service-rust/
-    service-postgresql/
-
-  infra/
-  docs/
-  scripts/
-  tests/
+OK Go, .NET, TypeScript, Elixir, Python and Rust mapped to clear operational roles
+OK service-api organized first by language instead of mixed deployment folders
+OK domain-owned PostgreSQL layout ready for migrations, seeds, views, functions and indexes
+OK edge, identity and webhook-hub already started as concrete service templates
+OK event-driven architecture planned with Kafka, retries and transactional outbox
+OK enterprise observability stack designed from the foundation instead of late-stage retrofit
 ```
 
 ---
 
-## Delivery Principles
+## Current Status
 
-- keep the repository root clean
-- keep code in English
-- keep comments short and in Brazilian Portuguese when code starts landing
-- keep business rules inside domain and application, never in bootstrap
-- keep each domain responsible for its own data and migrations
-- prefer container-first execution for local development and tests
-- document every meaningful update in `docs/CHANGELOG.md`
+The repository is currently in the architectural foundation stage.
+
+The base monorepo layout is already in place together with the first service templates for:
+
+- `edge`
+- `identity`
+- `webhook-hub`
+- PostgreSQL ownership for `common` and `identity`
+
+---
+
+## Contact
+
+**Thiago Di Faria** - thiagodifaria@gmail.com
+
+[![GitHub](https://img.shields.io/badge/GitHub-@thiagodifaria-black?style=flat&logo=github)](https://github.com/thiagodifaria)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Thiago_Di_Faria-blue?style=flat&logo=linkedin)](https://linkedin.com/in/thiagodifaria)
+
+---
+
+### Star this project if you find it useful
+
+**Made by [Thiago Di Faria](https://github.com/thiagodifaria)**
