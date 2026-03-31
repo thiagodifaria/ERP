@@ -3,7 +3,7 @@ import { IncomingMessage, ServerResponse } from "node:http";
 import { HealthResponse, ReadinessResponse } from "./dto/health.js";
 import { CreateWorkflowDefinitionRequest } from "./dto/create-workflow-definition-request.js";
 import { UpdateWorkflowDefinitionStatusRequest } from "./dto/update-workflow-definition-status-request.js";
-import { services } from "../config/container.js";
+import { runtime, services } from "../config/container.js";
 
 function json(response: ServerResponse, statusCode: number, body: unknown): void {
   response.writeHead(statusCode, { "content-type": "application/json" });
@@ -12,26 +12,23 @@ function json(response: ServerResponse, statusCode: number, body: unknown): void
 
 function live(): HealthResponse {
   return {
-    service: "workflow-control",
+    service: runtime.config.serviceName,
     status: "live"
   };
 }
 
 function ready(): HealthResponse {
   return {
-    service: "workflow-control",
+    service: runtime.config.serviceName,
     status: "ready"
   };
 }
 
 function details(): ReadinessResponse {
   return {
-    service: "workflow-control",
+    service: runtime.config.serviceName,
     status: "ready",
-    dependencies: [
-      { name: "router", status: "ready" },
-      { name: "definitions-catalog", status: "pending-runtime-wiring" }
-    ]
+    dependencies: runtime.readinessDependencies
   };
 }
 

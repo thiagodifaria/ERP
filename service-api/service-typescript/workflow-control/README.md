@@ -6,6 +6,7 @@ Initial scope:
 
 - TypeScript service bootstrap
 - layered folder structure aligned with the monorepo standard
+- runtime config isolated in `src/config`
 - health and readiness routes
 - bootstrap workflow definition list
 - room for workflow definitions and future control-plane APIs

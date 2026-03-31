@@ -1,6 +1,7 @@
+import { WorkflowDefinitionRepository } from "../domain/workflow-definition-repository.js";
 import { WorkflowDefinition, WorkflowDefinitionStatus, createWorkflowDefinition } from "../domain/workflow-definition.js";
 
-export class InMemoryWorkflowDefinitionRepository {
+export class InMemoryWorkflowDefinitionRepository implements WorkflowDefinitionRepository {
   private readonly definitions: WorkflowDefinition[];
 
   public constructor() {

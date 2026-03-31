@@ -1,9 +1,9 @@
 import { WorkflowDefinition, createWorkflowDefinition } from "../domain/workflow-definition.js";
-import { InMemoryWorkflowDefinitionRepository } from "../infrastructure/in-memory-workflow-definition-repository.js";
+import { WorkflowDefinitionRepository } from "../domain/workflow-definition-repository.js";
 
 export class CreateWorkflowDefinition {
   public constructor(
-    private readonly repository: InMemoryWorkflowDefinitionRepository
+    private readonly repository: WorkflowDefinitionRepository
   ) {}
 
   public execute(input: {
