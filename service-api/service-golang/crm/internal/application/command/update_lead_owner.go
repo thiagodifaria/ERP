@@ -18,10 +18,11 @@ type UpdateLeadOwnerInput struct {
 }
 
 type UpdateLeadOwnerResult struct {
-	Lead      *entity.Lead
-	ErrorCode string
-	ErrorText string
-	NotFound  bool
+	Lead       *entity.Lead
+	ErrorCode  string
+	ErrorText  string
+	BadRequest bool
+	NotFound   bool
 }
 
 func NewUpdateLeadOwner(leadRepository repository.LeadRepository) UpdateLeadOwner {
@@ -39,7 +40,16 @@ func (useCase UpdateLeadOwner) Execute(input UpdateLeadOwnerInput) UpdateLeadOwn
 		}
 	}
 
-	updatedLead := useCase.leadRepository.Update(lead.AssignOwner(input.OwnerUserID))
+	assignedLead, err := lead.AssignOwner(input.OwnerUserID)
+	if err != nil {
+		return UpdateLeadOwnerResult{
+			ErrorCode:  "invalid_owner_user_id",
+			ErrorText:  "Lead owner user id is invalid.",
+			BadRequest: true,
+		}
+	}
+
+	updatedLead := useCase.leadRepository.Update(assignedLead)
 
 	return UpdateLeadOwnerResult{Lead: &updatedLead}
 }

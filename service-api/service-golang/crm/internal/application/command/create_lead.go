@@ -3,9 +3,9 @@ package command
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/entity"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/repository"
 )
@@ -65,6 +65,12 @@ func (useCase CreateLead) Execute(input CreateLeadInput) CreateLeadResult {
 				ErrorText:  "Lead email is invalid.",
 				BadRequest: true,
 			}
+		case entity.ErrLeadOwnerUserIDInvalid:
+			return CreateLeadResult{
+				ErrorCode:  "invalid_owner_user_id",
+				ErrorText:  "Lead owner user id is invalid.",
+				BadRequest: true,
+			}
 		default:
 			return CreateLeadResult{
 				ErrorCode:  "invalid_lead",
@@ -80,10 +86,13 @@ func (useCase CreateLead) Execute(input CreateLeadInput) CreateLeadResult {
 }
 
 func newPublicID() string {
-	raw := make([]byte, 8)
+	raw := make([]byte, 16)
 	if _, err := rand.Read(raw); err != nil {
-		return "lead-fallback"
+		return uuid.Nil.String()
 	}
 
-	return "lead-" + hex.EncodeToString(raw)
+	raw[6] = (raw[6] & 0x0f) | 0x40
+	raw[8] = (raw[8] & 0x3f) | 0x80
+
+	return uuid.UUID(raw).String()
 }

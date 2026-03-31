@@ -6,11 +6,15 @@ import (
 	"errors"
 	"net/mail"
 	"strings"
+
+	"github.com/google/uuid"
 )
 
 var (
+	ErrLeadPublicIDInvalid         = errors.New("lead public id is invalid")
 	ErrLeadNameRequired            = errors.New("lead name is required")
 	ErrLeadEmailInvalid            = errors.New("lead email is invalid")
+	ErrLeadOwnerUserIDInvalid      = errors.New("lead owner user id is invalid")
 	ErrLeadStatusInvalid           = errors.New("lead status is invalid")
 	ErrLeadStatusTransitionInvalid = errors.New("lead status transition is invalid")
 )
@@ -25,9 +29,15 @@ type Lead struct {
 }
 
 func NewLead(publicID string, name string, email string, source string, ownerUserID string) (Lead, error) {
+	normalizedPublicID := strings.TrimSpace(publicID)
 	normalizedName := strings.TrimSpace(name)
 	normalizedEmail := strings.ToLower(strings.TrimSpace(email))
 	normalizedSource := strings.TrimSpace(source)
+	normalizedOwnerUserID := strings.TrimSpace(ownerUserID)
+
+	if _, err := uuid.Parse(normalizedPublicID); err != nil {
+		return Lead{}, ErrLeadPublicIDInvalid
+	}
 
 	if normalizedName == "" {
 		return Lead{}, ErrLeadNameRequired
@@ -41,13 +51,19 @@ func NewLead(publicID string, name string, email string, source string, ownerUse
 		normalizedSource = "manual"
 	}
 
+	if normalizedOwnerUserID != "" {
+		if _, err := uuid.Parse(normalizedOwnerUserID); err != nil {
+			return Lead{}, ErrLeadOwnerUserIDInvalid
+		}
+	}
+
 	return Lead{
-		PublicID:    publicID,
+		PublicID:    normalizedPublicID,
 		Name:        normalizedName,
 		Email:       normalizedEmail,
 		Source:      normalizedSource,
 		Status:      "captured",
-		OwnerUserID: strings.TrimSpace(ownerUserID),
+		OwnerUserID: normalizedOwnerUserID,
 	}, nil
 }
 
@@ -70,9 +86,16 @@ func (lead Lead) TransitionTo(status string) (Lead, error) {
 	return lead, nil
 }
 
-func (lead Lead) AssignOwner(ownerUserID string) Lead {
-	lead.OwnerUserID = strings.TrimSpace(ownerUserID)
-	return lead
+func (lead Lead) AssignOwner(ownerUserID string) (Lead, error) {
+	normalizedOwnerUserID := strings.TrimSpace(ownerUserID)
+	if normalizedOwnerUserID != "" {
+		if _, err := uuid.Parse(normalizedOwnerUserID); err != nil {
+			return Lead{}, ErrLeadOwnerUserIDInvalid
+		}
+	}
+
+	lead.OwnerUserID = normalizedOwnerUserID
+	return lead, nil
 }
 
 func normalizeStatus(status string) string {

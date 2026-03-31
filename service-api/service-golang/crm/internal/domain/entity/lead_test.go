@@ -2,13 +2,18 @@ package entity
 
 import "testing"
 
+const (
+	testLeadPublicID      = "0195e7a0-7a9c-7c1f-8a44-4a6e70000001"
+	testOwnerUserPublicID = "0195e7a0-7a9c-7c1f-8a44-4a6e70000011"
+)
+
 func TestNewLeadShouldNormalizeAndCreateLead(t *testing.T) {
 	lead, err := NewLead(
-		"lead-public-id",
+		testLeadPublicID,
 		"  Ana Souza  ",
 		"ANA@EXAMPLE.COM",
 		"",
-		"owner-public-id",
+		testOwnerUserPublicID,
 	)
 
 	if err != nil {
@@ -33,7 +38,7 @@ func TestNewLeadShouldNormalizeAndCreateLead(t *testing.T) {
 }
 
 func TestNewLeadShouldRejectBlankName(t *testing.T) {
-	_, err := NewLead("lead-public-id", "   ", "ana@example.com", "meta-ads", "owner-public-id")
+	_, err := NewLead(testLeadPublicID, "   ", "ana@example.com", "meta-ads", testOwnerUserPublicID)
 
 	if err != ErrLeadNameRequired {
 		t.Fatalf("expected ErrLeadNameRequired, got %v", err)
@@ -41,15 +46,31 @@ func TestNewLeadShouldRejectBlankName(t *testing.T) {
 }
 
 func TestNewLeadShouldRejectInvalidEmail(t *testing.T) {
-	_, err := NewLead("lead-public-id", "Ana Souza", "invalid-email", "meta-ads", "owner-public-id")
+	_, err := NewLead(testLeadPublicID, "Ana Souza", "invalid-email", "meta-ads", testOwnerUserPublicID)
 
 	if err != ErrLeadEmailInvalid {
 		t.Fatalf("expected ErrLeadEmailInvalid, got %v", err)
 	}
 }
 
+func TestNewLeadShouldRejectInvalidPublicID(t *testing.T) {
+	_, err := NewLead("lead-public-id", "Ana Souza", "ana@example.com", "meta-ads", testOwnerUserPublicID)
+
+	if err != ErrLeadPublicIDInvalid {
+		t.Fatalf("expected ErrLeadPublicIDInvalid, got %v", err)
+	}
+}
+
+func TestNewLeadShouldRejectInvalidOwnerUserID(t *testing.T) {
+	_, err := NewLead(testLeadPublicID, "Ana Souza", "ana@example.com", "meta-ads", "owner-public-id")
+
+	if err != ErrLeadOwnerUserIDInvalid {
+		t.Fatalf("expected ErrLeadOwnerUserIDInvalid, got %v", err)
+	}
+}
+
 func TestTransitionToShouldMoveLeadToQualified(t *testing.T) {
-	lead, err := NewLead("lead-public-id", "Ana Souza", "ana@example.com", "meta-ads", "owner-public-id")
+	lead, err := NewLead(testLeadPublicID, "Ana Souza", "ana@example.com", "meta-ads", testOwnerUserPublicID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -65,7 +86,7 @@ func TestTransitionToShouldMoveLeadToQualified(t *testing.T) {
 }
 
 func TestTransitionToShouldRejectInvalidTransition(t *testing.T) {
-	lead, err := NewLead("lead-public-id", "Ana Souza", "ana@example.com", "meta-ads", "owner-public-id")
+	lead, err := NewLead(testLeadPublicID, "Ana Souza", "ana@example.com", "meta-ads", testOwnerUserPublicID)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -82,18 +103,38 @@ func TestTransitionToShouldRejectInvalidTransition(t *testing.T) {
 }
 
 func TestAssignOwnerShouldNormalizeValue(t *testing.T) {
-	lead, err := NewLead("lead-public-id", "Ana Souza", "ana@example.com", "meta-ads", "")
+	lead, err := NewLead(testLeadPublicID, "Ana Souza", "ana@example.com", "meta-ads", "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	assignedLead := lead.AssignOwner("  owner-ana  ")
-	if assignedLead.OwnerUserID != "owner-ana" {
-		t.Fatalf("expected normalized owner owner-ana, got %s", assignedLead.OwnerUserID)
+	assignedLead, err := lead.AssignOwner("  " + testOwnerUserPublicID + "  ")
+	if err != nil {
+		t.Fatalf("unexpected owner assignment error: %v", err)
 	}
 
-	unassignedLead := assignedLead.AssignOwner("   ")
+	if assignedLead.OwnerUserID != testOwnerUserPublicID {
+		t.Fatalf("expected normalized owner %s, got %s", testOwnerUserPublicID, assignedLead.OwnerUserID)
+	}
+
+	unassignedLead, err := assignedLead.AssignOwner("   ")
+	if err != nil {
+		t.Fatalf("unexpected owner clearing error: %v", err)
+	}
+
 	if unassignedLead.OwnerUserID != "" {
 		t.Fatalf("expected owner to be cleared, got %s", unassignedLead.OwnerUserID)
+	}
+}
+
+func TestAssignOwnerShouldRejectInvalidValue(t *testing.T) {
+	lead, err := NewLead(testLeadPublicID, "Ana Souza", "ana@example.com", "meta-ads", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	_, err = lead.AssignOwner("owner-ana")
+	if err != ErrLeadOwnerUserIDInvalid {
+		t.Fatalf("expected ErrLeadOwnerUserIDInvalid, got %v", err)
 	}
 }

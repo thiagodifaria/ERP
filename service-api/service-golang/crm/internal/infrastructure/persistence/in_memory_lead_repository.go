@@ -14,15 +14,20 @@ type InMemoryLeadRepository struct {
 	leads []entity.Lead
 }
 
+const (
+	BootstrapLeadPublicID      = "0195e7a0-7a9c-7c1f-8a44-4a6e70000001"
+	BootstrapOwnerUserPublicID = "0195e7a0-7a9c-7c1f-8a44-4a6e70000011"
+)
+
 func NewInMemoryLeadRepository() *InMemoryLeadRepository {
 	repository := &InMemoryLeadRepository{}
 
 	lead, _ := entity.NewLead(
-		"lead-bootstrap-ops",
+		BootstrapLeadPublicID,
 		"Bootstrap Ops Lead",
 		"lead@bootstrap-ops.local",
 		"manual",
-		"owner-bootstrap-ops",
+		BootstrapOwnerUserPublicID,
 	)
 	repository.leads = []entity.Lead{lead}
 

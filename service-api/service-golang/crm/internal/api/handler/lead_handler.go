@@ -154,6 +154,12 @@ func (handler LeadHandler) UpdateOwner(writer http.ResponseWriter, request *http
 	writer.Header().Set("Content-Type", "application/json")
 
 	switch {
+	case result.BadRequest:
+		writer.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    result.ErrorCode,
+			Message: result.ErrorText,
+		})
 	case result.NotFound:
 		writer.WriteHeader(http.StatusNotFound)
 		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{

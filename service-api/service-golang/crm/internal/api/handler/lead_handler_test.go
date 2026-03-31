@@ -13,6 +13,12 @@ import (
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/infrastructure/persistence"
 )
 
+const (
+	testOwnerAnaPublicID       = "0195e7a0-7a9c-7c1f-8a44-4a6e70000021"
+	testOwnerCarolPublicID     = "0195e7a0-7a9c-7c1f-8a44-4a6e70000022"
+	testOwnerDuplicatePublicID = "0195e7a0-7a9c-7c1f-8a44-4a6e70000023"
+)
+
 func TestListShouldReturnBootstrapLead(t *testing.T) {
 	handler := newLeadHandlerForTest(persistence.NewInMemoryLeadRepository())
 	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads", nil)
@@ -48,7 +54,7 @@ func TestListShouldFilterByStatusSearchAndAssignment(t *testing.T) {
 		Name:        "Ana Souza",
 		Email:       "ana@example.com",
 		Source:      "Meta-Ads",
-		OwnerUserID: "owner-ana",
+		OwnerUserID: testOwnerAnaPublicID,
 	})
 	if createdLead.Lead == nil {
 		t.Fatalf("expected created lead, got error %s", createdLead.ErrorCode)
@@ -64,7 +70,7 @@ func TestListShouldFilterByStatusSearchAndAssignment(t *testing.T) {
 
 	request := httptest.NewRequest(
 		http.MethodGet,
-		"/api/crm/leads?status=contacted&q=ana&assigned=true&source=meta-ads&ownerUserId=owner-ana",
+		"/api/crm/leads?status=contacted&q=ana&assigned=true&source=meta-ads&ownerUserId="+testOwnerAnaPublicID,
 		nil,
 	)
 	recorder := httptest.NewRecorder()
@@ -136,7 +142,7 @@ func TestSummaryShouldReturnPipelineSnapshot(t *testing.T) {
 		Name:        "Ana Souza",
 		Email:       "ana@example.com",
 		Source:      "meta-ads",
-		OwnerUserID: "owner-ana",
+		OwnerUserID: testOwnerAnaPublicID,
 	})
 	bruno := createLead.Execute(command.CreateLeadInput{
 		Name:   "Bruno Lima",
@@ -192,7 +198,7 @@ func TestSummaryShouldReturnPipelineSnapshot(t *testing.T) {
 
 func TestCreateShouldReturnCreatedLead(t *testing.T) {
 	handler := newLeadHandlerForTest(persistence.NewInMemoryLeadRepository())
-	body := bytes.NewBufferString(`{"name":"Ana Souza","email":"ana@example.com","source":"meta-ads","ownerUserId":"owner-ana"}`)
+	body := bytes.NewBufferString(`{"name":"Ana Souza","email":"ana@example.com","source":"meta-ads","ownerUserId":"` + testOwnerAnaPublicID + `"}`)
 	request := httptest.NewRequest(http.MethodPost, "/api/crm/leads", body)
 	recorder := httptest.NewRecorder()
 
@@ -214,11 +220,15 @@ func TestCreateShouldReturnCreatedLead(t *testing.T) {
 	if response.Status != "captured" {
 		t.Fatalf("expected status captured, got %s", response.Status)
 	}
+
+	if response.OwnerUserID != testOwnerAnaPublicID {
+		t.Fatalf("expected owner %s, got %s", testOwnerAnaPublicID, response.OwnerUserID)
+	}
 }
 
 func TestCreateShouldReturnConflictForDuplicateEmail(t *testing.T) {
 	handler := newLeadHandlerForTest(persistence.NewInMemoryLeadRepository())
-	body := bytes.NewBufferString(`{"name":"Duplicate Lead","email":"lead@bootstrap-ops.local","source":"manual","ownerUserId":"owner-duplicate"}`)
+	body := bytes.NewBufferString(`{"name":"Duplicate Lead","email":"lead@bootstrap-ops.local","source":"manual","ownerUserId":"` + testOwnerDuplicatePublicID + `"}`)
 	request := httptest.NewRequest(http.MethodPost, "/api/crm/leads", body)
 	recorder := httptest.NewRecorder()
 
@@ -231,8 +241,8 @@ func TestCreateShouldReturnConflictForDuplicateEmail(t *testing.T) {
 
 func TestGetByPublicIDShouldReturnLead(t *testing.T) {
 	handler := newLeadHandlerForTest(persistence.NewInMemoryLeadRepository())
-	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/lead-bootstrap-ops", nil)
-	request.SetPathValue("publicId", "lead-bootstrap-ops")
+	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/"+persistence.BootstrapLeadPublicID, nil)
+	request.SetPathValue("publicId", persistence.BootstrapLeadPublicID)
 	recorder := httptest.NewRecorder()
 
 	handler.GetByPublicID(recorder, request)
@@ -245,8 +255,8 @@ func TestGetByPublicIDShouldReturnLead(t *testing.T) {
 func TestUpdateStatusShouldReturnUpdatedLead(t *testing.T) {
 	handler := newLeadHandlerForTest(persistence.NewInMemoryLeadRepository())
 	body := bytes.NewBufferString(`{"status":"contacted"}`)
-	request := httptest.NewRequest(http.MethodPatch, "/api/crm/leads/lead-bootstrap-ops/status", body)
-	request.SetPathValue("publicId", "lead-bootstrap-ops")
+	request := httptest.NewRequest(http.MethodPatch, "/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/status", body)
+	request.SetPathValue("publicId", persistence.BootstrapLeadPublicID)
 	recorder := httptest.NewRecorder()
 
 	handler.UpdateStatus(recorder, request)
@@ -280,6 +290,7 @@ func TestUpdateOwnerShouldReturnUpdatedLead(t *testing.T) {
 	}
 
 	body := bytes.NewBufferString(`{"ownerUserId":"owner-carol"}`)
+	body = bytes.NewBufferString(`{"ownerUserId":"` + testOwnerCarolPublicID + `"}`)
 	request := httptest.NewRequest(http.MethodPatch, "/api/crm/leads/"+createdLead.Lead.PublicID+"/owner", body)
 	request.SetPathValue("publicId", createdLead.Lead.PublicID)
 	recorder := httptest.NewRecorder()
@@ -295,16 +306,16 @@ func TestUpdateOwnerShouldReturnUpdatedLead(t *testing.T) {
 		t.Fatalf("unexpected decode error: %v", err)
 	}
 
-	if response.OwnerUserID != "owner-carol" {
-		t.Fatalf("expected owner owner-carol, got %s", response.OwnerUserID)
+	if response.OwnerUserID != testOwnerCarolPublicID {
+		t.Fatalf("expected owner %s, got %s", testOwnerCarolPublicID, response.OwnerUserID)
 	}
 }
 
 func TestUpdateOwnerShouldAllowClearingOwner(t *testing.T) {
 	handler := newLeadHandlerForTest(persistence.NewInMemoryLeadRepository())
 	body := bytes.NewBufferString(`{"ownerUserId":"   "}`)
-	request := httptest.NewRequest(http.MethodPatch, "/api/crm/leads/lead-bootstrap-ops/owner", body)
-	request.SetPathValue("publicId", "lead-bootstrap-ops")
+	request := httptest.NewRequest(http.MethodPatch, "/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/owner", body)
+	request.SetPathValue("publicId", persistence.BootstrapLeadPublicID)
 	recorder := httptest.NewRecorder()
 
 	handler.UpdateOwner(recorder, request)
@@ -320,6 +331,29 @@ func TestUpdateOwnerShouldAllowClearingOwner(t *testing.T) {
 
 	if response.OwnerUserID != "" {
 		t.Fatalf("expected owner to be cleared, got %s", response.OwnerUserID)
+	}
+}
+
+func TestUpdateOwnerShouldRejectInvalidUUID(t *testing.T) {
+	handler := newLeadHandlerForTest(persistence.NewInMemoryLeadRepository())
+	body := bytes.NewBufferString(`{"ownerUserId":"owner-carol"}`)
+	request := httptest.NewRequest(http.MethodPatch, "/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/owner", body)
+	request.SetPathValue("publicId", persistence.BootstrapLeadPublicID)
+	recorder := httptest.NewRecorder()
+
+	handler.UpdateOwner(recorder, request)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, recorder.Code)
+	}
+
+	var response dto.ErrorResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.Code != "invalid_owner_user_id" {
+		t.Fatalf("expected invalid_owner_user_id, got %s", response.Code)
 	}
 }
 

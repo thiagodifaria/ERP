@@ -97,7 +97,7 @@ func TestRouterShouldExposeLeadByPublicID(t *testing.T) {
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
 	)
-	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/lead-bootstrap-ops", nil)
+	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/"+persistence.BootstrapLeadPublicID, nil)
 	recorder := httptest.NewRecorder()
 
 	router.ServeHTTP(recorder, request)
@@ -111,8 +111,8 @@ func TestRouterShouldExposeLeadByPublicID(t *testing.T) {
 		t.Fatalf("unexpected decode error: %v", err)
 	}
 
-	if response.PublicID != "lead-bootstrap-ops" {
-		t.Fatalf("expected public id lead-bootstrap-ops, got %s", response.PublicID)
+	if response.PublicID != persistence.BootstrapLeadPublicID {
+		t.Fatalf("expected public id %s, got %s", persistence.BootstrapLeadPublicID, response.PublicID)
 	}
 }
 
@@ -121,7 +121,11 @@ func TestRouterShouldUpdateLeadOwner(t *testing.T) {
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
 	)
-	request := httptest.NewRequest(http.MethodPatch, "/api/crm/leads/lead-bootstrap-ops/owner", bytes.NewBufferString(`{"ownerUserId":"owner-updated"}`))
+	request := httptest.NewRequest(
+		http.MethodPatch,
+		"/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/owner",
+		bytes.NewBufferString(`{"ownerUserId":"0195e7a0-7a9c-7c1f-8a44-4a6e70000024"}`),
+	)
 	recorder := httptest.NewRecorder()
 
 	router.ServeHTTP(recorder, request)
@@ -135,7 +139,7 @@ func TestRouterShouldUpdateLeadOwner(t *testing.T) {
 		t.Fatalf("unexpected decode error: %v", err)
 	}
 
-	if response.OwnerUserID != "owner-updated" {
-		t.Fatalf("expected owner owner-updated, got %s", response.OwnerUserID)
+	if response.OwnerUserID != "0195e7a0-7a9c-7c1f-8a44-4a6e70000024" {
+		t.Fatalf("expected owner 0195e7a0-7a9c-7c1f-8a44-4a6e70000024, got %s", response.OwnerUserID)
 	}
 }
