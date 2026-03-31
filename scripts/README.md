@@ -24,7 +24,7 @@ Useful commands:
 - `./scripts/db.sh summary crm smoke-identity-bootstrap`  `# total, status e ownership`
 - `./scripts/test.sh unit`
 - `./scripts/test.sh integration`
-- `./scripts/test.sh contract`  `# contratos HTTP publicos de crm e identity`
+- `./scripts/test.sh contract`  `# contratos HTTP publicos de workflow-control, crm e identity`
 - `./scripts/test.sh smoke`  `# reset relacional + bootstrap + smoke HTTP de crm e identity, incluindo health/details e lead notes`
 - `./scripts/test.sh all`
 
@@ -40,3 +40,9 @@ Current unit scope:
 - TypeScript: `workflow-control`
 - .NET: `identity`
 - Rust: `webhook-hub`
+
+Current contract scope:
+
+- TypeScript: `workflow-control`
+- Go: `crm`
+- .NET: `identity`

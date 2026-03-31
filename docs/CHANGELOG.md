@@ -151,3 +151,5 @@
 - `v0.0.74`: [UPDATE 31/03/2026 - 16:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A suite passou a validar normalizacao de payload e erro `workflow_definition_status_invalid`, endurecendo a API antes da fase contratual.
 - `v0.0.75`: [UPDATE 31/03/2026 - 16:08 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou a primeira suite de contract tests em `TypeScript`, congelando o payload publico de `WorkflowDefinition`.
 - `v0.0.75`: [UPDATE 31/03/2026 - 16:08 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O servico passou a expor `npm run test:contract`, alinhando a stack `TypeScript` ao fluxo contratual ja usado em `crm` e `identity`.
+- `v0.0.76`: [UPDATE 31/03/2026 - 16:12 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh contract` passou a executar `workflow-control` em container, colocando a stack `TypeScript` tambem no pipeline contratual oficial.
+- `v0.0.76`: [UPDATE 31/03/2026 - 16:12 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional foi atualizada para refletir que o fluxo de contratos do monorepo agora cobre `workflow-control`, `crm` e `identity`.

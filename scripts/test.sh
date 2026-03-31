@@ -41,6 +41,14 @@ run_typescript_unit() {
     sh -lc "npm install && npm run test:unit && rm -rf node_modules dist"
 }
 
+run_typescript_contract() {
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-typescript/workflow-control:/workspace" \
+    -w /workspace \
+    node:22-alpine \
+    sh -lc "npm install && npm run test:contract && rm -rf node_modules dist"
+}
+
 run_dotnet_build() {
   docker run --rm \
     -v "$ROOT_DIR/service-api/service-csharp/identity:/workspace" \
@@ -600,6 +608,7 @@ main() {
       run_dotnet_integration
       ;;
     contract)
+      run_typescript_contract
       run_go_contract
       run_dotnet_contract
       ;;
@@ -611,6 +620,7 @@ main() {
       run_typescript_unit
       run_dotnet_build
       run_dotnet_integration
+      run_typescript_contract
       run_go_contract
       run_dotnet_contract
       run_rust_unit
