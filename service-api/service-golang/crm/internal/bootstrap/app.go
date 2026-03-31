@@ -65,5 +65,11 @@ func buildRepositories(cfg config.Config) (repository.LeadRepository, repository
 		return nil, nil, nil, err
 	}
 
-	return leadRepository, persistence.NewInMemoryLeadNoteRepository(), database, nil
+	leadNoteRepository, err := persistence.NewPostgresLeadNoteRepository(database, cfg.BootstrapTenantSlug)
+	if err != nil {
+		_ = database.Close()
+		return nil, nil, nil, err
+	}
+
+	return leadRepository, leadNoteRepository, database, nil
 }

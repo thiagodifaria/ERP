@@ -97,3 +97,5 @@
 - `v0.0.47`: [UPDATE 31/03/2026 - 14:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Cobertura do `crm` foi ampliada para validar criacao de nota, normalizacao de payload e erro `400` para body vazio.
 - `v0.0.48`: [UPDATE 31/03/2026 - 14:05 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Contexto `service-postgresql/crm` ganhou a tabela `lead_notes`, com ownership por tenant, relacionamento com `crm.leads` e remocao em cascata.
 - `v0.0.48`: [UPDATE 31/03/2026 - 14:05 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Seeds relacionais do `crm` passaram a provisionar uma nota bootstrap por lead, preparando o runtime PostgreSQL para a nova trilha de historico operacional.
+- `v0.0.49`: [UPDATE 31/03/2026 - 14:07 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou `PostgresLeadNoteRepository`, cobrindo listagem e criacao de notas por lead dentro do tenant bootstrap.
+- `v0.0.49`: [UPDATE 31/03/2026 - 14:07 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O bootstrap do runtime passou a ligar `LeadNoteRepository` ao PostgreSQL quando `CRM_REPOSITORY_DRIVER=postgres`, fechando a persistencia real da nova trilha de historico.
