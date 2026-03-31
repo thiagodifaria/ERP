@@ -16,6 +16,7 @@ public static class DependencyInjection
     services.AddScoped<CreateBootstrapUser>();
     services.AddScoped<RemoveBootstrapTeamMember>();
     services.AddScoped<RevokeBootstrapUserRole>();
+    services.AddScoped<GetBootstrapCompanyByPublicId>();
     services.AddScoped<UpdateBootstrapTeam>();
     services.AddScoped<UpdateBootstrapCompany>();
     services.AddScoped<UpdateBootstrapUser>();
