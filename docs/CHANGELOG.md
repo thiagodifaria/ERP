@@ -133,3 +133,5 @@
 - `v0.0.65`: [UPDATE 31/03/2026 - 15:24 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O README do servico passou a listar as rotas publicas iniciais e o readiness exposto ja distingue `router` de `definitions-catalog`.
 - `v0.0.66`: [UPDATE 31/03/2026 - 15:28 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou a primeira suite unitaria em `TypeScript`, cobrindo `live`, `ready` e `details` com `node:test`.
 - `v0.0.66`: [UPDATE 31/03/2026 - 15:28 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `package.json` do servico passou a expor `npm run test:unit`, alinhando a stack ao fluxo container-first do monorepo.
+- `v0.0.67`: [UPDATE 31/03/2026 - 15:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `Dockerfile` multi-stage com build em `node:22-alpine` e runtime final enxuto em producao.
+- `v0.0.67`: [UPDATE 31/03/2026 - 15:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O README do servico passou a documentar o build containerizado da nova stack `TypeScript`.

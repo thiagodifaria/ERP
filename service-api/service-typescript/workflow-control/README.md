@@ -18,3 +18,4 @@ Public routes:
 Container-first validation:
 
 - `docker run --rm -v ${PWD}:/workspace -w /workspace/service-api/service-typescript/workflow-control node:22-alpine sh -lc "npm install && npm run test:unit"`
+- `docker build -t erp-workflow-control ./service-api/service-typescript/workflow-control`
