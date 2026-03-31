@@ -14,7 +14,7 @@ import (
 func NewServer(cfg config.Config, logger *telemetry.Logger, leadRepository repository.LeadRepository) *http.Server {
 	return &http.Server{
 		Addr:              cfg.HTTPAddress,
-		Handler:           NewRouter(logger, leadRepository),
+		Handler:           NewRouterWithRuntime(logger, leadRepository, cfg.RepositoryDriver),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }

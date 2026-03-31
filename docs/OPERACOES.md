@@ -12,6 +12,7 @@
 - logs estruturados
 - correlation id obrigatorio
 - tenant id quando aplicavel
+- readiness com dependencias refletindo o runtime real do servico
 - metricas de latencia, erro, throughput e filas
 - traces ponta a ponta em fluxos criticos
 
@@ -39,7 +40,7 @@ Cada servico critico deve documentar:
 - `./scripts/test.sh unit` executa Go, .NET e Rust em modo container-first
 - `./scripts/test.sh integration` executa a suite HTTP do `identity`
 - `./scripts/test.sh contract` executa a suite publica de contratos do `identity`
-- `./scripts/test.sh smoke` reseta volume, aplica bootstrap relacional e valida `crm` e `identity` ao vivo por HTTP em cima do PostgreSQL
+- `./scripts/test.sh smoke` reseta volume, aplica bootstrap relacional e valida `crm` e `identity` ao vivo por HTTP em cima do PostgreSQL, incluindo `health/details`
 
 ## Entrega incremental
 

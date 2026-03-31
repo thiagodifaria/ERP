@@ -84,3 +84,24 @@ func TestDetailsReturnsReadinessPayload(t *testing.T) {
 		t.Fatalf("expected 3 dependencies, got %d", len(response.Dependencies))
 	}
 }
+
+func TestDetailsForRuntimeShouldReportPostgreSQLReady(t *testing.T) {
+	request := httptest.NewRequest(http.MethodGet, "/health/details", nil)
+	recorder := httptest.NewRecorder()
+
+	DetailsForRuntime("postgres")(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response dto.ReadinessResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	dependency := response.Dependencies[1]
+	if dependency.Name != "postgresql" || dependency.Status != "ready" {
+		t.Fatalf("expected postgresql dependency ready, got %s/%s", dependency.Name, dependency.Status)
+	}
+}

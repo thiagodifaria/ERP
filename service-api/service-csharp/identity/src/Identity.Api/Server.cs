@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Identity.Application;
 using Identity.Contracts;
+using Identity.Infrastructure;
 
 namespace Identity.Api;
 
@@ -264,13 +265,18 @@ public static class Server
 
   private static ReadinessResponse BuildReadiness()
   {
+    var repositoryDriver = IdentityInfrastructureOptions.Load().RepositoryDriver;
+    var postgresqlStatus = repositoryDriver.Equals("postgres", StringComparison.OrdinalIgnoreCase)
+      ? "ready"
+      : "pending-runtime-wiring";
+
     return new ReadinessResponse(
       "identity",
       "ready",
       [
         new DependencyHealthResponse("tenant-catalog", "ready"),
         new DependencyHealthResponse("bootstrap-api", "ready"),
-        new DependencyHealthResponse("postgresql", "pending-runtime-wiring")
+        new DependencyHealthResponse("postgresql", postgresqlStatus)
       ]);
   }
 }

@@ -24,9 +24,26 @@ func Ready(writer http.ResponseWriter, request *http.Request) {
 }
 
 func Details(writer http.ResponseWriter, request *http.Request) {
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(http.StatusOK)
-	_ = json.NewEncoder(writer).Encode(dto.ReadinessResponse{
+	DetailsForRuntime("memory")(writer, request)
+}
+
+func DetailsForRuntime(repositoryDriver string) http.HandlerFunc {
+	readiness := buildReadiness(repositoryDriver)
+
+	return func(writer http.ResponseWriter, request *http.Request) {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(writer).Encode(readiness)
+	}
+}
+
+func buildReadiness(repositoryDriver string) dto.ReadinessResponse {
+	postgresqlStatus := "pending-runtime-wiring"
+	if repositoryDriver == "postgres" {
+		postgresqlStatus = "ready"
+	}
+
+	return dto.ReadinessResponse{
 		Service: "crm",
 		Status:  "ready",
 		Dependencies: []dto.DependencyResponse{
@@ -36,14 +53,14 @@ func Details(writer http.ResponseWriter, request *http.Request) {
 			},
 			{
 				Name:   "postgresql",
-				Status: "pending-runtime-wiring",
+				Status: postgresqlStatus,
 			},
 			{
 				Name:   "edge",
 				Status: "pending-runtime-wiring",
 			},
 		},
-	})
+	}
 }
 
 func respond(writer http.ResponseWriter, response dto.HealthResponse) {

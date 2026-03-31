@@ -14,5 +14,6 @@ Initial scope:
 - lead public ids and owner references aligned with UUID public ids from identity
 - selectable repository driver with PostgreSQL-backed lead persistence for a bootstrap tenant
 - runtime smoke now exercises the live HTTP API against PostgreSQL
+- runtime health details reflect the active repository dependency state
 - lead lookup by public id and controlled status transitions
 - unit validation for bootstrap and domain basics

@@ -160,11 +160,19 @@ run_crm_runtime_smoke() {
   "${COMPOSE_CMD[@]}" up -d --build crm
   wait_for_http_ready "$base_url/health/ready"
 
+  local details_response
   lead_list="$(curl -fsS "$base_url/api/crm/leads")"
+  details_response="$(curl -fsS "$base_url/health/details")"
   echo "[test] crm api list => $lead_list"
+  echo "[test] crm health details => $details_response"
 
   if [[ "$lead_list" != *'"email":"lead@bootstrap-ops.local"'* ]]; then
     echo "[test] bootstrap CRM lead was not returned by the live API"
+    exit 1
+  fi
+
+  if [[ "$details_response" != *'"name":"postgresql","status":"ready"'* ]]; then
+    echo "[test] crm health details did not report postgresql ready"
     exit 1
   fi
 
@@ -251,11 +259,19 @@ run_identity_runtime_smoke() {
   "${COMPOSE_CMD[@]}" up -d --build identity
   wait_for_http_ready "$base_url/health/ready"
 
+  local details_response
   tenants_response="$(curl -fsS "$base_url/api/identity/tenants")"
+  details_response="$(curl -fsS "$base_url/health/details")"
   echo "[test] identity api tenants => $tenants_response"
+  echo "[test] identity health details => $details_response"
 
   if [[ "$tenants_response" != *'"slug":"bootstrap-ops"'* ]]; then
     echo "[test] bootstrap identity tenants were not returned by the live API"
+    exit 1
+  fi
+
+  if [[ "$details_response" != *'"name":"postgresql","status":"ready"'* ]]; then
+    echo "[test] identity health details did not report postgresql ready"
     exit 1
   fi
 
