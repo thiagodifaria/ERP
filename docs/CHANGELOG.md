@@ -35,3 +35,5 @@
 - `v0.0.15`: [UPDATE 31/03/2026 - 02:53 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Endpoint `GET /api/identity/tenants/{slug}/companies` adicionado com cobertura unitaria e de integracao validada em container.
 - `v0.0.16`: [UPDATE 31/03/2026 - 02:57 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou criacao de empresas com `POST /api/identity/tenants/{slug}/companies`, validacao de contrato, conflito por nome e erro `404` para tenant inexistente.
 - `v0.0.16`: [UPDATE 31/03/2026 - 02:57 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Fluxo `POST /api/identity/tenants` passou a provisionar empresa padrao junto dos papeis basicos, com cobertura unitaria e de integracao validada em container.
+- `v0.0.17`: [UPDATE 31/03/2026 - 03:01 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou catalogo bootstrap de `users`, contratos publicos dedicados e endpoints `GET /api/identity/tenants/{slug}/users` e `POST /api/identity/tenants/{slug}/users`.
+- `v0.0.17`: [UPDATE 31/03/2026 - 03:01 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Fluxo `POST /api/identity/tenants` passou a provisionar usuario owner padrao junto da empresa e dos papeis basicos, com validacao executada em container.

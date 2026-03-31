@@ -89,6 +89,28 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
   }
 
   [Fact]
+  public async Task TenantUsersEndpointShouldReturnUsersForKnownTenant()
+  {
+    var response = await _client.GetAsync("/api/identity/tenants/bootstrap-ops/users");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<UserResponse[]>();
+
+    Assert.NotNull(payload);
+    Assert.NotEmpty(payload);
+    Assert.Contains(payload, user => user.Email == "owner@bootstrap-ops.local");
+  }
+
+  [Fact]
+  public async Task TenantUsersEndpointShouldReturnNotFoundForUnknownTenant()
+  {
+    var response = await _client.GetAsync("/api/identity/tenants/missing-tenant/users");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
+
+  [Fact]
   public async Task CreateTenantShouldReturnCreatedTenant()
   {
     var request = new CreateTenantRequest(
@@ -124,6 +146,16 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
     Assert.NotNull(companiesPayload);
     Assert.Single(companiesPayload);
     Assert.Equal(request.DisplayName, companiesPayload[0].DisplayName);
+
+    var usersResponse = await _client.GetAsync($"/api/identity/tenants/{payload.Slug}/users");
+
+    Assert.Equal(HttpStatusCode.OK, usersResponse.StatusCode);
+
+    var usersPayload = await usersResponse.Content.ReadFromJsonAsync<UserResponse[]>();
+
+    Assert.NotNull(usersPayload);
+    Assert.Single(usersPayload);
+    Assert.Equal($"owner@{payload.Slug}.local", usersPayload[0].Email);
   }
 
   [Fact]
@@ -258,5 +290,70 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
 
     Assert.NotNull(payload);
     Assert.Equal("invalid_display_name", payload.Code);
+  }
+
+  [Fact]
+  public async Task CreateUserShouldReturnCreatedUser()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With User");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var request = new CreateUserRequest(
+      "tenant.user@tenant-with-user.local",
+      "Tenant User",
+      "Tenant",
+      "User");
+
+    var response = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/users",
+      request);
+
+    Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal(request.Email, payload.Email);
+    Assert.Equal(request.DisplayName, payload.DisplayName);
+  }
+
+  [Fact]
+  public async Task CreateUserShouldReturnConflictForDuplicateEmail()
+  {
+    var request = new CreateUserRequest("owner@bootstrap-ops.local", "Duplicate Owner", null, null);
+
+    var response = await _client.PostAsJsonAsync(
+      "/api/identity/tenants/bootstrap-ops/users",
+      request);
+
+    Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("user_email_conflict", payload.Code);
+  }
+
+  [Fact]
+  public async Task CreateUserShouldReturnBadRequestForInvalidEmail()
+  {
+    var request = new CreateUserRequest("invalid-email", "Invalid User", null, null);
+
+    var response = await _client.PostAsJsonAsync(
+      "/api/identity/tenants/bootstrap-ops/users",
+      request);
+
+    Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("invalid_email", payload.Code);
   }
 }

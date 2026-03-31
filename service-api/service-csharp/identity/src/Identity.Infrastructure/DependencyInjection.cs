@@ -11,11 +11,14 @@ public static class DependencyInjection
   {
     services.AddSingleton<InMemoryTenantRepository>();
     services.AddSingleton<InMemoryCompanyRepository>();
+    services.AddSingleton<InMemoryUserRepository>();
     services.AddSingleton<InMemoryRoleRepository>();
     services.AddSingleton<ITenantCatalog>(serviceProvider => serviceProvider.GetRequiredService<InMemoryTenantRepository>());
     services.AddSingleton<ITenantRepository>(serviceProvider => serviceProvider.GetRequiredService<InMemoryTenantRepository>());
     services.AddSingleton<ICompanyCatalog>(serviceProvider => serviceProvider.GetRequiredService<InMemoryCompanyRepository>());
     services.AddSingleton<ICompanyRepository>(serviceProvider => serviceProvider.GetRequiredService<InMemoryCompanyRepository>());
+    services.AddSingleton<IUserCatalog>(serviceProvider => serviceProvider.GetRequiredService<InMemoryUserRepository>());
+    services.AddSingleton<IUserRepository>(serviceProvider => serviceProvider.GetRequiredService<InMemoryUserRepository>());
     services.AddSingleton<IRoleCatalog>(serviceProvider => serviceProvider.GetRequiredService<InMemoryRoleRepository>());
     services.AddSingleton<IRoleRepository>(serviceProvider => serviceProvider.GetRequiredService<InMemoryRoleRepository>());
 

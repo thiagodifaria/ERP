@@ -10,10 +10,12 @@ public static class DependencyInjection
   {
     services.AddScoped<CreateBootstrapCompany>();
     services.AddScoped<CreateBootstrapTenant>();
+    services.AddScoped<CreateBootstrapUser>();
     services.AddScoped<ListBootstrapCompanies>();
     services.AddScoped<GetBootstrapTenantBySlug>();
     services.AddScoped<ListBootstrapTenants>();
     services.AddScoped<ListBootstrapRoles>();
+    services.AddScoped<ListBootstrapUsers>();
 
     return services;
   }

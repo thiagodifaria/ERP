@@ -63,6 +63,32 @@ public static class Server
           $"/api/identity/tenants/{slug}/companies/{result.Company!.PublicId}",
           result.Company);
       });
+    app.MapPost(
+      "/api/identity/tenants/{slug}/users",
+      Results<Created<UserResponse>, BadRequest<ErrorResponse>, NotFound<ErrorResponse>, Conflict<ErrorResponse>>
+      (string slug, CreateUserRequest request, CreateBootstrapUser useCase) =>
+      {
+        var result = useCase.Execute(slug, request);
+
+        if (result.IsBadRequest)
+        {
+          return TypedResults.BadRequest(result.Error!);
+        }
+
+        if (result.IsNotFound)
+        {
+          return TypedResults.NotFound(result.Error!);
+        }
+
+        if (result.IsConflict)
+        {
+          return TypedResults.Conflict(result.Error!);
+        }
+
+        return TypedResults.Created(
+          $"/api/identity/tenants/{slug}/users/{result.User!.PublicId}",
+          result.User);
+      });
     app.MapGet(
       "/api/identity/tenants",
       (ListBootstrapTenants useCase) => TypedResults.Ok(useCase.Execute()));
@@ -85,6 +111,16 @@ public static class Server
         return companies is null
           ? TypedResults.NotFound()
           : TypedResults.Ok(companies);
+      });
+    app.MapGet(
+      "/api/identity/tenants/{slug}/users",
+      Results<Ok<IReadOnlyCollection<UserResponse>>, NotFound> (string slug, ListBootstrapUsers useCase) =>
+      {
+        var users = useCase.Execute(slug);
+
+        return users is null
+          ? TypedResults.NotFound()
+          : TypedResults.Ok(users);
       });
     app.MapGet(
       "/api/identity/tenants/{slug}/roles",
