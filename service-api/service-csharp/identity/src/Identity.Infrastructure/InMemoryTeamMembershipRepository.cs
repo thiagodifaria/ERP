@@ -73,6 +73,26 @@ public sealed class InMemoryTeamMembershipRepository : ITeamMembershipRepository
     }
   }
 
+  public bool RemoveByTenantIdAndTeamIdAndUserId(long tenantId, long teamId, long userId)
+  {
+    lock (_sync)
+    {
+      if (!_membershipsByTeam.TryGetValue((tenantId, teamId), out var memberships))
+      {
+        return false;
+      }
+
+      var removed = memberships.RemoveAll(membership => membership.UserId == userId);
+
+      if (memberships.Count == 0)
+      {
+        _membershipsByTeam.Remove((tenantId, teamId));
+      }
+
+      return removed > 0;
+    }
+  }
+
   public long NextId()
   {
     lock (_sync)

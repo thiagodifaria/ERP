@@ -5,5 +5,7 @@ public interface ITeamMembershipRepository : ITeamMembershipCatalog
 {
   TeamMembership Add(TeamMembership membership);
 
+  bool RemoveByTenantIdAndTeamIdAndUserId(long tenantId, long teamId, long userId);
+
   long NextId();
 }

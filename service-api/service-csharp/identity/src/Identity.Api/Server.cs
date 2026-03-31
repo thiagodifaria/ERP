@@ -214,6 +214,25 @@ public static class Server
           $"/api/identity/tenants/{slug}/teams/{teamPublicId}/members/{result.Membership!.UserPublicId}",
           result.Membership);
       });
+    app.MapDelete(
+      "/api/identity/tenants/{slug}/teams/{teamPublicId:guid}/members/{userPublicId:guid}",
+      Results<Ok<TeamMembershipResponse>, BadRequest<ErrorResponse>, NotFound<ErrorResponse>>
+      (string slug, Guid teamPublicId, Guid userPublicId, RemoveBootstrapTeamMember useCase) =>
+      {
+        var result = useCase.Execute(slug, teamPublicId, userPublicId);
+
+        if (result.IsBadRequest)
+        {
+          return TypedResults.BadRequest(result.Error!);
+        }
+
+        if (result.IsNotFound)
+        {
+          return TypedResults.NotFound(result.Error!);
+        }
+
+        return TypedResults.Ok(result.Membership!);
+      });
     app.MapPost(
       "/api/identity/tenants/{slug}/users/{userPublicId:guid}/roles",
       Results<Created<UserRoleResponse>, BadRequest<ErrorResponse>, NotFound<ErrorResponse>, Conflict<ErrorResponse>>

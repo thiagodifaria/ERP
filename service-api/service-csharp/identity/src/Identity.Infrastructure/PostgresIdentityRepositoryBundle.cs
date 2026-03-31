@@ -733,6 +733,24 @@ public sealed class PostgresIdentityRepositoryBundle :
     return MapTeamMembership(reader);
   }
 
+  bool ITeamMembershipRepository.RemoveByTenantIdAndTeamIdAndUserId(long tenantId, long teamId, long userId)
+  {
+    const string sql = """
+      DELETE FROM identity.team_memberships
+      WHERE tenant_id = @tenant_id
+        AND team_id = @team_id
+        AND user_id = @user_id;
+      """;
+
+    using var connection = OpenConnection();
+    using var command = new NpgsqlCommand(sql, connection);
+    command.Parameters.AddWithValue("tenant_id", tenantId);
+    command.Parameters.AddWithValue("team_id", teamId);
+    command.Parameters.AddWithValue("user_id", userId);
+
+    return command.ExecuteNonQuery() > 0;
+  }
+
   long ITeamMembershipRepository.NextId()
   {
     return NextId("identity.team_memberships");

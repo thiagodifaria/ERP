@@ -117,3 +117,5 @@
 - `v0.0.57`: [UPDATE 31/03/2026 - 14:42 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A trilha de update de `team` foi ligada em memoria e PostgreSQL, com cobertura unitaria para sucesso, `404`, nome invalido e conflito por duplicidade.
 - `v0.0.58`: [UPDATE 31/03/2026 - 14:46 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Integration e contract tests do `identity` passaram a validar o contrato publico de update de team, incluindo retorno `404` para time inexistente.
 - `v0.0.58`: [UPDATE 31/03/2026 - 14:46 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `identity` foi ampliado para renomear o time criado em runtime real no PostgreSQL e refletir o novo nome no snapshot consolidado.
+- `v0.0.59`: [UPDATE 31/03/2026 - 14:51 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou `DELETE /api/identity/tenants/{slug}/teams/{teamPublicId}/members/{userPublicId}` para remover memberships sem excluir usuario ou time.
+- `v0.0.59`: [UPDATE 31/03/2026 - 14:51 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A remocao de team-membership foi ligada em memoria e PostgreSQL, com cobertura unitaria para sucesso, user invalido, user inexistente e membership ausente.

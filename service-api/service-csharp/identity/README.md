@@ -39,6 +39,7 @@ Public routes:
 - `PATCH /api/identity/tenants/{slug}/teams/{teamPublicId}`
 - `GET /api/identity/tenants/{slug}/teams/{teamPublicId}/members`
 - `POST /api/identity/tenants/{slug}/teams/{teamPublicId}/members`
+- `DELETE /api/identity/tenants/{slug}/teams/{teamPublicId}/members/{userPublicId}`
 - `GET /api/identity/tenants/{slug}/roles`
 
 Container-first validation:
