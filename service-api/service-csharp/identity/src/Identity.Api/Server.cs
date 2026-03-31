@@ -16,6 +16,27 @@ public static class Server
     app.MapGet("/health/live", () => TypedResults.Ok(new HealthResponse("identity", "live")));
     app.MapGet("/health/ready", () => TypedResults.Ok(new HealthResponse("identity", "ready")));
     app.MapGet("/health/details", () => TypedResults.Ok(BuildReadiness()));
+    app.MapPost(
+      "/api/identity/tenants",
+      Results<Created<TenantResponse>, BadRequest<ErrorResponse>, Conflict<ErrorResponse>>
+      (CreateTenantRequest request, CreateBootstrapTenant useCase) =>
+      {
+        var result = useCase.Execute(request);
+
+        if (result.IsBadRequest)
+        {
+          return TypedResults.BadRequest(result.Error!);
+        }
+
+        if (result.IsConflict)
+        {
+          return TypedResults.Conflict(result.Error!);
+        }
+
+        return TypedResults.Created(
+          $"/api/identity/tenants/{result.Tenant!.Slug}",
+          result.Tenant);
+      });
     app.MapGet(
       "/api/identity/tenants",
       (ListBootstrapTenants useCase) => TypedResults.Ok(useCase.Execute()));

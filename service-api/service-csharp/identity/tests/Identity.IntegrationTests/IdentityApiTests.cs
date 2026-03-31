@@ -46,6 +46,39 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
   }
 
   [Fact]
+  public async Task CreateTenantShouldReturnCreatedTenant()
+  {
+    var request = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Created Tenant");
+
+    var response = await _client.PostAsJsonAsync("/api/identity/tenants", request);
+
+    Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal(request.Slug, payload.Slug);
+    Assert.Equal(request.DisplayName, payload.DisplayName);
+  }
+
+  [Fact]
+  public async Task CreateTenantShouldReturnConflictForDuplicateSlug()
+  {
+    var request = new CreateTenantRequest("bootstrap-ops", "Bootstrap Ops Duplicate");
+
+    var response = await _client.PostAsJsonAsync("/api/identity/tenants", request);
+
+    Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("tenant_slug_conflict", payload.Code);
+  }
+
+  [Fact]
   public async Task TenantRolesEndpointShouldReturnRolesForKnownTenant()
   {
     var response = await _client.GetAsync("/api/identity/tenants/bootstrap-ops/roles");

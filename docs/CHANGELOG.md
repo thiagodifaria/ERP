@@ -23,3 +23,5 @@
 - `v0.0.9`: [UPDATE 31/03/2026 - 02:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Testes de integracao HTTP adicionados ao `identity` para `GET /health/details` e `GET /api/identity/tenants`, com execucao validada em container.
 - `v0.0.10`: [UPDATE 31/03/2026 - 02:28 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou leitura de roles por tenant em bootstrap, com contrato `RoleResponse`, catalogo em memoria e endpoint `GET /api/identity/tenants/{slug}/roles`.
 - `v0.0.10`: [UPDATE 31/03/2026 - 02:28 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Testes unitarios e de integracao adicionados para a leitura de roles, incluindo retorno `404` para tenant desconhecido, com validacao em container.
+- `v0.0.11`: [UPDATE 31/03/2026 - 02:40 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` recebeu contrato de repositorio para tenants, geracao de `public_id` em UUIDv7 e fluxo inicial de criacao com `POST /api/identity/tenants`.
+- `v0.0.11`: [UPDATE 31/03/2026 - 02:40 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Testes unitarios e de integracao ampliados para cobrir criacao de tenant e conflito de slug, com validacao executada em container.

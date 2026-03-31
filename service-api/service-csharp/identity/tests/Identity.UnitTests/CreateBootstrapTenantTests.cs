@@ -1,0 +1,37 @@
+// Estes testes cobrem a criacao minima de tenants no bootstrap.
+using Identity.Application;
+using Identity.Contracts;
+using Identity.Infrastructure;
+using Xunit;
+
+namespace Identity.UnitTests;
+
+public sealed class CreateBootstrapTenantTests
+{
+  [Fact]
+  public void ExecuteShouldCreateTenantForValidPayload()
+  {
+    var repository = new InMemoryTenantRepository();
+    var useCase = new CreateBootstrapTenant(repository);
+
+    var result = useCase.Execute(new CreateTenantRequest("tenant-lab", "Tenant Lab"));
+
+    Assert.True(result.IsSuccess);
+    Assert.NotNull(result.Tenant);
+    Assert.Equal("tenant-lab", result.Tenant!.Slug);
+    Assert.Equal("Tenant Lab", result.Tenant.DisplayName);
+  }
+
+  [Fact]
+  public void ExecuteShouldRejectDuplicateSlug()
+  {
+    var repository = new InMemoryTenantRepository();
+    var useCase = new CreateBootstrapTenant(repository);
+
+    var result = useCase.Execute(new CreateTenantRequest("bootstrap-ops", "Another Name"));
+
+    Assert.True(result.IsConflict);
+    Assert.NotNull(result.Error);
+    Assert.Equal("tenant_slug_conflict", result.Error!.Code);
+  }
+}

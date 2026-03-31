@@ -10,7 +10,7 @@ public sealed class ListBootstrapTenantsTests
   [Fact]
   public void ExecuteShouldReturnBootstrapTenants()
   {
-    var useCase = new ListBootstrapTenants(new InMemoryTenantCatalog());
+    var useCase = new ListBootstrapTenants(new InMemoryTenantRepository());
 
     var response = useCase.Execute();
 

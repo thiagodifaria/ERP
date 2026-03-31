@@ -6,16 +6,16 @@ namespace Identity.Application;
 
 public sealed class ListBootstrapTenants
 {
-  private readonly ITenantCatalog _tenantCatalog;
+  private readonly ITenantRepository _tenantRepository;
 
-  public ListBootstrapTenants(ITenantCatalog tenantCatalog)
+  public ListBootstrapTenants(ITenantRepository tenantRepository)
   {
-    _tenantCatalog = tenantCatalog;
+    _tenantRepository = tenantRepository;
   }
 
   public IReadOnlyCollection<TenantResponse> Execute()
   {
-    return _tenantCatalog
+    return _tenantRepository
       .List()
       .Select(tenant => new TenantResponse(
         tenant.Id,

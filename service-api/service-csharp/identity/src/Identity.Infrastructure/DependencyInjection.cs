@@ -9,7 +9,9 @@ public static class DependencyInjection
 {
   public static IServiceCollection AddIdentityInfrastructure(this IServiceCollection services)
   {
-    services.AddSingleton<ITenantCatalog, InMemoryTenantCatalog>();
+    services.AddSingleton<InMemoryTenantRepository>();
+    services.AddSingleton<ITenantCatalog>(serviceProvider => serviceProvider.GetRequiredService<InMemoryTenantRepository>());
+    services.AddSingleton<ITenantRepository>(serviceProvider => serviceProvider.GetRequiredService<InMemoryTenantRepository>());
     services.AddSingleton<IRoleCatalog, InMemoryRoleCatalog>();
 
     return services;
