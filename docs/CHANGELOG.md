@@ -135,3 +135,5 @@
 - `v0.0.66`: [UPDATE 31/03/2026 - 15:28 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `package.json` do servico passou a expor `npm run test:unit`, alinhando a stack ao fluxo container-first do monorepo.
 - `v0.0.67`: [UPDATE 31/03/2026 - 15:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `Dockerfile` multi-stage com build em `node:22-alpine` e runtime final enxuto em producao.
 - `v0.0.67`: [UPDATE 31/03/2026 - 15:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O README do servico passou a documentar o build containerizado da nova stack `TypeScript`.
+- `v0.0.68`: [UPDATE 31/03/2026 - 15:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` entrou no `docker-compose.yml` como servico de primeira classe do stack local, com porta dedicada e dependencias basicas.
+- `v0.0.68`: [UPDATE 31/03/2026 - 15:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `.env.example` e o README raiz foram atualizados para refletir a primeira stack `TypeScript` realmente iniciada no monorepo.

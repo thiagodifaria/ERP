@@ -71,6 +71,7 @@ The base monorepo layout is already in place together with the first service tem
 - `edge`
 - `crm`
 - `identity`
+- `workflow-control`
 - `webhook-hub`
 - PostgreSQL ownership for `common` and `identity`
 

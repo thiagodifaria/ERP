@@ -65,6 +65,21 @@ services:
     ports:
       - "${CRM_HTTP_PORT}:8083"
 
+  workflow-control:
+    build:
+      context: ../service-api/service-typescript/workflow-control
+    container_name: erp-workflow-control
+    environment:
+      WORKFLOW_CONTROL_HTTP_HOST: "0.0.0.0"
+      WORKFLOW_CONTROL_HTTP_PORT: "8084"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+      service-redis:
+        condition: service_healthy
+    ports:
+      - "${WORKFLOW_CONTROL_HTTP_PORT}:8084"
+
   identity:
     build:
       context: ../service-api/service-csharp/identity
