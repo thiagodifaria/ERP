@@ -31,6 +31,7 @@ func NewRouter(
 	leadNoteHandler := handler.NewLeadNoteHandler(
 		query.NewGetLeadByPublicID(leadRepository),
 		query.NewListLeadNotes(leadNoteRepository),
+		command.NewCreateLeadNote(leadRepository, leadNoteRepository),
 	)
 
 	mux.HandleFunc("/health/live", handler.Live)
@@ -41,6 +42,7 @@ func NewRouter(
 	mux.HandleFunc("POST /api/crm/leads", leadHandler.Create)
 	mux.HandleFunc("GET /api/crm/leads/{publicId}", leadHandler.GetByPublicID)
 	mux.HandleFunc("GET /api/crm/leads/{publicId}/notes", leadNoteHandler.List)
+	mux.HandleFunc("POST /api/crm/leads/{publicId}/notes", leadNoteHandler.Create)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}", leadHandler.UpdateProfile)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/owner", leadHandler.UpdateOwner)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/status", leadHandler.UpdateStatus)
@@ -67,6 +69,7 @@ func NewRouterWithRuntime(
 	leadNoteHandler := handler.NewLeadNoteHandler(
 		query.NewGetLeadByPublicID(leadRepository),
 		query.NewListLeadNotes(leadNoteRepository),
+		command.NewCreateLeadNote(leadRepository, leadNoteRepository),
 	)
 
 	mux.HandleFunc("/health/live", handler.Live)
@@ -77,6 +80,7 @@ func NewRouterWithRuntime(
 	mux.HandleFunc("POST /api/crm/leads", leadHandler.Create)
 	mux.HandleFunc("GET /api/crm/leads/{publicId}", leadHandler.GetByPublicID)
 	mux.HandleFunc("GET /api/crm/leads/{publicId}/notes", leadNoteHandler.List)
+	mux.HandleFunc("POST /api/crm/leads/{publicId}/notes", leadNoteHandler.Create)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}", leadHandler.UpdateProfile)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/owner", leadHandler.UpdateOwner)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/status", leadHandler.UpdateStatus)

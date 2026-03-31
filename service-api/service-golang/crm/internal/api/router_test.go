@@ -202,3 +202,32 @@ func TestRouterShouldExposeLeadNotes(t *testing.T) {
 		t.Fatalf("expected 1 note, got %d", len(response))
 	}
 }
+
+func TestRouterShouldCreateLeadNote(t *testing.T) {
+	router := NewRouter(
+		telemetry.New("crm-test"),
+		persistence.NewInMemoryLeadRepository(),
+		persistence.NewInMemoryLeadNoteRepository(),
+	)
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/notes",
+		bytes.NewBufferString(`{"body":"Cliente pediu proposta revisada.","category":"follow-up"}`),
+	)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, recorder.Code)
+	}
+
+	var response dto.LeadNoteResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.Body != "Cliente pediu proposta revisada." {
+		t.Fatalf("expected body to be persisted, got %s", response.Body)
+	}
+}

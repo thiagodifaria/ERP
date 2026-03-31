@@ -19,5 +19,6 @@ Initial scope:
 - partial lead profile update endpoint for name, email and source
 - lead note domain started for next-step relationship history flows
 - bootstrap endpoint `GET /api/crm/leads/{publicId}/notes` for read-side relationship context
+- bootstrap endpoint `POST /api/crm/leads/{publicId}/notes` for operational follow-up capture
 - contract coverage for public HTTP routes and public error shape
 - unit validation for bootstrap and domain basics

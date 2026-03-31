@@ -93,3 +93,5 @@
 - `v0.0.45`: [UPDATE 31/03/2026 - 13:59 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A abstracao `LeadNoteRepository` foi iniciada para preparar a trilha de historico de relacionamento do lead nos proximos miniupdates.
 - `v0.0.46`: [UPDATE 31/03/2026 - 14:00 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou `GET /api/crm/leads/{publicId}/notes`, com bootstrap read-side de historico operacional e resposta `404` para lead inexistente.
 - `v0.0.46`: [UPDATE 31/03/2026 - 14:00 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O runtime do `crm` passou a carregar um `LeadNoteRepository` em memoria para sustentar a trilha inicial de notas enquanto a persistencia relacional entra nos proximos commits.
+- `v0.0.47`: [UPDATE 31/03/2026 - 14:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou `POST /api/crm/leads/{publicId}/notes`, permitindo registrar follow-ups e observacoes operacionais no bootstrap do servico.
+- `v0.0.47`: [UPDATE 31/03/2026 - 14:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Cobertura do `crm` foi ampliada para validar criacao de nota, normalizacao de payload e erro `400` para body vazio.
