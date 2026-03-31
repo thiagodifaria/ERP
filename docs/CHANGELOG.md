@@ -52,3 +52,5 @@
 - `v0.0.24`: [UPDATE 31/03/2026 - 06:04 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou o projeto `Identity.ContractTests` com validacoes reais para lista de tenants, criacao de tenant, snapshot consolidado e contrato de erro publico.
 - `v0.0.24`: [UPDATE 31/03/2026 - 06:04 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh contract` deixou de ser placeholder e passou a executar o projeto de contract tests em container, com revalidacao de integracao do `identity`.
 - `v0.0.25`: [UPDATE 31/03/2026 - 06:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Documentacao tecnica atualizada para refletir o estado real do `identity`, incluindo rotas publicas, comandos de validacao e runbook operacional atual dos scripts.
+- `v0.0.26`: [UPDATE 31/03/2026 - 06:10 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Servico `crm` iniciado em Go com bootstrap, health endpoints, middleware de correlation, Dockerfile e README proprio.
+- `v0.0.26`: [UPDATE 31/03/2026 - 06:10 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Primeira entidade de dominio `Lead` criada no `crm` com validacoes basicas e cobertura executada em container via `scripts/test.sh unit`.

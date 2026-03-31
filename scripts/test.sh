@@ -25,6 +25,12 @@ run_go_unit() {
     -w /workspace \
     golang:1.24-alpine \
     go test ./...
+
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-golang/crm:/workspace" \
+    -w /workspace \
+    golang:1.24-alpine \
+    go test ./...
 }
 
 run_dotnet_build() {
