@@ -12,5 +12,6 @@ Initial scope:
 - pipeline summary endpoint for operational funnel reading
 - owner assignment endpoint for taking or clearing lead responsibility
 - lead public ids and owner references aligned with UUID public ids from identity
+- selectable repository driver with PostgreSQL-backed lead persistence for a bootstrap tenant
 - lead lookup by public id and controlled status transitions
 - unit validation for bootstrap and domain basics

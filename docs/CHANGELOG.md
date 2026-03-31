@@ -73,3 +73,5 @@
 - `v0.0.35`: [UPDATE 31/03/2026 - 06:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh smoke` foi endurecido para validar o bootstrap relacional de `crm` com status `captured` e owner atribuido no tenant de smoke.
 - `v0.0.36`: [UPDATE 31/03/2026 - 13:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` alinhou `publicId` de lead e `ownerUserId` com UUIDs reais, aproximando a API do contrato publico de identidade e da modelagem relacional do PostgreSQL.
 - `v0.0.36`: [UPDATE 31/03/2026 - 13:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Validacoes do dominio e dos handlers foram ampliadas para rejeitar owner invalido, com cobertura de testes atualizada em container.
+- `v0.0.37`: [UPDATE 31/03/2026 - 13:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou driver de persistencia selecionavel por configuracao, com adapter PostgreSQL para listagem, lookup, criacao e update de leads dentro de um tenant bootstrap.
+- `v0.0.37`: [UPDATE 31/03/2026 - 13:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Runtime, Dockerfile, compose e `.env.example` foram alinhados para permitir subir o `crm` conectado ao PostgreSQL sem sair do fluxo container-first.

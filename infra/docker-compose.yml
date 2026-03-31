@@ -51,6 +51,14 @@ services:
     container_name: erp-crm
     environment:
       CRM_HTTP_ADDRESS: ":8083"
+      CRM_REPOSITORY_DRIVER: "postgres"
+      CRM_BOOTSTRAP_TENANT_SLUG: "bootstrap-ops"
+      CRM_POSTGRES_HOST: "service-postgresql"
+      CRM_POSTGRES_PORT: "5432"
+      CRM_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      CRM_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      CRM_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      CRM_POSTGRES_SSL_MODE: "disable"
     depends_on:
       service-postgresql:
         condition: service_healthy
