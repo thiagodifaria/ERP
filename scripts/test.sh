@@ -315,6 +315,58 @@ run_crm_runtime_smoke() {
   fi
 }
 
+run_workflow_control_runtime_smoke() {
+  local base_url="http://localhost:${WORKFLOW_CONTROL_HTTP_PORT:-8084}"
+  local create_response
+  local created_key="runtime-flow"
+  local detail_response
+  local status_response
+  local health_details_response
+
+  "${COMPOSE_CMD[@]}" up -d --build workflow-control
+  wait_for_http_ready "$base_url/health/ready"
+
+  health_details_response="$(curl -fsS "$base_url/health/details")"
+  echo "[test] workflow-control health details => $health_details_response"
+
+  if [[ "$health_details_response" != *'"name":"definitions-catalog","status":"pending-runtime-wiring"'* ]]; then
+    echo "[test] workflow-control health details did not expose the expected in-memory catalog dependency"
+    exit 1
+  fi
+
+  create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"key":"runtime-flow","name":"Runtime Flow","description":"Fluxo criado no smoke HTTP do workflow-control.","trigger":"lead.created"}' \
+    "$base_url/api/workflow-control/definitions")"
+  echo "[test] workflow-control create => $create_response"
+
+  if [[ "$create_response" != *"\"key\":\"$created_key\""* || "$create_response" != *'"status":"draft"'* ]]; then
+    echo "[test] workflow-control create did not return the expected resource"
+    exit 1
+  fi
+
+  detail_response="$(curl -fsS "$base_url/api/workflow-control/definitions/$created_key")"
+  echo "[test] workflow-control detail => $detail_response"
+
+  if [[ "$detail_response" != *"\"key\":\"$created_key\""* || "$detail_response" != *'"trigger":"lead.created"'* ]]; then
+    echo "[test] workflow-control detail did not return the created resource"
+    exit 1
+  fi
+
+  status_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d '{"status":"active"}' \
+    "$base_url/api/workflow-control/definitions/$created_key/status")"
+  echo "[test] workflow-control status => $status_response"
+
+  if [[ "$status_response" != *"\"key\":\"$created_key\""* || "$status_response" != *'"status":"active"'* ]]; then
+    echo "[test] workflow-control status update did not persist"
+    exit 1
+  fi
+}
+
 run_identity_runtime_smoke() {
   local base_url="http://localhost:${IDENTITY_HTTP_PORT:-8081}"
   local tenant_slug="runtime-identity-lab"
@@ -576,9 +628,11 @@ run_smoke() {
   trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
   export CRM_HTTP_PORT="${CRM_HTTP_PORT_SMOKE:-18083}"
   export IDENTITY_HTTP_PORT="${IDENTITY_HTTP_PORT_SMOKE:-18081}"
+  export WORKFLOW_CONTROL_HTTP_PORT="${WORKFLOW_CONTROL_HTTP_PORT_SMOKE:-18084}"
   bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
   "${COMPOSE_CMD[@]}" ps
   run_identity_database_smoke
+  run_workflow_control_runtime_smoke
   run_crm_runtime_smoke
   run_identity_runtime_smoke
 }

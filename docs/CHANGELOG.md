@@ -153,3 +153,5 @@
 - `v0.0.75`: [UPDATE 31/03/2026 - 16:08 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O servico passou a expor `npm run test:contract`, alinhando a stack `TypeScript` ao fluxo contratual ja usado em `crm` e `identity`.
 - `v0.0.76`: [UPDATE 31/03/2026 - 16:12 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh contract` passou a executar `workflow-control` em container, colocando a stack `TypeScript` tambem no pipeline contratual oficial.
 - `v0.0.76`: [UPDATE 31/03/2026 - 16:12 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional foi atualizada para refletir que o fluxo de contratos do monorepo agora cobre `workflow-control`, `crm` e `identity`.
+- `v0.0.77`: [UPDATE 31/03/2026 - 16:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh smoke` passou a subir `workflow-control` em `docker compose`, validar `health/details` e exercitar `create`, `detail` e `status` por HTTP real.
+- `v0.0.77`: [UPDATE 31/03/2026 - 16:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do monorepo agora cobre as tres stacks com superficie funcional mais madura: `TypeScript`, `Go` e `.NET`.

@@ -40,7 +40,7 @@ Cada servico critico deve documentar:
 - `./scripts/test.sh unit` executa Go, TypeScript, .NET e Rust em modo container-first
 - `./scripts/test.sh integration` executa a suite HTTP do `identity`
 - `./scripts/test.sh contract` executa as suites publicas de contratos de `workflow-control`, `crm` e `identity`
-- `./scripts/test.sh smoke` reseta volume, aplica bootstrap relacional e valida `crm` e `identity` ao vivo por HTTP em cima do PostgreSQL, incluindo `health/details` e `lead notes`
+- `./scripts/test.sh smoke` reseta volume, aplica bootstrap relacional e valida `workflow-control`, `crm` e `identity` ao vivo por HTTP, incluindo `health/details`, `lead notes` e o catalogo inicial de workflows
 
 ## Entrega incremental
 
