@@ -11,7 +11,13 @@ if [[ ! -f "$ENV_FILE" ]]; then
   ENV_FILE="$ROOT_DIR/.env.example"
 fi
 
+set -a
+source "$ENV_FILE"
+set +a
+
 COMPOSE_CMD=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
+DB_NAME="${ERP_POSTGRES_DB:-erp}"
+DB_USER="${ERP_POSTGRES_USER:-erp}"
 
 run_go_unit() {
   docker run --rm \
@@ -45,8 +51,52 @@ run_rust_unit() {
     cargo test
 }
 
+run_identity_database_smoke() {
+  local smoke_slug="smoke-identity-bootstrap"
+  local summary
+
+  bash "$ROOT_DIR/scripts/db.sh" up
+  bash "$ROOT_DIR/scripts/db.sh" migrate all
+
+  "${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" -c "
+      INSERT INTO identity.tenants (public_id, slug, display_name, status)
+      SELECT gen_random_uuid(), '$smoke_slug', 'Smoke Identity Bootstrap', 'active'
+      WHERE NOT EXISTS (
+        SELECT 1
+        FROM identity.tenants
+        WHERE slug = '$smoke_slug'
+      );
+    "
+
+  bash "$ROOT_DIR/scripts/db.sh" seed identity
+  bash "$ROOT_DIR/scripts/db.sh" seed identity
+
+  summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        tenant.slug || '|' ||
+        (SELECT count(*) FROM identity.companies AS company WHERE company.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM identity.users AS \"user\" WHERE \"user\".tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM identity.teams AS team WHERE team.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM identity.roles AS role WHERE role.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM identity.team_memberships AS membership WHERE membership.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM identity.user_roles AS user_role WHERE user_role.tenant_id = tenant.id)
+      FROM identity.tenants AS tenant
+      WHERE tenant.slug = '$smoke_slug';
+    ")"
+
+  echo "[test] identity db smoke => $summary"
+
+  if [[ "$summary" != "$smoke_slug|1|1|1|5|1|1" ]]; then
+    echo "[test] unexpected identity db smoke summary"
+    exit 1
+  fi
+}
+
 run_smoke() {
   "${COMPOSE_CMD[@]}" ps
+  run_identity_database_smoke
 }
 
 usage() {

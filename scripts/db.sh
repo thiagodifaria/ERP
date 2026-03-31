@@ -26,6 +26,12 @@ run_psql_file() {
     psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" < "$file_path"
 }
 
+run_psql_query() {
+  local query="$1"
+  "${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" -c "$query"
+}
+
 apply_directory() {
   local directory_path="$1"
 
@@ -52,6 +58,7 @@ Usage:
   ./scripts/db.sh migrate all
   ./scripts/db.sh seed identity
   ./scripts/db.sh seed all
+  ./scripts/db.sh summary identity [tenant-slug]
   ./scripts/db.sh psql
 EOF
 }
@@ -91,6 +98,37 @@ main() {
           ;;
         all)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/seeds"
+          ;;
+        *)
+          usage
+          exit 1
+          ;;
+      esac
+      ;;
+    summary)
+      ensure_postgres
+      case "$scope" in
+        identity)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM identity.companies AS company WHERE company.tenant_id = tenant.id) AS companies,
+              (SELECT count(*) FROM identity.users AS \"user\" WHERE \"user\".tenant_id = tenant.id) AS users,
+              (SELECT count(*) FROM identity.teams AS team WHERE team.tenant_id = tenant.id) AS teams,
+              (SELECT count(*) FROM identity.roles AS role WHERE role.tenant_id = tenant.id) AS roles,
+              (SELECT count(*) FROM identity.team_memberships AS membership WHERE membership.tenant_id = tenant.id) AS team_memberships,
+              (SELECT count(*) FROM identity.user_roles AS user_role WHERE user_role.tenant_id = tenant.id) AS user_roles
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
           ;;
         *)
           usage
