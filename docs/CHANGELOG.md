@@ -15,3 +15,5 @@
 - `v0.0.5`: [UPDATE 31/03/2026 - 01:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Contexto `identity` aprofundado com migrations de `users`, `teams`, `roles`, `team_memberships` e `user_roles`, mais os modelos iniciais correspondentes em C#.
 - `v0.0.6`: [UPDATE 31/03/2026 - 01:51 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Primeiros testes reais adicionados para `edge` em Go, `identity` em C# e `webhook-hub` em Rust, cobrindo health endpoints e contrato basico do agregado `Tenant`.
 - `v0.0.6`: [UPDATE 31/03/2026 - 01:51 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh` atualizado para executar o projeto de testes do `identity` em container, substituindo a validacao apenas por build.
+- `v0.0.7`: [UPDATE 31/03/2026 - 02:01 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Funcao compartilhada `common_set_updated_at()` adicionada ao contexto `common` para padronizar `updated_at` em tabelas operacionais.
+- `v0.0.7`: [UPDATE 31/03/2026 - 02:01 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Triggers de `updated_at` adicionados para `tenants`, `companies`, `users`, `teams` e `roles` no contexto `identity`, com validacao realizada no PostgreSQL em container.
