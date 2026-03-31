@@ -143,3 +143,5 @@
 - `v0.0.70`: [UPDATE 31/03/2026 - 15:42 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O servico passou a expor `GET /api/workflow-control/definitions` como primeiro endpoint de controle de workflows na stack `TypeScript`.
 - `v0.0.71`: [UPDATE 31/03/2026 - 15:46 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `POST /api/workflow-control/definitions`, com criacao bootstrap em memoria e status inicial `draft`.
 - `v0.0.71`: [UPDATE 31/03/2026 - 15:46 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A API passou a tratar `invalid_json`, campos obrigatorios e conflito por `key` duplicada na primeira escrita publica da stack `TypeScript`.
+- `v0.0.72`: [UPDATE 31/03/2026 - 15:49 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/definitions/{key}` para leitura pontual de definicoes pelo identificador natural do dominio.
+- `v0.0.72`: [UPDATE 31/03/2026 - 15:49 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack `TypeScript` passou a responder `workflow_definition_not_found` quando a `key` consultada nao existe no catalogo bootstrap.

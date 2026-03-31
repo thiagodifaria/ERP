@@ -34,6 +34,11 @@ function details(): ReadinessResponse {
   };
 }
 
+function pathSegments(request: IncomingMessage): string[] {
+  const pathname = request.url?.split("?")[0] ?? "/";
+  return pathname.split("/").filter((segment) => segment.length > 0);
+}
+
 async function readJson<T>(request: IncomingMessage): Promise<T> {
   const chunks: Buffer[] = [];
 
@@ -68,6 +73,28 @@ export async function route(request: IncomingMessage, response: ServerResponse):
 
   if (request.method === "GET" && request.url === "/api/workflow-control/definitions") {
     json(response, 200, services.listWorkflowDefinitions.execute());
+    return;
+  }
+
+  const segments = pathSegments(request);
+  if (
+    request.method === "GET" &&
+    segments.length === 4 &&
+    segments[0] === "api" &&
+    segments[1] === "workflow-control" &&
+    segments[2] === "definitions"
+  ) {
+    const definition = services.getWorkflowDefinitionByKey.execute(segments[3]);
+
+    if (definition === null) {
+      json(response, 404, {
+        code: "workflow_definition_not_found",
+        message: "Workflow definition was not found."
+      });
+      return;
+    }
+
+    json(response, 200, definition);
     return;
   }
 
