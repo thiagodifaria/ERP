@@ -75,3 +75,5 @@
 - `v0.0.36`: [UPDATE 31/03/2026 - 13:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Validacoes do dominio e dos handlers foram ampliadas para rejeitar owner invalido, com cobertura de testes atualizada em container.
 - `v0.0.37`: [UPDATE 31/03/2026 - 13:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou driver de persistencia selecionavel por configuracao, com adapter PostgreSQL para listagem, lookup, criacao e update de leads dentro de um tenant bootstrap.
 - `v0.0.37`: [UPDATE 31/03/2026 - 13:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Runtime, Dockerfile, compose e `.env.example` foram alinhados para permitir subir o `crm` conectado ao PostgreSQL sem sair do fluxo container-first.
+- `v0.0.38`: [UPDATE 31/03/2026 - 13:11 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Contexto relacional de `identity` ganhou seed idempotente para os tenants `bootstrap-ops` e `northwind-group`, alinhando o banco ao bootstrap historico da API.
+- `v0.0.38`: [UPDATE 31/03/2026 - 13:11 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh smoke` passou a resetar volume, aplicar `seed all` e limpar containers no fim, eliminando dependencia de estado antigo para validar `identity` e `crm`.

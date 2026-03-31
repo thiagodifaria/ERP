@@ -84,8 +84,8 @@ run_identity_database_smoke() {
       );
     "
 
-  bash "$ROOT_DIR/scripts/db.sh" seed identity
-  bash "$ROOT_DIR/scripts/db.sh" seed identity
+  bash "$ROOT_DIR/scripts/db.sh" seed all
+  bash "$ROOT_DIR/scripts/db.sh" seed all
 
   summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
     psql -U "$DB_USER" -d "$DB_NAME" -At -c "
@@ -132,6 +132,8 @@ run_identity_database_smoke() {
 }
 
 run_smoke() {
+  trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
+  bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
   "${COMPOSE_CMD[@]}" ps
   run_identity_database_smoke
 }

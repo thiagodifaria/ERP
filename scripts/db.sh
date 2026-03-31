@@ -47,6 +47,18 @@ apply_directory() {
 
 ensure_postgres() {
   "${COMPOSE_CMD[@]}" up -d service-postgresql
+
+  local attempts=0
+  until "${COMPOSE_CMD[@]}" exec -T service-postgresql pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; do
+    attempts=$((attempts + 1))
+
+    if [[ "$attempts" -ge 30 ]]; then
+      echo "[db] postgresql did not become ready in time"
+      exit 1
+    fi
+
+    sleep 1
+  done
 }
 
 usage() {

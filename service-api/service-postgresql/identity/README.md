@@ -9,3 +9,10 @@ Planned structure:
 - views
 - functions
 - indexes
+
+Current relational scope:
+
+- bootstrap tenants aligned with `bootstrap-ops` and `northwind-group`
+- tenant, company and user ownership
+- team structure and memberships
+- role catalog and direct user-role bindings
