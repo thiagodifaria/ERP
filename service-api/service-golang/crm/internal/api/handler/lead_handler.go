@@ -16,6 +16,7 @@ type LeadHandler struct {
 	getLeadSummary    query.GetLeadPipelineSummary
 	getLeadByPublicID query.GetLeadByPublicID
 	createLead        command.CreateLead
+	updateLeadOwner   command.UpdateLeadOwner
 	updateLeadStatus  command.UpdateLeadStatus
 }
 
@@ -24,6 +25,7 @@ func NewLeadHandler(
 	getLeadSummary query.GetLeadPipelineSummary,
 	getLeadByPublicID query.GetLeadByPublicID,
 	createLead command.CreateLead,
+	updateLeadOwner command.UpdateLeadOwner,
 	updateLeadStatus command.UpdateLeadStatus,
 ) LeadHandler {
 	return LeadHandler{
@@ -31,6 +33,7 @@ func NewLeadHandler(
 		getLeadSummary:    getLeadSummary,
 		getLeadByPublicID: getLeadByPublicID,
 		createLead:        createLead,
+		updateLeadOwner:   updateLeadOwner,
 		updateLeadStatus:  updateLeadStatus,
 	}
 }
@@ -127,6 +130,38 @@ func (handler LeadHandler) Create(writer http.ResponseWriter, request *http.Requ
 		})
 	default:
 		writer.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
+	}
+}
+
+func (handler LeadHandler) UpdateOwner(writer http.ResponseWriter, request *http.Request) {
+	var payload dto.UpdateLeadOwnerRequest
+	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    "invalid_json",
+			Message: "Request body is invalid.",
+		})
+		return
+	}
+
+	result := handler.updateLeadOwner.Execute(command.UpdateLeadOwnerInput{
+		PublicID:    request.PathValue("publicId"),
+		OwnerUserID: payload.OwnerUserID,
+	})
+
+	writer.Header().Set("Content-Type", "application/json")
+
+	switch {
+	case result.NotFound:
+		writer.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    result.ErrorCode,
+			Message: result.ErrorText,
+		})
+	default:
+		writer.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
 	}
 }

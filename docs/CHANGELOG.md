@@ -67,3 +67,5 @@
 - `v0.0.32`: [UPDATE 31/03/2026 - 06:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Cobertura do `crm` ampliada para validar combinacao de filtros e leitura de leads sem owner em container.
 - `v0.0.33`: [UPDATE 31/03/2026 - 06:36 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou `GET /api/crm/leads/summary`, consolidando total de leads, buckets por status e source, alem de contagem de atribuicao.
 - `v0.0.33`: [UPDATE 31/03/2026 - 06:36 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Testes do `crm` ampliados para validar snapshot de funil e exposicao da rota publica via router em container.
+- `v0.0.34`: [UPDATE 31/03/2026 - 06:38 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou `PATCH /api/crm/leads/{publicId}/owner`, permitindo assumir ou limpar ownership do lead sem recriar registro.
+- `v0.0.34`: [UPDATE 31/03/2026 - 06:38 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Dominio `Lead` passou a expor atribuicao de owner com normalizacao, e a cobertura do `crm` foi ampliada para validar handler, router e limpeza de ownership em container.

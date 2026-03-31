@@ -265,12 +265,71 @@ func TestUpdateStatusShouldReturnUpdatedLead(t *testing.T) {
 	}
 }
 
+func TestUpdateOwnerShouldReturnUpdatedLead(t *testing.T) {
+	repository := persistence.NewInMemoryLeadRepository()
+	createLead := command.NewCreateLead(repository)
+	handler := newLeadHandlerForTest(repository)
+
+	createdLead := createLead.Execute(command.CreateLeadInput{
+		Name:   "Carol Viana",
+		Email:  "carol@example.com",
+		Source: "manual",
+	})
+	if createdLead.Lead == nil {
+		t.Fatalf("expected created lead, got error %s", createdLead.ErrorCode)
+	}
+
+	body := bytes.NewBufferString(`{"ownerUserId":"owner-carol"}`)
+	request := httptest.NewRequest(http.MethodPatch, "/api/crm/leads/"+createdLead.Lead.PublicID+"/owner", body)
+	request.SetPathValue("publicId", createdLead.Lead.PublicID)
+	recorder := httptest.NewRecorder()
+
+	handler.UpdateOwner(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response dto.LeadResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.OwnerUserID != "owner-carol" {
+		t.Fatalf("expected owner owner-carol, got %s", response.OwnerUserID)
+	}
+}
+
+func TestUpdateOwnerShouldAllowClearingOwner(t *testing.T) {
+	handler := newLeadHandlerForTest(persistence.NewInMemoryLeadRepository())
+	body := bytes.NewBufferString(`{"ownerUserId":"   "}`)
+	request := httptest.NewRequest(http.MethodPatch, "/api/crm/leads/lead-bootstrap-ops/owner", body)
+	request.SetPathValue("publicId", "lead-bootstrap-ops")
+	recorder := httptest.NewRecorder()
+
+	handler.UpdateOwner(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response dto.LeadResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.OwnerUserID != "" {
+		t.Fatalf("expected owner to be cleared, got %s", response.OwnerUserID)
+	}
+}
+
 func newLeadHandlerForTest(repository *persistence.InMemoryLeadRepository) LeadHandler {
 	return NewLeadHandler(
 		query.NewListLeads(repository),
 		query.NewGetLeadPipelineSummary(repository),
 		query.NewGetLeadByPublicID(repository),
 		command.NewCreateLead(repository),
+		command.NewUpdateLeadOwner(repository),
 		command.NewUpdateLeadStatus(repository),
 	)
 }

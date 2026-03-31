@@ -10,5 +10,6 @@ Initial scope:
 - bootstrap list and creation flow for leads
 - filterable lead list by `status`, `source`, `ownerUserId`, `assigned` and `q`
 - pipeline summary endpoint for operational funnel reading
+- owner assignment endpoint for taking or clearing lead responsibility
 - lead lookup by public id and controlled status transitions
 - unit validation for bootstrap and domain basics

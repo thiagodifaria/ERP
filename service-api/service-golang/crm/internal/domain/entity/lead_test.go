@@ -80,3 +80,20 @@ func TestTransitionToShouldRejectInvalidTransition(t *testing.T) {
 		t.Fatalf("expected ErrLeadStatusTransitionInvalid, got %v", err)
 	}
 }
+
+func TestAssignOwnerShouldNormalizeValue(t *testing.T) {
+	lead, err := NewLead("lead-public-id", "Ana Souza", "ana@example.com", "meta-ads", "")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	assignedLead := lead.AssignOwner("  owner-ana  ")
+	if assignedLead.OwnerUserID != "owner-ana" {
+		t.Fatalf("expected normalized owner owner-ana, got %s", assignedLead.OwnerUserID)
+	}
+
+	unassignedLead := assignedLead.AssignOwner("   ")
+	if unassignedLead.OwnerUserID != "" {
+		t.Fatalf("expected owner to be cleared, got %s", unassignedLead.OwnerUserID)
+	}
+}

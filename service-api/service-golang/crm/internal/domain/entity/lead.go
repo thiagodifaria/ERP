@@ -70,6 +70,11 @@ func (lead Lead) TransitionTo(status string) (Lead, error) {
 	return lead, nil
 }
 
+func (lead Lead) AssignOwner(ownerUserID string) Lead {
+	lead.OwnerUserID = strings.TrimSpace(ownerUserID)
+	return lead
+}
+
 func normalizeStatus(status string) string {
 	return strings.ToLower(strings.TrimSpace(status))
 }

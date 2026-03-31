@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -112,5 +113,29 @@ func TestRouterShouldExposeLeadByPublicID(t *testing.T) {
 
 	if response.PublicID != "lead-bootstrap-ops" {
 		t.Fatalf("expected public id lead-bootstrap-ops, got %s", response.PublicID)
+	}
+}
+
+func TestRouterShouldUpdateLeadOwner(t *testing.T) {
+	router := NewRouter(
+		telemetry.New("crm-test"),
+		persistence.NewInMemoryLeadRepository(),
+	)
+	request := httptest.NewRequest(http.MethodPatch, "/api/crm/leads/lead-bootstrap-ops/owner", bytes.NewBufferString(`{"ownerUserId":"owner-updated"}`))
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response dto.LeadResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.OwnerUserID != "owner-updated" {
+		t.Fatalf("expected owner owner-updated, got %s", response.OwnerUserID)
 	}
 }
