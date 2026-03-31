@@ -1,11 +1,13 @@
 # workflow-control
 
-This domain will own workflow definitions, triggers, actions and versioned published plans.
+This domain owns workflow definitions, triggers, actions and versioned published plans.
 
-Planned structure:
+Current structure:
 
 - migrations
 - seeds
+- workflow definition catalog
+- updated_at trigger for mutable records
 - views
 - functions
 - indexes

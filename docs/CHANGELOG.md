@@ -155,3 +155,5 @@
 - `v0.0.76`: [UPDATE 31/03/2026 - 16:12 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional foi atualizada para refletir que o fluxo de contratos do monorepo agora cobre `workflow-control`, `crm` e `identity`.
 - `v0.0.77`: [UPDATE 31/03/2026 - 16:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh smoke` passou a subir `workflow-control` em `docker compose`, validar `health/details` e exercitar `create`, `detail` e `status` por HTTP real.
 - `v0.0.77`: [UPDATE 31/03/2026 - 16:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do monorepo agora cobre as tres stacks com superficie funcional mais madura: `TypeScript`, `Go` e `.NET`.
+- `v0.0.78`: [UPDATE 31/03/2026 - 16:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contexto `workflow-control` ganhou as primeiras migrations em PostgreSQL, com schema proprio e tabela `workflow_definitions` multi-tenant.
+- `v0.0.78`: [UPDATE 31/03/2026 - 16:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O catalogo relacional passou a nascer com `updated_at` automatizado, `key` unica por tenant e checks de status alinhados ao dominio TypeScript.
