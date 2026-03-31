@@ -163,3 +163,5 @@
 - `v0.0.80`: [UPDATE 31/03/2026 - 16:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional foi atualizada para incluir o summary de definicoes por status, facilitando diagnostico rapido do catalogo de workflows.
 - `v0.0.81`: [UPDATE 31/03/2026 - 16:52 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` foi refatorado para usar contrato de repositrio explicito, abrindo caminho para persistencia alternativa sem acoplamento ao adapter em memoria.
 - `v0.0.81`: [UPDATE 31/03/2026 - 16:52 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A configuracao de runtime foi isolada em `src/config/env.ts`, preparando driver `postgres`, tenant bootstrap e readiness dinamico no servico TypeScript.
+- `v0.0.82`: [UPDATE 31/03/2026 - 17:04 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` ganhou adapter PostgreSQL com resolucao de tenant bootstrap, queries reais de list/detail/create/status e readiness assincrono.
+- `v0.0.82`: [UPDATE 31/03/2026 - 17:04 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contrato de repositorio passou a operar de forma assincrona e a stack `TypeScript` agora suporta `memory` e `postgres` como drivers de persistencia.

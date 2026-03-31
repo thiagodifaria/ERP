@@ -6,7 +6,7 @@ export class GetWorkflowDefinitionByKey {
     private readonly repository: WorkflowDefinitionRepository
   ) {}
 
-  public execute(key: string): WorkflowDefinition | null {
+  public execute(key: string): Promise<WorkflowDefinition | null> {
     return this.repository.findByKey(key);
   }
 }

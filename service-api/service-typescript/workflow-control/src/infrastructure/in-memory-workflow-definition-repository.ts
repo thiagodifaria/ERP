@@ -17,22 +17,22 @@ export class InMemoryWorkflowDefinitionRepository implements WorkflowDefinitionR
     ];
   }
 
-  public list(): WorkflowDefinition[] {
+  public async list(): Promise<WorkflowDefinition[]> {
     return [...this.definitions];
   }
 
-  public findByKey(key: string): WorkflowDefinition | null {
+  public async findByKey(key: string): Promise<WorkflowDefinition | null> {
     const normalizedKey = key.trim().toLowerCase();
 
     return this.definitions.find((definition) => definition.key === normalizedKey) ?? null;
   }
 
-  public add(definition: WorkflowDefinition): WorkflowDefinition {
+  public async add(definition: WorkflowDefinition): Promise<WorkflowDefinition> {
     this.definitions.push(definition);
     return definition;
   }
 
-  public updateStatus(key: string, status: WorkflowDefinitionStatus): WorkflowDefinition {
+  public async updateStatus(key: string, status: WorkflowDefinitionStatus): Promise<WorkflowDefinition> {
     const normalizedKey = key.trim().toLowerCase();
     const definition = this.definitions.find((candidate) => candidate.key === normalizedKey);
 
@@ -44,7 +44,7 @@ export class InMemoryWorkflowDefinitionRepository implements WorkflowDefinitionR
     return definition;
   }
 
-  public nextId(): number {
+  public async nextId(): Promise<number> {
     return this.definitions.reduce((max, definition) => Math.max(max, definition.id), 0) + 1;
   }
 }

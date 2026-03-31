@@ -9,6 +9,7 @@ Initial scope:
 - runtime config isolated in `src/config`
 - health and readiness routes
 - bootstrap workflow definition list
+- repository abstraction ready for memory and PostgreSQL
 - room for workflow definitions and future control-plane APIs
 
 Public routes:

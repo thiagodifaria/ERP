@@ -66,6 +66,6 @@ test("health details should expose readiness dependencies", async () => {
   assert.equal(payload.status, "ready");
   assert.deepEqual(payload.dependencies, [
     { name: "router", status: "ready" },
-    { name: "definitions-catalog", status: "pending-runtime-wiring" }
+    { name: "definitions-catalog", status: "ready" }
   ]);
 });

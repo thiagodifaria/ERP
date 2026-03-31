@@ -24,11 +24,11 @@ function ready(): HealthResponse {
   };
 }
 
-function details(): ReadinessResponse {
+async function details(): Promise<ReadinessResponse> {
   return {
     service: runtime.config.serviceName,
     status: "ready",
-    dependencies: runtime.readinessDependencies
+    dependencies: await runtime.readinessDependencies()
   };
 }
 
@@ -65,12 +65,12 @@ export async function route(request: IncomingMessage, response: ServerResponse):
   }
 
   if (request.url === "/health/details") {
-    json(response, 200, details());
+    json(response, 200, await details());
     return;
   }
 
   if (request.method === "GET" && request.url === "/api/workflow-control/definitions") {
-    json(response, 200, services.listWorkflowDefinitions.execute());
+    json(response, 200, await services.listWorkflowDefinitions.execute());
     return;
   }
 
@@ -82,7 +82,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     segments[1] === "workflow-control" &&
     segments[2] === "definitions"
   ) {
-    const definition = services.getWorkflowDefinitionByKey.execute(segments[3]);
+    const definition = await services.getWorkflowDefinitionByKey.execute(segments[3]);
 
     if (definition === null) {
       json(response, 404, {
@@ -106,7 +106,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
   ) {
     try {
       const payload = await readJson<UpdateWorkflowDefinitionStatusRequest>(request);
-      const updated = services.updateWorkflowDefinitionStatus.execute(segments[3], payload.status);
+      const updated = await services.updateWorkflowDefinitionStatus.execute(segments[3], payload.status);
 
       json(response, 200, updated);
       return;
@@ -137,6 +137,14 @@ export async function route(request: IncomingMessage, response: ServerResponse):
         return;
       }
 
+      if (code === "workflow_definition_tenant_not_found") {
+        json(response, 500, {
+          code,
+          message: "Workflow bootstrap tenant was not found."
+        });
+        return;
+      }
+
       json(response, 500, {
         code: "unexpected_error",
         message: "Unexpected error."
@@ -148,7 +156,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
   if (request.method === "POST" && request.url === "/api/workflow-control/definitions") {
     try {
       const payload = await readJson<CreateWorkflowDefinitionRequest>(request);
-      const created = services.createWorkflowDefinition.execute(payload);
+      const created = await services.createWorkflowDefinition.execute(payload);
 
       json(response, 201, created);
       return;
@@ -167,6 +175,14 @@ export async function route(request: IncomingMessage, response: ServerResponse):
         json(response, 409, {
           code,
           message: "Workflow definition key already exists."
+        });
+        return;
+      }
+
+      if (code === "workflow_definition_tenant_not_found") {
+        json(response, 500, {
+          code,
+          message: "Workflow bootstrap tenant was not found."
         });
         return;
       }

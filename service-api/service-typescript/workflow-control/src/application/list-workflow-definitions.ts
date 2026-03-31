@@ -6,7 +6,7 @@ export class ListWorkflowDefinitions {
     private readonly repository: WorkflowDefinitionRepository
   ) {}
 
-  public execute(): WorkflowDefinition[] {
+  public execute(): Promise<WorkflowDefinition[]> {
     return this.repository.list();
   }
 }

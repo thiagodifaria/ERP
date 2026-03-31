@@ -10,6 +10,16 @@ export type WorkflowControlConfig = {
   postgresSslMode: string;
 };
 
+function ensureRepositoryDriver(value: string): "memory" | "postgres" {
+  const normalizedValue = value.trim().toLowerCase();
+
+  if (normalizedValue !== "memory" && normalizedValue !== "postgres") {
+    throw new Error("workflow_control_repository_driver_invalid");
+  }
+
+  return normalizedValue;
+}
+
 function envOrDefault(key: string, fallback: string): string {
   return process.env[key] ?? fallback;
 }
@@ -17,7 +27,7 @@ function envOrDefault(key: string, fallback: string): string {
 export function loadConfig(): WorkflowControlConfig {
   return {
     serviceName: "workflow-control",
-    repositoryDriver: envOrDefault("WORKFLOW_CONTROL_REPOSITORY_DRIVER", "memory") as "memory" | "postgres",
+    repositoryDriver: ensureRepositoryDriver(envOrDefault("WORKFLOW_CONTROL_REPOSITORY_DRIVER", "memory")),
     bootstrapTenantSlug: envOrDefault("WORKFLOW_CONTROL_BOOTSTRAP_TENANT_SLUG", "bootstrap-ops"),
     postgresHost: envOrDefault("WORKFLOW_CONTROL_POSTGRES_HOST", envOrDefault("ERP_POSTGRES_HOST", "localhost")),
     postgresPort: envOrDefault("WORKFLOW_CONTROL_POSTGRES_PORT", "5432"),

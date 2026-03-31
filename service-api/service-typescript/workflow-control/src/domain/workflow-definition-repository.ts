@@ -1,9 +1,9 @@
 import { WorkflowDefinition, WorkflowDefinitionStatus } from "./workflow-definition.js";
 
 export interface WorkflowDefinitionRepository {
-  list(): WorkflowDefinition[];
-  findByKey(key: string): WorkflowDefinition | null;
-  add(definition: WorkflowDefinition): WorkflowDefinition;
-  updateStatus(key: string, status: WorkflowDefinitionStatus): WorkflowDefinition;
-  nextId(): number;
+  list(): Promise<WorkflowDefinition[]>;
+  findByKey(key: string): Promise<WorkflowDefinition | null>;
+  add(definition: WorkflowDefinition): Promise<WorkflowDefinition>;
+  updateStatus(key: string, status: WorkflowDefinitionStatus): Promise<WorkflowDefinition>;
+  nextId(): Promise<number>;
 }

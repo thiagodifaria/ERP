@@ -6,8 +6,8 @@ export class UpdateWorkflowDefinitionStatus {
     private readonly repository: WorkflowDefinitionRepository
   ) {}
 
-  public execute(key: string, status: string): WorkflowDefinition {
-    const definition = this.repository.findByKey(key);
+  public async execute(key: string, status: string): Promise<WorkflowDefinition> {
+    const definition = await this.repository.findByKey(key);
 
     if (definition === null) {
       throw new Error("workflow_definition_not_found");
