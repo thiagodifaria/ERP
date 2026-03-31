@@ -50,6 +50,8 @@ Usage:
   ./scripts/db.sh migrate common
   ./scripts/db.sh migrate identity
   ./scripts/db.sh migrate all
+  ./scripts/db.sh seed identity
+  ./scripts/db.sh seed all
   ./scripts/db.sh psql
 EOF
 }
@@ -74,6 +76,21 @@ main() {
         all)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/common/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/migrations"
+          ;;
+        *)
+          usage
+          exit 1
+          ;;
+      esac
+      ;;
+    seed)
+      ensure_postgres
+      case "$scope" in
+        identity)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/seeds"
+          ;;
+        all)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/seeds"
           ;;
         *)
           usage
