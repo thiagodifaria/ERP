@@ -24,4 +24,15 @@ public sealed class Team
   public string Name { get; }
 
   public string Status { get; }
+
+  public Team ReviseProfile(string name)
+  {
+    return new Team(
+      Id,
+      TenantId,
+      CompanyId,
+      PublicId,
+      name,
+      Status);
+  }
 }

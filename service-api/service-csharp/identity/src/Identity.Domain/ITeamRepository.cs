@@ -5,6 +5,8 @@ public interface ITeamRepository : ITeamCatalog
 {
   Team Add(Team team);
 
+  Team Update(Team team);
+
   long NextId();
 
   IReadOnlyCollection<Team> SeedDefaults(Tenant tenant);

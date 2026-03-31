@@ -113,3 +113,5 @@
 - `v0.0.55`: [UPDATE 31/03/2026 - 14:32 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A remocao de user-role foi ligada em memoria e PostgreSQL, com cobertura unitaria para sucesso, `role_not_found` e `user_role_not_found`.
 - `v0.0.56`: [UPDATE 31/03/2026 - 14:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Integration e contract tests do `identity` passaram a validar a revogacao de role por usuario e a ausencia do papel na leitura subsequente.
 - `v0.0.56`: [UPDATE 31/03/2026 - 14:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `identity` foi ampliado para remover `viewer` em runtime real no PostgreSQL e confirmar o snapshot consolidado com `userRoles=1`.
+- `v0.0.57`: [UPDATE 31/03/2026 - 14:42 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou `PATCH /api/identity/tenants/{slug}/teams/{teamPublicId}` para renomear times existentes sem recriacao de membership.
+- `v0.0.57`: [UPDATE 31/03/2026 - 14:42 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A trilha de update de `team` foi ligada em memoria e PostgreSQL, com cobertura unitaria para sucesso, `404`, nome invalido e conflito por duplicidade.

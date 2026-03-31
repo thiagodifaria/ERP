@@ -36,6 +36,7 @@ Public routes:
 - `DELETE /api/identity/tenants/{slug}/users/{userPublicId}/roles/{roleCode}`
 - `GET /api/identity/tenants/{slug}/teams`
 - `POST /api/identity/tenants/{slug}/teams`
+- `PATCH /api/identity/tenants/{slug}/teams/{teamPublicId}`
 - `GET /api/identity/tenants/{slug}/teams/{teamPublicId}/members`
 - `POST /api/identity/tenants/{slug}/teams/{teamPublicId}/members`
 - `GET /api/identity/tenants/{slug}/roles`

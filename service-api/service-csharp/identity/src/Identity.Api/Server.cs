@@ -164,6 +164,30 @@ public static class Server
           $"/api/identity/tenants/{slug}/teams/{result.Team!.PublicId}",
           result.Team);
       });
+    app.MapPatch(
+      "/api/identity/tenants/{slug}/teams/{teamPublicId:guid}",
+      Results<Ok<TeamResponse>, BadRequest<ErrorResponse>, NotFound<ErrorResponse>, Conflict<ErrorResponse>>
+      (string slug, Guid teamPublicId, UpdateTeamRequest request, UpdateBootstrapTeam useCase) =>
+      {
+        var result = useCase.Execute(slug, teamPublicId, request);
+
+        if (result.IsBadRequest)
+        {
+          return TypedResults.BadRequest(result.Error!);
+        }
+
+        if (result.IsNotFound)
+        {
+          return TypedResults.NotFound(result.Error!);
+        }
+
+        if (result.IsConflict)
+        {
+          return TypedResults.Conflict(result.Error!);
+        }
+
+        return TypedResults.Ok(result.Team!);
+      });
     app.MapPost(
       "/api/identity/tenants/{slug}/teams/{teamPublicId:guid}/members",
       Results<Created<TeamMembershipResponse>, BadRequest<ErrorResponse>, NotFound<ErrorResponse>, Conflict<ErrorResponse>>

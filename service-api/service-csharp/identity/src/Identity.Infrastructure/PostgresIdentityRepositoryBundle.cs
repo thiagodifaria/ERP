@@ -493,6 +493,29 @@ public sealed class PostgresIdentityRepositoryBundle :
     return MapTeam(reader);
   }
 
+  Team ITeamRepository.Update(Team team)
+  {
+    const string sql = """
+      UPDATE identity.teams
+      SET name = @name,
+          status = @status
+      WHERE tenant_id = @tenant_id
+        AND public_id = @public_id
+      RETURNING id, tenant_id, company_id, public_id, name, status;
+      """;
+
+    using var connection = OpenConnection();
+    using var command = new NpgsqlCommand(sql, connection);
+    command.Parameters.AddWithValue("tenant_id", team.TenantId);
+    command.Parameters.AddWithValue("public_id", team.PublicId);
+    command.Parameters.AddWithValue("name", team.Name);
+    command.Parameters.AddWithValue("status", team.Status);
+    using var reader = command.ExecuteReader();
+    reader.Read();
+
+    return MapTeam(reader);
+  }
+
   long ITeamRepository.NextId()
   {
     return NextId("identity.teams");

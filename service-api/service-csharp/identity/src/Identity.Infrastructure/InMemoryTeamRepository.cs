@@ -82,6 +82,28 @@ public sealed class InMemoryTeamRepository : ITeamRepository
     }
   }
 
+  public Team Update(Team team)
+  {
+    lock (_sync)
+    {
+      if (!_teamsByTenantId.TryGetValue(team.TenantId, out var teams))
+      {
+        throw new InvalidOperationException("Team tenant collection was not found.");
+      }
+
+      var index = teams.FindIndex(existingTeam => existingTeam.PublicId == team.PublicId);
+
+      if (index < 0)
+      {
+        throw new InvalidOperationException("Team was not found for update.");
+      }
+
+      teams[index] = team;
+
+      return team;
+    }
+  }
+
   public long NextId()
   {
     lock (_sync)
