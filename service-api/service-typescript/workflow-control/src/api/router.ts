@@ -1,6 +1,7 @@
 // This router starts small and grows with public workflow-control routes.
 import { IncomingMessage, ServerResponse } from "node:http";
 import { HealthResponse, ReadinessResponse } from "./dto/health.js";
+import { CreateWorkflowDefinitionRequest } from "./dto/create-workflow-definition-request.js";
 import { services } from "../config/container.js";
 
 function json(response: ServerResponse, statusCode: number, body: unknown): void {
@@ -33,7 +34,23 @@ function details(): ReadinessResponse {
   };
 }
 
-export function route(request: IncomingMessage, response: ServerResponse): void {
+async function readJson<T>(request: IncomingMessage): Promise<T> {
+  const chunks: Buffer[] = [];
+
+  for await (const chunk of request) {
+    chunks.push(Buffer.from(chunk));
+  }
+
+  const rawBody = Buffer.concat(chunks).toString("utf8");
+
+  if (rawBody.length === 0) {
+    throw new Error("invalid_json");
+  }
+
+  return JSON.parse(rawBody) as T;
+}
+
+export async function route(request: IncomingMessage, response: ServerResponse): Promise<void> {
   if (request.url === "/health/live") {
     json(response, 200, live());
     return;
@@ -52,6 +69,48 @@ export function route(request: IncomingMessage, response: ServerResponse): void 
   if (request.method === "GET" && request.url === "/api/workflow-control/definitions") {
     json(response, 200, services.listWorkflowDefinitions.execute());
     return;
+  }
+
+  if (request.method === "POST" && request.url === "/api/workflow-control/definitions") {
+    try {
+      const payload = await readJson<CreateWorkflowDefinitionRequest>(request);
+      const created = services.createWorkflowDefinition.execute(payload);
+
+      json(response, 201, created);
+      return;
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "unexpected_error";
+
+      if (code === "invalid_json") {
+        json(response, 400, {
+          code: "invalid_json",
+          message: "Request body must be a valid JSON object."
+        });
+        return;
+      }
+
+      if (code === "workflow_definition_key_conflict") {
+        json(response, 409, {
+          code,
+          message: "Workflow definition key already exists."
+        });
+        return;
+      }
+
+      if (code === "workflow_definition_key_required" || code === "workflow_definition_name_required" || code === "workflow_definition_trigger_required") {
+        json(response, 400, {
+          code,
+          message: "Workflow definition payload is invalid."
+        });
+        return;
+      }
+
+      json(response, 500, {
+        code: "unexpected_error",
+        message: "Unexpected error."
+      });
+      return;
+    }
   }
 
   json(response, 404, {
