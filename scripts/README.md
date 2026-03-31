@@ -33,3 +33,10 @@ Rules:
 - prefer flags and subcommands over script sprawl
 - keep scripts readable
 - do not hide critical business logic here
+
+Current unit scope:
+
+- Go: `edge`, `crm`
+- TypeScript: `workflow-control`
+- .NET: `identity`
+- Rust: `webhook-hub`
