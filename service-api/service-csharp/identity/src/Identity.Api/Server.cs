@@ -14,10 +14,23 @@ public static class Server
   {
     app.MapGet("/health/live", () => TypedResults.Ok(new HealthResponse("identity", "live")));
     app.MapGet("/health/ready", () => TypedResults.Ok(new HealthResponse("identity", "ready")));
+    app.MapGet("/health/details", () => TypedResults.Ok(BuildReadiness()));
     app.MapGet(
       "/api/identity/tenants",
       (ListBootstrapTenants useCase) => TypedResults.Ok(useCase.Execute()));
 
     return app;
+  }
+
+  private static ReadinessResponse BuildReadiness()
+  {
+    return new ReadinessResponse(
+      "identity",
+      "ready",
+      [
+        new DependencyHealthResponse("tenant-catalog", "ready"),
+        new DependencyHealthResponse("bootstrap-api", "ready"),
+        new DependencyHealthResponse("postgresql", "pending-runtime-wiring")
+      ]);
   }
 }

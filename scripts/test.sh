@@ -29,6 +29,14 @@ run_dotnet_build() {
     dotnet test tests/Identity.UnitTests/Identity.UnitTests.csproj -c Release
 }
 
+run_dotnet_integration() {
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-csharp/identity:/workspace" \
+    -w /workspace \
+    mcr.microsoft.com/dotnet/sdk:8.0 \
+    dotnet test tests/Identity.IntegrationTests/Identity.IntegrationTests.csproj -c Release
+}
+
 run_rust_unit() {
   docker run --rm \
     -v "$ROOT_DIR/service-api/service-rust/webhook-hub:/workspace" \
@@ -62,7 +70,7 @@ main() {
       run_rust_unit
       ;;
     integration)
-      echo "[test] integration suites will be wired as persistence and messaging adapters land"
+      run_dotnet_integration
       ;;
     contract)
       echo "[test] contract suites will be wired as public endpoints and events stabilize"
@@ -73,8 +81,8 @@ main() {
     all)
       run_go_unit
       run_dotnet_build
+      run_dotnet_integration
       run_rust_unit
-      echo "[test] integration suites will be wired as persistence and messaging adapters land"
       echo "[test] contract suites will be wired as public endpoints and events stabilize"
       ;;
     *)
