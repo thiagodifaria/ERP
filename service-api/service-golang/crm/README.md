@@ -16,4 +16,5 @@ Initial scope:
 - runtime smoke now exercises the live HTTP API against PostgreSQL
 - runtime health details reflect the active repository dependency state
 - lead lookup by public id and controlled status transitions
+- contract coverage for public HTTP routes and public error shape
 - unit validation for bootstrap and domain basics

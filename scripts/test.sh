@@ -57,6 +57,14 @@ run_dotnet_contract() {
     dotnet test tests/Identity.ContractTests/Identity.ContractTests.csproj -c Release
 }
 
+run_go_contract() {
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-golang/crm:/workspace" \
+    -w /workspace \
+    golang:1.24-alpine \
+    go test -tags=contract ./tests/contract/...
+}
+
 run_rust_unit() {
   docker run --rm \
     -v "$ROOT_DIR/service-api/service-rust/webhook-hub:/workspace" \
@@ -433,6 +441,7 @@ main() {
       run_dotnet_integration
       ;;
     contract)
+      run_go_contract
       run_dotnet_contract
       ;;
     smoke)
@@ -442,6 +451,7 @@ main() {
       run_go_unit
       run_dotnet_build
       run_dotnet_integration
+      run_go_contract
       run_dotnet_contract
       run_rust_unit
       ;;

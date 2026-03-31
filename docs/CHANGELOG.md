@@ -85,3 +85,5 @@
 - `v0.0.41`: [UPDATE 31/03/2026 - 13:27 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O runtime do `identity` foi revalidado em container com persistencia real, confirmando leitura e escrita vivas contra o banco sem deixar containers ativos ao final.
 - `v0.0.42`: [UPDATE 31/03/2026 - 13:32 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` e `identity` alinharam `/health/details` ao driver real de persistencia, passando a reportar `postgresql=ready` quando o runtime sobe conectado ao banco.
 - `v0.0.42`: [UPDATE 31/03/2026 - 13:32 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh smoke` foi endurecido para validar esse contrato de readiness ao vivo por HTTP, reforcando a observabilidade minima do stack container-first.
+- `v0.0.43`: [UPDATE 31/03/2026 - 13:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou a suite `tests/contract` com validacoes reais para lista, criacao, mudanca de status, health details e contrato publico de erro.
+- `v0.0.43`: [UPDATE 31/03/2026 - 13:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh contract` passou a executar `crm` e `identity` em fluxo container-first, separando cobertura contratual do pacote unitario do Go por build tag.
