@@ -68,6 +68,7 @@ run_rust_unit() {
 run_identity_database_smoke() {
   local smoke_slug="smoke-identity-bootstrap"
   local summary
+  local crm_summary
 
   bash "$ROOT_DIR/scripts/db.sh" up
   bash "$ROOT_DIR/scripts/db.sh" migrate all
@@ -104,6 +105,22 @@ run_identity_database_smoke() {
 
   if [[ "$summary" != "$smoke_slug|1|1|1|5|1|1" ]]; then
     echo "[test] unexpected identity db smoke summary"
+    exit 1
+  fi
+
+  crm_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        tenant.slug || '|' ||
+        (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id)
+      FROM identity.tenants AS tenant
+      WHERE tenant.slug = '$smoke_slug';
+    ")"
+
+  echo "[test] crm db smoke => $crm_summary"
+
+  if [[ "$crm_summary" != "$smoke_slug|1" ]]; then
+    echo "[test] unexpected crm db smoke summary"
     exit 1
   fi
 }

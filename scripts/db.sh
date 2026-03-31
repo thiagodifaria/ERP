@@ -55,10 +55,13 @@ Usage:
   ./scripts/db.sh up
   ./scripts/db.sh migrate common
   ./scripts/db.sh migrate identity
+  ./scripts/db.sh migrate crm
   ./scripts/db.sh migrate all
   ./scripts/db.sh seed identity
+  ./scripts/db.sh seed crm
   ./scripts/db.sh seed all
   ./scripts/db.sh summary identity [tenant-slug]
+  ./scripts/db.sh summary crm [tenant-slug]
   ./scripts/db.sh psql
 EOF
 }
@@ -80,9 +83,13 @@ main() {
         identity)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/migrations"
           ;;
+        crm)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/migrations"
+          ;;
         all)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/common/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/migrations"
           ;;
         *)
           usage
@@ -96,8 +103,12 @@ main() {
         identity)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/seeds"
           ;;
+        crm)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/seeds"
+          ;;
         all)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/seeds"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/seeds"
           ;;
         *)
           usage
@@ -125,6 +136,23 @@ main() {
               (SELECT count(*) FROM identity.roles AS role WHERE role.tenant_id = tenant.id) AS roles,
               (SELECT count(*) FROM identity.team_memberships AS membership WHERE membership.tenant_id = tenant.id) AS team_memberships,
               (SELECT count(*) FROM identity.user_roles AS user_role WHERE user_role.tenant_id = tenant.id) AS user_roles
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
+          ;;
+        crm)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id) AS leads
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;
