@@ -17,5 +17,6 @@ Initial scope:
 - runtime health details reflect the active repository dependency state
 - lead lookup by public id and controlled status transitions
 - partial lead profile update endpoint for name, email and source
+- lead note domain started for next-step relationship history flows
 - contract coverage for public HTTP routes and public error shape
 - unit validation for bootstrap and domain basics

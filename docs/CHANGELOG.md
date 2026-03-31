@@ -89,3 +89,5 @@
 - `v0.0.43`: [UPDATE 31/03/2026 - 13:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh contract` passou a executar `crm` e `identity` em fluxo container-first, separando cobertura contratual do pacote unitario do Go por build tag.
 - `v0.0.44`: [UPDATE 31/03/2026 - 13:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou `PATCH /api/crm/leads/{publicId}` para atualizar nome, email e source do lead sem recriacao, com conflito por email duplicado e validacao de payload no dominio.
 - `v0.0.44`: [UPDATE 31/03/2026 - 13:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Cobertura unitaria, contratual e smoke HTTP do `crm` foi ampliada para validar a mutacao de perfil em runtime real contra o PostgreSQL.
+- `v0.0.45`: [UPDATE 31/03/2026 - 13:59 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Dominio `crm` ganhou o agregado `LeadNote`, com validacoes para `publicId`, `leadPublicId`, `body`, categoria default e `createdAt` normalizado.
+- `v0.0.45`: [UPDATE 31/03/2026 - 13:59 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A abstracao `LeadNoteRepository` foi iniciada para preparar a trilha de historico de relacionamento do lead nos proximos miniupdates.
