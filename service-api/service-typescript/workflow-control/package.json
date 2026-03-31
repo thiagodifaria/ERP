@@ -6,7 +6,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/src/server.js",
-    "test:unit": "node --import tsx --test tests/unit/**/*.test.ts"
+    "test:unit": "node --import tsx --test tests/unit/**/*.test.ts",
+    "test:contract": "node --import tsx --test tests/contract/**/*.test.ts"
   },
   "devDependencies": {
     "@types/node": "24.6.0",

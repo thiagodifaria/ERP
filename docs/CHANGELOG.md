@@ -149,3 +149,5 @@
 - `v0.0.73`: [UPDATE 31/03/2026 - 15:55 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O catalogo em memoria passou a suportar transicao de estado sem recriar a definicao inteira, preparando o servico para fluxos operacionais reais.
 - `v0.0.74`: [UPDATE 31/03/2026 - 16:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou cobertura unitaria para `list`, `detail`, `create` e `status`, cobrindo o ciclo principal do agregado `WorkflowDefinition`.
 - `v0.0.74`: [UPDATE 31/03/2026 - 16:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A suite passou a validar normalizacao de payload e erro `workflow_definition_status_invalid`, endurecendo a API antes da fase contratual.
+- `v0.0.75`: [UPDATE 31/03/2026 - 16:08 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou a primeira suite de contract tests em `TypeScript`, congelando o payload publico de `WorkflowDefinition`.
+- `v0.0.75`: [UPDATE 31/03/2026 - 16:08 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O servico passou a expor `npm run test:contract`, alinhando a stack `TypeScript` ao fluxo contratual ja usado em `crm` e `identity`.

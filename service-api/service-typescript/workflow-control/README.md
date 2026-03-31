@@ -23,9 +23,16 @@ Public routes:
 Container-first validation:
 
 - `docker run --rm -v ${PWD}:/workspace -w /workspace/service-api/service-typescript/workflow-control node:22-alpine sh -lc "npm install && npm run test:unit"`
+- `docker run --rm -v ${PWD}:/workspace -w /workspace/service-api/service-typescript/workflow-control node:22-alpine sh -lc "npm install && npm run test:contract"`
 - `docker build -t erp-workflow-control ./service-api/service-typescript/workflow-control`
 
 Current unit scope:
 
 - health and readiness routes
 - workflow definition list, create, detail and status transitions
+
+Current contract scope:
+
+- public payload shape for workflow definition list
+- create/detail/status lifecycle
+- not found error contract
