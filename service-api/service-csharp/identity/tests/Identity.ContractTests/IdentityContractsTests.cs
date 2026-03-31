@@ -183,6 +183,44 @@ public sealed class IdentityContractsTests : IClassFixture<WebApplicationFactory
   }
 
   [Fact]
+  public async Task UserDetailContractShouldExposePublicFields()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Contract User Detail");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var createUserResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/users",
+      new CreateUserRequest(
+        $"contract.user.detail@{tenantPayload.Slug}.local",
+        "Contract User Detail",
+        "Contract",
+        "Detail"));
+
+    var createdUser = await createUserResponse.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(createdUser);
+
+    var response = await _client.GetAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{createdUser!.PublicId}");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(payload);
+    Assert.NotEqual(Guid.Empty, payload!.PublicId);
+    Assert.Equal($"contract.user.detail@{tenantPayload.Slug}.local", payload.Email);
+    Assert.Equal("Contract User Detail", payload.DisplayName);
+    Assert.Equal("active", payload.Status);
+  }
+
+  [Fact]
   public async Task RevokeUserRoleContractShouldReturnRevokedResourceShape()
   {
     var tenantRequest = new CreateTenantRequest(

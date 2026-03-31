@@ -192,6 +192,60 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
   }
 
   [Fact]
+  public async Task UserByPublicIdEndpointShouldReturnUserForKnownTenant()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With User Lookup");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var createResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/users",
+      new CreateUserRequest(
+        $"lookup.user@{tenantPayload.Slug}.local",
+        "Lookup User",
+        "Lookup",
+        "User"));
+
+    var createdUser = await createResponse.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(createdUser);
+
+    var response = await _client.GetAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{createdUser!.PublicId}");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal(createdUser.PublicId, payload!.PublicId);
+    Assert.Equal($"lookup.user@{tenantPayload.Slug}.local", payload.Email);
+  }
+
+  [Fact]
+  public async Task UserByPublicIdEndpointShouldReturnNotFoundForUnknownUser()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With Missing User");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var response = await _client.GetAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/users/{Guid.NewGuid()}");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
+
+  [Fact]
   public async Task UserRolesEndpointShouldReturnRolesForKnownUser()
   {
     var usersPayload = await _client.GetFromJsonAsync<UserResponse[]>("/api/identity/tenants/bootstrap-ops/users");

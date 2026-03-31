@@ -337,6 +337,19 @@ public static class Server
           : TypedResults.Ok(users);
       });
     app.MapGet(
+      "/api/identity/tenants/{slug}/users/{userPublicId:guid}",
+      Results<Ok<UserResponse>, NotFound> (
+        string slug,
+        Guid userPublicId,
+        GetBootstrapUserByPublicId useCase) =>
+      {
+        var user = useCase.Execute(slug, userPublicId);
+
+        return user is null
+          ? TypedResults.NotFound()
+          : TypedResults.Ok(user);
+      });
+    app.MapGet(
       "/api/identity/tenants/{slug}/users/{userPublicId:guid}/roles",
       Results<Ok<IReadOnlyCollection<UserRoleResponse>>, NotFound> (
         string slug,

@@ -311,6 +311,7 @@ run_identity_runtime_smoke() {
   local users_response
   local create_user_response
   local updated_user_response
+  local user_detail_response
   local created_user_public_id
   local teams_response
   local create_team_response
@@ -433,6 +434,15 @@ run_identity_runtime_smoke() {
 
   if [[ "$updated_user_response" != *"\"email\":\"runtime.user.prime@$tenant_slug.local\""* || "$updated_user_response" != *'"familyName":"Prime"'* ]]; then
     echo "[test] runtime identity user update did not persist"
+    exit 1
+  fi
+
+  user_detail_response="$(curl -fsS \
+    "$base_url/api/identity/tenants/$tenant_slug/users/$created_user_public_id")"
+  echo "[test] identity api user detail => $user_detail_response"
+
+  if [[ "$user_detail_response" != *"\"email\":\"runtime.user.prime@$tenant_slug.local\""* || "$user_detail_response" != *'"displayName":"Runtime User Prime"'* ]]; then
+    echo "[test] runtime identity user detail did not reflect live update"
     exit 1
   fi
 
