@@ -8,6 +8,7 @@ Current structure:
 - seeds
 - workflow definition catalog
 - updated_at trigger for mutable records
+- bootstrap seed for lead follow-up orchestration
 - views
 - functions
 - indexes

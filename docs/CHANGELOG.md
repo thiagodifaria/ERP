@@ -157,3 +157,5 @@
 - `v0.0.77`: [UPDATE 31/03/2026 - 16:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do monorepo agora cobre as tres stacks com superficie funcional mais madura: `TypeScript`, `Go` e `.NET`.
 - `v0.0.78`: [UPDATE 31/03/2026 - 16:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contexto `workflow-control` ganhou as primeiras migrations em PostgreSQL, com schema proprio e tabela `workflow_definitions` multi-tenant.
 - `v0.0.78`: [UPDATE 31/03/2026 - 16:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O catalogo relacional passou a nascer com `updated_at` automatizado, `key` unica por tenant e checks de status alinhados ao dominio TypeScript.
+- `v0.0.79`: [UPDATE 31/03/2026 - 16:38 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contexto relacional de `workflow-control` ganhou seed bootstrap de `lead-follow-up` para tenants operacionais e de smoke.
+- `v0.0.79`: [UPDATE 31/03/2026 - 16:38 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O catalogo inicial do banco ficou alinhado ao bootstrap historico do servico `TypeScript`, preparando a troca de driver sem regressao funcional.
