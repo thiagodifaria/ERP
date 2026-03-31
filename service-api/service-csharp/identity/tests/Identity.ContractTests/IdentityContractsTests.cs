@@ -194,6 +194,38 @@ public sealed class IdentityContractsTests : IClassFixture<WebApplicationFactory
   }
 
   [Fact]
+  public async Task UpdateTeamContractShouldReturnUpdatedResourceShape()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Contract Team Update");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var teams = await _client.GetFromJsonAsync<TeamResponse[]>(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/teams");
+
+    Assert.NotNull(teams);
+    Assert.NotEmpty(teams);
+
+    var response = await _client.PatchAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/teams/{teams![0].PublicId}",
+      new UpdateTeamRequest("Core Contract Prime"));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<TeamResponse>();
+
+    Assert.NotNull(payload);
+    Assert.NotEqual(Guid.Empty, payload!.PublicId);
+    Assert.Equal("Core Contract Prime", payload.Name);
+    Assert.Equal("active", payload.Status);
+  }
+
+  [Fact]
   public async Task ErrorContractShouldExposeCodeAndMessage()
   {
     var response = await _client.PostAsJsonAsync(

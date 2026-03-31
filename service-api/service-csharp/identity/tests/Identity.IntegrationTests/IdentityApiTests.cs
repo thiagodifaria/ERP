@@ -636,6 +636,59 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
   }
 
   [Fact]
+  public async Task UpdateTeamShouldReturnUpdatedTeam()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With Team Update");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var teamsPayload = await _client.GetFromJsonAsync<TeamResponse[]>(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/teams");
+
+    Assert.NotNull(teamsPayload);
+
+    var response = await _client.PatchAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/teams/{teamsPayload![0].PublicId}",
+      new UpdateTeamRequest("Core Prime"));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<TeamResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("Core Prime", payload!.Name);
+  }
+
+  [Fact]
+  public async Task UpdateTeamShouldReturnNotFoundForUnknownTeam()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Tenant With Missing Team");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var response = await _client.PatchAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/teams/{Guid.NewGuid()}",
+      new UpdateTeamRequest("Core Prime"));
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal("team_not_found", payload.Code);
+  }
+
+  [Fact]
   public async Task CreateTeamShouldReturnConflictForDuplicateName()
   {
     var request = new CreateTeamRequest("Core");

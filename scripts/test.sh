@@ -313,6 +313,7 @@ run_identity_runtime_smoke() {
   local created_user_public_id
   local teams_response
   local create_team_response
+  local updated_team_response
   local created_team_public_id
   local members_response
   local assign_role_response
@@ -445,6 +446,18 @@ run_identity_runtime_smoke() {
     exit 1
   fi
 
+  updated_team_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d '{"name":"Field Ops Prime"}' \
+    "$base_url/api/identity/tenants/$tenant_slug/teams/$created_team_public_id")"
+  echo "[test] identity api update team => $updated_team_response"
+
+  if [[ "$updated_team_response" != *'"name":"Field Ops Prime"'* ]]; then
+    echo "[test] runtime identity team update did not persist"
+    exit 1
+  fi
+
   members_response="$(curl -fsS \
     -X POST \
     -H "Content-Type: application/json" \
@@ -506,7 +519,7 @@ run_identity_runtime_smoke() {
   snapshot_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/snapshot")"
   echo "[test] identity api snapshot => $snapshot_response"
 
-  if [[ "$snapshot_response" != *'"companies":2'* || "$snapshot_response" != *'"users":2'* || "$snapshot_response" != *'"teams":2'* || "$snapshot_response" != *'"roles":5'* || "$snapshot_response" != *'"teamMemberships":2'* || "$snapshot_response" != *'"userRoles":1'* ]]; then
+  if [[ "$snapshot_response" != *'"companies":2'* || "$snapshot_response" != *'"users":2'* || "$snapshot_response" != *'"teams":2'* || "$snapshot_response" != *'"roles":5'* || "$snapshot_response" != *'"teamMemberships":2'* || "$snapshot_response" != *'"userRoles":1'* || "$snapshot_response" != *'"name":"Field Ops Prime"'* ]]; then
     echo "[test] runtime identity snapshot did not reflect live updates"
     exit 1
   fi

@@ -115,3 +115,5 @@
 - `v0.0.56`: [UPDATE 31/03/2026 - 14:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `identity` foi ampliado para remover `viewer` em runtime real no PostgreSQL e confirmar o snapshot consolidado com `userRoles=1`.
 - `v0.0.57`: [UPDATE 31/03/2026 - 14:42 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou `PATCH /api/identity/tenants/{slug}/teams/{teamPublicId}` para renomear times existentes sem recriacao de membership.
 - `v0.0.57`: [UPDATE 31/03/2026 - 14:42 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A trilha de update de `team` foi ligada em memoria e PostgreSQL, com cobertura unitaria para sucesso, `404`, nome invalido e conflito por duplicidade.
+- `v0.0.58`: [UPDATE 31/03/2026 - 14:46 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Integration e contract tests do `identity` passaram a validar o contrato publico de update de team, incluindo retorno `404` para time inexistente.
+- `v0.0.58`: [UPDATE 31/03/2026 - 14:46 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `identity` foi ampliado para renomear o time criado em runtime real no PostgreSQL e refletir o novo nome no snapshot consolidado.
