@@ -143,3 +143,31 @@ func TestRouterShouldUpdateLeadOwner(t *testing.T) {
 		t.Fatalf("expected owner 0195e7a0-7a9c-7c1f-8a44-4a6e70000024, got %s", response.OwnerUserID)
 	}
 }
+
+func TestRouterShouldUpdateLeadProfile(t *testing.T) {
+	router := NewRouter(
+		telemetry.New("crm-test"),
+		persistence.NewInMemoryLeadRepository(),
+	)
+	request := httptest.NewRequest(
+		http.MethodPatch,
+		"/api/crm/leads/"+persistence.BootstrapLeadPublicID,
+		bytes.NewBufferString(`{"name":"Bootstrap Prime","email":"bootstrap.prime@example.com","source":"instagram"}`),
+	)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response dto.LeadResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.Email != "bootstrap.prime@example.com" {
+		t.Fatalf("expected updated email bootstrap.prime@example.com, got %s", response.Email)
+	}
+}

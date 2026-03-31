@@ -161,6 +161,7 @@ run_crm_runtime_smoke() {
   local lead_list
   local create_response
   local created_public_id
+  local profile_response
   local owner_response
   local status_response
   local summary_response
@@ -212,6 +213,18 @@ run_crm_runtime_smoke() {
     exit 1
   fi
 
+  profile_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d '{"name":"Runtime Lead Prime","email":"runtime.lead.prime@example.com","source":"instagram"}' \
+    "$base_url/api/crm/leads/$created_public_id")"
+  echo "[test] crm api profile => $profile_response"
+
+  if [[ "$profile_response" != *'"name":"Runtime Lead Prime"'* || "$profile_response" != *'"email":"runtime.lead.prime@example.com"'* || "$profile_response" != *'"source":"instagram"'* ]]; then
+    echo "[test] runtime lead profile update did not persist"
+    exit 1
+  fi
+
   owner_response="$(curl -fsS \
     -X PATCH \
     -H "Content-Type: application/json" \
@@ -239,7 +252,7 @@ run_crm_runtime_smoke() {
   summary_response="$(curl -fsS "$base_url/api/crm/leads/summary")"
   echo "[test] crm api summary => $summary_response"
 
-  if [[ "$summary_response" != *'"total":2'* || "$summary_response" != *'"assigned":2'* || "$summary_response" != *'"contacted":1'* ]]; then
+  if [[ "$summary_response" != *'"total":2'* || "$summary_response" != *'"assigned":2'* || "$summary_response" != *'"contacted":1'* || "$summary_response" != *'"instagram":1'* ]]; then
     echo "[test] runtime CRM summary did not reflect live updates"
     exit 1
   fi

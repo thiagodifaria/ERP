@@ -166,6 +166,56 @@ func TestLeadStatusContractShouldReturnUpdatedResource(t *testing.T) {
 	}
 }
 
+func TestLeadProfileContractShouldReturnUpdatedResource(t *testing.T) {
+	router := newContractRouter()
+
+	createResponse := performRequest(
+		t,
+		router,
+		http.MethodPost,
+		"/api/crm/leads",
+		bytes.NewBufferString(`{"name":"Contract Profile","email":"contract.profile@example.com","source":"organic"}`),
+	)
+
+	if createResponse.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, createResponse.Code)
+	}
+
+	var created leadResponse
+	if err := json.Unmarshal(createResponse.Body.Bytes(), &created); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	updateResponse := performRequest(
+		t,
+		router,
+		http.MethodPatch,
+		"/api/crm/leads/"+created.PublicID,
+		bytes.NewBufferString(`{"name":"Contract Profile Prime","email":"CONTRACT.PROFILE.PRIME@EXAMPLE.COM","source":"instagram"}`),
+	)
+
+	if updateResponse.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, updateResponse.Code)
+	}
+
+	var updated leadResponse
+	if err := json.Unmarshal(updateResponse.Body.Bytes(), &updated); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if updated.Name != "Contract Profile Prime" {
+		t.Fatalf("expected updated name Contract Profile Prime, got %s", updated.Name)
+	}
+
+	if updated.Email != "contract.profile.prime@example.com" {
+		t.Fatalf("expected normalized updated email, got %s", updated.Email)
+	}
+
+	if updated.Source != "instagram" {
+		t.Fatalf("expected updated source instagram, got %s", updated.Source)
+	}
+}
+
 func TestHealthDetailsContractShouldExposeDependencyShape(t *testing.T) {
 	response := performRequest(
 		t,

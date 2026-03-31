@@ -87,3 +87,5 @@
 - `v0.0.42`: [UPDATE 31/03/2026 - 13:32 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh smoke` foi endurecido para validar esse contrato de readiness ao vivo por HTTP, reforcando a observabilidade minima do stack container-first.
 - `v0.0.43`: [UPDATE 31/03/2026 - 13:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou a suite `tests/contract` com validacoes reais para lista, criacao, mudanca de status, health details e contrato publico de erro.
 - `v0.0.43`: [UPDATE 31/03/2026 - 13:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/test.sh contract` passou a executar `crm` e `identity` em fluxo container-first, separando cobertura contratual do pacote unitario do Go por build tag.
+- `v0.0.44`: [UPDATE 31/03/2026 - 13:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou `PATCH /api/crm/leads/{publicId}` para atualizar nome, email e source do lead sem recriacao, com conflito por email duplicado e validacao de payload no dominio.
+- `v0.0.44`: [UPDATE 31/03/2026 - 13:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Cobertura unitaria, contratual e smoke HTTP do `crm` foi ampliada para validar a mutacao de perfil em runtime real contra o PostgreSQL.

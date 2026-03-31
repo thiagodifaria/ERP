@@ -275,6 +275,63 @@ func TestUpdateStatusShouldReturnUpdatedLead(t *testing.T) {
 	}
 }
 
+func TestUpdateProfileShouldReturnUpdatedLead(t *testing.T) {
+	handler := newLeadHandlerForTest(persistence.NewInMemoryLeadRepository())
+	body := bytes.NewBufferString(`{"name":"Bootstrap Prime","email":"bootstrap.prime@example.com","source":"instagram"}`)
+	request := httptest.NewRequest(http.MethodPatch, "/api/crm/leads/"+persistence.BootstrapLeadPublicID, body)
+	request.SetPathValue("publicId", persistence.BootstrapLeadPublicID)
+	recorder := httptest.NewRecorder()
+
+	handler.UpdateProfile(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response dto.LeadResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.Name != "Bootstrap Prime" {
+		t.Fatalf("expected updated name Bootstrap Prime, got %s", response.Name)
+	}
+
+	if response.Email != "bootstrap.prime@example.com" {
+		t.Fatalf("expected updated email bootstrap.prime@example.com, got %s", response.Email)
+	}
+
+	if response.Source != "instagram" {
+		t.Fatalf("expected updated source instagram, got %s", response.Source)
+	}
+}
+
+func TestUpdateProfileShouldRejectDuplicateEmail(t *testing.T) {
+	repository := persistence.NewInMemoryLeadRepository()
+	createLead := command.NewCreateLead(repository)
+	handler := newLeadHandlerForTest(repository)
+
+	createdLead := createLead.Execute(command.CreateLeadInput{
+		Name:   "Carol Viana",
+		Email:  "carol@example.com",
+		Source: "manual",
+	})
+	if createdLead.Lead == nil {
+		t.Fatalf("expected created lead, got error %s", createdLead.ErrorCode)
+	}
+
+	body := bytes.NewBufferString(`{"email":"lead@bootstrap-ops.local"}`)
+	request := httptest.NewRequest(http.MethodPatch, "/api/crm/leads/"+createdLead.Lead.PublicID, body)
+	request.SetPathValue("publicId", createdLead.Lead.PublicID)
+	recorder := httptest.NewRecorder()
+
+	handler.UpdateProfile(recorder, request)
+
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("expected status %d, got %d", http.StatusConflict, recorder.Code)
+	}
+}
+
 func TestUpdateOwnerShouldReturnUpdatedLead(t *testing.T) {
 	repository := persistence.NewInMemoryLeadRepository()
 	createLead := command.NewCreateLead(repository)
@@ -363,6 +420,7 @@ func newLeadHandlerForTest(repository *persistence.InMemoryLeadRepository) LeadH
 		query.NewGetLeadPipelineSummary(repository),
 		query.NewGetLeadByPublicID(repository),
 		command.NewCreateLead(repository),
+		command.NewUpdateLeadProfile(repository),
 		command.NewUpdateLeadOwner(repository),
 		command.NewUpdateLeadStatus(repository),
 	)

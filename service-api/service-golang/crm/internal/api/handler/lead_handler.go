@@ -16,6 +16,7 @@ type LeadHandler struct {
 	getLeadSummary    query.GetLeadPipelineSummary
 	getLeadByPublicID query.GetLeadByPublicID
 	createLead        command.CreateLead
+	updateLeadProfile command.UpdateLeadProfile
 	updateLeadOwner   command.UpdateLeadOwner
 	updateLeadStatus  command.UpdateLeadStatus
 }
@@ -25,6 +26,7 @@ func NewLeadHandler(
 	getLeadSummary query.GetLeadPipelineSummary,
 	getLeadByPublicID query.GetLeadByPublicID,
 	createLead command.CreateLead,
+	updateLeadProfile command.UpdateLeadProfile,
 	updateLeadOwner command.UpdateLeadOwner,
 	updateLeadStatus command.UpdateLeadStatus,
 ) LeadHandler {
@@ -33,6 +35,7 @@ func NewLeadHandler(
 		getLeadSummary:    getLeadSummary,
 		getLeadByPublicID: getLeadByPublicID,
 		createLead:        createLead,
+		updateLeadProfile: updateLeadProfile,
 		updateLeadOwner:   updateLeadOwner,
 		updateLeadStatus:  updateLeadStatus,
 	}
@@ -130,6 +133,52 @@ func (handler LeadHandler) Create(writer http.ResponseWriter, request *http.Requ
 		})
 	default:
 		writer.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
+	}
+}
+
+func (handler LeadHandler) UpdateProfile(writer http.ResponseWriter, request *http.Request) {
+	var payload dto.UpdateLeadProfileRequest
+	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+		writer.Header().Set("Content-Type", "application/json")
+		writer.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    "invalid_json",
+			Message: "Request body is invalid.",
+		})
+		return
+	}
+
+	result := handler.updateLeadProfile.Execute(command.UpdateLeadProfileInput{
+		PublicID: request.PathValue("publicId"),
+		Name:     payload.Name,
+		Email:    payload.Email,
+		Source:   payload.Source,
+	})
+
+	writer.Header().Set("Content-Type", "application/json")
+
+	switch {
+	case result.BadRequest:
+		writer.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    result.ErrorCode,
+			Message: result.ErrorText,
+		})
+	case result.Conflict:
+		writer.WriteHeader(http.StatusConflict)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    result.ErrorCode,
+			Message: result.ErrorText,
+		})
+	case result.NotFound:
+		writer.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    result.ErrorCode,
+			Message: result.ErrorText,
+		})
+	default:
+		writer.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
 	}
 }

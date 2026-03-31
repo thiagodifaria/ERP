@@ -127,6 +127,51 @@ func TestAssignOwnerShouldNormalizeValue(t *testing.T) {
 	}
 }
 
+func TestReviseProfileShouldKeepStatusAndNormalizeFields(t *testing.T) {
+	lead, err := NewLead(testLeadPublicID, "Ana Souza", "ana@example.com", "meta-ads", testOwnerUserPublicID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	qualifiedLead, err := lead.TransitionTo("qualified")
+	if err != nil {
+		t.Fatalf("unexpected transition error: %v", err)
+	}
+
+	revisedLead, err := qualifiedLead.ReviseProfile("  Ana Prime  ", "ANA.PRIME@EXAMPLE.COM", "")
+	if err != nil {
+		t.Fatalf("unexpected profile revision error: %v", err)
+	}
+
+	if revisedLead.Name != "Ana Prime" {
+		t.Fatalf("expected normalized name Ana Prime, got %s", revisedLead.Name)
+	}
+
+	if revisedLead.Email != "ana.prime@example.com" {
+		t.Fatalf("expected normalized email ana.prime@example.com, got %s", revisedLead.Email)
+	}
+
+	if revisedLead.Source != "manual" {
+		t.Fatalf("expected source manual, got %s", revisedLead.Source)
+	}
+
+	if revisedLead.Status != "qualified" {
+		t.Fatalf("expected status qualified, got %s", revisedLead.Status)
+	}
+}
+
+func TestReviseProfileShouldRejectInvalidEmail(t *testing.T) {
+	lead, err := NewLead(testLeadPublicID, "Ana Souza", "ana@example.com", "meta-ads", testOwnerUserPublicID)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	_, err = lead.ReviseProfile("Ana Souza", "invalid-email", "meta-ads")
+	if err != ErrLeadEmailInvalid {
+		t.Fatalf("expected ErrLeadEmailInvalid, got %v", err)
+	}
+}
+
 func TestAssignOwnerShouldRejectInvalidValue(t *testing.T) {
 	lead, err := NewLead(testLeadPublicID, "Ana Souza", "ana@example.com", "meta-ads", "")
 	if err != nil {

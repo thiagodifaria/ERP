@@ -86,6 +86,16 @@ func (lead Lead) TransitionTo(status string) (Lead, error) {
 	return lead, nil
 }
 
+func (lead Lead) ReviseProfile(name string, email string, source string) (Lead, error) {
+	revisedLead, err := NewLead(lead.PublicID, name, email, source, lead.OwnerUserID)
+	if err != nil {
+		return Lead{}, err
+	}
+
+	revisedLead.Status = normalizeStatus(lead.Status)
+	return revisedLead, nil
+}
+
 func (lead Lead) AssignOwner(ownerUserID string) (Lead, error) {
 	normalizedOwnerUserID := strings.TrimSpace(ownerUserID)
 	if normalizedOwnerUserID != "" {
