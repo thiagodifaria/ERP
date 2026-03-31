@@ -61,6 +61,16 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
     Assert.NotNull(payload);
     Assert.Equal(request.Slug, payload.Slug);
     Assert.Equal(request.DisplayName, payload.DisplayName);
+
+    var rolesResponse = await _client.GetAsync($"/api/identity/tenants/{payload.Slug}/roles");
+
+    Assert.Equal(HttpStatusCode.OK, rolesResponse.StatusCode);
+
+    var rolesPayload = await rolesResponse.Content.ReadFromJsonAsync<RoleResponse[]>();
+
+    Assert.NotNull(rolesPayload);
+    Assert.Equal(5, rolesPayload.Length);
+    Assert.Contains(rolesPayload, role => role.Code == "owner");
   }
 
   [Fact]

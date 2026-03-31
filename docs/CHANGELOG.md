@@ -27,3 +27,5 @@
 - `v0.0.11`: [UPDATE 31/03/2026 - 02:40 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Testes unitarios e de integracao ampliados para cobrir criacao de tenant e conflito de slug, com validacao executada em container.
 - `v0.0.12`: [UPDATE 31/03/2026 - 02:52 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `edge` e `webhook-hub` ganharam endpoint `GET /health/details` com readiness detalhado e dependencias observaveis no bootstrap.
 - `v0.0.12`: [UPDATE 31/03/2026 - 02:52 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Smoke coverage adicionada para `edge` e `webhook-hub`, com validacao de router e rotas de health executada em container.
+- `v0.0.13`: [UPDATE 31/03/2026 - 03:01 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Provisionamento automatico de roles padrao conectado ao fluxo `POST /api/identity/tenants`, para que tenant novo ja nasca com papeis basicos disponiveis.
+- `v0.0.13`: [UPDATE 31/03/2026 - 03:01 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Catalogo de roles em memoria evoluido para repositorio mutavel com seed de defaults por tenant, com validacao executada em container.

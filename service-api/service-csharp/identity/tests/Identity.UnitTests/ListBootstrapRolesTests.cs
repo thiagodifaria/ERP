@@ -10,7 +10,7 @@ public sealed class ListBootstrapRolesTests
   [Fact]
   public void ExecuteShouldReturnRolesForKnownTenant()
   {
-    var useCase = new ListBootstrapRoles(new InMemoryRoleCatalog());
+    var useCase = new ListBootstrapRoles(new InMemoryRoleRepository());
 
     var response = useCase.Execute("bootstrap-ops");
 
@@ -22,7 +22,7 @@ public sealed class ListBootstrapRolesTests
   [Fact]
   public void ExecuteShouldReturnEmptyForUnknownTenant()
   {
-    var useCase = new ListBootstrapRoles(new InMemoryRoleCatalog());
+    var useCase = new ListBootstrapRoles(new InMemoryRoleRepository());
 
     var response = useCase.Execute("missing-tenant");
 

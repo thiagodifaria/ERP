@@ -6,16 +6,16 @@ namespace Identity.Application;
 
 public sealed class ListBootstrapRoles
 {
-  private readonly IRoleCatalog _roleCatalog;
+  private readonly IRoleRepository _roleRepository;
 
-  public ListBootstrapRoles(IRoleCatalog roleCatalog)
+  public ListBootstrapRoles(IRoleRepository roleRepository)
   {
-    _roleCatalog = roleCatalog;
+    _roleRepository = roleRepository;
   }
 
   public IReadOnlyCollection<RoleResponse> Execute(string tenantSlug)
   {
-    return _roleCatalog
+    return _roleRepository
       .ListByTenantSlug(tenantSlug)
       .Select(role => new RoleResponse(
         role.Id,
