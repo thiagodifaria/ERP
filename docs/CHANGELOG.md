@@ -56,3 +56,5 @@
 - `v0.0.26`: [UPDATE 31/03/2026 - 06:10 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Primeira entidade de dominio `Lead` criada no `crm` com validacoes basicas e cobertura executada em container via `scripts/test.sh unit`.
 - `v0.0.27`: [UPDATE 31/03/2026 - 06:14 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` ganhou bootstrap em memoria de leads com `GET /api/crm/leads` e `POST /api/crm/leads`, mais DTOs publicos, casos de uso e adapter inicial de persistencia.
 - `v0.0.27`: [UPDATE 31/03/2026 - 06:14 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Fluxo de criacao de lead validado com regra de nome obrigatorio, e-mail valido, default source e conflito por e-mail em container via `scripts/test.sh unit`.
+- `v0.0.28`: [UPDATE 31/03/2026 - 06:15 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `crm` integrado ao `infra/docker-compose.yml` com porta dedicada e configuracao basica de runtime no stack local.
+- `v0.0.28`: [UPDATE 31/03/2026 - 06:15 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `README.md` raiz atualizado para refletir `crm` como servico ja iniciado, com validacao de compose executada via `docker compose config`.

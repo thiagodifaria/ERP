@@ -69,6 +69,7 @@ The repository is currently in the architectural foundation stage.
 The base monorepo layout is already in place together with the first service templates for:
 
 - `edge`
+- `crm`
 - `identity`
 - `webhook-hub`
 - PostgreSQL ownership for `common` and `identity`
