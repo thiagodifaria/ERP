@@ -7,6 +7,7 @@ import (
 
   "github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/api"
   "github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/config"
+  "github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/infrastructure/persistence"
   "github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/telemetry"
 )
 
@@ -19,7 +20,8 @@ type App struct {
 func NewApp() (*App, error) {
   cfg := config.Load()
   logger := telemetry.New(cfg.ServiceName)
-  server := api.NewServer(cfg, logger)
+  leadRepository := persistence.NewInMemoryLeadRepository()
+  server := api.NewServer(cfg, logger, leadRepository)
 
   return &App{
     Config: cfg,
