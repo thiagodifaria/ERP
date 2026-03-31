@@ -30,13 +30,16 @@ Cada servico critico deve documentar:
 - `./scripts/up.sh` sobe o ecossistema local definido em compose
 - `./scripts/down.sh` derruba os containers e remove orfaos
 - `./scripts/logs.sh <servico>` consulta logs do servico informado
-- `./scripts/db.sh migrate all` aplica a base `common` e `identity`
+- `./scripts/db.sh migrate all` aplica a base `common`, `identity` e `crm`
+- `./scripts/db.sh migrate crm` aplica apenas o contexto relacional de CRM
 - `./scripts/db.sh seed identity` aplica o bootstrap relacional do contexto `identity`
+- `./scripts/db.sh seed crm` aplica o bootstrap relacional do contexto `crm`
 - `./scripts/db.sh summary identity <tenant-slug>` resume companies, users, teams, roles e bindings do tenant
+- `./scripts/db.sh summary crm <tenant-slug>` resume a quantidade de leads por tenant
 - `./scripts/test.sh unit` executa Go, .NET e Rust em modo container-first
 - `./scripts/test.sh integration` executa a suite HTTP do `identity`
 - `./scripts/test.sh contract` executa a suite publica de contratos do `identity`
-- `./scripts/test.sh smoke` valida compose e o bootstrap relacional do `identity`
+- `./scripts/test.sh smoke` valida compose e o bootstrap relacional de `identity` e `crm`
 
 ## Entrega incremental
 

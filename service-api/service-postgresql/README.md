@@ -25,3 +25,9 @@ Domains already mapped in this repository:
 - engagement
 - documents
 - analytics
+
+Domains already carrying concrete relational work:
+
+- `common`
+- `identity`
+- `crm`

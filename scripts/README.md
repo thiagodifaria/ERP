@@ -17,8 +17,11 @@ Useful commands:
 - `./scripts/down.sh`
 - `./scripts/logs.sh identity`
 - `./scripts/db.sh migrate all`
+- `./scripts/db.sh migrate crm`
 - `./scripts/db.sh seed identity`
+- `./scripts/db.sh seed crm`
 - `./scripts/db.sh summary identity smoke-identity-bootstrap`
+- `./scripts/db.sh summary crm smoke-identity-bootstrap`
 - `./scripts/test.sh unit`
 - `./scripts/test.sh integration`
 - `./scripts/test.sh contract`
