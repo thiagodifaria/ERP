@@ -21,3 +21,5 @@
 - `v0.0.8`: [UPDATE 31/03/2026 - 02:10 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou contrato de leitura de tenants, adapter de bootstrap em memoria, caso de uso `ListBootstrapTenants` e endpoint `GET /api/identity/tenants`, com build e testes validados em container.
 - `v0.0.9`: [UPDATE 31/03/2026 - 02:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou endpoint `GET /health/details` com readiness detalhado e contratos publicos para dependencias e status do servico.
 - `v0.0.9`: [UPDATE 31/03/2026 - 02:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Testes de integracao HTTP adicionados ao `identity` para `GET /health/details` e `GET /api/identity/tenants`, com execucao validada em container.
+- `v0.0.10`: [UPDATE 31/03/2026 - 02:28 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `identity` ganhou leitura de roles por tenant em bootstrap, com contrato `RoleResponse`, catalogo em memoria e endpoint `GET /api/identity/tenants/{slug}/roles`.
+- `v0.0.10`: [UPDATE 31/03/2026 - 02:28 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Testes unitarios e de integracao adicionados para a leitura de roles, incluindo retorno `404` para tenant desconhecido, com validacao em container.

@@ -2,6 +2,7 @@
 // Crescimento de endpoints deve manter a API fina.
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Routing;
 using Identity.Application;
 using Identity.Contracts;
@@ -18,6 +19,16 @@ public static class Server
     app.MapGet(
       "/api/identity/tenants",
       (ListBootstrapTenants useCase) => TypedResults.Ok(useCase.Execute()));
+    app.MapGet(
+      "/api/identity/tenants/{slug}/roles",
+      Results<Ok<IReadOnlyCollection<RoleResponse>>, NotFound> (string slug, ListBootstrapRoles useCase) =>
+      {
+        var roles = useCase.Execute(slug);
+
+        return roles.Count == 0
+          ? TypedResults.NotFound()
+          : TypedResults.Ok(roles);
+      });
 
     return app;
   }

@@ -44,4 +44,26 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
     Assert.NotEmpty(payload);
     Assert.Contains(payload, tenant => tenant.Slug == "bootstrap-ops");
   }
+
+  [Fact]
+  public async Task TenantRolesEndpointShouldReturnRolesForKnownTenant()
+  {
+    var response = await _client.GetAsync("/api/identity/tenants/bootstrap-ops/roles");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<RoleResponse[]>();
+
+    Assert.NotNull(payload);
+    Assert.Equal(5, payload.Length);
+    Assert.Contains(payload, role => role.Code == "owner");
+  }
+
+  [Fact]
+  public async Task TenantRolesEndpointShouldReturnNotFoundForUnknownTenant()
+  {
+    var response = await _client.GetAsync("/api/identity/tenants/unknown/roles");
+
+    Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+  }
 }
