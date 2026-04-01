@@ -221,3 +221,5 @@
 - `v0.1.9`: [UPDATE 01/04/2026 - 05:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A suite unitaria passou a validar a exposicao da run bootstrap `lead-follow-up` pela API TypeScript.
 - `v0.1.10`: [UPDATE 01/04/2026 - 05:44 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/runs/{publicId}` para leitura individual de execucoes pelo identificador publico.
 - `v0.1.10`: [UPDATE 01/04/2026 - 05:44 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A API TypeScript passou a responder `workflow_run_not_found` quando a run consultada nao existe no ledger bootstrap.
+- `v0.1.11`: [UPDATE 01/04/2026 - 05:50 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `POST /api/workflow-control/runs`, criando execucoes pendentes a partir da definicao e da versao corrente publicada.
+- `v0.1.11`: [UPDATE 01/04/2026 - 05:50 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack TypeScript passou a ligar escrita de run a `workflowDefinitionKey`, `subjectType`, `subjectPublicId` e `initiatedBy`, com erro explicito quando o catalogo ou a versao corrente nao existem.

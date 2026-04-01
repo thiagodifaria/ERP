@@ -75,6 +75,30 @@ test("workflow run detail should expose bootstrap execution by public id", async
   assert.equal(payload.workflowDefinitionVersionId, 1);
 });
 
+test("workflow run create should append a pending execution linked to current version", async () => {
+  const response = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: "00000000-0000-0000-0000-000000009999",
+      initiatedBy: "ops-console"
+    })
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 201);
+  assert.match(payload.publicId, /^[0-9a-f-]{36}$/);
+  assert.equal(payload.workflowDefinitionId, 1);
+  assert.equal(payload.workflowDefinitionVersionId, 1);
+  assert.equal(payload.status, "pending");
+  assert.equal(payload.triggerEvent, "lead.created");
+  assert.equal(payload.initiatedBy, "ops-console");
+});
+
 test("workflow definition detail should expose created resource by key", async () => {
   const key = `detail-${randomUUID()}`;
   const createResponse = await request("/api/workflow-control/definitions", {

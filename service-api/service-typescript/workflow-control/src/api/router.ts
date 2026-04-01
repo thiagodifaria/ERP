@@ -2,6 +2,7 @@
 import { IncomingMessage, ServerResponse } from "node:http";
 import { HealthResponse, ReadinessResponse } from "./dto/health.js";
 import { CreateWorkflowDefinitionRequest } from "./dto/create-workflow-definition-request.js";
+import { CreateWorkflowRunRequest } from "./dto/create-workflow-run-request.js";
 import { UpdateWorkflowDefinitionRequest } from "./dto/update-workflow-definition-request.js";
 import { UpdateWorkflowDefinitionStatusRequest } from "./dto/update-workflow-definition-status-request.js";
 import { runtime, services } from "../config/container.js";
@@ -508,6 +509,55 @@ export async function route(request: IncomingMessage, response: ServerResponse):
         json(response, 400, {
           code,
           message: "Workflow definition payload is invalid."
+        });
+        return;
+      }
+
+      json(response, 500, {
+        code: "unexpected_error",
+        message: "Unexpected error."
+      });
+      return;
+    }
+  }
+
+  if (request.method === "POST" && request.url === "/api/workflow-control/runs") {
+    try {
+      const payload = await readJson<CreateWorkflowRunRequest>(request);
+      const created = await services.createWorkflowRun.execute(payload);
+
+      json(response, 201, created);
+      return;
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "unexpected_error";
+
+      if (code === "invalid_json") {
+        json(response, 400, {
+          code: "invalid_json",
+          message: "Request body must be a valid JSON object."
+        });
+        return;
+      }
+
+      if (code === "workflow_definition_not_found" || code === "workflow_definition_version_not_found") {
+        json(response, 404, {
+          code,
+          message: code === "workflow_definition_not_found"
+            ? "Workflow definition was not found."
+            : "Workflow definition version was not found."
+        });
+        return;
+      }
+
+      if (
+        code === "workflow_run_definition_key_required" ||
+        code === "workflow_run_subject_type_required" ||
+        code === "workflow_run_subject_public_id_required" ||
+        code === "workflow_run_initiated_by_required"
+      ) {
+        json(response, 400, {
+          code,
+          message: "Workflow run payload is invalid."
         });
         return;
       }
