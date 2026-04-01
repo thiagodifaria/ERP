@@ -239,3 +239,5 @@
 - `v0.1.18`: [UPDATE 01/04/2026 - 06:24 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O shape publico do ledger de execucao ficou congelado para listagem, detalhe e criacao inicial de runs.
 - `v0.1.19`: [UPDATE 01/04/2026 - 06:28 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A suite contratual de `workflow-control` passou a cobrir `GET /runs/summary` e filtros no `GET /runs`.
 - `v0.1.19`: [UPDATE 01/04/2026 - 06:28 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O read-side operacional do ledger ficou congelado tambem para buckets por status e consultas filtradas por definicao, sujeito e iniciador.
+- `v0.1.20`: [UPDATE 01/04/2026 - 06:33 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` ganhou contract coverage para `start`, `complete`, `fail` e `cancel` de `workflow runs`.
+- `v0.1.20`: [UPDATE 01/04/2026 - 06:33 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ciclo de vida publico do ledger operacional ficou congelado tambem no nivel contratual, reduzindo risco de regressao nas transicoes.

@@ -201,6 +201,128 @@ test("workflow runs contract should support operational filters", async () => {
   assert.ok(payload.every((workflowRun) => workflowRun.initiatedBy === "contract-filter"));
 });
 
+test("workflow run contract should expose start transition", async () => {
+  const createResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: randomUUID(),
+      initiatedBy: "contract-start"
+    })
+  });
+  const created = await createResponse.json() as WorkflowRunResponse;
+
+  assert.equal(createResponse.status, 201);
+
+  const response = await request(`/api/workflow-control/runs/${created.publicId}/start`, {
+    method: "POST"
+  });
+  const payload = await response.json() as WorkflowRunResponse;
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.publicId, created.publicId);
+  assert.equal(payload.status, "running");
+  assert.ok(payload.startedAt);
+});
+
+test("workflow run contract should expose complete transition", async () => {
+  const createResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: randomUUID(),
+      initiatedBy: "contract-complete"
+    })
+  });
+  const created = await createResponse.json() as WorkflowRunResponse;
+
+  assert.equal(createResponse.status, 201);
+
+  const startResponse = await request(`/api/workflow-control/runs/${created.publicId}/start`, {
+    method: "POST"
+  });
+  assert.equal(startResponse.status, 200);
+
+  const response = await request(`/api/workflow-control/runs/${created.publicId}/complete`, {
+    method: "POST"
+  });
+  const payload = await response.json() as WorkflowRunResponse;
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.publicId, created.publicId);
+  assert.equal(payload.status, "completed");
+  assert.ok(payload.completedAt);
+});
+
+test("workflow run contract should expose fail transition", async () => {
+  const createResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: randomUUID(),
+      initiatedBy: "contract-fail"
+    })
+  });
+  const created = await createResponse.json() as WorkflowRunResponse;
+
+  assert.equal(createResponse.status, 201);
+
+  const startResponse = await request(`/api/workflow-control/runs/${created.publicId}/start`, {
+    method: "POST"
+  });
+  assert.equal(startResponse.status, 200);
+
+  const response = await request(`/api/workflow-control/runs/${created.publicId}/fail`, {
+    method: "POST"
+  });
+  const payload = await response.json() as WorkflowRunResponse;
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.publicId, created.publicId);
+  assert.equal(payload.status, "failed");
+  assert.ok(payload.failedAt);
+});
+
+test("workflow run contract should expose cancel transition", async () => {
+  const createResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: randomUUID(),
+      initiatedBy: "contract-cancel"
+    })
+  });
+  const created = await createResponse.json() as WorkflowRunResponse;
+
+  assert.equal(createResponse.status, 201);
+
+  const response = await request(`/api/workflow-control/runs/${created.publicId}/cancel`, {
+    method: "POST"
+  });
+  const payload = await response.json() as WorkflowRunResponse;
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.publicId, created.publicId);
+  assert.equal(payload.status, "cancelled");
+  assert.ok(payload.cancelledAt);
+});
+
 test("workflow definition contract should return created resource", async () => {
   const key = `contract-${randomUUID()}`;
   const response = await request("/api/workflow-control/definitions", {
