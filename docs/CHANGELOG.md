@@ -251,3 +251,5 @@
 - `v0.1.24`: [UPDATE 01/04/2026 - 06:58 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Cada evento passa a registrar `category`, `body`, `createdBy` e o run associado, preparando historico operacional mais rico no PostgreSQL.
 - `v0.1.25`: [UPDATE 01/04/2026 - 07:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` passou a semear um primeiro `workflow_run_event` bootstrap por tenant operacional.
 - `v0.1.25`: [UPDATE 01/04/2026 - 07:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ledger relacional agora nasce com uma nota operacional ligada a cada execucao base, preparando leitura historica e diagnostico contextual.
+- `v0.1.26`: [UPDATE 01/04/2026 - 07:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/db.sh summary workflow-control` passou a expor tambem o total de `workflow_run_events` por tenant.
+- `v0.1.26`: [UPDATE 01/04/2026 - 07:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke relacional do monorepo agora confirma tambem o bootstrap de eventos do ledger operacional.

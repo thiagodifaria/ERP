@@ -162,6 +162,7 @@ run_identity_database_smoke() {
         (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id) || '|' ||
         (SELECT count(*) FROM workflow_control.workflow_definition_versions AS version WHERE version.tenant_id = tenant.id) || '|' ||
         (SELECT count(*) FROM workflow_control.workflow_runs AS workflow_run WHERE workflow_run.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM workflow_control.workflow_run_events AS workflow_run_event WHERE workflow_run_event.tenant_id = tenant.id) || '|' ||
         (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id AND definition.status = 'draft') || '|' ||
         (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id AND definition.status = 'active') || '|' ||
         (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id AND definition.status = 'archived') || '|' ||
@@ -177,7 +178,7 @@ run_identity_database_smoke() {
 
   echo "[test] workflow-control db smoke => $workflow_control_summary"
 
-  if [[ "$workflow_control_summary" != "$smoke_slug|1|1|1|0|1|0|0|1|0|0|0|1" ]]; then
+  if [[ "$workflow_control_summary" != "$smoke_slug|1|1|1|1|0|1|0|0|1|0|0|0|1" ]]; then
     echo "[test] unexpected workflow-control db smoke summary"
     exit 1
   fi
