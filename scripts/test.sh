@@ -353,6 +353,16 @@ run_workflow_control_runtime_smoke() {
   local run_create_response
   local created_run_public_id
   local filtered_runs_response
+  local run_start_response
+  local run_complete_create_response
+  local completed_run_public_id
+  local run_complete_response
+  local run_fail_create_response
+  local failed_run_public_id
+  local run_fail_response
+  local run_cancel_create_response
+  local cancelled_run_public_id
+  local run_cancel_response
   local versions_response
   local current_version_response
   local publish_response
@@ -434,6 +444,96 @@ run_workflow_control_runtime_smoke() {
 
   if [[ "$filtered_runs_response" != *"\"publicId\":\"$created_run_public_id\""* || "$runs_summary_response" != *'"total":2'* || "$runs_summary_response" != *'"pending":1'* || "$runs_summary_response" != *'"running":1'* ]]; then
     echo "[test] workflow-control run filters or summary did not reflect live writes"
+    exit 1
+  fi
+
+  run_start_response="$(curl -fsS \
+    -X POST \
+    "$base_url/api/workflow-control/runs/$created_run_public_id/start")"
+  echo "[test] workflow-control start run => $run_start_response"
+
+  if [[ "$run_start_response" != *"\"publicId\":\"$created_run_public_id\""* || "$run_start_response" != *'"status":"running"'* || "$run_start_response" != *'"startedAt":"'*
+  ]]; then
+    echo "[test] workflow-control run start did not persist"
+    exit 1
+  fi
+
+  run_complete_create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"workflowDefinitionKey":"lead-follow-up","subjectType":"crm.lead","subjectPublicId":"00000000-0000-0000-0000-000000009997","initiatedBy":"smoke-complete"}' \
+    "$base_url/api/workflow-control/runs")"
+  completed_run_public_id="$(echo "$run_complete_create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+
+  if [[ -z "$completed_run_public_id" ]]; then
+    echo "[test] workflow-control complete-path run create did not return public id"
+    exit 1
+  fi
+
+  curl -fsS -X POST "$base_url/api/workflow-control/runs/$completed_run_public_id/start" >/dev/null
+  run_complete_response="$(curl -fsS \
+    -X POST \
+    "$base_url/api/workflow-control/runs/$completed_run_public_id/complete")"
+  echo "[test] workflow-control complete run => $run_complete_response"
+
+  if [[ "$run_complete_response" != *"\"publicId\":\"$completed_run_public_id\""* || "$run_complete_response" != *'"status":"completed"'* || "$run_complete_response" != *'"completedAt":"'*
+  ]]; then
+    echo "[test] workflow-control run complete did not persist"
+    exit 1
+  fi
+
+  run_fail_create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"workflowDefinitionKey":"lead-follow-up","subjectType":"crm.lead","subjectPublicId":"00000000-0000-0000-0000-000000009996","initiatedBy":"smoke-fail"}' \
+    "$base_url/api/workflow-control/runs")"
+  failed_run_public_id="$(echo "$run_fail_create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+
+  if [[ -z "$failed_run_public_id" ]]; then
+    echo "[test] workflow-control fail-path run create did not return public id"
+    exit 1
+  fi
+
+  curl -fsS -X POST "$base_url/api/workflow-control/runs/$failed_run_public_id/start" >/dev/null
+  run_fail_response="$(curl -fsS \
+    -X POST \
+    "$base_url/api/workflow-control/runs/$failed_run_public_id/fail")"
+  echo "[test] workflow-control fail run => $run_fail_response"
+
+  if [[ "$run_fail_response" != *"\"publicId\":\"$failed_run_public_id\""* || "$run_fail_response" != *'"status":"failed"'* || "$run_fail_response" != *'"failedAt":"'*
+  ]]; then
+    echo "[test] workflow-control run fail did not persist"
+    exit 1
+  fi
+
+  run_cancel_create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"workflowDefinitionKey":"lead-follow-up","subjectType":"crm.lead","subjectPublicId":"00000000-0000-0000-0000-000000009995","initiatedBy":"smoke-cancel"}' \
+    "$base_url/api/workflow-control/runs")"
+  cancelled_run_public_id="$(echo "$run_cancel_create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+
+  if [[ -z "$cancelled_run_public_id" ]]; then
+    echo "[test] workflow-control cancel-path run create did not return public id"
+    exit 1
+  fi
+
+  run_cancel_response="$(curl -fsS \
+    -X POST \
+    "$base_url/api/workflow-control/runs/$cancelled_run_public_id/cancel")"
+  echo "[test] workflow-control cancel run => $run_cancel_response"
+
+  if [[ "$run_cancel_response" != *"\"publicId\":\"$cancelled_run_public_id\""* || "$run_cancel_response" != *'"status":"cancelled"'* || "$run_cancel_response" != *'"cancelledAt":"'*
+  ]]; then
+    echo "[test] workflow-control run cancel did not persist"
+    exit 1
+  fi
+
+  runs_summary_response="$(curl -fsS "$base_url/api/workflow-control/runs/summary")"
+  echo "[test] workflow-control runs summary after transitions => $runs_summary_response"
+
+  if [[ "$runs_summary_response" != *'"total":5'* || "$runs_summary_response" != *'"running":2'* || "$runs_summary_response" != *'"completed":1'* || "$runs_summary_response" != *'"failed":1'* || "$runs_summary_response" != *'"cancelled":1'* ]]; then
+    echo "[test] workflow-control run transitions did not reflect on live summary"
     exit 1
   fi
 

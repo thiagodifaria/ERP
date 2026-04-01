@@ -245,3 +245,5 @@
 - `v0.1.21`: [UPDATE 01/04/2026 - 06:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional foi ajustada para deixar explicito que o fluxo `smoke` agora cobre tambem o ledger de execucao do `workflow-control`.
 - `v0.1.22`: [UPDATE 01/04/2026 - 06:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `workflow-control` passou a validar `GET /runs`, `GET /runs/summary`, `POST /runs` e filtros operacionais em runtime real com PostgreSQL.
 - `v0.1.22`: [UPDATE 01/04/2026 - 06:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ledger de execucao agora tem cobertura ponta a ponta de leitura bootstrap, escrita e resumo vivo no stack local.
+- `v0.1.23`: [UPDATE 01/04/2026 - 06:51 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `workflow-control` passou a validar `start`, `complete`, `fail` e `cancel` de runs em runtime real com PostgreSQL.
+- `v0.1.23`: [UPDATE 01/04/2026 - 06:51 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O summary vivo do ledger agora tambem confirma os efeitos das transicoes operacionais, fechando a trilha ponta a ponta de ciclo de vida.
