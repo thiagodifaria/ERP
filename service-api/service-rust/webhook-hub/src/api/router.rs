@@ -66,9 +66,13 @@ async fn create_event(
     State(state): State<WebhookHubState>,
     Json(payload): Json<CreateWebhookEventRequest>,
 ) -> Result<(StatusCode, Json<WebhookEvent>), (StatusCode, Json<ErrorResponse>)> {
-    if payload.provider.trim().is_empty()
-        || payload.event_type.trim().is_empty()
-        || payload.external_id.trim().is_empty()
+    let provider = payload.provider.trim().to_lowercase();
+    let event_type = payload.event_type.trim().to_lowercase();
+    let external_id = payload.external_id.trim().to_string();
+
+    if provider.is_empty()
+        || event_type.is_empty()
+        || external_id.is_empty()
     {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -79,8 +83,22 @@ async fn create_event(
         ));
     }
 
+    if state
+        .find_event_by_provider_and_external_id(&provider, &external_id)
+        .await
+        .is_some()
+    {
+        return Err((
+            StatusCode::CONFLICT,
+            Json(ErrorResponse::new(
+                "webhook_event_conflict",
+                "Webhook event with this provider and external id already exists.",
+            )),
+        ));
+    }
+
     let webhook_event = state
-        .push_event(payload.provider, payload.event_type, payload.external_id, payload.payload_summary)
+        .push_event(provider, event_type, external_id, payload.payload_summary)
         .await;
 
     Ok((StatusCode::CREATED, Json(webhook_event)))
@@ -161,6 +179,19 @@ impl WebhookHubState {
             .cloned()
     }
 
+    async fn find_event_by_provider_and_external_id(
+        &self,
+        provider: &str,
+        external_id: &str,
+    ) -> Option<WebhookEvent> {
+        self.events
+            .read()
+            .await
+            .iter()
+            .find(|event| event.provider == provider && event.external_id == external_id)
+            .cloned()
+    }
+
     async fn push_event(
         &self,
         provider: String,
@@ -171,9 +202,9 @@ impl WebhookHubState {
         let webhook_event = WebhookEvent {
             id: self.next_id.fetch_add(1, Ordering::SeqCst) + 1,
             public_id: Uuid::new_v4().to_string(),
-            provider: provider.trim().to_lowercase(),
-            event_type: event_type.trim().to_lowercase(),
-            external_id: external_id.trim().to_string(),
+            provider,
+            event_type,
+            external_id,
             payload_summary: payload_summary.map(|value| value.trim().to_string()),
             status: "received".to_string(),
             received_at: Utc::now().to_rfc3339(),
@@ -510,5 +541,47 @@ mod tests {
         assert_eq!(filtered_payload[0]["provider"], "stripe");
         assert_eq!(filtered_payload[0]["event_type"], "payment.succeeded");
         assert_eq!(filtered_payload[0]["status"], "received");
+    }
+
+    #[tokio::test]
+    async fn webhook_event_create_should_reject_duplicate_provider_and_external_id() {
+        let app = build_router();
+
+        let first_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/webhook-hub/events")
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(
+                        r#"{"provider":"stripe","event_type":"payment.failed","external_id":"evt_duplicate_001"}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(first_response.status(), StatusCode::CREATED);
+
+        let duplicate_response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/webhook-hub/events")
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(
+                        r#"{"provider":"stripe","event_type":"payment.failed","external_id":"evt_duplicate_001"}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(duplicate_response.status(), StatusCode::CONFLICT);
+
+        let duplicate_body = duplicate_response.into_body().collect().await.unwrap().to_bytes();
+        let duplicate_payload: Value = serde_json::from_slice(&duplicate_body).unwrap();
+
+        assert_eq!(duplicate_payload["code"], "webhook_event_conflict");
     }
 }

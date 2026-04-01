@@ -9,6 +9,7 @@ Initial scope:
 - router boundary
 - webhook intake list and ingest routes
 - webhook intake summary route
+- idempotent duplicate guard on intake by provider and external id
 - room for signature validation, normalization and deduplication
 
 Public routes:

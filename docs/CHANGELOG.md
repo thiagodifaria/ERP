@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.36`: [UPDATE 01/04/2026 - 06:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub passou a rejeitar intake duplicado por `provider` e `external_id`, retornando `409 webhook_event_conflict` para reforcar idempotencia operacional.
+- `v0.1.36`: [UPDATE 01/04/2026 - 06:35 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ampliado com testes e smoke cobrindo conflito de duplicidade no intake sem inflar o resumo do buffer em runtime.
 - `v0.1.35`: [UPDATE 01/04/2026 - 06:25 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub passou a aceitar filtros `provider`, `event_type` e `status` em `GET /api/webhook-hub/events` para leitura operacional segmentada do intake.
 - `v0.1.35`: [UPDATE 01/04/2026 - 06:26 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ampliado com testes e smoke cobrindo filtros de listagem por provedor, tipo de evento e status.
 - `v0.1.34`: [UPDATE 01/04/2026 - 06:18 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ganhou `GET /api/webhook-hub/events/{publicId}` para leitura detalhada do intake por identificador publico.
