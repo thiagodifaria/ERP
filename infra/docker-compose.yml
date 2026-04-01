@@ -112,6 +112,13 @@ services:
     container_name: erp-webhook-hub
     environment:
       WEBHOOK_HUB_HTTP_ADDRESS: "0.0.0.0:8082"
+      WEBHOOK_HUB_REPOSITORY_DRIVER: "postgres"
+      WEBHOOK_HUB_POSTGRES_HOST: "service-postgresql"
+      WEBHOOK_HUB_POSTGRES_PORT: "5432"
+      WEBHOOK_HUB_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      WEBHOOK_HUB_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      WEBHOOK_HUB_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      WEBHOOK_HUB_POSTGRES_SSL_MODE: "disable"
     depends_on:
       service-postgresql:
         condition: service_healthy

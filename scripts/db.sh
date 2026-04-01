@@ -77,6 +77,7 @@ Usage:
   ./scripts/db.sh seed all
   ./scripts/db.sh summary identity [tenant-slug]
   ./scripts/db.sh summary crm [tenant-slug]
+  ./scripts/db.sh summary webhook-hub
   ./scripts/db.sh summary workflow-control [tenant-slug]
   ./scripts/db.sh psql
 EOF
@@ -190,6 +191,21 @@ main() {
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;
+          "
+          ;;
+        webhook-hub)
+          run_psql_query "
+            SELECT
+              count(*) AS total,
+              count(*) FILTER (WHERE status = 'received') AS received,
+              count(*) FILTER (WHERE status = 'validated') AS validated,
+              count(*) FILTER (WHERE status = 'queued') AS queued,
+              count(*) FILTER (WHERE status = 'processing') AS processing,
+              count(*) FILTER (WHERE status = 'forwarded') AS forwarded,
+              count(*) FILTER (WHERE status = 'failed') AS failed,
+              count(*) FILTER (WHERE status = 'rejected') AS rejected,
+              (SELECT count(*) FROM webhook_hub.webhook_event_transitions) AS transitions
+            FROM webhook_hub.webhook_events;
           "
           ;;
         workflow-control)

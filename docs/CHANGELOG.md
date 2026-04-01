@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.47`: [UPDATE 01/04/2026 - 08:36 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O compose local passou a subir o `webhook-hub` em modo PostgreSQL por padrao, com variaveis dedicadas do dominio e readiness refletindo `postgresql=ready`.
+- `v0.1.47`: [UPDATE 01/04/2026 - 08:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `db.sh` e o smoke do monorepo ganharam cobertura relacional do `webhook-hub`, validando evento persistido, status terminal `forwarded` e ledger com `5` transicoes no banco real.
 - `v0.1.46`: [UPDATE 01/04/2026 - 08:25 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub foi reestruturado para suportar backend selecionavel entre memoria e PostgreSQL, com config dedicada, conexao relacional e bootstrap HTTP preparado para os dois drivers.
 - `v0.1.46`: [UPDATE 01/04/2026 - 08:26 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O runtime em Rust manteve a suite de rotas e transicoes passando em container apos a troca do estado unico por backend de persistencia configuravel.
 - `v0.1.45`: [UPDATE 01/04/2026 - 08:05 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` ganhou ciclo de vida inicial de execucao com `start`, `complete` e `fail`, incluindo timestamps operacionais e resumo por status em memoria.
