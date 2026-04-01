@@ -72,6 +72,21 @@ def test_automation_board_returns_delivery_and_runtime_board() -> None:
     assert payload["delivery"]["forwarded"] == 87
 
 
+def test_workflow_definition_health_returns_definition_level_health() -> None:
+    response = client.get("/api/analytics/reports/workflow-definition-health?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["summary"]["definitionsTotal"] == 2
+    assert payload["summary"]["stable"] == 1
+    assert payload["summary"]["attention"] == 1
+    assert payload["definitions"][0]["workflowDefinitionKey"] == "lead-follow-up"
+    assert payload["definitions"][0]["health"] == "stable"
+    assert payload["definitions"][1]["workflowDefinitionKey"] == "proposal-reminder"
+    assert payload["definitions"][1]["attentionReasons"] == ["definition-not-active"]
+
+
 def test_delivery_reliability_returns_webhook_operational_footprint() -> None:
     response = client.get("/api/analytics/reports/delivery-reliability?provider=stripe")
     payload = response.json()

@@ -9,6 +9,7 @@ from app.reports.delivery_reliability import build_delivery_reliability
 from app.reports.pipeline_summary import build_pipeline_summary
 from app.reports.service_pulse import build_service_pulse
 from app.reports.tenant_360 import build_tenant_360
+from app.reports.workflow_definition_health import build_workflow_definition_health
 
 
 app = FastAPI(title=settings.service_name)
@@ -64,6 +65,11 @@ def tenant_360(tenant_slug: str | None = None) -> dict:
 @app.get("/api/analytics/reports/automation-board")
 def automation_board(tenant_slug: str | None = None) -> dict:
     return build_automation_board(tenant_slug)
+
+
+@app.get("/api/analytics/reports/workflow-definition-health")
+def workflow_definition_health(tenant_slug: str | None = None) -> dict:
+    return build_workflow_definition_health(tenant_slug)
 
 
 @app.get("/api/analytics/reports/delivery-reliability")

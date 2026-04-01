@@ -8,6 +8,7 @@ Initial scope:
 - health and readiness routes
 - first operational pipeline summary report
 - automation board with workflow-level operational breakdown
+- workflow definition health report with catalog and runtime alignment
 - selectable repository driver between memory and PostgreSQL
 - room for warehouse ingestion, ETL and forecasting models
 
@@ -20,6 +21,7 @@ Public routes:
 - `GET /api/analytics/reports/service-pulse`
 - `GET /api/analytics/reports/tenant-360`
 - `GET /api/analytics/reports/automation-board`
+- `GET /api/analytics/reports/workflow-definition-health`
 - `GET /api/analytics/reports/delivery-reliability`
 
 Container-first validation:
