@@ -20,3 +20,9 @@ Public routes:
 - `GET /api/webhook-hub/events/summary`
 - `GET /api/webhook-hub/events/{publicId}`
 - `POST /api/webhook-hub/events`
+
+Event query params:
+
+- `provider=<provider>`
+- `event_type=<eventType>`
+- `status=<status>`

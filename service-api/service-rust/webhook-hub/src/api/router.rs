@@ -9,7 +9,7 @@ use std::{
 };
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     routing::get,
     Json, Router,
@@ -51,8 +51,15 @@ async fn details() -> Json<ReadinessResponse> {
     ))
 }
 
-async fn list_events(State(state): State<WebhookHubState>) -> Json<Vec<WebhookEvent>> {
-    Json(state.list_events().await)
+async fn list_events(
+    State(state): State<WebhookHubState>,
+    Query(filters): Query<ListWebhookEventsQuery>,
+) -> Json<Vec<WebhookEvent>> {
+    Json(
+        state
+            .list_events_filtered(filters.provider, filters.event_type, filters.status)
+            .await,
+    )
 }
 
 async fn create_event(
@@ -106,8 +113,43 @@ struct WebhookHubState {
 }
 
 impl WebhookHubState {
-    async fn list_events(&self) -> Vec<WebhookEvent> {
-        self.events.read().await.clone()
+    async fn list_events_filtered(
+        &self,
+        provider: Option<String>,
+        event_type: Option<String>,
+        status: Option<String>,
+    ) -> Vec<WebhookEvent> {
+        let provider = provider.map(|value| value.trim().to_lowercase());
+        let event_type = event_type.map(|value| value.trim().to_lowercase());
+        let status = status.map(|value| value.trim().to_lowercase());
+
+        self.events
+            .read()
+            .await
+            .iter()
+            .filter(|event| {
+                if let Some(provider_filter) = &provider {
+                    if &event.provider != provider_filter {
+                        return false;
+                    }
+                }
+
+                if let Some(event_type_filter) = &event_type {
+                    if &event.event_type != event_type_filter {
+                        return false;
+                    }
+                }
+
+                if let Some(status_filter) = &status {
+                    if &event.status != status_filter {
+                        return false;
+                    }
+                }
+
+                true
+            })
+            .cloned()
+            .collect()
     }
 
     async fn find_event_by_public_id(&self, public_id: &str) -> Option<WebhookEvent> {
@@ -219,6 +261,13 @@ struct CreateWebhookEventRequest {
     event_type: String,
     external_id: String,
     payload_summary: Option<String>,
+}
+
+#[derive(Default, serde::Deserialize)]
+struct ListWebhookEventsQuery {
+    provider: Option<String>,
+    event_type: Option<String>,
+    status: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -404,5 +453,62 @@ mod tests {
         assert_eq!(detail_payload["provider"], "shopify");
         assert_eq!(detail_payload["event_type"], "order.created");
         assert_eq!(detail_payload["external_id"], "ord_001");
+    }
+
+    #[tokio::test]
+    async fn webhook_event_list_should_support_provider_event_type_and_status_filters() {
+        let app = build_router();
+
+        let first_create_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/webhook-hub/events")
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(
+                        r#"{"provider":"stripe","event_type":"payment.succeeded","external_id":"evt_filter_001"}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(first_create_response.status(), StatusCode::CREATED);
+
+        let second_create_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/webhook-hub/events")
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(
+                        r#"{"provider":"tiny","event_type":"lead.created","external_id":"evt_filter_002"}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(second_create_response.status(), StatusCode::CREATED);
+
+        let filtered_response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/webhook-hub/events?provider=stripe&event_type=payment.succeeded&status=received")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(filtered_response.status(), StatusCode::OK);
+
+        let filtered_body = filtered_response.into_body().collect().await.unwrap().to_bytes();
+        let filtered_payload: Value = serde_json::from_slice(&filtered_body).unwrap();
+
+        assert_eq!(filtered_payload.as_array().unwrap().len(), 1);
+        assert_eq!(filtered_payload[0]["provider"], "stripe");
+        assert_eq!(filtered_payload[0]["event_type"], "payment.succeeded");
+        assert_eq!(filtered_payload[0]["status"], "received");
     }
 }

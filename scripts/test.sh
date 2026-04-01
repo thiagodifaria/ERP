@@ -96,6 +96,7 @@ run_webhook_hub_runtime_smoke() {
   local create_response
   local created_public_id
   local detail_response
+  local filtered_response
   local summary_response
 
   "${COMPOSE_CMD[@]}" up -d --build webhook-hub
@@ -118,14 +119,16 @@ run_webhook_hub_runtime_smoke() {
     "$base_url/api/webhook-hub/events")"
   created_public_id="$(echo "$create_response" | sed -n 's/.*"public_id":"\([^"]*\)".*/\1/p')"
   detail_response="$(curl -fsS "$base_url/api/webhook-hub/events/$created_public_id")"
+  filtered_response="$(curl -fsS "$base_url/api/webhook-hub/events?provider=stripe&event_type=payment.succeeded&status=received")"
   summary_response="$(curl -fsS "$base_url/api/webhook-hub/events/summary")"
   list_response="$(curl -fsS "$base_url/api/webhook-hub/events")"
   echo "[test] webhook-hub create => $create_response"
   echo "[test] webhook-hub detail => $detail_response"
+  echo "[test] webhook-hub filtered list => $filtered_response"
   echo "[test] webhook-hub list after create => $list_response"
   echo "[test] webhook-hub summary => $summary_response"
 
-  if [[ -z "$created_public_id" || "$create_response" != *'"provider":"stripe"'* || "$create_response" != *'"event_type":"payment.succeeded"'* || "$detail_response" != *"\"public_id\":\"$created_public_id\""* || "$detail_response" != *'"external_id":"evt_runtime_001"'* || "$list_response" != *'"external_id":"evt_runtime_001"'* || "$summary_response" != *'"total":1'* || "$summary_response" != *'"stripe":1'* ]]; then
+  if [[ -z "$created_public_id" || "$create_response" != *'"provider":"stripe"'* || "$create_response" != *'"event_type":"payment.succeeded"'* || "$detail_response" != *"\"public_id\":\"$created_public_id\""* || "$detail_response" != *'"external_id":"evt_runtime_001"'* || "$filtered_response" != *'"provider":"stripe"'* || "$filtered_response" != *'"status":"received"'* || "$list_response" != *'"external_id":"evt_runtime_001"'* || "$summary_response" != *'"total":1'* || "$summary_response" != *'"stripe":1'* ]]; then
     echo "[test] webhook-hub runtime ingestion did not persist"
     exit 1
   fi

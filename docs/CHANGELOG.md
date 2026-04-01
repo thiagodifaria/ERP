@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.35`: [UPDATE 01/04/2026 - 06:25 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub passou a aceitar filtros `provider`, `event_type` e `status` em `GET /api/webhook-hub/events` para leitura operacional segmentada do intake.
+- `v0.1.35`: [UPDATE 01/04/2026 - 06:26 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ampliado com testes e smoke cobrindo filtros de listagem por provedor, tipo de evento e status.
 - `v0.1.34`: [UPDATE 01/04/2026 - 06:18 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ganhou `GET /api/webhook-hub/events/{publicId}` para leitura detalhada do intake por identificador publico.
 - `v0.1.34`: [UPDATE 01/04/2026 - 06:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ampliado com testes e smoke cobrindo detail read de eventos ingeridos em runtime.
 - `v0.1.33`: [UPDATE 01/04/2026 - 06:10 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub em Rust saiu do scaffold e ganhou `POST /api/webhook-hub/events`, `GET /api/webhook-hub/events` e `GET /api/webhook-hub/events/summary` para intake e leitura operacional em memoria.
