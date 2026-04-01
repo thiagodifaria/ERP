@@ -207,3 +207,5 @@
 - `v0.1.2`: [UPDATE 01/04/2026 - 05:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contexto relacional de `workflow-control` agora trata runs mutaveis com o mesmo padrao tecnico ja usado em `identity`, `crm` e no catalogo do proprio servico.
 - `v0.1.3`: [UPDATE 01/04/2026 - 05:10 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` passou a semear uma primeira `workflow_run` bootstrap por tenant operacional, referenciando a definicao `lead-follow-up` e sua versao `1`.
 - `v0.1.3`: [UPDATE 01/04/2026 - 05:10 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contexto relacional agora nasce com um exemplo real de execucao em andamento, facilitando observabilidade e validacoes de leitura sem depender de escrita previa.
+- `v0.1.4`: [UPDATE 01/04/2026 - 05:15 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/db.sh summary workflow-control` passou a expor total de `workflow_runs` e buckets por status de execucao.
+- `v0.1.4`: [UPDATE 01/04/2026 - 05:15 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional do monorepo foi atualizada para refletir que o contexto `workflow-control` agora ja pode ser diagnosticado tambem pelo angulo de execucao, e nao so de catalogo.

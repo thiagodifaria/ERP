@@ -24,7 +24,7 @@ Useful commands:
 - `./scripts/db.sh seed workflow-control`
 - `./scripts/db.sh summary identity smoke-identity-bootstrap`
 - `./scripts/db.sh summary crm smoke-identity-bootstrap`  `# total, status e ownership`
-- `./scripts/db.sh summary workflow-control bootstrap-ops`  `# total, versoes e distribuicao por status`
+- `./scripts/db.sh summary workflow-control bootstrap-ops`  `# total, versoes, runs e distribuicao por status de execucao`
 - `./scripts/test.sh unit`
 - `./scripts/test.sh integration`
 - `./scripts/test.sh contract`  `# contratos HTTP publicos de workflow-control, crm e identity`
