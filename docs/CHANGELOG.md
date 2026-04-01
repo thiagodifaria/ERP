@@ -326,3 +326,5 @@
 - `v0.1.61`: [UPDATE 01/04/2026 - 11:49 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O gateway agora entrega um cockpit unico por tenant e responde `502` quando a dependencia analitica nao consegue ser lida.
 - `v0.1.62`: [UPDATE 01/04/2026 - 11:57 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` passou a aceitar filtros no `GET /api/workflow-runtime/executions/summary`, permitindo leitura resumida por tenant e por `workflowDefinitionKey`.
 - `v0.1.62`: [UPDATE 01/04/2026 - 11:58 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke em container agora valida resumo filtrado do runtime em PostgreSQL real, sem misturar execucoes de outros tenants ou workflows.
+- `v0.1.63`: [UPDATE 01/04/2026 - 12:12 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` ganhou `POST /api/workflow-runtime/executions/{publicId}/retry`, reabrindo execucoes `failed` ou `cancelled` com `retryCount` persistido em memoria e PostgreSQL.
+- `v0.1.63`: [UPDATE 01/04/2026 - 12:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do runtime agora valida reprocessamento completo no banco real, cobrindo `retry`, novo `start`, `complete` e ledger final com `10` transicoes persistidas.

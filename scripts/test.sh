@@ -745,6 +745,10 @@ run_workflow_runtime_smoke() {
   local fail_create_response
   local fail_public_id
   local fail_response
+  local retry_response
+  local retry_start_response
+  local retry_complete_response
+  local retry_transitions_response
   local db_summary
 
   "${COMPOSE_CMD[@]}" up -d --build workflow-runtime
@@ -790,6 +794,10 @@ run_workflow_runtime_smoke() {
     "$base_url/api/workflow-runtime/executions")"
   fail_public_id="$(echo "$fail_create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
   fail_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/fail")"
+  retry_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/retry")"
+  retry_start_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/start")"
+  retry_complete_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/complete")"
+  retry_transitions_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/$fail_public_id/transitions")"
   summary_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/summary")"
   list_response="$(curl -fsS "$base_url/api/workflow-runtime/executions")"
   db_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
@@ -799,7 +807,8 @@ run_workflow_runtime_smoke() {
         count(*) FILTER (WHERE status = 'completed') || '|' ||
         count(*) FILTER (WHERE status = 'failed') || '|' ||
         count(*) FILTER (WHERE status = 'cancelled') || '|' ||
-        (SELECT count(*) FROM workflow_runtime.execution_transitions)
+        (SELECT count(*) FROM workflow_runtime.execution_transitions) || '|' ||
+        coalesce(sum(retry_count), 0)
       FROM workflow_runtime.executions;
     ")"
 
@@ -811,14 +820,18 @@ run_workflow_runtime_smoke() {
   echo "[test] workflow-runtime filtered summary => $filtered_summary_response"
   echo "[test] workflow-runtime cancel => $cancel_response"
   echo "[test] workflow-runtime fail => $fail_response"
+  echo "[test] workflow-runtime retry => $retry_response"
+  echo "[test] workflow-runtime retry start => $retry_start_response"
+  echo "[test] workflow-runtime retry complete => $retry_complete_response"
+  echo "[test] workflow-runtime retry transitions => $retry_transitions_response"
   echo "[test] workflow-runtime summary after transitions => $summary_response"
   echo "[test] workflow-runtime list after transitions => $list_response"
   echo "[test] workflow-runtime db summary => $db_summary"
 
   if [[ -z "$created_public_id" || -z "$cancel_public_id" || -z "$fail_public_id" || "$create_response" != *'"tenantSlug":"bootstrap-ops"'* || "$start_response" != *'"status":"running"'* || "$complete_response" != *'"status":"completed"'* || "$complete_response" != *'"completedAt":"'*
     || "$transitions_response" != *'"status":"pending"'* || "$transitions_response" != *'"status":"running"'* || "$transitions_response" != *'"status":"completed"'* || "$filtered_response" != *"\"publicId\":\"$created_public_id\""* || "$filtered_response" != *'"tenantSlug":"bootstrap-ops"'* || "$filtered_summary_response" != *'"total":1'* || "$filtered_summary_response" != *'"completed":1'* || "$filtered_summary_response" != *'"failed":0'* || "$cancel_response" != *'"status":"cancelled"'* || "$cancel_response" != *'"tenantSlug":"northwind-group"'* || "$cancel_response" != *'"cancelledAt":"'*
-    || "$fail_response" != *'"status":"failed"'* || "$fail_response" != *'"failedAt":"'*
-    || "$summary_response" != *'"total":3'* || "$summary_response" != *'"completed":1'* || "$summary_response" != *'"failed":1'* || "$summary_response" != *'"cancelled":1'* || "$list_response" != *"\"publicId\":\"$cancel_public_id\""* || "$list_response" != *"\"publicId\":\"$fail_public_id\""* || "$db_summary" != '3|1|1|1|7' ]]; then
+    || "$fail_response" != *'"status":"failed"'* || "$fail_response" != *'"failedAt":"'* || "$retry_response" != *'"status":"pending"'* || "$retry_response" != *'"retryCount":1'* || "$retry_start_response" != *'"status":"running"'* || "$retry_complete_response" != *'"status":"completed"'* || "$retry_complete_response" != *'"retryCount":1'* || "$retry_transitions_response" != *'"status":"failed"'* || "$retry_transitions_response" != *'"status":"completed"'*
+    || "$summary_response" != *'"total":3'* || "$summary_response" != *'"completed":2'* || "$summary_response" != *'"failed":0'* || "$summary_response" != *'"cancelled":1'* || "$list_response" != *"\"publicId\":\"$cancel_public_id\""* || "$list_response" != *"\"publicId\":\"$fail_public_id\""* || "$db_summary" != '3|2|0|1|10|1' ]]; then
     echo "[test] workflow-runtime runtime lifecycle did not persist in postgresql as expected"
     exit 1
   fi
@@ -849,7 +862,7 @@ run_analytics_runtime_smoke() {
   echo "[test] analytics automation board => $automation_board_response"
   echo "[test] analytics delivery reliability => $delivery_reliability_response"
 
-  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"dataSource":"postgresql"'* || "$pipeline_summary_response" != *'"leadsCaptured":1'* || "$pipeline_summary_response" != *'"conversions":1'* || "$pipeline_summary_response" != *'"manual":1'* || "$pipeline_summary_response" != *'"runningAutomations":2'* || "$service_pulse_response" != *'"tenantSlug":"bootstrap-ops"'* || "$service_pulse_response" != *'"dataSource":"postgresql"'* || "$service_pulse_response" != *'"totalLeads":1'* || "$service_pulse_response" != *'"activeDefinitions":1'* || "$service_pulse_response" != *'"runsRunning":2'* || "$service_pulse_response" != *'"runsCompleted":1'* || "$service_pulse_response" != *'"runsFailed":1'* || "$service_pulse_response" != *'"runsCancelled":1'* || "$service_pulse_response" != *'"totalExecutions":2'* || "$service_pulse_response" != *'"completed":1'* || "$service_pulse_response" != *'"failed":1'* || "$service_pulse_response" != *'"forwarded":1'* || "$tenant_360_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_360_response" != *'"dataSource":"postgresql"'* || "$tenant_360_response" != *'"companies":1'* || "$tenant_360_response" != *'"users":1'* || "$tenant_360_response" != *'"teams":1'* || "$tenant_360_response" != *'"roles":5'* || "$tenant_360_response" != *'"assignedLeads":1'* || "$tenant_360_response" != *'"leadNotes":1'* || "$tenant_360_response" != *'"workflowRuns":5'* || "$tenant_360_response" != *'"runtimeExecutions":2'* || "$automation_board_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_board_response" != *'"dataSource":"postgresql"'* || "$automation_board_response" != *'"definitionsTotal":2'* || "$automation_board_response" != *'"definitionsActive":1'* || "$automation_board_response" != *'"definitionsDraft":1'* || "$automation_board_response" != *'"publishedVersions":3'* || "$automation_board_response" != *'"runsTotal":5'* || "$automation_board_response" != *'"runningRuns":2'* || "$automation_board_response" != *'"recordedEvents":8'* || "$automation_board_response" != *'"executionsTotal":2'* || "$automation_board_response" != *'"recordedTransitions":5'* || "$automation_board_response" != *'"forwarded":1'* || "$delivery_reliability_response" != *'"provider":"stripe"'* || "$delivery_reliability_response" != *'"dataSource":"postgresql"'* || "$delivery_reliability_response" != *'"totalEvents":1'* || "$delivery_reliability_response" != *'"handledEvents":1'* || "$delivery_reliability_response" != *'"avgTransitionsPerEvent":5.0'* || "$delivery_reliability_response" != *'"received":1'* || "$delivery_reliability_response" != *'"validated":1'* || "$delivery_reliability_response" != *'"queued":1'* || "$delivery_reliability_response" != *'"processing":1'* || "$delivery_reliability_response" != *'"forwarded":1'* ]]; then
+  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"dataSource":"postgresql"'* || "$pipeline_summary_response" != *'"leadsCaptured":1'* || "$pipeline_summary_response" != *'"conversions":2'* || "$pipeline_summary_response" != *'"manual":1'* || "$pipeline_summary_response" != *'"runningAutomations":2'* || "$service_pulse_response" != *'"tenantSlug":"bootstrap-ops"'* || "$service_pulse_response" != *'"dataSource":"postgresql"'* || "$service_pulse_response" != *'"totalLeads":1'* || "$service_pulse_response" != *'"activeDefinitions":1'* || "$service_pulse_response" != *'"runsRunning":2'* || "$service_pulse_response" != *'"runsCompleted":1'* || "$service_pulse_response" != *'"runsFailed":1'* || "$service_pulse_response" != *'"runsCancelled":1'* || "$service_pulse_response" != *'"totalExecutions":2'* || "$service_pulse_response" != *'"completed":2'* || "$service_pulse_response" != *'"failed":0'* || "$service_pulse_response" != *'"forwarded":1'* || "$tenant_360_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_360_response" != *'"dataSource":"postgresql"'* || "$tenant_360_response" != *'"companies":1'* || "$tenant_360_response" != *'"users":1'* || "$tenant_360_response" != *'"teams":1'* || "$tenant_360_response" != *'"roles":5'* || "$tenant_360_response" != *'"assignedLeads":1'* || "$tenant_360_response" != *'"leadNotes":1'* || "$tenant_360_response" != *'"workflowRuns":5'* || "$tenant_360_response" != *'"runtimeExecutions":2'* || "$tenant_360_response" != *'"runtimeCompleted":2'* || "$tenant_360_response" != *'"runtimeFailed":0'* || "$automation_board_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_board_response" != *'"dataSource":"postgresql"'* || "$automation_board_response" != *'"definitionsTotal":2'* || "$automation_board_response" != *'"definitionsActive":1'* || "$automation_board_response" != *'"definitionsDraft":1'* || "$automation_board_response" != *'"publishedVersions":3'* || "$automation_board_response" != *'"runsTotal":5'* || "$automation_board_response" != *'"runningRuns":2'* || "$automation_board_response" != *'"recordedEvents":8'* || "$automation_board_response" != *'"executionsTotal":2'* || "$automation_board_response" != *'"completedExecutions":2'* || "$automation_board_response" != *'"failedExecutions":0'* || "$automation_board_response" != *'"recordedTransitions":8'* || "$automation_board_response" != *'"forwarded":1'* || "$delivery_reliability_response" != *'"provider":"stripe"'* || "$delivery_reliability_response" != *'"dataSource":"postgresql"'* || "$delivery_reliability_response" != *'"totalEvents":1'* || "$delivery_reliability_response" != *'"handledEvents":1'* || "$delivery_reliability_response" != *'"avgTransitionsPerEvent":5.0'* || "$delivery_reliability_response" != *'"received":1'* || "$delivery_reliability_response" != *'"validated":1'* || "$delivery_reliability_response" != *'"queued":1'* || "$delivery_reliability_response" != *'"processing":1'* || "$delivery_reliability_response" != *'"forwarded":1'* ]]; then
     echo "[test] analytics runtime bootstrap report did not return the expected payload"
     exit 1
   fi

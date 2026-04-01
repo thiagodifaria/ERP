@@ -30,6 +30,7 @@ Public routes:
 - `POST /api/workflow-runtime/executions/{publicId}/complete`
 - `POST /api/workflow-runtime/executions/{publicId}/fail`
 - `POST /api/workflow-runtime/executions/{publicId}/cancel`
+- `POST /api/workflow-runtime/executions/{publicId}/retry`
 
 Container-first validation:
 

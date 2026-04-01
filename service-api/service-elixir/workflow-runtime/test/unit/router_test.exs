@@ -250,6 +250,68 @@ defmodule WorkflowRuntime.Api.RouterTest do
     assert filtered_summary_payload["failed"] == 0
   end
 
+  test "execution can be retried after failure and resume lifecycle" do
+    create_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "tenantSlug" => "ops-east",
+        "workflowDefinitionKey" => "lead-follow-up",
+        "subjectType" => "crm.lead",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001296",
+        "initiatedBy" => "retry-user"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    public_id = Jason.decode!(create_conn.resp_body)["publicId"]
+
+    _fail_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/fail") |> Router.call([])
+    retry_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/retry") |> Router.call([])
+    restart_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/start") |> Router.call([])
+    complete_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/complete") |> Router.call([])
+    transitions_conn = conn(:get, "/api/workflow-runtime/executions/#{public_id}/transitions") |> Router.call([])
+
+    retry_payload = Jason.decode!(retry_conn.resp_body)
+    restart_payload = Jason.decode!(restart_conn.resp_body)
+    complete_payload = Jason.decode!(complete_conn.resp_body)
+    transitions_payload = Jason.decode!(transitions_conn.resp_body)
+
+    assert retry_conn.status == 200
+    assert retry_payload["status"] == "pending"
+    assert retry_payload["retryCount"] == 1
+    assert retry_payload["failedAt"] == nil
+    assert retry_payload["startedAt"] == nil
+    assert retry_payload["completedAt"] == nil
+
+    assert restart_conn.status == 200
+    assert restart_payload["status"] == "running"
+
+    assert complete_conn.status == 200
+    assert complete_payload["status"] == "completed"
+    assert complete_payload["retryCount"] == 1
+
+    assert Enum.map(transitions_payload, & &1["status"]) == ["pending", "failed", "pending", "running", "completed"]
+  end
+
+  test "execution blocks retry when lifecycle has not failed or cancelled" do
+    create_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "workflowDefinitionKey" => "lead-follow-up",
+        "subjectType" => "crm.lead",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001297",
+        "initiatedBy" => "retry-user"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    public_id = Jason.decode!(create_conn.resp_body)["publicId"]
+
+    retry_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/retry") |> Router.call([])
+    retry_payload = Jason.decode!(retry_conn.resp_body)
+
+    assert retry_conn.status == 409
+    assert retry_payload["code"] == "workflow_runtime_execution_retry_invalid"
+  end
+
   test "execution blocks invalid lifecycle transition" do
     create_conn =
       conn(:post, "/api/workflow-runtime/executions", %{

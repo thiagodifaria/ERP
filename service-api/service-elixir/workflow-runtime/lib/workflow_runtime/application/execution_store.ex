@@ -53,6 +53,14 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     end
   end
 
+  def retry(public_id, allowed_statuses) do
+    if postgres_driver?() do
+      retry_postgres(public_id, allowed_statuses)
+    else
+      retry_memory(public_id, allowed_statuses)
+    end
+  end
+
   def reset do
     unless postgres_driver?() do
       Agent.update(__MODULE__, fn _state -> %{executions: [], transitions: %{}} end)
@@ -170,6 +178,45 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
       failed: Enum.count(executions, &(&1["status"] == "failed")),
       cancelled: Enum.count(executions, &(&1["status"] == "cancelled"))
     }
+  end
+
+  defp retry_memory(public_id, allowed_statuses) do
+    Agent.get_and_update(__MODULE__, fn state ->
+      case Enum.find(state.executions, &(&1["publicId"] == public_id)) do
+        nil ->
+          {{:error, :not_found}, state}
+
+        execution ->
+          if execution["status"] in allowed_statuses do
+            updated_execution =
+              execution
+              |> reset_for_retry()
+
+            updated_transitions =
+              Map.update(
+                state.transitions,
+                public_id,
+                [build_transition("pending", execution["initiatedBy"])],
+                fn existing ->
+                  existing ++ [build_transition("pending", execution["initiatedBy"])]
+                end
+              )
+
+            updated_state = %{
+              state
+              | executions:
+                  Enum.map(state.executions, fn current_execution ->
+                    if current_execution["publicId"] == public_id, do: updated_execution, else: current_execution
+                  end),
+                transitions: updated_transitions
+            }
+
+            {{:ok, updated_execution}, updated_state}
+          else
+            {{:error, :invalid_transition}, state}
+          end
+      end
+    end)
   end
 
   defp list_postgres(filters) do
@@ -388,6 +435,60 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     }
   end
 
+  defp retry_postgres(public_id, allowed_statuses) do
+    case find_postgres(public_id) do
+      nil ->
+        {:error, :not_found}
+
+      execution ->
+        if execution["status"] in allowed_statuses do
+          transition_public_id = generate_public_id()
+
+          {:ok, :updated} =
+            Postgres.transaction(fn connection ->
+              Postgrex.query!(
+                connection,
+                """
+                UPDATE workflow_runtime.executions
+                SET
+                  status = 'pending',
+                  retry_count = retry_count + 1,
+                  started_at = NULL,
+                  completed_at = NULL,
+                  failed_at = NULL,
+                  cancelled_at = NULL,
+                  updated_at = timezone('utc', now())
+                WHERE public_id = $1::uuid
+                """,
+                [uuid_bytes(public_id)]
+              )
+
+              Postgrex.query!(
+                connection,
+                """
+                INSERT INTO workflow_runtime.execution_transitions (
+                  public_id,
+                  execution_id,
+                  status,
+                  changed_by
+                )
+                SELECT $1::uuid, runtime_execution.id, 'pending', runtime_execution.initiated_by
+                FROM workflow_runtime.executions AS runtime_execution
+                WHERE runtime_execution.public_id = $2::uuid
+                """,
+                [uuid_bytes(transition_public_id), uuid_bytes(public_id)]
+              )
+
+              :updated
+            end)
+
+          {:ok, find_postgres(public_id)}
+        else
+          {:error, :invalid_transition}
+        end
+    end
+  end
+
   defp postgres_driver? do
     Postgres.enabled?()
   end
@@ -485,6 +586,16 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
   defp maybe_put_timestamp(execution, "failed"), do: Map.put(execution, "failedAt", now())
   defp maybe_put_timestamp(execution, "cancelled"), do: Map.put(execution, "cancelledAt", now())
   defp maybe_put_timestamp(execution, _next_status), do: execution
+
+  defp reset_for_retry(execution) do
+    execution
+    |> Map.put("status", "pending")
+    |> Map.update!("retryCount", &(&1 + 1))
+    |> Map.put("startedAt", nil)
+    |> Map.put("completedAt", nil)
+    |> Map.put("failedAt", nil)
+    |> Map.put("cancelledAt", nil)
+  end
 
   defp normalize_filters(filters) do
     %{

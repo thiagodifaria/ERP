@@ -83,6 +83,22 @@ defmodule WorkflowRuntime.Api.Router do
     transition_execution(conn, public_id, "cancelled", ["pending", "running"])
   end
 
+  post "/api/workflow-runtime/executions/:public_id/retry" do
+    case ExecutionStore.retry(public_id, ["failed", "cancelled"]) do
+      {:ok, execution} ->
+        json(conn, 200, execution)
+
+      {:error, :not_found} ->
+        json(conn, 404, %{code: "workflow_runtime_execution_not_found", message: "Execution was not found."})
+
+      {:error, :invalid_transition} ->
+        json(conn, 409, %{
+          code: "workflow_runtime_execution_retry_invalid",
+          message: "Execution cannot be retried from the current status."
+        })
+    end
+  end
+
   post "/api/workflow-runtime/executions" do
     required_fields = ["workflowDefinitionKey", "subjectType", "subjectPublicId", "initiatedBy"]
 
