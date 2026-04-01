@@ -235,3 +235,5 @@
 - `v0.1.16`: [UPDATE 01/04/2026 - 06:14 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ciclo de vida de runs agora cobre tambem abortos operacionais com `cancelledAt`, fechando o conjunto principal de transicoes publicas.
 - `v0.1.17`: [UPDATE 01/04/2026 - 06:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `GET /api/workflow-control/runs` passou a aceitar filtros por `status`, `workflowDefinitionKey`, `subjectType` e `initiatedBy`.
 - `v0.1.17`: [UPDATE 01/04/2026 - 06:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ledger operacional ficou mais util para diagnostico e filas, com validacao explicita de filtro invalido na stack TypeScript.
+- `v0.1.18`: [UPDATE 01/04/2026 - 06:24 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` ganhou contract coverage para `GET /runs`, `GET /runs/{publicId}` e `POST /runs`.
+- `v0.1.18`: [UPDATE 01/04/2026 - 06:24 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O shape publico do ledger de execucao ficou congelado para listagem, detalhe e criacao inicial de runs.

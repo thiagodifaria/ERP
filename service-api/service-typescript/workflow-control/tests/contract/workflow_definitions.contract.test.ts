@@ -24,6 +24,22 @@ type WorkflowDefinitionVersionResponse = {
   snapshotTrigger: string;
 };
 
+type WorkflowRunResponse = {
+  id: number;
+  publicId: string;
+  workflowDefinitionId: number;
+  workflowDefinitionVersionId: number;
+  status: string;
+  triggerEvent: string;
+  subjectType: string;
+  subjectPublicId: string;
+  initiatedBy: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  failedAt: string | null;
+  cancelledAt: string | null;
+};
+
 type ErrorResponse = {
   code: string;
   message: string;
@@ -80,6 +96,62 @@ test("workflow definitions contract should expose public fields on list", async 
     assert.ok(definition.status.trim().length > 0);
     assert.ok(definition.trigger.trim().length > 0);
   }
+});
+
+test("workflow runs contract should expose public fields on list", async () => {
+  const response = await request("/api/workflow-control/runs");
+  const payload = await response.json() as WorkflowRunResponse[];
+
+  assert.equal(response.status, 200);
+  assert.ok(payload.length > 0);
+
+  for (const workflowRun of payload) {
+    assert.ok(workflowRun.id > 0);
+    assert.match(workflowRun.publicId, /^[0-9a-f-]{36}$/);
+    assert.ok(workflowRun.workflowDefinitionId > 0);
+    assert.ok(workflowRun.workflowDefinitionVersionId > 0);
+    assert.ok(workflowRun.status.trim().length > 0);
+    assert.ok(workflowRun.triggerEvent.trim().length > 0);
+    assert.ok(workflowRun.subjectType.trim().length > 0);
+    assert.match(workflowRun.subjectPublicId, /^[0-9a-f-]{36}$/);
+    assert.ok(workflowRun.initiatedBy.trim().length > 0);
+  }
+});
+
+test("workflow run contract should expose execution detail by public id", async () => {
+  const response = await request("/api/workflow-control/runs/00000000-0000-0000-0000-000000000301");
+  const payload = await response.json() as WorkflowRunResponse;
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.publicId, "00000000-0000-0000-0000-000000000301");
+  assert.equal(payload.status, "running");
+  assert.equal(payload.triggerEvent, "lead.created");
+  assert.equal(payload.subjectType, "crm.lead");
+});
+
+test("workflow run contract should return created execution resource", async () => {
+  const response = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: randomUUID(),
+      initiatedBy: "contract-suite"
+    })
+  });
+  const payload = await response.json() as WorkflowRunResponse;
+
+  assert.equal(response.status, 201);
+  assert.match(payload.publicId, /^[0-9a-f-]{36}$/);
+  assert.equal(payload.workflowDefinitionId, 1);
+  assert.equal(payload.workflowDefinitionVersionId, 1);
+  assert.equal(payload.status, "pending");
+  assert.equal(payload.triggerEvent, "lead.created");
+  assert.equal(payload.subjectType, "crm.lead");
+  assert.equal(payload.initiatedBy, "contract-suite");
 });
 
 test("workflow definition contract should return created resource", async () => {
