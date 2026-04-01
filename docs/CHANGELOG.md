@@ -175,3 +175,5 @@
 - `v0.0.86`: [UPDATE 01/04/2026 - 03:36 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Cada versao publicada agora pode guardar snapshot de `name`, `description`, `status` e `trigger`, com `updated_at` automatizado no PostgreSQL.
 - `v0.0.87`: [UPDATE 01/04/2026 - 03:40 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` passou a semear a versao `1` de cada definicao bootstrap no PostgreSQL.
 - `v0.0.87`: [UPDATE 01/04/2026 - 03:40 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O historico inicial de publicacao agora nasce alinhado ao catalogo base, evitando definicoes ativas sem snapshot versionado.
+- `v0.0.88`: [UPDATE 01/04/2026 - 03:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/db.sh summary workflow-control` passou a expor total de versoes publicadas e a ultima versao conhecida por tenant.
+- `v0.0.88`: [UPDATE 01/04/2026 - 03:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional do summary de workflow-control foi atualizada para refletir o novo foco em historico de publicacao.
