@@ -62,6 +62,7 @@ Current unit scope:
 - workflow run complete transition
 - workflow run fail transition
 - workflow run cancel transition
+- workflow run filtered list read
 - workflow definition metadata update
 - workflow definition version history read
 - workflow definition manual publication
@@ -85,6 +86,7 @@ Current contract scope:
 - workflow run running-to-completed transition
 - workflow run running-to-failed transition
 - workflow run pending-or-running-to-cancelled transition
+- workflow run filters by status, definition key, subject type and initiator
 - create/update/detail/status lifecycle
 - version list, publish and current-version lifecycle
 - version detail and restore lifecycle

@@ -39,6 +39,10 @@ function pathSegments(request: IncomingMessage): string[] {
   return pathname.split("/").filter((segment) => segment.length > 0);
 }
 
+function searchParams(request: IncomingMessage): URLSearchParams {
+  return new URL(request.url ?? "/", "http://workflow-control.local").searchParams;
+}
+
 async function readJson<T>(request: IncomingMessage): Promise<T> {
   const chunks: Buffer[] = [];
 
@@ -79,6 +83,36 @@ export async function route(request: IncomingMessage, response: ServerResponse):
   if (request.method === "GET" && request.url === "/api/workflow-control/runs") {
     json(response, 200, await services.listWorkflowRuns.execute());
     return;
+  }
+
+  if (request.method === "GET" && request.url?.startsWith("/api/workflow-control/runs?")) {
+    try {
+      const params = searchParams(request);
+      const workflowRuns = await services.listWorkflowRuns.execute({
+        workflowDefinitionKey: params.get("workflowDefinitionKey") ?? undefined,
+        status: params.get("status") ?? undefined,
+        subjectType: params.get("subjectType") ?? undefined,
+        initiatedBy: params.get("initiatedBy") ?? undefined
+      });
+      json(response, 200, workflowRuns);
+      return;
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "unexpected_error";
+
+      if (code === "workflow_run_status_invalid") {
+        json(response, 400, {
+          code,
+          message: "Workflow run filter is invalid."
+        });
+        return;
+      }
+
+      json(response, 500, {
+        code: "unexpected_error",
+        message: "Unexpected error."
+      });
+      return;
+    }
   }
 
   if (request.method === "GET" && request.url === "/api/workflow-control/runs/summary") {

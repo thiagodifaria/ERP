@@ -237,6 +237,33 @@ test("workflow run cancel should stop a pending execution", async () => {
   assert.match(payload.cancelledAt, /.+/);
 });
 
+test("workflow runs list should accept operational filters", async () => {
+  const createResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: "00000000-0000-0000-0000-000000004444",
+      initiatedBy: "filter-agent"
+    })
+  });
+
+  assert.equal(createResponse.status, 201);
+
+  const response = await request("/api/workflow-control/runs?status=pending&workflowDefinitionKey=lead-follow-up&subjectType=crm.lead&initiatedBy=filter-agent");
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.ok(Array.isArray(payload));
+  assert.ok(payload.length >= 1);
+  assert.ok(payload.every((run) => run.status === "pending"));
+  assert.ok(payload.every((run) => run.subjectType === "crm.lead"));
+  assert.ok(payload.every((run) => run.initiatedBy === "filter-agent"));
+});
+
 test("workflow definition detail should expose created resource by key", async () => {
   const key = `detail-${randomUUID()}`;
   const createResponse = await request("/api/workflow-control/definitions", {

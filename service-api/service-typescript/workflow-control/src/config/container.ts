@@ -115,7 +115,7 @@ export const services = {
   getWorkflowDefinitionVersionSummary: new GetWorkflowDefinitionVersionSummary(repository, versionRepository),
   listWorkflowDefinitionVersions: new ListWorkflowDefinitionVersions(repository, versionRepository),
   listWorkflowDefinitions: new ListWorkflowDefinitions(repository),
-  listWorkflowRuns: new ListWorkflowRuns(runRepository),
+  listWorkflowRuns: new ListWorkflowRuns(repository, runRepository),
   publishWorkflowDefinitionVersion: new PublishWorkflowDefinitionVersion(repository, versionRepository),
   restoreWorkflowDefinitionVersion: new RestoreWorkflowDefinitionVersion(repository, versionRepository),
   startWorkflowRun: new StartWorkflowRun(runRepository),
