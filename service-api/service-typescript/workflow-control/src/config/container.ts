@@ -1,4 +1,5 @@
 import { CreateWorkflowDefinition } from "../application/create-workflow-definition.js";
+import { GetCurrentWorkflowDefinitionVersion } from "../application/get-current-workflow-definition-version.js";
 import { GetWorkflowDefinitionByKey } from "../application/get-workflow-definition-by-key.js";
 import { ListWorkflowDefinitionVersions } from "../application/list-workflow-definition-versions.js";
 import { ListWorkflowDefinitions } from "../application/list-workflow-definitions.js";
@@ -48,6 +49,7 @@ const versionRepository = buildVersionRepository();
 
 export const services = {
   createWorkflowDefinition: new CreateWorkflowDefinition(repository),
+  getCurrentWorkflowDefinitionVersion: new GetCurrentWorkflowDefinitionVersion(repository, versionRepository),
   getWorkflowDefinitionByKey: new GetWorkflowDefinitionByKey(repository),
   listWorkflowDefinitionVersions: new ListWorkflowDefinitionVersions(repository, versionRepository),
   listWorkflowDefinitions: new ListWorkflowDefinitions(repository),

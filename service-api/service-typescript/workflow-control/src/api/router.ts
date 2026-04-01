@@ -98,6 +98,47 @@ export async function route(request: IncomingMessage, response: ServerResponse):
   }
 
   if (
+    request.method === "GET" &&
+    segments.length === 6 &&
+    segments[0] === "api" &&
+    segments[1] === "workflow-control" &&
+    segments[2] === "definitions" &&
+    segments[4] === "versions" &&
+    segments[5] === "current"
+  ) {
+    try {
+      const currentVersion = await services.getCurrentWorkflowDefinitionVersion.execute(segments[3]);
+
+      if (currentVersion === null) {
+        json(response, 404, {
+          code: "workflow_definition_version_not_found",
+          message: "Workflow definition version was not found."
+        });
+        return;
+      }
+
+      json(response, 200, currentVersion);
+      return;
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "unexpected_error";
+
+      if (code === "workflow_definition_not_found") {
+        json(response, 404, {
+          code,
+          message: "Workflow definition was not found."
+        });
+        return;
+      }
+
+      json(response, 500, {
+        code: "unexpected_error",
+        message: "Unexpected error."
+      });
+      return;
+    }
+  }
+
+  if (
     request.method === "POST" &&
     segments.length === 5 &&
     segments[0] === "api" &&
