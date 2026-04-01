@@ -193,3 +193,5 @@
 - `v0.0.95`: [UPDATE 01/04/2026 - 04:25 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O resumo relacional de `workflow-control` agora reflete tambem total de versoes e ultima publicacao por tenant, alinhando operacao e smoke ao historico versionado.
 - `v0.0.96`: [UPDATE 01/04/2026 - 04:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/definitions/{key}/versions/{versionNumber}` para leitura pontual de snapshots publicados.
 - `v0.0.96`: [UPDATE 01/04/2026 - 04:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A API passou a validar `workflow_definition_version_number_invalid` para consultas com numero de versao malformado.
+- `v0.0.97`: [UPDATE 01/04/2026 - 04:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `POST /api/workflow-control/definitions/{key}/versions/{versionNumber}/restore`, permitindo restaurar a definicao a partir de um snapshot publicado.
+- `v0.0.97`: [UPDATE 01/04/2026 - 04:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O fluxo unitario agora valida rollback completo de metadados e status a partir de uma versao historica.

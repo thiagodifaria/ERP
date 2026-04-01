@@ -98,6 +98,50 @@ export async function route(request: IncomingMessage, response: ServerResponse):
   }
 
   if (
+    request.method === "POST" &&
+    segments.length === 7 &&
+    segments[0] === "api" &&
+    segments[1] === "workflow-control" &&
+    segments[2] === "definitions" &&
+    segments[4] === "versions" &&
+    segments[6] === "restore"
+  ) {
+    try {
+      const versionNumber = Number(segments[5]);
+
+      if (!Number.isInteger(versionNumber) || versionNumber <= 0) {
+        json(response, 400, {
+          code: "workflow_definition_version_number_invalid",
+          message: "Workflow definition version number is invalid."
+        });
+        return;
+      }
+
+      const restoredDefinition = await services.restoreWorkflowDefinitionVersion.execute(segments[3], versionNumber);
+      json(response, 200, restoredDefinition);
+      return;
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "unexpected_error";
+
+      if (code === "workflow_definition_not_found" || code === "workflow_definition_version_not_found") {
+        json(response, 404, {
+          code,
+          message: code === "workflow_definition_not_found"
+            ? "Workflow definition was not found."
+            : "Workflow definition version was not found."
+        });
+        return;
+      }
+
+      json(response, 500, {
+        code: "unexpected_error",
+        message: "Unexpected error."
+      });
+      return;
+    }
+  }
+
+  if (
     request.method === "GET" &&
     segments.length === 6 &&
     segments[0] === "api" &&

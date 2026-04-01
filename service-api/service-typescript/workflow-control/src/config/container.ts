@@ -5,6 +5,7 @@ import { GetWorkflowDefinitionVersionByNumber } from "../application/get-workflo
 import { ListWorkflowDefinitionVersions } from "../application/list-workflow-definition-versions.js";
 import { ListWorkflowDefinitions } from "../application/list-workflow-definitions.js";
 import { PublishWorkflowDefinitionVersion } from "../application/publish-workflow-definition-version.js";
+import { RestoreWorkflowDefinitionVersion } from "../application/restore-workflow-definition-version.js";
 import { UpdateWorkflowDefinition } from "../application/update-workflow-definition.js";
 import { UpdateWorkflowDefinitionStatus } from "../application/update-workflow-definition-status.js";
 import { WorkflowDefinitionRepository } from "../domain/workflow-definition-repository.js";
@@ -71,6 +72,7 @@ export const services = {
   listWorkflowDefinitionVersions: new ListWorkflowDefinitionVersions(repository, versionRepository),
   listWorkflowDefinitions: new ListWorkflowDefinitions(repository),
   publishWorkflowDefinitionVersion: new PublishWorkflowDefinitionVersion(repository, versionRepository),
+  restoreWorkflowDefinitionVersion: new RestoreWorkflowDefinitionVersion(repository, versionRepository),
   updateWorkflowDefinition: new UpdateWorkflowDefinition(repository),
   updateWorkflowDefinitionStatus: new UpdateWorkflowDefinitionStatus(repository)
 };

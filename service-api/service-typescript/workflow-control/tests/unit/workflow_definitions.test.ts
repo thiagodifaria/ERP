@@ -138,6 +138,69 @@ test("workflow definition version detail should expose requested snapshot", asyn
   assert.equal(payload.snapshotTrigger, "lead.created");
 });
 
+test("workflow definition restore should bring metadata back from a published version", async () => {
+  const key = `restore-${randomUUID()}`;
+  const createResponse = await request("/api/workflow-control/definitions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      key,
+      name: "Restore Flow",
+      description: "Fluxo inicial para restore.",
+      trigger: "lead.created"
+    })
+  });
+
+  assert.equal(createResponse.status, 201);
+
+  const publishV1Response = await request(`/api/workflow-control/definitions/${key}/versions`, {
+    method: "POST"
+  });
+  assert.equal(publishV1Response.status, 201);
+
+  const updateResponse = await request(`/api/workflow-control/definitions/${key}`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      name: "Restore Flow Prime",
+      description: "Fluxo refinado antes do rollback.",
+      trigger: "lead.qualified"
+    })
+  });
+  assert.equal(updateResponse.status, 200);
+
+  const statusResponse = await request(`/api/workflow-control/definitions/${key}/status`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      status: "active"
+    })
+  });
+  assert.equal(statusResponse.status, 200);
+
+  const publishV2Response = await request(`/api/workflow-control/definitions/${key}/versions`, {
+    method: "POST"
+  });
+  assert.equal(publishV2Response.status, 201);
+
+  const restoreResponse = await request(`/api/workflow-control/definitions/${key}/versions/1/restore`, {
+    method: "POST"
+  });
+  const restorePayload = await restoreResponse.json();
+
+  assert.equal(restoreResponse.status, 200);
+  assert.equal(restorePayload.name, "Restore Flow");
+  assert.equal(restorePayload.description, "Fluxo inicial para restore.");
+  assert.equal(restorePayload.trigger, "lead.created");
+  assert.equal(restorePayload.status, "draft");
+});
+
 test("workflow definition create should normalize payload and return draft status", async () => {
   const key = `create-${randomUUID()}`;
   const response = await request("/api/workflow-control/definitions", {
