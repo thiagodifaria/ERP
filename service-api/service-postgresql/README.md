@@ -20,6 +20,7 @@ Domains already mapped in this repository:
 - rentals
 - finance
 - billing
+- webhook-hub
 - workflow-control
 - workflow-runtime
 - engagement
@@ -31,3 +32,4 @@ Domains already carrying concrete relational work:
 - `common`
 - `identity`
 - `crm`
+- `webhook-hub`

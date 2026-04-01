@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.41`: [UPDATE 01/04/2026 - 07:17 BELO HORIZONTE, MINAS GERAIS, BRAZIL] PostgreSQL ganhou o dominio `webhook-hub` com schema proprio, tabela de eventos inbound e ledger de transicoes para sustentar persistencia real do intake em Rust.
+- `v0.1.41`: [UPDATE 01/04/2026 - 07:18 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `db.sh` e a documentacao do PostgreSQL foram ampliados para reconhecer `migrate webhook-hub` e incluir o novo dominio no fluxo `migrate all`.
 - `v0.1.40`: [UPDATE 01/04/2026 - 07:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ganhou `GET /api/webhook-hub/events/{publicId}/transitions` e passou a registrar trilha cronologica de status para cada evento ingerido.
 - `v0.1.40`: [UPDATE 01/04/2026 - 07:07 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ampliado com testes e smoke cobrindo auditoria de transicoes do intake ao longo do ciclo `received -> validated -> queued -> processing -> forwarded`.
 - `v0.1.39`: [UPDATE 01/04/2026 - 06:58 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub passou a expor resumo operacional enriquecido com `pending_delivery`, `handled` e `by_status` em `GET /api/webhook-hub/events/summary`.

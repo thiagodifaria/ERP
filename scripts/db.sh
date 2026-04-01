@@ -68,6 +68,7 @@ Usage:
   ./scripts/db.sh migrate common
   ./scripts/db.sh migrate identity
   ./scripts/db.sh migrate crm
+  ./scripts/db.sh migrate webhook-hub
   ./scripts/db.sh migrate workflow-control
   ./scripts/db.sh migrate all
   ./scripts/db.sh seed identity
@@ -101,6 +102,9 @@ main() {
         crm)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/migrations"
           ;;
+        webhook-hub)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/webhook-hub/migrations"
+          ;;
         workflow-control)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/migrations"
           ;;
@@ -108,6 +112,7 @@ main() {
           apply_directory "$ROOT_DIR/service-api/service-postgresql/common/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/webhook-hub/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/migrations"
           ;;
         *)
