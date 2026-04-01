@@ -99,6 +99,22 @@ test("workflow run create should append a pending execution linked to current ve
   assert.equal(payload.initiatedBy, "ops-console");
 });
 
+test("workflow run summary should expose operational buckets", async () => {
+  const listResponse = await request("/api/workflow-control/runs");
+  const runs = await listResponse.json();
+  const response = await request("/api/workflow-control/runs/summary");
+  const payload = await response.json();
+
+  assert.equal(listResponse.status, 200);
+  assert.equal(response.status, 200);
+  assert.equal(payload.total, runs.length);
+  assert.equal(payload.pending, runs.filter((run) => run.status === "pending").length);
+  assert.equal(payload.running, runs.filter((run) => run.status === "running").length);
+  assert.equal(payload.completed, runs.filter((run) => run.status === "completed").length);
+  assert.equal(payload.failed, runs.filter((run) => run.status === "failed").length);
+  assert.equal(payload.cancelled, runs.filter((run) => run.status === "cancelled").length);
+});
+
 test("workflow definition detail should expose created resource by key", async () => {
   const key = `detail-${randomUUID()}`;
   const createResponse = await request("/api/workflow-control/definitions", {

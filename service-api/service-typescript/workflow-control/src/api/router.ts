@@ -81,6 +81,11 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     return;
   }
 
+  if (request.method === "GET" && request.url === "/api/workflow-control/runs/summary") {
+    json(response, 200, await services.getWorkflowRunSummary.execute());
+    return;
+  }
+
   const segments = pathSegments(request);
   if (
     request.method === "GET" &&

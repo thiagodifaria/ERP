@@ -4,6 +4,7 @@ import { GetCurrentWorkflowDefinitionVersion } from "../application/get-current-
 import { GetWorkflowDefinitionByKey } from "../application/get-workflow-definition-by-key.js";
 import { GetWorkflowDefinitionVersionByNumber } from "../application/get-workflow-definition-version-by-number.js";
 import { GetWorkflowRunByPublicId } from "../application/get-workflow-run-by-public-id.js";
+import { GetWorkflowRunSummary } from "../application/get-workflow-run-summary.js";
 import { GetWorkflowDefinitionVersionSummary } from "../application/get-workflow-definition-version-summary.js";
 import { ListWorkflowDefinitionVersions } from "../application/list-workflow-definition-versions.js";
 import { ListWorkflowDefinitions } from "../application/list-workflow-definitions.js";
@@ -103,6 +104,7 @@ export const services = {
   getWorkflowDefinitionByKey: new GetWorkflowDefinitionByKey(repository),
   getWorkflowDefinitionVersionByNumber: new GetWorkflowDefinitionVersionByNumber(repository, versionRepository),
   getWorkflowRunByPublicId: new GetWorkflowRunByPublicId(runRepository),
+  getWorkflowRunSummary: new GetWorkflowRunSummary(runRepository),
   getWorkflowDefinitionVersionSummary: new GetWorkflowDefinitionVersionSummary(repository, versionRepository),
   listWorkflowDefinitionVersions: new ListWorkflowDefinitionVersions(repository, versionRepository),
   listWorkflowDefinitions: new ListWorkflowDefinitions(repository),
