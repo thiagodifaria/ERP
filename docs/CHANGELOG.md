@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.34`: [UPDATE 01/04/2026 - 06:18 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ganhou `GET /api/webhook-hub/events/{publicId}` para leitura detalhada do intake por identificador publico.
+- `v0.1.34`: [UPDATE 01/04/2026 - 06:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ampliado com testes e smoke cobrindo detail read de eventos ingeridos em runtime.
 - `v0.1.33`: [UPDATE 01/04/2026 - 06:10 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub em Rust saiu do scaffold e ganhou `POST /api/webhook-hub/events`, `GET /api/webhook-hub/events` e `GET /api/webhook-hub/events/summary` para intake e leitura operacional em memoria.
 - `v0.1.33`: [UPDATE 01/04/2026 - 06:12 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ampliado com testes em Rust e smoke no compose validando ingestao, listagem e resumo do intake ao vivo.
 - `v0.1.32`: [UPDATE 01/04/2026 - 06:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Workflow-control passou a aceitar filtros `category` e `createdBy` em `GET /api/workflow-control/runs/{publicId}/events` para leitura segmentada do ledger operacional.

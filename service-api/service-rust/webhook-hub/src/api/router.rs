@@ -9,7 +9,7 @@ use std::{
 };
 
 use axum::{
-    extract::State,
+    extract::{Path, State},
     http::StatusCode,
     routing::get,
     Json, Router,
@@ -27,6 +27,7 @@ pub fn build_router() -> Router {
         .route("/health/details", get(details))
         .route("/api/webhook-hub/events", get(list_events).post(create_event))
         .route("/api/webhook-hub/events/summary", get(get_event_summary))
+        .route("/api/webhook-hub/events/:public_id", get(get_event_by_public_id))
         .with_state(state)
 }
 
@@ -82,6 +83,22 @@ async fn get_event_summary(State(state): State<WebhookHubState>) -> Json<Webhook
     Json(state.summary().await)
 }
 
+async fn get_event_by_public_id(
+    State(state): State<WebhookHubState>,
+    Path(public_id): Path<String>,
+) -> Result<Json<WebhookEvent>, (StatusCode, Json<ErrorResponse>)> {
+    match state.find_event_by_public_id(&public_id).await {
+        Some(webhook_event) => Ok(Json(webhook_event)),
+        None => Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse::new(
+                "webhook_event_not_found",
+                "Webhook event was not found.",
+            )),
+        )),
+    }
+}
+
 #[derive(Clone, Default)]
 struct WebhookHubState {
     next_id: Arc<AtomicU64>,
@@ -91,6 +108,15 @@ struct WebhookHubState {
 impl WebhookHubState {
     async fn list_events(&self) -> Vec<WebhookEvent> {
         self.events.read().await.clone()
+    }
+
+    async fn find_event_by_public_id(&self, public_id: &str) -> Option<WebhookEvent> {
+        self.events
+            .read()
+            .await
+            .iter()
+            .find(|event| event.public_id == public_id)
+            .cloned()
     }
 
     async fn push_event(
@@ -332,5 +358,51 @@ mod tests {
         assert_eq!(summary_payload["total"], 1);
         assert_eq!(summary_payload["received"], 1);
         assert_eq!(summary_payload["by_provider"]["tiny"], 1);
+    }
+
+    #[tokio::test]
+    async fn webhook_event_detail_should_return_created_resource_by_public_id() {
+        let app = build_router();
+
+        let create_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/webhook-hub/events")
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(
+                        r#"{"provider":"shopify","event_type":"order.created","external_id":"ord_001","payload_summary":"Pedido criado."}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(create_response.status(), StatusCode::CREATED);
+
+        let create_body = create_response.into_body().collect().await.unwrap().to_bytes();
+        let create_payload: Value = serde_json::from_slice(&create_body).unwrap();
+        let public_id = create_payload["public_id"].as_str().unwrap();
+
+        let detail_response = app
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/api/webhook-hub/events/{public_id}"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(detail_response.status(), StatusCode::OK);
+
+        let detail_body = detail_response.into_body().collect().await.unwrap().to_bytes();
+        let detail_payload: Value = serde_json::from_slice(&detail_body).unwrap();
+
+        assert_eq!(detail_payload["public_id"], public_id);
+        assert_eq!(detail_payload["provider"], "shopify");
+        assert_eq!(detail_payload["event_type"], "order.created");
+        assert_eq!(detail_payload["external_id"], "ord_001");
     }
 }

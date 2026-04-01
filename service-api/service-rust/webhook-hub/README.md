@@ -18,4 +18,5 @@ Public routes:
 - `GET /health/details`
 - `GET /api/webhook-hub/events`
 - `GET /api/webhook-hub/events/summary`
+- `GET /api/webhook-hub/events/{publicId}`
 - `POST /api/webhook-hub/events`
