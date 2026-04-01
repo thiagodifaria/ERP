@@ -24,6 +24,7 @@ Public routes:
 - `GET /api/workflow-control/definitions/{key}/versions`
 - `GET /api/workflow-control/definitions/{key}/versions/current`
 - `GET /api/workflow-control/definitions/{key}/versions/{versionNumber}`
+- `GET /api/workflow-control/definitions/{key}/versions/summary`
 - `POST /api/workflow-control/definitions/{key}/versions`
 - `POST /api/workflow-control/definitions/{key}/versions/{versionNumber}/restore`
 - `POST /api/workflow-control/definitions`
@@ -46,6 +47,7 @@ Current unit scope:
 - workflow definition manual publication
 - workflow definition current-version read
 - workflow definition version detail read
+- workflow definition version summary read
 - workflow definition restore from published snapshot
 
 Current contract scope:

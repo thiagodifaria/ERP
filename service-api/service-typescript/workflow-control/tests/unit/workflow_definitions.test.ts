@@ -138,6 +138,17 @@ test("workflow definition version detail should expose requested snapshot", asyn
   assert.equal(payload.snapshotTrigger, "lead.created");
 });
 
+test("workflow definition version summary should expose totals and current version", async () => {
+  const response = await request("/api/workflow-control/definitions/lead-follow-up/versions/summary");
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.workflowDefinitionId, 1);
+  assert.equal(payload.totalVersions, 1);
+  assert.equal(payload.currentVersionNumber, 1);
+  assert.equal(payload.currentSnapshotStatus, "active");
+});
+
 test("workflow definition restore should bring metadata back from a published version", async () => {
   const key = `restore-${randomUUID()}`;
   const createResponse = await request("/api/workflow-control/definitions", {

@@ -199,3 +199,5 @@
 - `v0.0.98`: [UPDATE 01/04/2026 - 04:43 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O README do servico passou a deixar explicito que o escopo contratual cobre agora o ciclo completo de versoes.
 - `v0.0.99`: [UPDATE 01/04/2026 - 04:49 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do `workflow-control` passou a validar publicacao de `v2`, leitura de version detail e restore de `v1` no runtime PostgreSQL.
 - `v0.0.99`: [UPDATE 01/04/2026 - 04:49 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ciclo ponta a ponta de versionamento ficou validado com publish sequencial, leitura corrente e rollback do catalogo de workflows.
+- `v0.1.0`: [UPDATE 01/04/2026 - 04:55 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/definitions/{key}/versions/summary`, expondo total de snapshots e versao corrente sem precisar baixar o historico completo.
+- `v0.1.0`: [UPDATE 01/04/2026 - 04:55 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O read-side de versionamento ficou mais amigavel para painis e diagnostico rapido, consolidando o primeiro bloco forte de publicacao/versionamento da stack TypeScript.
