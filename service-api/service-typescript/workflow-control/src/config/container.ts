@@ -1,6 +1,7 @@
 import { CancelWorkflowRun } from "../application/cancel-workflow-run.js";
 import { CompleteWorkflowRun } from "../application/complete-workflow-run.js";
 import { CreateWorkflowDefinition } from "../application/create-workflow-definition.js";
+import { CreateWorkflowRunNote } from "../application/create-workflow-run-note.js";
 import { CreateWorkflowRun } from "../application/create-workflow-run.js";
 import { FailWorkflowRun } from "../application/fail-workflow-run.js";
 import { GetCurrentWorkflowDefinitionVersion } from "../application/get-current-workflow-definition-version.js";
@@ -129,6 +130,7 @@ export const services = {
   cancelWorkflowRun: new CancelWorkflowRun(runRepository),
   completeWorkflowRun: new CompleteWorkflowRun(runRepository),
   createWorkflowDefinition: new CreateWorkflowDefinition(repository),
+  createWorkflowRunNote: new CreateWorkflowRunNote(runRepository, runEventRepository),
   createWorkflowRun: new CreateWorkflowRun(repository, versionRepository, runRepository),
   failWorkflowRun: new FailWorkflowRun(runRepository),
   getCurrentWorkflowDefinitionVersion: new GetCurrentWorkflowDefinitionVersion(repository, versionRepository),

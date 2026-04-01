@@ -87,6 +87,50 @@ test("workflow run events should expose bootstrap event ledger by run", async ()
   assert.equal(payload[0].category, "note");
 });
 
+test("workflow run note create should append an operational note to the execution ledger", async () => {
+  const createRunResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: "00000000-0000-0000-0000-000000009991",
+      initiatedBy: "ops-notes"
+    })
+  });
+  const createdRun = await createRunResponse.json();
+
+  assert.equal(createRunResponse.status, 201);
+
+  const createEventResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/events`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      body: "Contato inicial registrado pelo time comercial.",
+      createdBy: "ops-notes"
+    })
+  });
+  const createdEvent = await createEventResponse.json();
+
+  assert.equal(createEventResponse.status, 201);
+  assert.equal(createdEvent.workflowRunPublicId, createdRun.publicId);
+  assert.equal(createdEvent.category, "note");
+  assert.equal(createdEvent.body, "Contato inicial registrado pelo time comercial.");
+  assert.equal(createdEvent.createdBy, "ops-notes");
+
+  const eventsResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/events`);
+  const eventsPayload = await eventsResponse.json();
+
+  assert.equal(eventsResponse.status, 200);
+  assert.ok(Array.isArray(eventsPayload));
+  assert.equal(eventsPayload.length, 1);
+  assert.equal(eventsPayload[0].body, "Contato inicial registrado pelo time comercial.");
+});
+
 test("workflow run create should append a pending execution linked to current version", async () => {
   const response = await request("/api/workflow-control/runs", {
     method: "POST",

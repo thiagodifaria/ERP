@@ -1,5 +1,6 @@
 // This router starts small and grows with public workflow-control routes.
 import { IncomingMessage, ServerResponse } from "node:http";
+import { CreateWorkflowRunEventRequest } from "./dto/create-workflow-run-event-request.js";
 import { HealthResponse, ReadinessResponse } from "./dto/health.js";
 import { CreateWorkflowDefinitionRequest } from "./dto/create-workflow-definition-request.js";
 import { CreateWorkflowRunRequest } from "./dto/create-workflow-run-request.js";
@@ -182,6 +183,59 @@ export async function route(request: IncomingMessage, response: ServerResponse):
         json(response, 404, {
           code,
           message: "Workflow run was not found."
+        });
+        return;
+      }
+
+      json(response, 500, {
+        code: "unexpected_error",
+        message: "Unexpected error."
+      });
+      return;
+    }
+  }
+
+  if (
+    request.method === "POST" &&
+    segments.length === 5 &&
+    segments[0] === "api" &&
+    segments[1] === "workflow-control" &&
+    segments[2] === "runs" &&
+    segments[4] === "events"
+  ) {
+    try {
+      const payload = await readJson<CreateWorkflowRunEventRequest>(request);
+      const workflowRunEvent = await services.createWorkflowRunNote.execute({
+        workflowRunPublicId: segments[3],
+        body: payload.body,
+        createdBy: payload.createdBy
+      });
+
+      json(response, 201, workflowRunEvent);
+      return;
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "unexpected_error";
+
+      if (code === "invalid_json") {
+        json(response, 400, {
+          code: "invalid_json",
+          message: "Request body must be a valid JSON object."
+        });
+        return;
+      }
+
+      if (code === "workflow_run_not_found") {
+        json(response, 404, {
+          code,
+          message: "Workflow run was not found."
+        });
+        return;
+      }
+
+      if (code === "workflow_run_event_body_required" || code === "workflow_run_event_created_by_required") {
+        json(response, 400, {
+          code,
+          message: "Workflow run event payload is invalid."
         });
         return;
       }

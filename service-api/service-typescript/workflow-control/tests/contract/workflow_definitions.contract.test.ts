@@ -152,6 +152,44 @@ test("workflow run events contract should expose event history by run", async ()
   assert.ok(payload[0].createdAt.trim().length > 0);
 });
 
+test("workflow run events contract should return created note resource", async () => {
+  const createRunResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: randomUUID(),
+      initiatedBy: "contract-notes"
+    })
+  });
+  const createdRun = await createRunResponse.json() as WorkflowRunResponse;
+
+  assert.equal(createRunResponse.status, 201);
+
+  const response = await request(`/api/workflow-control/runs/${createdRun.publicId}/events`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      body: "Observacao contratual registrada no ledger da execucao.",
+      createdBy: "contract-notes"
+    })
+  });
+  const payload = await response.json() as WorkflowRunEventResponse;
+
+  assert.equal(response.status, 201);
+  assert.match(payload.publicId, /^[0-9a-f-]{36}$/);
+  assert.equal(payload.workflowRunPublicId, createdRun.publicId);
+  assert.equal(payload.category, "note");
+  assert.equal(payload.body, "Observacao contratual registrada no ledger da execucao.");
+  assert.equal(payload.createdBy, "contract-notes");
+  assert.ok(payload.createdAt.trim().length > 0);
+});
+
 test("workflow run contract should return created execution resource", async () => {
   const response = await request("/api/workflow-control/runs", {
     method: "POST",

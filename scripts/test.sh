@@ -349,6 +349,7 @@ run_workflow_control_runtime_smoke() {
   local list_response
   local runs_response
   local run_events_response
+  local run_note_response
   local runs_summary_response
   local create_response
   local created_key="runtime-flow"
@@ -459,6 +460,20 @@ run_workflow_control_runtime_smoke() {
   if [[ "$run_start_response" != *"\"publicId\":\"$created_run_public_id\""* || "$run_start_response" != *'"status":"running"'* || "$run_start_response" != *'"startedAt":"'*
   ]]; then
     echo "[test] workflow-control run start did not persist"
+    exit 1
+  fi
+
+  run_note_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"body":"Anotacao operacional criada no smoke do workflow-control.","createdBy":"smoke-ops"}' \
+    "$base_url/api/workflow-control/runs/$created_run_public_id/events")"
+  run_events_response="$(curl -fsS "$base_url/api/workflow-control/runs/$created_run_public_id/events")"
+  echo "[test] workflow-control create run note => $run_note_response"
+  echo "[test] workflow-control runtime run events => $run_events_response"
+
+  if [[ "$run_note_response" != *"\"workflowRunPublicId\":\"$created_run_public_id\""* || "$run_note_response" != *'"category":"note"'* || "$run_events_response" != *'"createdBy":"smoke-ops"'* || "$run_events_response" != *'"body":"Anotacao operacional criada no smoke do workflow-control."'* ]]; then
+    echo "[test] workflow-control run note create did not persist"
     exit 1
   fi
 
