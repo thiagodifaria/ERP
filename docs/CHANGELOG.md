@@ -231,3 +231,5 @@
 - `v0.1.14`: [UPDATE 01/04/2026 - 06:05 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ciclo de vida de runs passou a cobrir tambem o caminho de sucesso completo, de `pending` para `running` e depois `completed`.
 - `v0.1.15`: [UPDATE 01/04/2026 - 06:10 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `POST /api/workflow-control/runs/{publicId}/fail`, permitindo encerrar execucoes em `running` no estado `failed`.
 - `v0.1.15`: [UPDATE 01/04/2026 - 06:10 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ledger operacional agora cobre tambem o ramo de erro com `failedAt`, fortalecendo o rastreio de execucoes malsucedidas.
+- `v0.1.16`: [UPDATE 01/04/2026 - 06:14 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `POST /api/workflow-control/runs/{publicId}/cancel`, permitindo cancelar execucoes em `pending` ou `running`.
+- `v0.1.16`: [UPDATE 01/04/2026 - 06:14 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ciclo de vida de runs agora cobre tambem abortos operacionais com `cancelledAt`, fechando o conjunto principal de transicoes publicas.

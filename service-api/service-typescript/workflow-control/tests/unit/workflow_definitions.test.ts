@@ -209,6 +209,34 @@ test("workflow run fail should mark a running execution as failed", async () => 
   assert.match(payload.failedAt, /.+/);
 });
 
+test("workflow run cancel should stop a pending execution", async () => {
+  const createResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: "00000000-0000-0000-0000-000000005555",
+      initiatedBy: "ops-console"
+    })
+  });
+  const created = await createResponse.json();
+
+  assert.equal(createResponse.status, 201);
+
+  const cancelResponse = await request(`/api/workflow-control/runs/${created.publicId}/cancel`, {
+    method: "POST"
+  });
+  const payload = await cancelResponse.json();
+
+  assert.equal(cancelResponse.status, 200);
+  assert.equal(payload.publicId, created.publicId);
+  assert.equal(payload.status, "cancelled");
+  assert.match(payload.cancelledAt, /.+/);
+});
+
 test("workflow definition detail should expose created resource by key", async () => {
   const key = `detail-${randomUUID()}`;
   const createResponse = await request("/api/workflow-control/definitions", {

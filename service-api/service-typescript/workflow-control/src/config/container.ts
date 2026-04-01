@@ -1,3 +1,4 @@
+import { CancelWorkflowRun } from "../application/cancel-workflow-run.js";
 import { CompleteWorkflowRun } from "../application/complete-workflow-run.js";
 import { CreateWorkflowDefinition } from "../application/create-workflow-definition.js";
 import { CreateWorkflowRun } from "../application/create-workflow-run.js";
@@ -101,6 +102,7 @@ export const repositories = {
 };
 
 export const services = {
+  cancelWorkflowRun: new CancelWorkflowRun(runRepository),
   completeWorkflowRun: new CompleteWorkflowRun(runRepository),
   createWorkflowDefinition: new CreateWorkflowDefinition(repository),
   createWorkflowRun: new CreateWorkflowRun(repository, versionRepository, runRepository),
