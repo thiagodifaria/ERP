@@ -18,8 +18,8 @@
 
 ## Documentation / Documentacao
 
-**Read in English:** [README_EN.md](README_EN.md)  
-**Leia em Portugues:** [README_PT.md](README_PT.md)  
+**Detailed English README:** [README_EN.md](README_EN.md)  
+**README detalhado em Portugues:** [README_PT.md](README_PT.md)  
 **Architecture Reference:** [docs/ARQUITETURA.md](docs/ARQUITETURA.md)  
 **Engineering Standards:** [docs/PADROES.md](docs/PADROES.md)  
 **Integration Map:** [docs/INTEGRACOES.md](docs/INTEGRACOES.md)  
@@ -32,11 +32,14 @@
 
 ERP is a portfolio-grade enterprise platform built to feel like a serious internal product instead of a generic CRUD sample. The repository is organized as a multi-tenant, container-first and polyglot backend where each service owns a clear operational responsibility.
 
+The project is also the public evolution of ERP structures already used in real business environments. Here, that experience is being turned into a reusable template, a study case, a portfolio centerpiece and a public enterprise ERP reference.
+
 The current milestone is already a real MVP. The platform now has an end-to-end commercial and automation slice connecting `identity`, `crm`, `sales`, `workflow-control`, `workflow-runtime`, `analytics`, `webhook-hub` and `edge` with PostgreSQL-backed flows and container-first validation.
 
 ### Key Highlights
 
 - multi-tenant architecture from day one
+- evolution of real ERP implementation experience into a reusable platform reference
 - identity, CRM, sales and automation already connected in the same operational flow
 - bounded PostgreSQL schemas with migrations and seeds per context
 - `edge` exposing platform, automation and sales cockpits
@@ -55,6 +58,13 @@ Commercial flow already connected from lead capture to sale conversion
 Operational dashboards exposed through analytics and edge aggregation
 CI/CD workflows prepared for GitHub Actions and GHCR publishing
 ```
+
+### Project Positioning
+
+- template for future enterprise systems and internal platform accelerators
+- study case for multi-tenant, polyglot and container-first backend architecture
+- portfolio project with real operational scope instead of isolated code samples
+- public enterprise ERP reference that can evolve in an open and inspectable way
 
 ---
 
@@ -108,6 +118,11 @@ The current MVP is backend-first and already covers a complete vertical slice:
 - sales, tenant and automation reports in `analytics`
 - aggregated operational cockpits in `edge`
 - webhook intake and delivery transition tracking in `webhook-hub`
+
+For the complete service-by-service presentation, use the detailed guides:
+
+- [README_EN.md](README_EN.md)
+- [README_PT.md](README_PT.md)
 
 ---
 

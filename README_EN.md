@@ -12,12 +12,13 @@
 [![Rust](https://img.shields.io/badge/Rust-webhook%20hub-000000?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-domain%20storage-316192?style=flat&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Docker](https://img.shields.io/badge/Docker-Container%20First-2496ED?style=flat&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Tests](https://img.shields.io/badge/Tests-Unit%20Contract%20Smoke-success?style=flat)]()
+[![Tests](https://img.shields.io/badge/Tests-Unit%20Integration%20Contract%20Smoke-success?style=flat)]()
 
 ---
 
 ## Documentation / Documentacao
 
+**Project Overview:** [README.md](README.md)  
 **Read in English:** [README_EN.md](README_EN.md)  
 **Leia em Portugues:** [README_PT.md](README_PT.md)  
 **Architecture Reference:** [docs/ARQUITETURA.md](docs/ARQUITETURA.md)  
@@ -30,35 +31,251 @@
 
 ## What is ERP?
 
-ERP is a portfolio-grade enterprise platform built to feel like a serious internal product instead of a generic CRUD sample. The repository is organized as a multi-tenant, container-first and polyglot backend where each service owns a clear operational responsibility.
+ERP is a portfolio-grade enterprise platform built to feel like a real internal product instead of a generic CRUD sample. The repository is structured as a multi-tenant, container-first and polyglot backend, where each service owns a bounded operational responsibility and a dedicated PostgreSQL context when persistence is required.
 
-The current milestone is already a real MVP. The platform now has an end-to-end commercial and automation slice connecting `identity`, `crm`, `sales`, `workflow-control`, `workflow-runtime`, `analytics`, `webhook-hub` and `edge` with PostgreSQL-backed flows and container-first validation.
+This repository is also the public evolution of ERP work already applied in real companies. The goal is not only to build a new system, but to turn that accumulated operational experience into:
 
-### Key Highlights
+- a reusable enterprise template
+- a study case for architecture and systems design
+- a portfolio project with realistic scope
+- a semi-open enterprise ERP reference that can be inspected and extended
 
-- multi-tenant architecture from day one
-- identity, CRM, sales and automation already connected in the same operational flow
-- bounded PostgreSQL schemas with migrations and seeds per context
-- `edge` exposing platform, automation and sales cockpits
-- `analytics` exposing pipeline, sales and tenant-wide operational reports
-- unit, integration, contract and smoke validation running in containers
-- GitHub Actions and GitHub Container Registry configured for CI/CD
-
-### What Makes It Special?
-
-```text
-Go, .NET, TypeScript, Elixir, Python and Rust mapped to clear operational roles
-Monorepo organized by language and bounded service ownership
-Domain-owned PostgreSQL schemas, migrations and bootstrap seeds
-Container-first validation across unit, integration, contract and smoke layers
-Commercial flow already connected from lead capture to sale conversion
-Operational dashboards exposed through analytics and edge aggregation
-CI/CD workflows prepared for GitHub Actions and GHCR publishing
-```
+The current milestone is already a real backend-first MVP. The platform now exposes an end-to-end commercial and automation slice connecting `identity`, `crm`, `sales`, `workflow-control`, `workflow-runtime`, `analytics`, `webhook-hub` and `edge`.
 
 ---
 
-## Quick Start
+## Current MVP Status
+
+Today the MVP already includes:
+
+- tenant, company, user, team and role management in `identity`
+- lead capture, ownership, status progression and note history in `crm`
+- opportunity, proposal and sale lifecycle in `sales`
+- workflow definition catalog, versioning, runs and operational events in `workflow-control`
+- runtime executions, retries and transition ledger in `workflow-runtime`
+- aggregated operational reports in `analytics`
+- external webhook intake and transition tracking in `webhook-hub`
+- operational cockpits in `edge`
+
+The project is still backend-first. That means the strongest part of the MVP today is system design, service behavior, contracts, database ownership and operational visibility rather than frontend presentation.
+
+---
+
+## Why This Project Exists
+
+ERP is designed to serve four roles at the same time:
+
+- enterprise template: a base for future systems and internal accelerators
+- study case: a concrete example of multi-tenant, polyglot and container-first architecture
+- portfolio: a project that demonstrates depth, consistency and operational realism
+- public reference: a way to expose how an enterprise ERP can be structured in a modern modular stack
+
+That is why the repository cares so much about domain boundaries, health endpoints, database ownership, contract stability, smoke validation and service composition.
+
+---
+
+## Architecture at a Glance
+
+The platform is intentionally separated into operational planes:
+
+- transaction plane: `identity`, `crm`, `sales`
+- control plane: `workflow-control`
+- runtime plane: `workflow-runtime`
+- analytics plane: `analytics`
+- integration plane: `webhook-hub`
+- aggregation and public ops plane: `edge`
+
+This separation keeps catalog concerns, execution concerns, transactional write concerns and reporting concerns from collapsing into the same service.
+
+---
+
+## Stack and Rationale
+
+The stack is polyglot by design, not by aesthetics.
+
+- `Go` powers `edge`, `crm` and `sales` because these services benefit from strong HTTP performance, simple deployment and low operational friction.
+- `.NET` powers `identity` because access control, tenancy and future financial domains benefit from strong enterprise ergonomics and mature application structuring.
+- `TypeScript` powers `workflow-control` because control-plane APIs and metadata-heavy orchestration benefit from fast iteration and a productive application layer.
+- `Elixir` powers `workflow-runtime` because durable execution, retries, timers and high-concurrency orchestration are a natural fit for OTP.
+- `Python` powers `analytics` because heavy read models, reporting, ETL-like logic and future forecasting workloads fit well in that ecosystem.
+- `Rust` powers `webhook-hub` because external event ingress, idempotency and strict transition control benefit from a highly predictable runtime.
+- `PostgreSQL` is used as domain-owned transactional storage, with schemas, migrations and seeds separated by context.
+
+---
+
+## Service Inventory
+
+| Service | Language | Responsibility | Main Public Surface |
+|--------|----------|----------------|---------------------|
+| `identity` | .NET | tenancy, companies, users, teams, roles and access structure | tenant bootstrap and access snapshot |
+| `crm` | Go | leads, ownership, status, summary and notes | lead pipeline and relationship history |
+| `sales` | Go | opportunities, proposals, sale conversion and revenue transitions | commercial lifecycle from opportunity to booked sale |
+| `workflow-control` | TypeScript | workflow definitions, versions, runs and run events | control-plane APIs and operational event ledger |
+| `workflow-runtime` | Elixir | durable execution, lifecycle transitions and retries | runtime orchestration and execution summary |
+| `analytics` | Python | heavy operational reads and business reports | sales, tenant and automation reports |
+| `webhook-hub` | Rust | inbound webhook intake and transition tracking | event ingestion and delivery traceability |
+| `edge` | Go | cross-service aggregation and public operational cockpit | health, tenant, automation and sales overview |
+
+---
+
+## Commercial and Automation Vertical Slice
+
+The clearest way to understand the current MVP is to follow its main flow:
+
+1. A lead enters `crm`.
+2. The lead can receive ownership, notes and status progression.
+3. A linked opportunity is created in `sales`.
+4. A proposal is created for that opportunity.
+5. The proposal can move through status transitions and be converted into a sale.
+6. `workflow-control` can create a workflow run bound to the same business subject.
+7. `workflow-runtime` can execute the corresponding definition with lifecycle transitions and retries.
+8. `analytics` reads the resulting footprint and exposes reports such as `pipeline-summary`, `sales-journey`, `tenant-360`, `automation-board` and `workflow-definition-health`.
+9. `edge` aggregates these reports into `tenant-overview`, `automation-overview` and `sales-overview`.
+
+This gives the repository a real end-to-end business narrative instead of isolated service demos.
+
+---
+
+## Public API Snapshot
+
+### Identity
+
+Main routes:
+
+- `GET /api/identity/tenants`
+- `POST /api/identity/tenants`
+- `GET /api/identity/tenants/{slug}`
+- `GET /api/identity/tenants/{slug}/snapshot`
+- `GET /api/identity/tenants/{slug}/companies`
+- `POST /api/identity/tenants/{slug}/companies`
+- `PATCH /api/identity/tenants/{slug}/companies/{companyPublicId}`
+- `GET /api/identity/tenants/{slug}/users`
+- `POST /api/identity/tenants/{slug}/users`
+- `PATCH /api/identity/tenants/{slug}/users/{userPublicId}`
+- `GET /api/identity/tenants/{slug}/teams`
+- `POST /api/identity/tenants/{slug}/teams`
+- `PATCH /api/identity/tenants/{slug}/teams/{teamPublicId}`
+- `GET /api/identity/tenants/{slug}/roles`
+
+### CRM
+
+Main routes:
+
+- `GET /api/crm/leads`
+- `GET /api/crm/leads/summary`
+- `POST /api/crm/leads`
+- `GET /api/crm/leads/{publicId}`
+- `PATCH /api/crm/leads/{publicId}`
+- `PATCH /api/crm/leads/{publicId}/owner`
+- `PATCH /api/crm/leads/{publicId}/status`
+- `GET /api/crm/leads/{publicId}/notes`
+- `POST /api/crm/leads/{publicId}/notes`
+
+### Sales
+
+Main routes:
+
+- `GET /api/sales/opportunities`
+- `GET /api/sales/opportunities/summary`
+- `POST /api/sales/opportunities`
+- `GET /api/sales/opportunities/{publicId}`
+- `PATCH /api/sales/opportunities/{publicId}`
+- `PATCH /api/sales/opportunities/{publicId}/stage`
+- `GET /api/sales/opportunities/{publicId}/proposals`
+- `POST /api/sales/opportunities/{publicId}/proposals`
+- `GET /api/sales/proposals/{publicId}`
+- `PATCH /api/sales/proposals/{publicId}/status`
+- `POST /api/sales/proposals/{publicId}/convert`
+- `GET /api/sales/sales`
+- `GET /api/sales/sales/summary`
+- `GET /api/sales/sales/{publicId}`
+- `PATCH /api/sales/sales/{publicId}/status`
+
+### Workflow Control
+
+Main routes:
+
+- `GET /api/workflow-control/definitions`
+- `POST /api/workflow-control/definitions`
+- `PATCH /api/workflow-control/definitions/{key}`
+- `PATCH /api/workflow-control/definitions/{key}/status`
+- `GET /api/workflow-control/definitions/{key}/versions`
+- `POST /api/workflow-control/definitions/{key}/versions`
+- `POST /api/workflow-control/definitions/{key}/versions/{versionNumber}/restore`
+- `GET /api/workflow-control/runs`
+- `GET /api/workflow-control/runs/summary`
+- `POST /api/workflow-control/runs`
+- `GET /api/workflow-control/runs/{publicId}`
+- `GET /api/workflow-control/runs/{publicId}/events`
+- `GET /api/workflow-control/runs/{publicId}/events/summary`
+- `POST /api/workflow-control/runs/{publicId}/events`
+- `POST /api/workflow-control/runs/{publicId}/start`
+- `POST /api/workflow-control/runs/{publicId}/complete`
+- `POST /api/workflow-control/runs/{publicId}/fail`
+- `POST /api/workflow-control/runs/{publicId}/cancel`
+
+### Workflow Runtime
+
+Main routes:
+
+- `GET /api/workflow-runtime/executions`
+- `GET /api/workflow-runtime/executions/{publicId}`
+- `GET /api/workflow-runtime/executions/{publicId}/transitions`
+- `GET /api/workflow-runtime/executions/summary`
+- `GET /api/workflow-runtime/executions/summary/by-workflow`
+- `POST /api/workflow-runtime/executions`
+- `POST /api/workflow-runtime/executions/{publicId}/start`
+- `POST /api/workflow-runtime/executions/{publicId}/complete`
+- `POST /api/workflow-runtime/executions/{publicId}/fail`
+- `POST /api/workflow-runtime/executions/{publicId}/cancel`
+- `POST /api/workflow-runtime/executions/{publicId}/retry`
+
+### Analytics
+
+Main routes:
+
+- `GET /api/analytics/reports/pipeline-summary`
+- `GET /api/analytics/reports/service-pulse`
+- `GET /api/analytics/reports/sales-journey`
+- `GET /api/analytics/reports/tenant-360`
+- `GET /api/analytics/reports/automation-board`
+- `GET /api/analytics/reports/workflow-definition-health`
+- `GET /api/analytics/reports/delivery-reliability`
+
+### Edge
+
+Main routes:
+
+- `GET /api/edge/ops/health`
+- `GET /api/edge/ops/tenant-overview`
+- `GET /api/edge/ops/automation-overview`
+- `GET /api/edge/ops/sales-overview`
+
+### Webhook Hub
+
+Main routes:
+
+- `GET /api/webhook-hub/events`
+- `POST /api/webhook-hub/events`
+- `GET /api/webhook-hub/events/{publicId}`
+- `GET /api/webhook-hub/events/{publicId}/transitions`
+- `GET /api/webhook-hub/events/summary`
+- `POST /api/webhook-hub/events/{publicId}/validate`
+- `POST /api/webhook-hub/events/{publicId}/queue`
+- `POST /api/webhook-hub/events/{publicId}/process`
+- `POST /api/webhook-hub/events/{publicId}/forward`
+- `POST /api/webhook-hub/events/{publicId}/fail`
+- `POST /api/webhook-hub/events/{publicId}/reject`
+
+All services also expose:
+
+- `GET /health/live`
+- `GET /health/ready`
+- `GET /health/details`
+
+---
+
+## Local Development
 
 ### Option 1: Shell Scripts
 
@@ -74,10 +291,15 @@ CI/CD workflows prepared for GitHub Actions and GHCR publishing
 docker compose --env-file .env.example -f infra/docker-compose.yml up --build -d
 ```
 
-### Validation
+### Common Utility Commands
 
 ```bash
+./scripts/logs.sh edge
+./scripts/db.sh migrate all
+./scripts/db.sh seed all
+./scripts/db.sh summary sales bootstrap-ops
 ./scripts/test.sh unit
+./scripts/test.sh integration
 ./scripts/test.sh contract
 ./scripts/test.sh smoke
 ```
@@ -97,78 +319,51 @@ docker compose --env-file .env.example -f infra/docker-compose.yml up --build -d
 
 ---
 
-## MVP Scope
+## Validation Strategy
 
-The current MVP is backend-first and already covers a complete vertical slice:
+The repository is intentionally container-first. Validation currently covers:
 
-- lead capture, owner assignment, status updates and note history in `crm`
-- opportunity pipeline, proposal lifecycle, sale conversion and revenue transitions in `sales`
-- workflow catalog, publication, runs and operational events in `workflow-control`
-- execution lifecycle, retries and transitions in `workflow-runtime`
-- sales, tenant and automation reports in `analytics`
-- aggregated operational cockpits in `edge`
-- webhook intake and delivery transition tracking in `webhook-hub`
+- `unit`: Go, TypeScript, Elixir, Python, .NET and Rust service-level tests
+- `integration`: dedicated HTTP integration suite for `identity`
+- `contract`: public API contract suites for `workflow-control`, `crm`, `sales` and `identity`
+- `smoke`: end-to-end runtime validation in Docker Compose with PostgreSQL and Redis
 
----
-
-## API Overview
-
-| Area | Endpoint | Description |
-|------|----------|-------------|
-| Identity | `GET /api/identity/tenants/{slug}/snapshot` | Read the tenant operational snapshot |
-| CRM | `POST /api/crm/leads` | Create a lead in the commercial funnel |
-| CRM | `POST /api/crm/leads/{publicId}/notes` | Register relationship notes for a lead |
-| Sales | `POST /api/sales/opportunities` | Create an opportunity linked to a lead |
-| Sales | `POST /api/sales/opportunities/{publicId}/proposals` | Create a proposal for an opportunity |
-| Sales | `POST /api/sales/proposals/{publicId}/convert` | Convert an accepted proposal into a sale |
-| Workflow Control | `POST /api/workflow-control/runs` | Create a workflow run for a business subject |
-| Workflow Runtime | `POST /api/workflow-runtime/executions` | Create a runtime execution from a workflow definition |
-| Analytics | `GET /api/analytics/reports/sales-journey` | Read the commercial funnel from lead to sale |
-| Analytics | `GET /api/analytics/reports/tenant-360` | Read a consolidated tenant snapshot |
-| Edge | `GET /api/edge/ops/automation-overview` | Read the operational automation cockpit |
-| Edge | `GET /api/edge/ops/sales-overview` | Read the commercial cockpit |
-| Webhook Hub | `POST /api/webhook-hub/events` | Ingest external webhook events |
-| Ops | `GET /health/live` | Liveness endpoint |
-| Ops | `GET /health/ready` | Readiness endpoint |
-
-More details are available in the service references:
-
-- [service-api/service-csharp/identity/README.md](service-api/service-csharp/identity/README.md)
-- [service-api/service-golang/crm/README.md](service-api/service-golang/crm/README.md)
-- [service-api/service-golang/sales/README.md](service-api/service-golang/sales/README.md)
-- [service-api/service-typescript/workflow-control/README.md](service-api/service-typescript/workflow-control/README.md)
-- [service-api/service-elixir/workflow-runtime/README.md](service-api/service-elixir/workflow-runtime/README.md)
-- [service-api/service-python/analytics/README.md](service-api/service-python/analytics/README.md)
-- [service-api/service-rust/webhook-hub/README.md](service-api/service-rust/webhook-hub/README.md)
-- [service-api/service-golang/edge/README.md](service-api/service-golang/edge/README.md)
+This means the MVP is not only modeled in code, but also verified close to the real runtime topology.
 
 ---
 
-## Automation Scripts
+## CI/CD and Container Publishing
 
-### `scripts/build.sh`
+The repository already includes:
 
-- builds the local Docker images defined in Compose
+- `Quality` workflow in GitHub Actions for `unit`, `integration`, `contract` and `smoke`
+- `Containers` workflow for publishing service images to `ghcr.io`
 
-### `scripts/up.sh`
+Expected published images:
 
-- starts the local stack in detached mode with build
+- `ghcr.io/thiagodifaria/erp-edge`
+- `ghcr.io/thiagodifaria/erp-crm`
+- `ghcr.io/thiagodifaria/erp-sales`
+- `ghcr.io/thiagodifaria/erp-identity`
+- `ghcr.io/thiagodifaria/erp-workflow-control`
+- `ghcr.io/thiagodifaria/erp-workflow-runtime`
+- `ghcr.io/thiagodifaria/erp-analytics`
+- `ghcr.io/thiagodifaria/erp-webhook-hub`
 
-### `scripts/down.sh`
+---
 
-- stops the stack and removes orphan containers
+## What Can Be Studied Here
 
-### `scripts/logs.sh <service>`
+This repository is useful if you want to study:
 
-- tails service logs from the Compose stack
-
-### `scripts/db.sh`
-
-- applies migrations, seeds and relational summaries by bounded context
-
-### `scripts/test.sh`
-
-- executes container-first `unit`, `integration`, `contract` and `smoke`
+- multi-tenant service boundaries
+- polyglot architecture with explicit role allocation by language
+- PostgreSQL ownership by domain context
+- control plane versus runtime plane separation
+- webhook intake and operational transition tracking
+- service aggregation and executive operational read models
+- container-first validation in a monorepo
+- portfolio-ready enterprise backend presentation
 
 ---
 
