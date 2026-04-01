@@ -181,3 +181,5 @@
 - `v0.0.89`: [UPDATE 01/04/2026 - 03:50 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O runtime em memoria passou a nascer com a versao `1` do fluxo bootstrap `lead-follow-up`, preparando as proximas APIs de versionamento.
 - `v0.0.90`: [UPDATE 01/04/2026 - 03:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/definitions/{key}/versions` como primeiro read-side de historico versionado.
 - `v0.0.90`: [UPDATE 01/04/2026 - 03:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O fluxo unitario passou a validar a exposicao da versao bootstrap `1` do `lead-follow-up` pela API TypeScript.
+- `v0.0.91`: [UPDATE 01/04/2026 - 04:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `POST /api/workflow-control/definitions/{key}/versions`, permitindo publicar snapshots numerados da definicao atual.
+- `v0.0.91`: [UPDATE 01/04/2026 - 04:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O runtime em memoria passou a validar publicacao manual de versoes para definicoes criadas durante a execucao.

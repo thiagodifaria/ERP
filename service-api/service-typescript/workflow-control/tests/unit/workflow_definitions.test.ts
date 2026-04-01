@@ -89,6 +89,35 @@ test("workflow definition versions should expose bootstrap publication history",
   assert.equal(payload[0].snapshotTrigger, "lead.created");
 });
 
+test("workflow definition publish should create a new version snapshot", async () => {
+  const key = `publish-${randomUUID()}`;
+  const createResponse = await request("/api/workflow-control/definitions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      key,
+      name: "Publish Flow",
+      description: "Fluxo para testar publicacao manual de versao.",
+      trigger: "lead.created"
+    })
+  });
+
+  assert.equal(createResponse.status, 201);
+
+  const publishResponse = await request(`/api/workflow-control/definitions/${key}/versions`, {
+    method: "POST"
+  });
+  const publishPayload = await publishResponse.json();
+
+  assert.equal(publishResponse.status, 201);
+  assert.ok(publishPayload.workflowDefinitionId > 1);
+  assert.equal(publishPayload.versionNumber, 1);
+  assert.equal(publishPayload.snapshotName, "Publish Flow");
+  assert.equal(publishPayload.snapshotTrigger, "lead.created");
+});
+
 test("workflow definition create should normalize payload and return draft status", async () => {
   const key = `create-${randomUUID()}`;
   const response = await request("/api/workflow-control/definitions", {
