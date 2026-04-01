@@ -89,6 +89,43 @@ run_rust_unit() {
     cargo test
 }
 
+run_webhook_hub_runtime_smoke() {
+  local base_url="http://localhost:${WEBHOOK_HUB_HTTP_PORT:-8082}"
+  local health_details_response
+  local list_response
+  local create_response
+  local summary_response
+
+  "${COMPOSE_CMD[@]}" up -d --build webhook-hub
+  wait_for_http_ready "$base_url/health/ready"
+
+  health_details_response="$(curl -fsS "$base_url/health/details")"
+  list_response="$(curl -fsS "$base_url/api/webhook-hub/events")"
+  echo "[test] webhook-hub health details => $health_details_response"
+  echo "[test] webhook-hub list => $list_response"
+
+  if [[ "$health_details_response" != *'"name":"signature-validation","status":"ready"'* || "$list_response" != '[]' ]]; then
+    echo "[test] webhook-hub bootstrap runtime state was not clean"
+    exit 1
+  fi
+
+  create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"provider":"stripe","event_type":"payment.succeeded","external_id":"evt_runtime_001","payload_summary":"Pagamento confirmado pelo smoke do webhook-hub."}' \
+    "$base_url/api/webhook-hub/events")"
+  summary_response="$(curl -fsS "$base_url/api/webhook-hub/events/summary")"
+  list_response="$(curl -fsS "$base_url/api/webhook-hub/events")"
+  echo "[test] webhook-hub create => $create_response"
+  echo "[test] webhook-hub list after create => $list_response"
+  echo "[test] webhook-hub summary => $summary_response"
+
+  if [[ "$create_response" != *'"provider":"stripe"'* || "$create_response" != *'"event_type":"payment.succeeded"'* || "$list_response" != *'"external_id":"evt_runtime_001"'* || "$summary_response" != *'"total":1'* || "$summary_response" != *'"stripe":1'* ]]; then
+    echo "[test] webhook-hub runtime ingestion did not persist"
+    exit 1
+  fi
+}
+
 run_identity_database_smoke() {
   local smoke_slug="smoke-identity-bootstrap"
   local summary
@@ -893,10 +930,12 @@ run_smoke() {
   trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
   export CRM_HTTP_PORT="${CRM_HTTP_PORT_SMOKE:-18083}"
   export IDENTITY_HTTP_PORT="${IDENTITY_HTTP_PORT_SMOKE:-18081}"
+  export WEBHOOK_HUB_HTTP_PORT="${WEBHOOK_HUB_HTTP_PORT_SMOKE:-18082}"
   export WORKFLOW_CONTROL_HTTP_PORT="${WORKFLOW_CONTROL_HTTP_PORT_SMOKE:-18084}"
   bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
   "${COMPOSE_CMD[@]}" ps
   run_identity_database_smoke
+  run_webhook_hub_runtime_smoke
   run_workflow_control_runtime_smoke
   run_crm_runtime_smoke
   run_identity_runtime_smoke

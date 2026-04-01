@@ -7,4 +7,15 @@ Initial scope:
 - runtime bootstrap
 - health endpoint
 - router boundary
+- webhook intake list and ingest routes
+- webhook intake summary route
 - room for signature validation, normalization and deduplication
+
+Public routes:
+
+- `GET /health/live`
+- `GET /health/ready`
+- `GET /health/details`
+- `GET /api/webhook-hub/events`
+- `GET /api/webhook-hub/events/summary`
+- `POST /api/webhook-hub/events`
