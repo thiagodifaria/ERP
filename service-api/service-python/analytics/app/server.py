@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from app.config.settings import settings
 from app.infrastructure.postgres import postgres_ready
+from app.reports.automation_board import build_automation_board
 from app.reports.pipeline_summary import build_pipeline_summary
 from app.reports.service_pulse import build_service_pulse
 from app.reports.tenant_360 import build_tenant_360
@@ -57,3 +58,8 @@ def service_pulse(tenant_slug: str | None = None) -> dict:
 @app.get("/api/analytics/reports/tenant-360")
 def tenant_360(tenant_slug: str | None = None) -> dict:
     return build_tenant_360(tenant_slug)
+
+
+@app.get("/api/analytics/reports/automation-board")
+def automation_board(tenant_slug: str | None = None) -> dict:
+    return build_automation_board(tenant_slug)

@@ -314,3 +314,5 @@
 - `v0.1.28`: [UPDATE 01/04/2026 - 07:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A nova superficie de eventos ja entrou em unit, contract e smoke HTTP contra PostgreSQL real.
 - `v0.1.56`: [UPDATE 01/04/2026 - 10:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `analytics` ganhou o relatorio `GET /api/analytics/reports/tenant-360`, consolidando identidade, comercial e automacao em uma visao operacional unica por tenant.
 - `v0.1.56`: [UPDATE 01/04/2026 - 10:32 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do monorepo passou a validar esse snapshot 360 com PostgreSQL real, cobrindo contagens de empresas, usuarios, leads, runs e execucoes.
+- `v0.1.57`: [UPDATE 01/04/2026 - 10:44 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `analytics` ganhou o relatorio `GET /api/analytics/reports/automation-board`, cruzando catalogo, ledger do `workflow-control`, runtime em Elixir e entrega do `webhook-hub`.
+- `v0.1.57`: [UPDATE 01/04/2026 - 10:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke passou a validar backlog de definicoes, versoes publicadas, eventos gravados e transicoes do runtime diretamente do PostgreSQL.

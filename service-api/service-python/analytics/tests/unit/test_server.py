@@ -56,3 +56,14 @@ def test_tenant_360_returns_tenant_operational_snapshot() -> None:
     assert payload["identity"]["companies"] == 3
     assert payload["commercial"]["assignedLeads"] == 96
     assert payload["automation"]["workflowRuns"] == 41
+
+
+def test_automation_board_returns_delivery_and_runtime_board() -> None:
+    response = client.get("/api/analytics/reports/automation-board?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["catalog"]["definitionsActive"] == 6
+    assert payload["runtime"]["completedExecutions"] == 28
+    assert payload["delivery"]["forwarded"] == 87
