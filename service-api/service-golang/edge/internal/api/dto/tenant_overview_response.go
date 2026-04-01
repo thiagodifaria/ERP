@@ -3,11 +3,11 @@
 package dto
 
 type TenantOverviewResponse struct {
-  Service         string         `json:"service"`
-  TenantSlug      string         `json:"tenantSlug"`
-  GeneratedAt     string         `json:"generatedAt"`
-  PipelineSummary map[string]any `json:"pipelineSummary"`
-  ServicePulse    map[string]any `json:"servicePulse"`
-  Tenant360       map[string]any `json:"tenant360"`
-  AutomationBoard map[string]any `json:"automationBoard"`
+	Service         string         `json:"service"`
+	TenantSlug      string         `json:"tenantSlug"`
+	GeneratedAt     string         `json:"generatedAt"`
+	PipelineSummary map[string]any `json:"pipelineSummary"`
+	ServicePulse    map[string]any `json:"servicePulse"`
+	Tenant360       map[string]any `json:"tenant360"`
+	AutomationBoard map[string]any `json:"automationBoard"`
 }

@@ -3,20 +3,27 @@
 package api
 
 import (
-  "net/http"
+	"net/http"
 
-  "github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/api/handler"
-  "github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/api/middleware"
-  "github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/telemetry"
+	"github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/api/handler"
+	"github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/api/middleware"
+	"github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/telemetry"
 )
 
-func NewRouter(logger *telemetry.Logger, healthHandler handler.HealthHandler, opsHandler handler.OpsHandler, tenantOverviewHandler handler.TenantOverviewHandler) http.Handler {
-  mux := http.NewServeMux()
-  mux.HandleFunc("/health/live", healthHandler.Live)
-  mux.HandleFunc("/health/ready", healthHandler.Ready)
-  mux.HandleFunc("/health/details", healthHandler.Details)
-  mux.HandleFunc("/api/edge/ops/health", opsHandler.Health)
-  mux.HandleFunc("/api/edge/ops/tenant-overview", tenantOverviewHandler.Overview)
+func NewRouter(
+	logger *telemetry.Logger,
+	healthHandler handler.HealthHandler,
+	opsHandler handler.OpsHandler,
+	tenantOverviewHandler handler.TenantOverviewHandler,
+	automationOverviewHandler handler.AutomationOverviewHandler,
+) http.Handler {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health/live", healthHandler.Live)
+	mux.HandleFunc("/health/ready", healthHandler.Ready)
+	mux.HandleFunc("/health/details", healthHandler.Details)
+	mux.HandleFunc("/api/edge/ops/health", opsHandler.Health)
+	mux.HandleFunc("/api/edge/ops/tenant-overview", tenantOverviewHandler.Overview)
+	mux.HandleFunc("/api/edge/ops/automation-overview", automationOverviewHandler.Overview)
 
-  return middleware.WithCorrelation(logger, mux)
+	return middleware.WithCorrelation(logger, mux)
 }

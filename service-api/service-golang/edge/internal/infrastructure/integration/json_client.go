@@ -3,31 +3,31 @@
 package integration
 
 import (
-  "context"
-  "encoding/json"
-  "fmt"
-  "net/http"
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
 )
 
 type JSONReader interface {
-  GetJSON(ctx context.Context, requestURL string, target any) error
+	GetJSON(ctx context.Context, requestURL string, target any) error
 }
 
 func (checker *HTTPHealthChecker) GetJSON(ctx context.Context, requestURL string, target any) error {
-  request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
-  if err != nil {
-    return err
-  }
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+	if err != nil {
+		return err
+	}
 
-  response, err := checker.client.Do(request)
-  if err != nil {
-    return err
-  }
-  defer response.Body.Close()
+	response, err := checker.client.Do(request)
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
 
-  if response.StatusCode != http.StatusOK {
-    return fmt.Errorf("unexpected_status:%d", response.StatusCode)
-  }
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected_status:%d", response.StatusCode)
+	}
 
-  return json.NewDecoder(response.Body).Decode(target)
+	return json.NewDecoder(response.Body).Decode(target)
 }

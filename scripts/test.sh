@@ -1131,8 +1131,35 @@ run_identity_runtime_smoke() {
   fi
 }
 
+run_edge_runtime_smoke() {
+  local base_url="http://localhost:${EDGE_HTTP_PORT:-8080}"
+  local details_response
+  local ops_health_response
+  local tenant_overview_response
+  local automation_overview_response
+
+  "${COMPOSE_CMD[@]}" up -d --build edge
+  wait_for_http_ready "$base_url/health/ready"
+
+  details_response="$(curl -fsS "$base_url/health/details")"
+  ops_health_response="$(curl -fsS "$base_url/api/edge/ops/health")"
+  tenant_overview_response="$(curl -fsS "$base_url/api/edge/ops/tenant-overview?tenantSlug=bootstrap-ops")"
+  automation_overview_response="$(curl -fsS "$base_url/api/edge/ops/automation-overview?tenantSlug=bootstrap-ops")"
+
+  echo "[test] edge health details => $details_response"
+  echo "[test] edge ops health => $ops_health_response"
+  echo "[test] edge tenant overview => $tenant_overview_response"
+  echo "[test] edge automation overview => $automation_overview_response"
+
+  if [[ "$details_response" != *'"service":"edge"'* || "$details_response" != *'"status":"ready"'* || "$details_response" != *'"name":"identity","status":"ready"'* || "$details_response" != *'"name":"analytics","status":"ready"'* || "$details_response" != *'"name":"webhook-hub","status":"ready"'* || "$ops_health_response" != *'"service":"edge"'* || "$ops_health_response" != *'"status":"ready"'* || "$ops_health_response" != *'"total":6'* || "$ops_health_response" != *'"ready":6'* || "$ops_health_response" != *'"degraded":0'* || "$ops_health_response" != *'"name":"workflow-runtime"'* || "$ops_health_response" != *'"name":"analytics"'* || "$tenant_overview_response" != *'"service":"edge"'* || "$tenant_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_overview_response" != *'"automationBoard"'* || "$tenant_overview_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$automation_overview_response" != *'"service":"edge"'* || "$automation_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_overview_response" != *'"status":"attention"'* || "$automation_overview_response" != *'"activeDefinitions":1'* || "$automation_overview_response" != *'"stableDefinitions":1'* || "$automation_overview_response" != *'"attentionDefinitions":1'* || "$automation_overview_response" != *'"criticalDefinitions":0'* || "$automation_overview_response" != *'"runningControlRuns":2'* || "$automation_overview_response" != *'"completedRuntimeExecutions":2'* || "$automation_overview_response" != *'"forwardedWebhookEvents":1'* || "$automation_overview_response" != *'"workflowDefinitionHealth"'* ]]; then
+    echo "[test] edge automation cockpit did not aggregate the expected live payload"
+    exit 1
+  fi
+}
+
 run_smoke() {
   trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
+  export EDGE_HTTP_PORT="${EDGE_HTTP_PORT_SMOKE:-18080}"
   export CRM_HTTP_PORT="${CRM_HTTP_PORT_SMOKE:-18083}"
   export IDENTITY_HTTP_PORT="${IDENTITY_HTTP_PORT_SMOKE:-18081}"
   export WEBHOOK_HUB_HTTP_PORT="${WEBHOOK_HUB_HTTP_PORT_SMOKE:-18082}"
@@ -1148,6 +1175,7 @@ run_smoke() {
   run_analytics_runtime_smoke
   run_crm_runtime_smoke
   run_identity_runtime_smoke
+  run_edge_runtime_smoke
 }
 
 usage() {

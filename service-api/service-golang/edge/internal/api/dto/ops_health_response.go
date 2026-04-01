@@ -3,21 +3,21 @@
 package dto
 
 type OpsHealthSummary struct {
-  Total    int `json:"total"`
-  Ready    int `json:"ready"`
-  Degraded int `json:"degraded"`
+	Total    int `json:"total"`
+	Ready    int `json:"ready"`
+	Degraded int `json:"degraded"`
 }
 
 type ServiceHealthSnapshot struct {
-  Name         string               `json:"name"`
-  Status       string               `json:"status"`
-  Dependencies []DependencyResponse `json:"dependencies"`
+	Name         string               `json:"name"`
+	Status       string               `json:"status"`
+	Dependencies []DependencyResponse `json:"dependencies"`
 }
 
 type OpsHealthResponse struct {
-  Service     string                  `json:"service"`
-  Status      string                  `json:"status"`
-  GeneratedAt string                  `json:"generatedAt"`
-  Summary     OpsHealthSummary        `json:"summary"`
-  Services    []ServiceHealthSnapshot `json:"services"`
+	Service     string                  `json:"service"`
+	Status      string                  `json:"status"`
+	GeneratedAt string                  `json:"generatedAt"`
+	Summary     OpsHealthSummary        `json:"summary"`
+	Services    []ServiceHealthSnapshot `json:"services"`
 }

@@ -3,97 +3,97 @@
 package integration
 
 import (
-  "context"
-  "encoding/json"
-  "net/http"
-  "strings"
-  "time"
+	"context"
+	"encoding/json"
+	"net/http"
+	"strings"
+	"time"
 
-  "github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/api/dto"
+	"github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/api/dto"
 )
 
 type ServiceEndpoint struct {
-  Name    string
-  BaseURL string
+	Name    string
+	BaseURL string
 }
 
 type HealthChecker interface {
-  Check(ctx context.Context, endpoint ServiceEndpoint) dto.DependencyResponse
-  Details(ctx context.Context, endpoint ServiceEndpoint) dto.ServiceHealthSnapshot
+	Check(ctx context.Context, endpoint ServiceEndpoint) dto.DependencyResponse
+	Details(ctx context.Context, endpoint ServiceEndpoint) dto.ServiceHealthSnapshot
 }
 
 type HTTPHealthChecker struct {
-  client *http.Client
+	client *http.Client
 }
 
 func NewHTTPHealthChecker(timeout time.Duration) *HTTPHealthChecker {
-  return &HTTPHealthChecker{
-    client: &http.Client{Timeout: timeout},
-  }
+	return &HTTPHealthChecker{
+		client: &http.Client{Timeout: timeout},
+	}
 }
 
 func (checker *HTTPHealthChecker) Check(ctx context.Context, endpoint ServiceEndpoint) dto.DependencyResponse {
-  snapshot := checker.Details(ctx, endpoint)
+	snapshot := checker.Details(ctx, endpoint)
 
-  return dto.DependencyResponse{
-    Name:   endpoint.Name,
-    Status: snapshot.Status,
-  }
+	return dto.DependencyResponse{
+		Name:   endpoint.Name,
+		Status: snapshot.Status,
+	}
 }
 
 func (checker *HTTPHealthChecker) Details(ctx context.Context, endpoint ServiceEndpoint) dto.ServiceHealthSnapshot {
-  if strings.TrimSpace(endpoint.BaseURL) == "" {
-    return dto.ServiceHealthSnapshot{
-      Name:   endpoint.Name,
-      Status: "not_configured",
-    }
-  }
+	if strings.TrimSpace(endpoint.BaseURL) == "" {
+		return dto.ServiceHealthSnapshot{
+			Name:   endpoint.Name,
+			Status: "not_configured",
+		}
+	}
 
-  request, err := http.NewRequestWithContext(
-    ctx,
-    http.MethodGet,
-    strings.TrimRight(endpoint.BaseURL, "/")+"/health/details",
-    nil,
-  )
-  if err != nil {
-    return dto.ServiceHealthSnapshot{
-      Name:   endpoint.Name,
-      Status: "not_ready",
-    }
-  }
+	request, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		strings.TrimRight(endpoint.BaseURL, "/")+"/health/details",
+		nil,
+	)
+	if err != nil {
+		return dto.ServiceHealthSnapshot{
+			Name:   endpoint.Name,
+			Status: "not_ready",
+		}
+	}
 
-  response, err := checker.client.Do(request)
-  if err != nil {
-    return dto.ServiceHealthSnapshot{
-      Name:   endpoint.Name,
-      Status: "not_ready",
-    }
-  }
-  defer response.Body.Close()
+	response, err := checker.client.Do(request)
+	if err != nil {
+		return dto.ServiceHealthSnapshot{
+			Name:   endpoint.Name,
+			Status: "not_ready",
+		}
+	}
+	defer response.Body.Close()
 
-  if response.StatusCode != http.StatusOK {
-    return dto.ServiceHealthSnapshot{
-      Name:   endpoint.Name,
-      Status: "not_ready",
-    }
-  }
+	if response.StatusCode != http.StatusOK {
+		return dto.ServiceHealthSnapshot{
+			Name:   endpoint.Name,
+			Status: "not_ready",
+		}
+	}
 
-  payload := dto.ReadinessResponse{}
-  if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
-    return dto.ServiceHealthSnapshot{
-      Name:   endpoint.Name,
-      Status: "not_ready",
-    }
-  }
+	payload := dto.ReadinessResponse{}
+	if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+		return dto.ServiceHealthSnapshot{
+			Name:   endpoint.Name,
+			Status: "not_ready",
+		}
+	}
 
-  status := payload.Status
-  if status == "" {
-    status = "not_ready"
-  }
+	status := payload.Status
+	if status == "" {
+		status = "not_ready"
+	}
 
-  return dto.ServiceHealthSnapshot{
-    Name:         endpoint.Name,
-    Status:       status,
-    Dependencies: payload.Dependencies,
-  }
+	return dto.ServiceHealthSnapshot{
+		Name:         endpoint.Name,
+		Status:       status,
+		Dependencies: payload.Dependencies,
+	}
 }
