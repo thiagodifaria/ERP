@@ -10,6 +10,7 @@ Current structure:
 - workflow definition version catalog
 - updated_at trigger for mutable records
 - bootstrap seed for lead follow-up orchestration
+- bootstrap seed for version 1 of each base workflow
 - views
 - functions
 - indexes

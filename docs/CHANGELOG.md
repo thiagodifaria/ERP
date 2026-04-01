@@ -173,3 +173,5 @@
 - `v0.0.85`: [UPDATE 31/03/2026 - 17:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional foi ajustada para deixar explicito que o fluxo `smoke` cobre as mutacoes principais do catalogo de workflows.
 - `v0.0.86`: [UPDATE 01/04/2026 - 03:36 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contexto relacional de `workflow-control` ganhou a tabela `workflow_definition_versions`, preparando historico de publicacao por definicao.
 - `v0.0.86`: [UPDATE 01/04/2026 - 03:36 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Cada versao publicada agora pode guardar snapshot de `name`, `description`, `status` e `trigger`, com `updated_at` automatizado no PostgreSQL.
+- `v0.0.87`: [UPDATE 01/04/2026 - 03:40 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` passou a semear a versao `1` de cada definicao bootstrap no PostgreSQL.
+- `v0.0.87`: [UPDATE 01/04/2026 - 03:40 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O historico inicial de publicacao agora nasce alinhado ao catalogo base, evitando definicoes ativas sem snapshot versionado.
