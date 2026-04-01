@@ -16,11 +16,26 @@ use axum::{
 };
 use chrono::Utc;
 use tokio::sync::RwLock;
+use tokio_postgres::Row;
 use uuid::Uuid;
 
-pub fn build_router() -> Router {
-    let state = WebhookHubState::default();
+use crate::{
+    config::{AppConfig, RepositoryDriver},
+    infrastructure::persistence::connect_postgres,
+};
 
+pub fn build_router() -> Router {
+    build_router_with_state(WebhookHubState::memory())
+}
+
+pub async fn build_router_from_config(
+    config: &AppConfig,
+) -> Result<Router, Box<dyn std::error::Error + Send + Sync>> {
+    let state = WebhookHubState::from_config(config).await?;
+    Ok(build_router_with_state(state))
+}
+
+fn build_router_with_state(state: WebhookHubState) -> Router {
     Router::new()
         .route("/health/live", get(live))
         .route("/health/ready", get(ready))
@@ -46,27 +61,20 @@ async fn ready() -> Json<HealthResponse> {
     Json(HealthResponse::new("webhook-hub", "ready"))
 }
 
-async fn details() -> Json<ReadinessResponse> {
-    Json(ReadinessResponse::new(
-        "webhook-hub",
-        "ready",
-        vec![
-            DependencyHealth::new("signature-validation", "ready"),
-            DependencyHealth::new("postgresql", "pending-runtime-wiring"),
-            DependencyHealth::new("redis", "pending-runtime-wiring"),
-        ],
-    ))
+async fn details(State(state): State<WebhookHubState>) -> Json<ReadinessResponse> {
+    Json(ReadinessResponse::new("webhook-hub", "ready", state.dependencies()))
 }
 
 async fn list_events(
     State(state): State<WebhookHubState>,
     Query(filters): Query<ListWebhookEventsQuery>,
-) -> Json<Vec<WebhookEvent>> {
-    Json(
-        state
-            .list_events_filtered(filters.provider, filters.event_type, filters.status)
-            .await,
-    )
+) -> Result<Json<Vec<WebhookEvent>>, (StatusCode, Json<ErrorResponse>)> {
+    let webhook_events = state
+        .list_events_filtered(filters.provider, filters.event_type, filters.status)
+        .await
+        .map_err(internal_storage_error)?;
+
+    Ok(Json(webhook_events))
 }
 
 async fn create_event(
@@ -93,6 +101,7 @@ async fn create_event(
     if state
         .find_event_by_provider_and_external_id(&provider, &external_id)
         .await
+        .map_err(internal_storage_error)?
         .is_some()
     {
         return Err((
@@ -106,20 +115,28 @@ async fn create_event(
 
     let webhook_event = state
         .push_event(provider, event_type, external_id, payload.payload_summary)
-        .await;
+        .await
+        .map_err(internal_storage_error)?;
 
     Ok((StatusCode::CREATED, Json(webhook_event)))
 }
 
-async fn get_event_summary(State(state): State<WebhookHubState>) -> Json<WebhookEventSummary> {
-    Json(state.summary().await)
+async fn get_event_summary(
+    State(state): State<WebhookHubState>,
+) -> Result<Json<WebhookEventSummary>, (StatusCode, Json<ErrorResponse>)> {
+    let summary = state.summary().await.map_err(internal_storage_error)?;
+    Ok(Json(summary))
 }
 
 async fn get_event_by_public_id(
     State(state): State<WebhookHubState>,
     Path(public_id): Path<String>,
 ) -> Result<Json<WebhookEvent>, (StatusCode, Json<ErrorResponse>)> {
-    match state.find_event_by_public_id(&public_id).await {
+    match state
+        .find_event_by_public_id(&public_id)
+        .await
+        .map_err(internal_storage_error)?
+    {
         Some(webhook_event) => Ok(Json(webhook_event)),
         None => Err((
             StatusCode::NOT_FOUND,
@@ -135,7 +152,11 @@ async fn list_event_transitions(
     State(state): State<WebhookHubState>,
     Path(public_id): Path<String>,
 ) -> Result<Json<Vec<WebhookEventStatusTransition>>, (StatusCode, Json<ErrorResponse>)> {
-    match state.list_event_transitions(&public_id).await {
+    match state
+        .list_event_transitions(&public_id)
+        .await
+        .map_err(internal_storage_error)?
+    {
         Some(status_history) => Ok(Json(status_history)),
         None => Err((
             StatusCode::NOT_FOUND,
@@ -232,84 +253,251 @@ fn map_transition_result(
                 "Webhook event cannot transition from the current status.",
             )),
         )),
+        Err(TransitionError::Storage) => Err(internal_storage_error(StorageError)),
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone)]
 struct WebhookHubState {
-    next_id: Arc<AtomicU64>,
-    events: Arc<RwLock<Vec<WebhookEvent>>>,
+    storage: StorageBackend,
+}
+
+#[derive(Clone)]
+enum StorageBackend {
+    Memory(Arc<MemoryStorage>),
+    Postgres(PostgresStorage),
+}
+
+#[derive(Default)]
+struct MemoryStorage {
+    next_id: AtomicU64,
+    events: RwLock<Vec<WebhookEvent>>,
+}
+
+#[derive(Clone)]
+struct PostgresStorage {
+    client: Arc<tokio_postgres::Client>,
 }
 
 impl WebhookHubState {
+    fn memory() -> Self {
+        Self {
+            storage: StorageBackend::Memory(Arc::new(MemoryStorage::default())),
+        }
+    }
+
+    async fn from_config(
+        config: &AppConfig,
+    ) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
+        match config.repository_driver {
+            RepositoryDriver::Memory => Ok(Self::memory()),
+            RepositoryDriver::Postgres => {
+                let client = connect_postgres(&config.postgres).await?;
+                Ok(Self {
+                    storage: StorageBackend::Postgres(PostgresStorage { client }),
+                })
+            }
+        }
+    }
+
+    fn dependencies(&self) -> Vec<DependencyHealth> {
+        let postgresql_status = match &self.storage {
+            StorageBackend::Memory(_) => "pending-runtime-wiring",
+            StorageBackend::Postgres(_) => "ready",
+        };
+
+        vec![
+            DependencyHealth::new("signature-validation", "ready"),
+            DependencyHealth::new("postgresql", postgresql_status),
+            DependencyHealth::new("redis", "pending-runtime-wiring"),
+        ]
+    }
+
     async fn list_events_filtered(
         &self,
         provider: Option<String>,
         event_type: Option<String>,
         status: Option<String>,
-    ) -> Vec<WebhookEvent> {
-        let provider = provider.map(|value| value.trim().to_lowercase());
-        let event_type = event_type.map(|value| value.trim().to_lowercase());
-        let status = status.map(|value| value.trim().to_lowercase());
+    ) -> Result<Vec<WebhookEvent>, StorageError> {
+        match &self.storage {
+            StorageBackend::Memory(memory) => {
+                let provider = provider.map(|value| value.trim().to_lowercase());
+                let event_type = event_type.map(|value| value.trim().to_lowercase());
+                let status = status.map(|value| value.trim().to_lowercase());
 
-        self.events
-            .read()
-            .await
-            .iter()
-            .filter(|event| {
-                if let Some(provider_filter) = &provider {
-                    if &event.provider != provider_filter {
-                        return false;
-                    }
+                Ok(memory
+                    .events
+                    .read()
+                    .await
+                    .iter()
+                    .filter(|event| {
+                        if let Some(provider_filter) = &provider {
+                            if &event.provider != provider_filter {
+                                return false;
+                            }
+                        }
+
+                        if let Some(event_type_filter) = &event_type {
+                            if &event.event_type != event_type_filter {
+                                return false;
+                            }
+                        }
+
+                        if let Some(status_filter) = &status {
+                            if &event.status != status_filter {
+                                return false;
+                            }
+                        }
+
+                        true
+                    })
+                    .cloned()
+                    .collect())
+            }
+            StorageBackend::Postgres(postgres) => {
+                let provider_filter = provider.map(|value| value.trim().to_lowercase());
+                let event_type_filter = event_type.map(|value| value.trim().to_lowercase());
+                let status_filter = status.map(|value| value.trim().to_lowercase());
+                let rows = postgres
+                    .client
+                    .query(
+                        "
+                        SELECT id, public_id, provider, event_type, external_id, payload_summary, status, received_at
+                        FROM webhook_hub.webhook_events
+                        WHERE ($1::text IS NULL OR provider = $1)
+                          AND ($2::text IS NULL OR event_type = $2)
+                          AND ($3::text IS NULL OR status = $3)
+                        ORDER BY id ASC;
+                        ",
+                        &[&provider_filter, &event_type_filter, &status_filter],
+                    )
+                    .await
+                    .map_err(|_| StorageError)?;
+
+                let mut webhook_events = Vec::with_capacity(rows.len());
+                for row in rows {
+                    webhook_events.push(map_row_to_webhook_event(&postgres.client, row).await?);
                 }
 
-                if let Some(event_type_filter) = &event_type {
-                    if &event.event_type != event_type_filter {
-                        return false;
-                    }
-                }
-
-                if let Some(status_filter) = &status {
-                    if &event.status != status_filter {
-                        return false;
-                    }
-                }
-
-                true
-            })
-            .cloned()
-            .collect()
+                Ok(webhook_events)
+            }
+        }
     }
 
-    async fn find_event_by_public_id(&self, public_id: &str) -> Option<WebhookEvent> {
-        self.events
-            .read()
-            .await
-            .iter()
-            .find(|event| event.public_id == public_id)
-            .cloned()
+    async fn find_event_by_public_id(&self, public_id: &str) -> Result<Option<WebhookEvent>, StorageError> {
+        match &self.storage {
+            StorageBackend::Memory(memory) => Ok(memory
+                .events
+                .read()
+                .await
+                .iter()
+                .find(|event| event.public_id == public_id)
+                .cloned()),
+            StorageBackend::Postgres(postgres) => {
+                let Ok(public_id) = Uuid::parse_str(public_id) else {
+                    return Ok(None);
+                };
+
+                let row = postgres
+                    .client
+                    .query_opt(
+                        "
+                        SELECT id, public_id, provider, event_type, external_id, payload_summary, status, received_at
+                        FROM webhook_hub.webhook_events
+                        WHERE public_id = $1;
+                        ",
+                        &[&public_id],
+                    )
+                    .await
+                    .map_err(|_| StorageError)?;
+
+                match row {
+                    Some(row) => Ok(Some(map_row_to_webhook_event(&postgres.client, row).await?)),
+                    None => Ok(None),
+                }
+            }
+        }
     }
 
     async fn find_event_by_provider_and_external_id(
         &self,
         provider: &str,
         external_id: &str,
-    ) -> Option<WebhookEvent> {
-        self.events
-            .read()
-            .await
-            .iter()
-            .find(|event| event.provider == provider && event.external_id == external_id)
-            .cloned()
+    ) -> Result<Option<WebhookEvent>, StorageError> {
+        match &self.storage {
+            StorageBackend::Memory(memory) => Ok(memory
+                .events
+                .read()
+                .await
+                .iter()
+                .find(|event| event.provider == provider && event.external_id == external_id)
+                .cloned()),
+            StorageBackend::Postgres(postgres) => {
+                let row = postgres
+                    .client
+                    .query_opt(
+                        "
+                        SELECT id, public_id, provider, event_type, external_id, payload_summary, status, received_at
+                        FROM webhook_hub.webhook_events
+                        WHERE provider = $1 AND external_id = $2;
+                        ",
+                        &[&provider, &external_id],
+                    )
+                    .await
+                    .map_err(|_| StorageError)?;
+
+                match row {
+                    Some(row) => Ok(Some(map_row_to_webhook_event(&postgres.client, row).await?)),
+                    None => Ok(None),
+                }
+            }
+        }
     }
 
-    async fn list_event_transitions(&self, public_id: &str) -> Option<Vec<WebhookEventStatusTransition>> {
-        self.events
-            .read()
-            .await
-            .iter()
-            .find(|event| event.public_id == public_id)
-            .map(|event| event.status_history.clone())
+    async fn list_event_transitions(
+        &self,
+        public_id: &str,
+    ) -> Result<Option<Vec<WebhookEventStatusTransition>>, StorageError> {
+        match &self.storage {
+            StorageBackend::Memory(memory) => Ok(memory
+                .events
+                .read()
+                .await
+                .iter()
+                .find(|event| event.public_id == public_id)
+                .map(|event| event.status_history.clone())),
+            StorageBackend::Postgres(postgres) => {
+                let Ok(public_id) = Uuid::parse_str(public_id) else {
+                    return Ok(None);
+                };
+
+                let rows = postgres
+                    .client
+                    .query(
+                        "
+                        SELECT transition.status, transition.changed_at
+                        FROM webhook_hub.webhook_event_transitions AS transition
+                        INNER JOIN webhook_hub.webhook_events AS event
+                          ON event.id = transition.webhook_event_id
+                        WHERE event.public_id = $1
+                        ORDER BY transition.changed_at ASC, transition.id ASC;
+                        ",
+                        &[&public_id],
+                    )
+                    .await
+                    .map_err(|_| StorageError)?;
+
+                if rows.is_empty() {
+                    return Ok(None);
+                }
+
+                Ok(Some(
+                    rows.into_iter()
+                        .map(map_row_to_transition)
+                        .collect(),
+                ))
+            }
+        }
     }
 
     async fn push_event(
@@ -318,22 +506,62 @@ impl WebhookHubState {
         event_type: String,
         external_id: String,
         payload_summary: Option<String>,
-    ) -> WebhookEvent {
-        let received_at = Utc::now().to_rfc3339();
-        let webhook_event = WebhookEvent {
-            id: self.next_id.fetch_add(1, Ordering::SeqCst) + 1,
-            public_id: Uuid::new_v4().to_string(),
-            provider,
-            event_type,
-            external_id,
-            payload_summary: payload_summary.map(|value| value.trim().to_string()),
-            status: "received".to_string(),
-            received_at: received_at.clone(),
-            status_history: vec![WebhookEventStatusTransition::new("received", received_at)],
-        };
+    ) -> Result<WebhookEvent, StorageError> {
+        match &self.storage {
+            StorageBackend::Memory(memory) => {
+                let received_at = Utc::now().to_rfc3339();
+                let webhook_event = WebhookEvent {
+                    id: memory.next_id.fetch_add(1, Ordering::SeqCst) + 1,
+                    public_id: Uuid::new_v4().to_string(),
+                    provider,
+                    event_type,
+                    external_id,
+                    payload_summary: payload_summary.map(|value| value.trim().to_string()),
+                    status: "received".to_string(),
+                    received_at: received_at.clone(),
+                    status_history: vec![WebhookEventStatusTransition::new("received", received_at)],
+                };
 
-        self.events.write().await.push(webhook_event.clone());
-        webhook_event
+                memory.events.write().await.push(webhook_event.clone());
+                Ok(webhook_event)
+            }
+            StorageBackend::Postgres(postgres) => {
+                let public_id = Uuid::new_v4();
+                let received_at = Utc::now();
+                let payload_summary = payload_summary.map(|value| value.trim().to_string());
+
+                let row = postgres
+                    .client
+                    .query_one(
+                        "
+                        INSERT INTO webhook_hub.webhook_events (
+                          public_id, provider, event_type, external_id, payload_summary, status, received_at
+                        )
+                        VALUES ($1, $2, $3, $4, $5, 'received', $6)
+                        RETURNING id, public_id, provider, event_type, external_id, payload_summary, status, received_at;
+                        ",
+                        &[&public_id, &provider, &event_type, &external_id, &payload_summary, &received_at],
+                    )
+                    .await
+                    .map_err(|_| StorageError)?;
+
+                let event_id = row.get::<_, i64>("id");
+                postgres
+                    .client
+                    .execute(
+                        "
+                        INSERT INTO webhook_hub.webhook_event_transitions (webhook_event_id, status, changed_at)
+                        VALUES ($1, 'received', $2);
+                        ",
+                        &[&event_id, &received_at],
+                    )
+                    .await
+                    .map_err(|_| StorageError)?;
+
+                let event = map_row_to_webhook_event(&postgres.client, row).await?;
+                Ok(event)
+            }
+        }
     }
 
     async fn transition_event_status(
@@ -342,25 +570,88 @@ impl WebhookHubState {
         next_status: &str,
         allowed_statuses: &[&str],
     ) -> Result<WebhookEvent, TransitionError> {
-        let mut events = self.events.write().await;
-        let webhook_event = events
-            .iter_mut()
-            .find(|event| event.public_id == public_id)
-            .ok_or(TransitionError::NotFound)?;
+        match &self.storage {
+            StorageBackend::Memory(memory) => {
+                let mut events = memory.events.write().await;
+                let webhook_event = events
+                    .iter_mut()
+                    .find(|event| event.public_id == public_id)
+                    .ok_or(TransitionError::NotFound)?;
 
-        if !allowed_statuses.iter().any(|status| webhook_event.status == *status) {
-            return Err(TransitionError::InvalidTransition);
+                if !allowed_statuses.iter().any(|status| webhook_event.status == *status) {
+                    return Err(TransitionError::InvalidTransition);
+                }
+
+                webhook_event.status = next_status.to_string();
+                webhook_event
+                    .status_history
+                    .push(WebhookEventStatusTransition::new(next_status, Utc::now().to_rfc3339()));
+                Ok(webhook_event.clone())
+            }
+            StorageBackend::Postgres(postgres) => {
+                let Ok(public_id) = Uuid::parse_str(public_id) else {
+                    return Err(TransitionError::NotFound);
+                };
+
+                let row = postgres
+                    .client
+                    .query_opt(
+                        "
+                        SELECT id, status
+                        FROM webhook_hub.webhook_events
+                        WHERE public_id = $1
+                        FOR UPDATE;
+                        ",
+                        &[&public_id],
+                    )
+                    .await
+                    .map_err(|_| TransitionError::Storage)?;
+
+                let Some(row) = row else {
+                    return Err(TransitionError::NotFound);
+                };
+
+                let event_id = row.get::<_, i64>("id");
+                let current_status = row.get::<_, String>("status");
+                if !allowed_statuses.iter().any(|status| current_status == *status) {
+                    return Err(TransitionError::InvalidTransition);
+                }
+
+                let changed_at = Utc::now();
+                postgres
+                    .client
+                    .execute(
+                        "
+                        UPDATE webhook_hub.webhook_events
+                        SET status = $2
+                        WHERE id = $1;
+                        ",
+                        &[&event_id, &next_status],
+                    )
+                    .await
+                    .map_err(|_| TransitionError::Storage)?;
+                postgres
+                    .client
+                    .execute(
+                        "
+                        INSERT INTO webhook_hub.webhook_event_transitions (webhook_event_id, status, changed_at)
+                        VALUES ($1, $2, $3);
+                        ",
+                        &[&event_id, &next_status, &changed_at],
+                    )
+                    .await
+                    .map_err(|_| TransitionError::Storage)?;
+
+                self.find_event_by_public_id(&public_id.to_string())
+                    .await
+                    .map_err(|_| TransitionError::Storage)?
+                    .ok_or(TransitionError::NotFound)
+            }
         }
-
-        webhook_event.status = next_status.to_string();
-        webhook_event
-            .status_history
-            .push(WebhookEventStatusTransition::new(next_status, Utc::now().to_rfc3339()));
-        Ok(webhook_event.clone())
     }
 
-    async fn summary(&self) -> WebhookEventSummary {
-        let events = self.events.read().await;
+    async fn summary(&self) -> Result<WebhookEventSummary, StorageError> {
+        let events = self.list_events_filtered(None, None, None).await?;
         let mut by_provider = BTreeMap::new();
         let mut by_status = BTreeMap::new();
 
@@ -369,7 +660,7 @@ impl WebhookHubState {
             *by_status.entry(event.status.clone()).or_insert(0) += 1;
         }
 
-        WebhookEventSummary {
+        Ok(WebhookEventSummary {
             total: events.len() as u64,
             received: events
                 .iter()
@@ -385,7 +676,7 @@ impl WebhookHubState {
                 .count() as u64,
             by_provider,
             by_status,
-        }
+        })
     }
 }
 
@@ -498,6 +789,65 @@ impl ErrorResponse {
 enum TransitionError {
     NotFound,
     InvalidTransition,
+    Storage,
+}
+
+#[derive(Debug)]
+struct StorageError;
+
+fn internal_storage_error(_error: StorageError) -> (StatusCode, Json<ErrorResponse>) {
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(ErrorResponse::new(
+            "webhook_event_storage_error",
+            "Webhook event storage operation failed.",
+        )),
+    )
+}
+
+async fn map_row_to_webhook_event(
+    client: &tokio_postgres::Client,
+    row: Row,
+) -> Result<WebhookEvent, StorageError> {
+    let event_id = row.get::<_, i64>("id");
+    let status_history_rows = client
+        .query(
+            "
+            SELECT status, changed_at
+            FROM webhook_hub.webhook_event_transitions
+            WHERE webhook_event_id = $1
+            ORDER BY changed_at ASC, id ASC;
+            ",
+            &[&event_id],
+        )
+        .await
+        .map_err(|_| StorageError)?;
+
+    let status_history = status_history_rows
+        .into_iter()
+        .map(map_row_to_transition)
+        .collect();
+
+    Ok(WebhookEvent {
+        id: event_id as u64,
+        public_id: row.get::<_, Uuid>("public_id").to_string(),
+        provider: row.get("provider"),
+        event_type: row.get("event_type"),
+        external_id: row.get("external_id"),
+        payload_summary: row.get("payload_summary"),
+        status: row.get("status"),
+        received_at: row
+            .get::<_, chrono::DateTime<Utc>>("received_at")
+            .to_rfc3339(),
+        status_history,
+    })
+}
+
+fn map_row_to_transition(row: Row) -> WebhookEventStatusTransition {
+    WebhookEventStatusTransition::new(
+        row.get::<_, String>("status").as_str(),
+        row.get::<_, chrono::DateTime<Utc>>("changed_at").to_rfc3339(),
+    )
 }
 
 #[cfg(test)]

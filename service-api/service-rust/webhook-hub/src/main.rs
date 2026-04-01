@@ -2,6 +2,7 @@
 // Regra de negocio nao deve ser implementada aqui.
 mod api;
 mod config;
+mod infrastructure;
 mod server;
 mod telemetry;
 

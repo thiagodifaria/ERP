@@ -5,6 +5,7 @@ The webhook-hub service protects the platform from external webhook bursts.
 Initial scope:
 
 - runtime bootstrap
+- repository driver selection between memory and PostgreSQL
 - health endpoint
 - router boundary
 - webhook intake list and ingest routes
@@ -35,3 +36,7 @@ Event query params:
 - `provider=<provider>`
 - `event_type=<eventType>`
 - `status=<status>`
+
+Runtime switch:
+
+- `WEBHOOK_HUB_REPOSITORY_DRIVER=postgres`

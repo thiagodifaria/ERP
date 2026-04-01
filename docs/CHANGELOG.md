@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.46`: [UPDATE 01/04/2026 - 08:25 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub foi reestruturado para suportar backend selecionavel entre memoria e PostgreSQL, com config dedicada, conexao relacional e bootstrap HTTP preparado para os dois drivers.
+- `v0.1.46`: [UPDATE 01/04/2026 - 08:26 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O runtime em Rust manteve a suite de rotas e transicoes passando em container apos a troca do estado unico por backend de persistencia configuravel.
 - `v0.1.45`: [UPDATE 01/04/2026 - 08:05 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` ganhou ciclo de vida inicial de execucao com `start`, `complete` e `fail`, incluindo timestamps operacionais e resumo por status em memoria.
 - `v0.1.45`: [UPDATE 01/04/2026 - 08:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O repositorio passou a ignorar artefatos `*.egg-info` do Python, enquanto os testes do `workflow-runtime` cobriram transicoes validas e invalidas de execucao.
 - `v0.1.44`: [UPDATE 01/04/2026 - 07:58 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack Python entrou no projeto com o servico `analytics`, usando FastAPI, health endpoints e o primeiro relatorio publico `GET /api/analytics/reports/pipeline-summary`.
