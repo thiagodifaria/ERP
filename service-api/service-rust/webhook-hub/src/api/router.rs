@@ -11,7 +11,7 @@ use std::{
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    routing::get,
+    routing::{get, post},
     Json, Router,
 };
 use chrono::Utc;
@@ -28,6 +28,8 @@ pub fn build_router() -> Router {
         .route("/api/webhook-hub/events", get(list_events).post(create_event))
         .route("/api/webhook-hub/events/summary", get(get_event_summary))
         .route("/api/webhook-hub/events/:public_id", get(get_event_by_public_id))
+        .route("/api/webhook-hub/events/:public_id/validate", post(validate_event))
+        .route("/api/webhook-hub/events/:public_id/reject", post(reject_event))
         .with_state(state)
 }
 
@@ -124,6 +126,50 @@ async fn get_event_by_public_id(
     }
 }
 
+async fn validate_event(
+    State(state): State<WebhookHubState>,
+    Path(public_id): Path<String>,
+) -> Result<Json<WebhookEvent>, (StatusCode, Json<ErrorResponse>)> {
+    map_transition_result(
+        state
+            .transition_event_status(&public_id, "validated", &["received"])
+            .await,
+    )
+}
+
+async fn reject_event(
+    State(state): State<WebhookHubState>,
+    Path(public_id): Path<String>,
+) -> Result<Json<WebhookEvent>, (StatusCode, Json<ErrorResponse>)> {
+    map_transition_result(
+        state
+            .transition_event_status(&public_id, "rejected", &["received", "validated"])
+            .await,
+    )
+}
+
+fn map_transition_result(
+    result: Result<WebhookEvent, TransitionError>,
+) -> Result<Json<WebhookEvent>, (StatusCode, Json<ErrorResponse>)> {
+    match result {
+        Ok(webhook_event) => Ok(Json(webhook_event)),
+        Err(TransitionError::NotFound) => Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse::new(
+                "webhook_event_not_found",
+                "Webhook event was not found.",
+            )),
+        )),
+        Err(TransitionError::InvalidTransition) => Err((
+            StatusCode::CONFLICT,
+            Json(ErrorResponse::new(
+                "webhook_event_transition_invalid",
+                "Webhook event cannot transition from the current status.",
+            )),
+        )),
+    }
+}
+
 #[derive(Clone, Default)]
 struct WebhookHubState {
     next_id: Arc<AtomicU64>,
@@ -212,6 +258,26 @@ impl WebhookHubState {
 
         self.events.write().await.push(webhook_event.clone());
         webhook_event
+    }
+
+    async fn transition_event_status(
+        &self,
+        public_id: &str,
+        next_status: &str,
+        allowed_statuses: &[&str],
+    ) -> Result<WebhookEvent, TransitionError> {
+        let mut events = self.events.write().await;
+        let webhook_event = events
+            .iter_mut()
+            .find(|event| event.public_id == public_id)
+            .ok_or(TransitionError::NotFound)?;
+
+        if !allowed_statuses.iter().any(|status| webhook_event.status == *status) {
+            return Err(TransitionError::InvalidTransition);
+        }
+
+        webhook_event.status = next_status.to_string();
+        Ok(webhook_event.clone())
     }
 
     async fn summary(&self) -> WebhookEventSummary {
@@ -318,6 +384,11 @@ impl ErrorResponse {
     fn new(code: &'static str, message: &'static str) -> Self {
         Self { code, message }
     }
+}
+
+enum TransitionError {
+    NotFound,
+    InvalidTransition,
 }
 
 #[cfg(test)]
@@ -583,5 +654,120 @@ mod tests {
         let duplicate_payload: Value = serde_json::from_slice(&duplicate_body).unwrap();
 
         assert_eq!(duplicate_payload["code"], "webhook_event_conflict");
+    }
+
+    #[tokio::test]
+    async fn webhook_event_should_validate_and_reject_through_explicit_routes() {
+        let app = build_router();
+
+        let create_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/webhook-hub/events")
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(
+                        r#"{"provider":"stripe","event_type":"payment.pending","external_id":"evt_transition_001"}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(create_response.status(), StatusCode::CREATED);
+
+        let create_body = create_response.into_body().collect().await.unwrap().to_bytes();
+        let create_payload: Value = serde_json::from_slice(&create_body).unwrap();
+        let public_id = create_payload["public_id"].as_str().unwrap();
+
+        let validate_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/webhook-hub/events/{public_id}/validate"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(validate_response.status(), StatusCode::OK);
+
+        let validate_body = validate_response.into_body().collect().await.unwrap().to_bytes();
+        let validate_payload: Value = serde_json::from_slice(&validate_body).unwrap();
+        assert_eq!(validate_payload["status"], "validated");
+
+        let reject_response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/webhook-hub/events/{public_id}/reject"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(reject_response.status(), StatusCode::OK);
+
+        let reject_body = reject_response.into_body().collect().await.unwrap().to_bytes();
+        let reject_payload: Value = serde_json::from_slice(&reject_body).unwrap();
+        assert_eq!(reject_payload["status"], "rejected");
+    }
+
+    #[tokio::test]
+    async fn webhook_event_should_block_invalid_status_transitions() {
+        let app = build_router();
+
+        let create_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/webhook-hub/events")
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(
+                        r#"{"provider":"tiny","event_type":"lead.created","external_id":"evt_transition_002"}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(create_response.status(), StatusCode::CREATED);
+
+        let create_body = create_response.into_body().collect().await.unwrap().to_bytes();
+        let create_payload: Value = serde_json::from_slice(&create_body).unwrap();
+        let public_id = create_payload["public_id"].as_str().unwrap();
+
+        let first_validate_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/webhook-hub/events/{public_id}/validate"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(first_validate_response.status(), StatusCode::OK);
+
+        let second_validate_response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/webhook-hub/events/{public_id}/validate"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(second_validate_response.status(), StatusCode::CONFLICT);
+
+        let second_validate_body = second_validate_response.into_body().collect().await.unwrap().to_bytes();
+        let second_validate_payload: Value = serde_json::from_slice(&second_validate_body).unwrap();
+        assert_eq!(
+            second_validate_payload["code"],
+            "webhook_event_transition_invalid"
+        );
     }
 }

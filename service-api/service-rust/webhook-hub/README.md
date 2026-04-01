@@ -21,6 +21,8 @@ Public routes:
 - `GET /api/webhook-hub/events/summary`
 - `GET /api/webhook-hub/events/{publicId}`
 - `POST /api/webhook-hub/events`
+- `POST /api/webhook-hub/events/{publicId}/validate`
+- `POST /api/webhook-hub/events/{publicId}/reject`
 
 Event query params:
 
