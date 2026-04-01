@@ -25,6 +25,16 @@ export class InMemoryWorkflowDefinitionVersionRepository implements WorkflowDefi
       .sort((left, right) => right.versionNumber - left.versionNumber);
   }
 
+  public async findByWorkflowDefinitionIdAndVersionNumber(
+    workflowDefinitionId: number,
+    versionNumber: number
+  ): Promise<WorkflowDefinitionVersion | null> {
+    return this.versions.find((version) => (
+      version.workflowDefinitionId === workflowDefinitionId &&
+      version.versionNumber === versionNumber
+    )) ?? null;
+  }
+
   public async findCurrentByWorkflowDefinitionId(workflowDefinitionId: number): Promise<WorkflowDefinitionVersion | null> {
     const versions = await this.listByWorkflowDefinitionId(workflowDefinitionId);
     return versions[0] ?? null;

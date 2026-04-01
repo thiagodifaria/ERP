@@ -46,6 +46,33 @@ export class PostgresWorkflowDefinitionVersionRepository implements WorkflowDefi
     return result.rows.map((row) => this.mapRow(row));
   }
 
+  public async findByWorkflowDefinitionIdAndVersionNumber(
+    workflowDefinitionId: number,
+    versionNumber: number
+  ): Promise<WorkflowDefinitionVersion | null> {
+    const tenantId = await this.resolveTenantId();
+    const result = await this.pool.query<WorkflowDefinitionVersionRow>(
+      `
+        SELECT
+          id,
+          workflow_definition_id,
+          version_number,
+          snapshot_name,
+          snapshot_description,
+          snapshot_status,
+          snapshot_trigger
+        FROM workflow_control.workflow_definition_versions
+        WHERE tenant_id = $1
+          AND workflow_definition_id = $2
+          AND version_number = $3
+        LIMIT 1
+      `,
+      [tenantId, workflowDefinitionId, versionNumber]
+    );
+
+    return result.rowCount === 0 ? null : this.mapRow(result.rows[0]);
+  }
+
   public async findCurrentByWorkflowDefinitionId(workflowDefinitionId: number): Promise<WorkflowDefinitionVersion | null> {
     const versions = await this.listByWorkflowDefinitionId(workflowDefinitionId);
     return versions[0] ?? null;

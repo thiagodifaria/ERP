@@ -128,6 +128,16 @@ test("workflow definition current version should expose latest snapshot", async 
   assert.equal(payload.snapshotName, "Lead Follow-Up");
 });
 
+test("workflow definition version detail should expose requested snapshot", async () => {
+  const response = await request("/api/workflow-control/definitions/lead-follow-up/versions/1");
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.workflowDefinitionId, 1);
+  assert.equal(payload.versionNumber, 1);
+  assert.equal(payload.snapshotTrigger, "lead.created");
+});
+
 test("workflow definition create should normalize payload and return draft status", async () => {
   const key = `create-${randomUUID()}`;
   const response = await request("/api/workflow-control/definitions", {

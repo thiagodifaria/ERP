@@ -191,3 +191,5 @@
 - `v0.0.94`: [UPDATE 01/04/2026 - 04:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack TypeScript agora trata persistencia de versions com os mesmos drivers `memory` e `postgres` usados no catalogo principal de definicoes.
 - `v0.0.95`: [UPDATE 01/04/2026 - 04:25 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do monorepo passou a validar `versions`, `current-version` e `publish` do `workflow-control` em runtime real com PostgreSQL.
 - `v0.0.95`: [UPDATE 01/04/2026 - 04:25 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O resumo relacional de `workflow-control` agora reflete tambem total de versoes e ultima publicacao por tenant, alinhando operacao e smoke ao historico versionado.
+- `v0.0.96`: [UPDATE 01/04/2026 - 04:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/definitions/{key}/versions/{versionNumber}` para leitura pontual de snapshots publicados.
+- `v0.0.96`: [UPDATE 01/04/2026 - 04:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A API passou a validar `workflow_definition_version_number_invalid` para consultas com numero de versao malformado.
