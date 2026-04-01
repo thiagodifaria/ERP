@@ -247,3 +247,5 @@
 - `v0.1.22`: [UPDATE 01/04/2026 - 06:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ledger de execucao agora tem cobertura ponta a ponta de leitura bootstrap, escrita e resumo vivo no stack local.
 - `v0.1.23`: [UPDATE 01/04/2026 - 06:51 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `workflow-control` passou a validar `start`, `complete`, `fail` e `cancel` de runs em runtime real com PostgreSQL.
 - `v0.1.23`: [UPDATE 01/04/2026 - 06:51 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O summary vivo do ledger agora tambem confirma os efeitos das transicoes operacionais, fechando a trilha ponta a ponta de ciclo de vida.
+- `v0.1.24`: [UPDATE 01/04/2026 - 06:58 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contexto relacional de `workflow-control` ganhou a tabela `workflow_run_events`, abrindo trilha de auditoria e notas por execucao.
+- `v0.1.24`: [UPDATE 01/04/2026 - 06:58 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Cada evento passa a registrar `category`, `body`, `createdBy` e o run associado, preparando historico operacional mais rico no PostgreSQL.
