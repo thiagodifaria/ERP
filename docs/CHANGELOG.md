@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.31`: [UPDATE 01/04/2026 - 05:55 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Workflow-control ganhou `GET /api/workflow-control/runs/{publicId}/events/summary` para resumir volume, categorias e ultimo evento do ledger por execucao.
+- `v0.1.31`: [UPDATE 01/04/2026 - 05:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Workflow-control ampliado com unit, contract e smoke validando resumo operacional de eventos em runtime com PostgreSQL.
 - `v0.1.30`: [UPDATE 01/04/2026 - 05:48 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Workflow-control passou a registrar eventos automáticos de status no ledger de workflow runs durante transicoes `start`, `complete`, `fail` e `cancel`.
 - `v0.1.30`: [UPDATE 01/04/2026 - 05:49 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Workflow-control ampliado com unit, contract e smoke validando timeline operacional com eventos `status` e `note` no PostgreSQL real.
 - `v0.1.29`: [UPDATE 01/04/2026 - 05:40 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Workflow-control ganhou `POST /api/workflow-control/runs/{publicId}/events` para registrar notas operacionais por execucao.

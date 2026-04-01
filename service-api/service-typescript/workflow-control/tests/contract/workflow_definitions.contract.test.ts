@@ -190,6 +190,65 @@ test("workflow run events contract should return created note resource", async (
   assert.ok(payload.createdAt.trim().length > 0);
 });
 
+test("workflow run event summary contract should expose counters and latest metadata", async () => {
+  const createRunResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: randomUUID(),
+      initiatedBy: "contract-summary"
+    })
+  });
+  const createdRun = await createRunResponse.json() as WorkflowRunResponse;
+
+  assert.equal(createRunResponse.status, 201);
+
+  const startResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/start`, {
+    method: "POST"
+  });
+  assert.equal(startResponse.status, 200);
+
+  const createEventResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/events`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      body: "Resumo contratual registrado no ledger.",
+      createdBy: "contract-summary"
+    })
+  });
+  const createdEvent = await createEventResponse.json() as WorkflowRunEventResponse;
+
+  assert.equal(createEventResponse.status, 201);
+
+  const response = await request(`/api/workflow-control/runs/${createdRun.publicId}/events/summary`);
+  const payload = await response.json() as {
+    workflowRunPublicId: string;
+    total: number;
+    byCategory: {
+      status: number;
+      note: number;
+    };
+    latestEventPublicId: string | null;
+    latestCategory: string | null;
+    latestCreatedAt: string | null;
+  };
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.workflowRunPublicId, createdRun.publicId);
+  assert.equal(payload.total, 2);
+  assert.equal(payload.byCategory.status, 1);
+  assert.equal(payload.byCategory.note, 1);
+  assert.equal(payload.latestEventPublicId, createdEvent.publicId);
+  assert.equal(payload.latestCategory, "note");
+  assert.ok(payload.latestCreatedAt);
+});
+
 test("workflow run contract should return created execution resource", async () => {
   const response = await request("/api/workflow-control/runs", {
     method: "POST",

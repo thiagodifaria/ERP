@@ -166,6 +166,38 @@ export async function route(request: IncomingMessage, response: ServerResponse):
 
   if (
     request.method === "GET" &&
+    segments.length === 6 &&
+    segments[0] === "api" &&
+    segments[1] === "workflow-control" &&
+    segments[2] === "runs" &&
+    segments[4] === "events" &&
+    segments[5] === "summary"
+  ) {
+    try {
+      const workflowRunEventSummary = await services.getWorkflowRunEventSummary.execute(segments[3]);
+      json(response, 200, workflowRunEventSummary);
+      return;
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "unexpected_error";
+
+      if (code === "workflow_run_not_found") {
+        json(response, 404, {
+          code,
+          message: "Workflow run was not found."
+        });
+        return;
+      }
+
+      json(response, 500, {
+        code: "unexpected_error",
+        message: "Unexpected error."
+      });
+      return;
+    }
+  }
+
+  if (
+    request.method === "GET" &&
     segments.length === 5 &&
     segments[0] === "api" &&
     segments[1] === "workflow-control" &&

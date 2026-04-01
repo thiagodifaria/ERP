@@ -131,6 +131,55 @@ test("workflow run note create should append an operational note to the executio
   assert.equal(eventsPayload[0].body, "Contato inicial registrado pelo time comercial.");
 });
 
+test("workflow run event summary should expose counters and latest event metadata", async () => {
+  const createRunResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: "00000000-0000-0000-0000-000000009992",
+      initiatedBy: "ops-summary"
+    })
+  });
+  const createdRun = await createRunResponse.json();
+
+  assert.equal(createRunResponse.status, 201);
+
+  const startResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/start`, {
+    method: "POST"
+  });
+  assert.equal(startResponse.status, 200);
+
+  const createEventResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/events`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      body: "Resumo operacional registrado apos iniciar a execucao.",
+      createdBy: "ops-summary"
+    })
+  });
+  const createdEvent = await createEventResponse.json();
+
+  assert.equal(createEventResponse.status, 201);
+
+  const summaryResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/events/summary`);
+  const summaryPayload = await summaryResponse.json();
+
+  assert.equal(summaryResponse.status, 200);
+  assert.equal(summaryPayload.workflowRunPublicId, createdRun.publicId);
+  assert.equal(summaryPayload.total, 2);
+  assert.equal(summaryPayload.byCategory.status, 1);
+  assert.equal(summaryPayload.byCategory.note, 1);
+  assert.equal(summaryPayload.latestEventPublicId, createdEvent.publicId);
+  assert.equal(summaryPayload.latestCategory, "note");
+  assert.match(summaryPayload.latestCreatedAt, /.+/);
+});
+
 test("workflow run create should append a pending execution linked to current version", async () => {
   const response = await request("/api/workflow-control/runs", {
     method: "POST",

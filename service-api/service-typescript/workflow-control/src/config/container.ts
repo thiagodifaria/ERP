@@ -7,6 +7,7 @@ import { FailWorkflowRun } from "../application/fail-workflow-run.js";
 import { GetCurrentWorkflowDefinitionVersion } from "../application/get-current-workflow-definition-version.js";
 import { GetWorkflowDefinitionByKey } from "../application/get-workflow-definition-by-key.js";
 import { GetWorkflowDefinitionVersionByNumber } from "../application/get-workflow-definition-version-by-number.js";
+import { GetWorkflowRunEventSummary } from "../application/get-workflow-run-event-summary.js";
 import { GetWorkflowRunByPublicId } from "../application/get-workflow-run-by-public-id.js";
 import { GetWorkflowRunSummary } from "../application/get-workflow-run-summary.js";
 import { GetWorkflowDefinitionVersionSummary } from "../application/get-workflow-definition-version-summary.js";
@@ -136,6 +137,7 @@ export const services = {
   getCurrentWorkflowDefinitionVersion: new GetCurrentWorkflowDefinitionVersion(repository, versionRepository),
   getWorkflowDefinitionByKey: new GetWorkflowDefinitionByKey(repository),
   getWorkflowDefinitionVersionByNumber: new GetWorkflowDefinitionVersionByNumber(repository, versionRepository),
+  getWorkflowRunEventSummary: new GetWorkflowRunEventSummary(runRepository, runEventRepository),
   getWorkflowRunByPublicId: new GetWorkflowRunByPublicId(runRepository),
   getWorkflowRunSummary: new GetWorkflowRunSummary(runRepository),
   getWorkflowDefinitionVersionSummary: new GetWorkflowDefinitionVersionSummary(repository, versionRepository),
