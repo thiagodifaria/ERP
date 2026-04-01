@@ -211,3 +211,5 @@
 - `v0.1.4`: [UPDATE 01/04/2026 - 05:15 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional do monorepo foi atualizada para refletir que o contexto `workflow-control` agora ja pode ser diagnosticado tambem pelo angulo de execucao, e nao so de catalogo.
 - `v0.1.5`: [UPDATE 01/04/2026 - 05:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O dominio TypeScript ganhou o agregado `WorkflowRun`, com status operacionais, referencias de definicao/versao e metadados de disparo.
 - `v0.1.5`: [UPDATE 01/04/2026 - 05:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack `workflow-control` passou a ter validacoes dedicadas para `triggerEvent`, sujeito de negocio, iniciador e ciclo de vida de execucao.
+- `v0.1.6`: [UPDATE 01/04/2026 - 05:24 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` ganhou o contrato `WorkflowRunRepository` e o primeiro adapter em memoria com bootstrap de execucao para `lead-follow-up`.
+- `v0.1.6`: [UPDATE 01/04/2026 - 05:24 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack TypeScript passou a ter base explicita para listar, criar, localizar e transicionar runs antes da ligacao com PostgreSQL real.

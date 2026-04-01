@@ -13,6 +13,7 @@ Initial scope:
 - domain primitives ready for versioned publication history
 - domain primitives ready for workflow execution tracking
 - version persistence ready for memory and PostgreSQL
+- workflow run repository abstraction ready for memory and PostgreSQL
 - room for workflow definitions and future control-plane APIs
 
 Public routes:
@@ -51,6 +52,7 @@ Current unit scope:
 - workflow definition version summary read
 - workflow definition restore from published snapshot
 - workflow run aggregate validation helpers
+- workflow run repository bootstrap in memory
 
 Current contract scope:
 
