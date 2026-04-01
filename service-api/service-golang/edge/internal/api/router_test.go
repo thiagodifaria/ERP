@@ -24,6 +24,14 @@ func TestRouterShouldExposeHealthDetails(t *testing.T) {
         {Name: "crm", BaseURL: "http://crm.local"},
       },
     ),
+    handler.NewOpsHandler(
+      "edge",
+      stubHealthChecker{},
+      []integration.ServiceEndpoint{
+        {Name: "identity", BaseURL: "http://identity.local"},
+        {Name: "crm", BaseURL: "http://crm.local"},
+      },
+    ),
   )
   request := httptest.NewRequest(http.MethodGet, "/health/details", nil)
   recorder := httptest.NewRecorder()
@@ -52,11 +60,58 @@ func TestRouterShouldExposeHealthDetails(t *testing.T) {
   }
 }
 
+func TestRouterShouldExposeOpsHealth(t *testing.T) {
+  router := NewRouter(
+    telemetry.New("edge-test"),
+    handler.NewHealthHandler("edge", stubHealthChecker{}, nil),
+    handler.NewOpsHandler(
+      "edge",
+      stubHealthChecker{},
+      []integration.ServiceEndpoint{
+        {Name: "identity", BaseURL: "http://identity.local"},
+        {Name: "analytics", BaseURL: "http://analytics.local"},
+      },
+    ),
+  )
+
+  request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/health", nil)
+  recorder := httptest.NewRecorder()
+
+  router.ServeHTTP(recorder, request)
+
+  if recorder.Code != http.StatusOK {
+    t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+  }
+
+  var response dto.OpsHealthResponse
+  if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+    t.Fatalf("unexpected decode error: %v", err)
+  }
+
+  if response.Service != "edge" {
+    t.Fatalf("expected service edge, got %s", response.Service)
+  }
+
+  if response.Summary.Total != 2 {
+    t.Fatalf("expected summary total 2, got %d", response.Summary.Total)
+  }
+}
+
 type stubHealthChecker struct{}
 
 func (stubHealthChecker) Check(_ context.Context, endpoint integration.ServiceEndpoint) dto.DependencyResponse {
   return dto.DependencyResponse{
     Name:   endpoint.Name,
     Status: "ready",
+  }
+}
+
+func (stubHealthChecker) Details(_ context.Context, endpoint integration.ServiceEndpoint) dto.ServiceHealthSnapshot {
+  return dto.ServiceHealthSnapshot{
+    Name:   endpoint.Name,
+    Status: "ready",
+    Dependencies: []dto.DependencyResponse{
+      {Name: "router", Status: "ready"},
+    },
   }
 }

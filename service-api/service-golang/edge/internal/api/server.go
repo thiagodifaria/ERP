@@ -14,18 +14,20 @@ import (
 
 func NewServer(cfg config.Config, logger *telemetry.Logger) *http.Server {
   checker := integration.NewHTTPHealthChecker(cfg.DownstreamTimeout)
-  healthHandler := handler.NewHealthHandler(cfg.ServiceName, checker, []integration.ServiceEndpoint{
+  dependencies := []integration.ServiceEndpoint{
     {Name: "identity", BaseURL: cfg.IdentityBaseURL},
     {Name: "crm", BaseURL: cfg.CRMBaseURL},
     {Name: "workflow-control", BaseURL: cfg.WorkflowControlBaseURL},
     {Name: "workflow-runtime", BaseURL: cfg.WorkflowRuntimeBaseURL},
     {Name: "analytics", BaseURL: cfg.AnalyticsBaseURL},
     {Name: "webhook-hub", BaseURL: cfg.WebhookHubBaseURL},
-  })
+  }
+  healthHandler := handler.NewHealthHandler(cfg.ServiceName, checker, dependencies)
+  opsHandler := handler.NewOpsHandler(cfg.ServiceName, checker, dependencies)
 
   return &http.Server{
     Addr:              cfg.HTTPAddress,
-    Handler:           NewRouter(logger, healthHandler),
+    Handler:           NewRouter(logger, healthHandler, opsHandler),
     ReadHeaderTimeout: 5 * time.Second,
   }
 }

@@ -136,3 +136,18 @@ func (checker handlerTestChecker) Check(_ context.Context, endpoint integration.
     Status: status,
   }
 }
+
+func (checker handlerTestChecker) Details(_ context.Context, endpoint integration.ServiceEndpoint) dto.ServiceHealthSnapshot {
+  status := "ready"
+  if checker.degradedName == endpoint.Name {
+    status = "not_ready"
+  }
+
+  return dto.ServiceHealthSnapshot{
+    Name:   endpoint.Name,
+    Status: status,
+    Dependencies: []dto.DependencyResponse{
+      {Name: "router", Status: "ready"},
+    },
+  }
+}

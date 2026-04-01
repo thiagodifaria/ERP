@@ -320,3 +320,5 @@
 - `v0.1.58`: [UPDATE 01/04/2026 - 11:00 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke passou a validar confiabilidade por provider, `avgTransitionsPerEvent` e leaderboard de entrega em runtime real.
 - `v0.1.59`: [UPDATE 01/04/2026 - 11:18 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `edge` deixou de expor health estatico e passou a verificar dinamicamente `identity`, `crm`, `workflow-control`, `workflow-runtime`, `analytics` e `webhook-hub`.
 - `v0.1.59`: [UPDATE 01/04/2026 - 11:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A configuracao do gateway ganhou URLs dedicadas por servico e timeout de downstream, preparando a camada publica para observabilidade operacional real.
+- `v0.1.60`: [UPDATE 01/04/2026 - 11:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `edge` ganhou `GET /api/edge/ops/health`, consolidando status, dependencias internas e resumo de prontidao dos demais servicos.
+- `v0.1.60`: [UPDATE 01/04/2026 - 11:35 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A camada Go passou a ler `health/details` dos downstreams e devolver um retrato unico de plataforma para diagnostico rapido.

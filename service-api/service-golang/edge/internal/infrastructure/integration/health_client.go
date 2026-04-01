@@ -19,6 +19,7 @@ type ServiceEndpoint struct {
 
 type HealthChecker interface {
   Check(ctx context.Context, endpoint ServiceEndpoint) dto.DependencyResponse
+  Details(ctx context.Context, endpoint ServiceEndpoint) dto.ServiceHealthSnapshot
 }
 
 type HTTPHealthChecker struct {
@@ -32,8 +33,17 @@ func NewHTTPHealthChecker(timeout time.Duration) *HTTPHealthChecker {
 }
 
 func (checker *HTTPHealthChecker) Check(ctx context.Context, endpoint ServiceEndpoint) dto.DependencyResponse {
+  snapshot := checker.Details(ctx, endpoint)
+
+  return dto.DependencyResponse{
+    Name:   endpoint.Name,
+    Status: snapshot.Status,
+  }
+}
+
+func (checker *HTTPHealthChecker) Details(ctx context.Context, endpoint ServiceEndpoint) dto.ServiceHealthSnapshot {
   if strings.TrimSpace(endpoint.BaseURL) == "" {
-    return dto.DependencyResponse{
+    return dto.ServiceHealthSnapshot{
       Name:   endpoint.Name,
       Status: "not_configured",
     }
@@ -42,11 +52,11 @@ func (checker *HTTPHealthChecker) Check(ctx context.Context, endpoint ServiceEnd
   request, err := http.NewRequestWithContext(
     ctx,
     http.MethodGet,
-    strings.TrimRight(endpoint.BaseURL, "/")+"/health/ready",
+    strings.TrimRight(endpoint.BaseURL, "/")+"/health/details",
     nil,
   )
   if err != nil {
-    return dto.DependencyResponse{
+    return dto.ServiceHealthSnapshot{
       Name:   endpoint.Name,
       Status: "not_ready",
     }
@@ -54,7 +64,7 @@ func (checker *HTTPHealthChecker) Check(ctx context.Context, endpoint ServiceEnd
 
   response, err := checker.client.Do(request)
   if err != nil {
-    return dto.DependencyResponse{
+    return dto.ServiceHealthSnapshot{
       Name:   endpoint.Name,
       Status: "not_ready",
     }
@@ -62,22 +72,28 @@ func (checker *HTTPHealthChecker) Check(ctx context.Context, endpoint ServiceEnd
   defer response.Body.Close()
 
   if response.StatusCode != http.StatusOK {
-    return dto.DependencyResponse{
+    return dto.ServiceHealthSnapshot{
       Name:   endpoint.Name,
       Status: "not_ready",
     }
   }
 
-  payload := dto.HealthResponse{}
-  if err := json.NewDecoder(response.Body).Decode(&payload); err == nil && payload.Status != "" && payload.Status != "ready" && payload.Status != "live" {
-    return dto.DependencyResponse{
+  payload := dto.ReadinessResponse{}
+  if err := json.NewDecoder(response.Body).Decode(&payload); err != nil {
+    return dto.ServiceHealthSnapshot{
       Name:   endpoint.Name,
       Status: "not_ready",
     }
   }
 
-  return dto.DependencyResponse{
-    Name:   endpoint.Name,
-    Status: "ready",
+  status := payload.Status
+  if status == "" {
+    status = "not_ready"
+  }
+
+  return dto.ServiceHealthSnapshot{
+    Name:         endpoint.Name,
+    Status:       status,
+    Dependencies: payload.Dependencies,
   }
 }
