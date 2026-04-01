@@ -22,6 +22,10 @@ Public routes:
 - `GET /api/webhook-hub/events/{publicId}`
 - `POST /api/webhook-hub/events`
 - `POST /api/webhook-hub/events/{publicId}/validate`
+- `POST /api/webhook-hub/events/{publicId}/queue`
+- `POST /api/webhook-hub/events/{publicId}/process`
+- `POST /api/webhook-hub/events/{publicId}/forward`
+- `POST /api/webhook-hub/events/{publicId}/fail`
 - `POST /api/webhook-hub/events/{publicId}/reject`
 
 Event query params:

@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.38`: [UPDATE 01/04/2026 - 06:51 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ganhou trilha operacional de processamento com `queue`, `process`, `forward` e `fail`, aproximando o intake do comportamento esperado para fan-in robusto.
+- `v0.1.38`: [UPDATE 01/04/2026 - 06:52 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ampliado com testes e smoke cobrindo happy path completo ate `forwarded` e caminho de falha apos fila.
 - `v0.1.37`: [UPDATE 01/04/2026 - 06:43 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ganhou transicoes operacionais explicitas com `POST /api/webhook-hub/events/{publicId}/validate` e `POST /api/webhook-hub/events/{publicId}/reject`, abrindo o ciclo de vida inicial do intake.
 - `v0.1.37`: [UPDATE 01/04/2026 - 06:44 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ampliado com testes e smoke cobrindo transicoes validas e bloqueio de mudanca de status invalida no runtime.
 - `v0.1.36`: [UPDATE 01/04/2026 - 06:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub passou a rejeitar intake duplicado por `provider` e `external_id`, retornando `409 webhook_event_conflict` para reforcar idempotencia operacional.

@@ -29,6 +29,10 @@ pub fn build_router() -> Router {
         .route("/api/webhook-hub/events/summary", get(get_event_summary))
         .route("/api/webhook-hub/events/:public_id", get(get_event_by_public_id))
         .route("/api/webhook-hub/events/:public_id/validate", post(validate_event))
+        .route("/api/webhook-hub/events/:public_id/queue", post(queue_event))
+        .route("/api/webhook-hub/events/:public_id/process", post(process_event))
+        .route("/api/webhook-hub/events/:public_id/forward", post(forward_event))
+        .route("/api/webhook-hub/events/:public_id/fail", post(fail_event))
         .route("/api/webhook-hub/events/:public_id/reject", post(reject_event))
         .with_state(state)
 }
@@ -144,6 +148,50 @@ async fn reject_event(
     map_transition_result(
         state
             .transition_event_status(&public_id, "rejected", &["received", "validated"])
+            .await,
+    )
+}
+
+async fn queue_event(
+    State(state): State<WebhookHubState>,
+    Path(public_id): Path<String>,
+) -> Result<Json<WebhookEvent>, (StatusCode, Json<ErrorResponse>)> {
+    map_transition_result(
+        state
+            .transition_event_status(&public_id, "queued", &["validated"])
+            .await,
+    )
+}
+
+async fn process_event(
+    State(state): State<WebhookHubState>,
+    Path(public_id): Path<String>,
+) -> Result<Json<WebhookEvent>, (StatusCode, Json<ErrorResponse>)> {
+    map_transition_result(
+        state
+            .transition_event_status(&public_id, "processing", &["queued"])
+            .await,
+    )
+}
+
+async fn forward_event(
+    State(state): State<WebhookHubState>,
+    Path(public_id): Path<String>,
+) -> Result<Json<WebhookEvent>, (StatusCode, Json<ErrorResponse>)> {
+    map_transition_result(
+        state
+            .transition_event_status(&public_id, "forwarded", &["processing"])
+            .await,
+    )
+}
+
+async fn fail_event(
+    State(state): State<WebhookHubState>,
+    Path(public_id): Path<String>,
+) -> Result<Json<WebhookEvent>, (StatusCode, Json<ErrorResponse>)> {
+    map_transition_result(
+        state
+            .transition_event_status(&public_id, "failed", &["queued", "processing"])
             .await,
     )
 }
@@ -769,5 +817,152 @@ mod tests {
             second_validate_payload["code"],
             "webhook_event_transition_invalid"
         );
+    }
+
+    #[tokio::test]
+    async fn webhook_event_should_follow_queue_process_and_forward_path() {
+        let app = build_router();
+
+        let create_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/webhook-hub/events")
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(
+                        r#"{"provider":"meta","event_type":"lead.generated","external_id":"evt_transition_003"}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(create_response.status(), StatusCode::CREATED);
+
+        let create_body = create_response.into_body().collect().await.unwrap().to_bytes();
+        let create_payload: Value = serde_json::from_slice(&create_body).unwrap();
+        let public_id = create_payload["public_id"].as_str().unwrap();
+
+        let validate_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/webhook-hub/events/{public_id}/validate"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(validate_response.status(), StatusCode::OK);
+
+        let queue_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/webhook-hub/events/{public_id}/queue"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(queue_response.status(), StatusCode::OK);
+
+        let process_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/webhook-hub/events/{public_id}/process"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(process_response.status(), StatusCode::OK);
+
+        let forward_response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/webhook-hub/events/{public_id}/forward"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(forward_response.status(), StatusCode::OK);
+
+        let forward_body = forward_response.into_body().collect().await.unwrap().to_bytes();
+        let forward_payload: Value = serde_json::from_slice(&forward_body).unwrap();
+        assert_eq!(forward_payload["status"], "forwarded");
+    }
+
+    #[tokio::test]
+    async fn webhook_event_should_fail_after_being_queued() {
+        let app = build_router();
+
+        let create_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/webhook-hub/events")
+                    .header("content-type", "application/json")
+                    .body(axum::body::Body::from(
+                        r#"{"provider":"hotmart","event_type":"invoice.failed","external_id":"evt_transition_004"}"#,
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(create_response.status(), StatusCode::CREATED);
+
+        let create_body = create_response.into_body().collect().await.unwrap().to_bytes();
+        let create_payload: Value = serde_json::from_slice(&create_body).unwrap();
+        let public_id = create_payload["public_id"].as_str().unwrap();
+
+        let validate_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/webhook-hub/events/{public_id}/validate"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(validate_response.status(), StatusCode::OK);
+
+        let queue_response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/webhook-hub/events/{public_id}/queue"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(queue_response.status(), StatusCode::OK);
+
+        let fail_response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri(format!("/api/webhook-hub/events/{public_id}/fail"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(fail_response.status(), StatusCode::OK);
+
+        let fail_body = fail_response.into_body().collect().await.unwrap().to_bytes();
+        let fail_payload: Value = serde_json::from_slice(&fail_body).unwrap();
+        assert_eq!(fail_payload["status"], "failed");
     }
 }
