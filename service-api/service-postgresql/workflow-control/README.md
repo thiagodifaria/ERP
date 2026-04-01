@@ -8,6 +8,7 @@ Current structure:
 - seeds
 - workflow definition catalog
 - workflow definition version catalog
+- workflow run ledger
 - updated_at trigger for mutable records
 - bootstrap seed for lead follow-up orchestration
 - bootstrap seed for version 1 of each base workflow

@@ -201,3 +201,5 @@
 - `v0.0.99`: [UPDATE 01/04/2026 - 04:49 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ciclo ponta a ponta de versionamento ficou validado com publish sequencial, leitura corrente e rollback do catalogo de workflows.
 - `v0.1.0`: [UPDATE 01/04/2026 - 04:55 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/definitions/{key}/versions/summary`, expondo total de snapshots e versao corrente sem precisar baixar o historico completo.
 - `v0.1.0`: [UPDATE 01/04/2026 - 04:55 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O read-side de versionamento ficou mais amigavel para painis e diagnostico rapido, consolidando o primeiro bloco forte de publicacao/versionamento da stack TypeScript.
+- `v0.1.1`: [UPDATE 01/04/2026 - 05:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contexto relacional de `workflow-control` ganhou a tabela `workflow_runs`, abrindo a trilha de execucao operacional dos fluxos publicados.
+- `v0.1.1`: [UPDATE 01/04/2026 - 05:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Cada run passa a guardar definicao, versao usada, status, evento de disparo, sujeito de negocio e carimbos de ciclo de vida no PostgreSQL.
