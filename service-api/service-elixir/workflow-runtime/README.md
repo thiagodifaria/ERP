@@ -10,6 +10,8 @@ Initial scope:
 - health and readiness routes
 - execution list route
 - execution summary route
+- execution transition ledger
+- filtered operational reads by tenant and status
 - room for timers, retries and durable orchestration
 
 Public routes:
@@ -19,11 +21,13 @@ Public routes:
 - `GET /health/details`
 - `GET /api/workflow-runtime/executions`
 - `GET /api/workflow-runtime/executions/{publicId}`
+- `GET /api/workflow-runtime/executions/{publicId}/transitions`
 - `GET /api/workflow-runtime/executions/summary`
 - `POST /api/workflow-runtime/executions`
 - `POST /api/workflow-runtime/executions/{publicId}/start`
 - `POST /api/workflow-runtime/executions/{publicId}/complete`
 - `POST /api/workflow-runtime/executions/{publicId}/fail`
+- `POST /api/workflow-runtime/executions/{publicId}/cancel`
 
 Container-first validation:
 

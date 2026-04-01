@@ -38,7 +38,8 @@ defmodule WorkflowRuntime.Api.RouterTest do
              "pending" => 0,
              "running" => 0,
              "completed" => 0,
-             "failed" => 0
+             "failed" => 0,
+             "cancelled" => 0
            }
   end
 
@@ -60,8 +61,10 @@ defmodule WorkflowRuntime.Api.RouterTest do
     detail_payload = Jason.decode!(detail_conn.resp_body)
 
     assert create_conn.status == 201
+    assert create_payload["tenantSlug"] == "bootstrap-ops"
     assert create_payload["workflowDefinitionKey"] == "lead-follow-up"
     assert create_payload["status"] == "pending"
+    assert create_payload["retryCount"] == 0
     assert detail_conn.status == 200
     assert detail_payload["publicId"] == public_id
     assert detail_payload["subjectType"] == "crm.lead"
@@ -114,6 +117,95 @@ defmodule WorkflowRuntime.Api.RouterTest do
     assert complete_payload["completedAt"] != nil
 
     assert summary_payload["completed"] == 1
+  end
+
+  test "execution transitions ledger reflects lifecycle" do
+    create_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "tenantSlug" => "ops-east",
+        "workflowDefinitionKey" => "lead-follow-up",
+        "subjectType" => "crm.lead",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001290",
+        "initiatedBy" => "unit-test"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    public_id = Jason.decode!(create_conn.resp_body)["publicId"]
+
+    _start_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/start") |> Router.call([])
+    _complete_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/complete") |> Router.call([])
+
+    transitions_conn = conn(:get, "/api/workflow-runtime/executions/#{public_id}/transitions") |> Router.call([])
+    transitions_payload = Jason.decode!(transitions_conn.resp_body)
+
+    assert transitions_conn.status == 200
+    assert Enum.map(transitions_payload, & &1["status"]) == ["pending", "running", "completed"]
+    assert Enum.all?(transitions_payload, &(&1["changedBy"] == "unit-test"))
+  end
+
+  test "execution list filters by tenant and status" do
+    first_create_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "tenantSlug" => "ops-east",
+        "workflowDefinitionKey" => "lead-follow-up",
+        "subjectType" => "crm.lead",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001291",
+        "initiatedBy" => "dispatch-user"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    second_create_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "tenantSlug" => "ops-west",
+        "workflowDefinitionKey" => "deal-follow-up",
+        "subjectType" => "crm.deal",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001292",
+        "initiatedBy" => "dispatch-user"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    first_public_id = Jason.decode!(first_create_conn.resp_body)["publicId"]
+    second_public_id = Jason.decode!(second_create_conn.resp_body)["publicId"]
+
+    _start_conn = conn(:post, "/api/workflow-runtime/executions/#{second_public_id}/start") |> Router.call([])
+
+    filtered_conn =
+      conn(:get, "/api/workflow-runtime/executions?tenantSlug=ops-west&status=running") |> Router.call([])
+
+    filtered_payload = Jason.decode!(filtered_conn.resp_body)
+
+    assert filtered_conn.status == 200
+    assert Enum.map(filtered_payload, & &1["publicId"]) == [second_public_id]
+    assert Enum.all?(filtered_payload, &(&1["tenantSlug"] == "ops-west"))
+    assert first_public_id not in Enum.map(filtered_payload, & &1["publicId"])
+  end
+
+  test "execution can be cancelled from runtime lifecycle" do
+    create_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "workflowDefinitionKey" => "lead-follow-up",
+        "subjectType" => "crm.lead",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001293",
+        "initiatedBy" => "unit-test"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    public_id = Jason.decode!(create_conn.resp_body)["publicId"]
+
+    cancel_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/cancel") |> Router.call([])
+    summary_conn = conn(:get, "/api/workflow-runtime/executions/summary") |> Router.call([])
+
+    cancel_payload = Jason.decode!(cancel_conn.resp_body)
+    summary_payload = Jason.decode!(summary_conn.resp_body)
+
+    assert cancel_conn.status == 200
+    assert cancel_payload["status"] == "cancelled"
+    assert cancel_payload["cancelledAt"] != nil
+    assert summary_payload["cancelled"] == 1
   end
 
   test "execution blocks invalid lifecycle transition" do

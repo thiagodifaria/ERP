@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.48`: [UPDATE 01/04/2026 - 09:04 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` passou a carregar `tenantSlug` por execucao, ganhou filtros operacionais na listagem e abriu o ledger publico de transicoes por `GET /api/workflow-runtime/executions/{publicId}/transitions`.
+- `v0.1.48`: [UPDATE 01/04/2026 - 09:05 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O lifecycle do runtime em Elixir ganhou cancelamento, resumo com `cancelled` e cobertura unitária para filtros, ledger e novas transicoes.
 - `v0.1.47`: [UPDATE 01/04/2026 - 08:36 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O compose local passou a subir o `webhook-hub` em modo PostgreSQL por padrao, com variaveis dedicadas do dominio e readiness refletindo `postgresql=ready`.
 - `v0.1.47`: [UPDATE 01/04/2026 - 08:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `db.sh` e o smoke do monorepo ganharam cobertura relacional do `webhook-hub`, validando evento persistido, status terminal `forwarded` e ledger com `5` transicoes no banco real.
 - `v0.1.46`: [UPDATE 01/04/2026 - 08:25 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub foi reestruturado para suportar backend selecionavel entre memoria e PostgreSQL, com config dedicada, conexao relacional e bootstrap HTTP preparado para os dois drivers.

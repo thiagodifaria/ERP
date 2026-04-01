@@ -30,7 +30,9 @@ defmodule WorkflowRuntime.Api.Router do
   end
 
   get "/api/workflow-runtime/executions" do
-    json(conn, 200, ExecutionStore.list())
+    conn = Plug.Conn.fetch_query_params(conn)
+
+    json(conn, 200, ExecutionStore.list(conn.query_params))
   end
 
   get "/api/workflow-runtime/executions/summary" do
@@ -47,6 +49,16 @@ defmodule WorkflowRuntime.Api.Router do
     end
   end
 
+  get "/api/workflow-runtime/executions/:public_id/transitions" do
+    case ExecutionStore.find(public_id) do
+      nil ->
+        json(conn, 404, %{code: "workflow_runtime_execution_not_found", message: "Execution was not found."})
+
+      _execution ->
+        json(conn, 200, ExecutionStore.transitions(public_id))
+    end
+  end
+
   post "/api/workflow-runtime/executions/:public_id/start" do
     transition_execution(conn, public_id, "running", ["pending"])
   end
@@ -57,6 +69,10 @@ defmodule WorkflowRuntime.Api.Router do
 
   post "/api/workflow-runtime/executions/:public_id/fail" do
     transition_execution(conn, public_id, "failed", ["pending", "running"])
+  end
+
+  post "/api/workflow-runtime/executions/:public_id/cancel" do
+    transition_execution(conn, public_id, "cancelled", ["pending", "running"])
   end
 
   post "/api/workflow-runtime/executions" do
