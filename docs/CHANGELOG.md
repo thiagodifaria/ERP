@@ -241,3 +241,5 @@
 - `v0.1.19`: [UPDATE 01/04/2026 - 06:28 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O read-side operacional do ledger ficou congelado tambem para buckets por status e consultas filtradas por definicao, sujeito e iniciador.
 - `v0.1.20`: [UPDATE 01/04/2026 - 06:33 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` ganhou contract coverage para `start`, `complete`, `fail` e `cancel` de `workflow runs`.
 - `v0.1.20`: [UPDATE 01/04/2026 - 06:33 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ciclo de vida publico do ledger operacional ficou congelado tambem no nivel contratual, reduzindo risco de regressao nas transicoes.
+- `v0.1.21`: [UPDATE 01/04/2026 - 06:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `smoke` do monorepo passou a validar no banco o bootstrap de `workflow_runs`, incluindo total e distribuicao por status.
+- `v0.1.21`: [UPDATE 01/04/2026 - 06:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional foi ajustada para deixar explicito que o fluxo `smoke` agora cobre tambem o ledger de execucao do `workflow-control`.

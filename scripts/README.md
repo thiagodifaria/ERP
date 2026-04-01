@@ -28,7 +28,7 @@ Useful commands:
 - `./scripts/test.sh unit`
 - `./scripts/test.sh integration`
 - `./scripts/test.sh contract`  `# contratos HTTP publicos de workflow-control, crm e identity`
-- `./scripts/test.sh smoke`  `# reset relacional + bootstrap + smoke HTTP de workflow-control, crm e identity, incluindo versionamento`
+- `./scripts/test.sh smoke`  `# reset relacional + bootstrap + smoke HTTP de workflow-control, crm e identity, incluindo versionamento e ledger de runs`
 - `./scripts/test.sh all`
 
 Rules:

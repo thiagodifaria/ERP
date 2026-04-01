@@ -101,7 +101,7 @@ test("workflow run create should append a pending execution linked to current ve
 
 test("workflow run summary should expose operational buckets", async () => {
   const listResponse = await request("/api/workflow-control/runs");
-  const runs = await listResponse.json();
+  const runs = await listResponse.json() as Array<{ status: string }>;
   const response = await request("/api/workflow-control/runs/summary");
   const payload = await response.json();
 
@@ -254,7 +254,11 @@ test("workflow runs list should accept operational filters", async () => {
   assert.equal(createResponse.status, 201);
 
   const response = await request("/api/workflow-control/runs?status=pending&workflowDefinitionKey=lead-follow-up&subjectType=crm.lead&initiatedBy=filter-agent");
-  const payload = await response.json();
+  const payload = await response.json() as Array<{
+    status: string;
+    subjectType: string;
+    initiatedBy: string;
+  }>;
 
   assert.equal(response.status, 200);
   assert.ok(Array.isArray(payload));
