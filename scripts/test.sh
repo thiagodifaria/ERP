@@ -345,6 +345,9 @@ run_workflow_control_runtime_smoke() {
   local versions_response
   local current_version_response
   local publish_response
+  local publish_response_v2
+  local version_detail_response
+  local restore_response
   local profile_response
   local detail_response
   local status_response
@@ -430,6 +433,30 @@ run_workflow_control_runtime_smoke() {
 
   if [[ "$status_response" != *"\"key\":\"$created_key\""* || "$status_response" != *'"status":"active"'* ]]; then
     echo "[test] workflow-control status update did not persist"
+    exit 1
+  fi
+
+  publish_response_v2="$(curl -fsS \
+    -X POST \
+    "$base_url/api/workflow-control/definitions/$created_key/versions")"
+  current_version_response="$(curl -fsS "$base_url/api/workflow-control/definitions/$created_key/versions/current")"
+  version_detail_response="$(curl -fsS "$base_url/api/workflow-control/definitions/$created_key/versions/1")"
+  echo "[test] workflow-control publish v2 => $publish_response_v2"
+  echo "[test] workflow-control current version runtime-flow => $current_version_response"
+  echo "[test] workflow-control version detail runtime-flow => $version_detail_response"
+
+  if [[ "$publish_response_v2" != *'"versionNumber":2'* || "$current_version_response" != *'"versionNumber":2'* || "$version_detail_response" != *'"versionNumber":1'* || "$version_detail_response" != *'"snapshotTrigger":"lead.created"'* ]]; then
+    echo "[test] workflow-control version history did not reflect live publish operations"
+    exit 1
+  fi
+
+  restore_response="$(curl -fsS \
+    -X POST \
+    "$base_url/api/workflow-control/definitions/$created_key/versions/1/restore")"
+  echo "[test] workflow-control restore => $restore_response"
+
+  if [[ "$restore_response" != *'"name":"Runtime Flow"'* || "$restore_response" != *'"status":"draft"'* || "$restore_response" != *'"trigger":"lead.created"'* ]]; then
+    echo "[test] workflow-control restore did not bring the definition back to the published snapshot"
     exit 1
   fi
 }

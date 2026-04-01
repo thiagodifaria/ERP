@@ -197,3 +197,5 @@
 - `v0.0.97`: [UPDATE 01/04/2026 - 04:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O fluxo unitario agora valida rollback completo de metadados e status a partir de uma versao historica.
 - `v0.0.98`: [UPDATE 01/04/2026 - 04:43 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` ganhou contract coverage para version detail e restore, congelando tambem o shape publico do rollback.
 - `v0.0.98`: [UPDATE 01/04/2026 - 04:43 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O README do servico passou a deixar explicito que o escopo contratual cobre agora o ciclo completo de versoes.
+- `v0.0.99`: [UPDATE 01/04/2026 - 04:49 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do `workflow-control` passou a validar publicacao de `v2`, leitura de version detail e restore de `v1` no runtime PostgreSQL.
+- `v0.0.99`: [UPDATE 01/04/2026 - 04:49 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ciclo ponta a ponta de versionamento ficou validado com publish sequencial, leitura corrente e rollback do catalogo de workflows.
