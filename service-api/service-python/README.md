@@ -7,6 +7,10 @@ Planned services:
 - analytics
 - simulation
 
+Already started:
+
+- `analytics`
+
 Standard layout:
 
 - `app/server.py`

@@ -1,0 +1,34 @@
+Metadata-Version: 2.4
+Name: analytics
+Version: 0.1.0
+Summary: Analytics service for ERP operational reporting
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi<0.117.0,>=0.116.0
+Requires-Dist: uvicorn<0.36.0,>=0.35.0
+Provides-Extra: dev
+Requires-Dist: httpx<0.29.0,>=0.28.0; extra == "dev"
+Requires-Dist: pytest<8.5.0,>=8.4.0; extra == "dev"
+
+# analytics
+
+The analytics service owns heavy operational reads, summarized reports and future forecasting workloads.
+
+Initial scope:
+
+- FastAPI service bootstrap
+- health and readiness routes
+- first operational pipeline summary report
+- room for warehouse ingestion, ETL and forecasting models
+
+Public routes:
+
+- `GET /health/live`
+- `GET /health/ready`
+- `GET /health/details`
+- `GET /api/analytics/reports/pipeline-summary`
+
+Container-first validation:
+
+- `docker run --rm -v ${PWD}:/workspace -w /workspace/service-api/service-python/analytics python:3.12-slim sh -lc "pip install -e .[dev] && pytest"`
+- `docker build -t erp-analytics ./service-api/service-python/analytics`

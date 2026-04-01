@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.44`: [UPDATE 01/04/2026 - 07:58 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack Python entrou no projeto com o servico `analytics`, usando FastAPI, health endpoints e o primeiro relatorio publico `GET /api/analytics/reports/pipeline-summary`.
+- `v0.1.44`: [UPDATE 01/04/2026 - 07:59 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `analytics` ganhou `pyproject.toml`, Dockerfile e testes unitarios cobrindo bootstrap e payload operacional do resumo de pipeline.
 - `v0.1.43`: [UPDATE 01/04/2026 - 07:44 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` passou a criar execucoes em memoria com `POST /api/workflow-runtime/executions` e leitura individual por `GET /api/workflow-runtime/executions/{publicId}`.
 - `v0.1.43`: [UPDATE 01/04/2026 - 07:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O repositorio foi ajustado para ignorar artefatos `_build/` e `deps/` do Elixir, enquanto os testes do `workflow-runtime` passaram a cobrir create, detail e validacao de payload.
 - `v0.1.42`: [UPDATE 01/04/2026 - 07:33 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack Elixir finalmente entrou no projeto com o servico `workflow-runtime`, usando OTP, Plug e store em memoria para abrir o plano de execucao da automacao.
