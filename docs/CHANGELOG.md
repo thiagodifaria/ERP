@@ -189,3 +189,5 @@
 - `v0.0.93`: [UPDATE 01/04/2026 - 04:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O README do servico passou a explicitar que o escopo contratual agora cobre tambem o ciclo de versoes publicadas.
 - `v0.0.94`: [UPDATE 01/04/2026 - 04:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` ganhou adapter PostgreSQL para `workflow_definition_versions`, fechando listagem, leitura corrente e publicacao numerada em runtime real.
 - `v0.0.94`: [UPDATE 01/04/2026 - 04:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack TypeScript agora trata persistencia de versions com os mesmos drivers `memory` e `postgres` usados no catalogo principal de definicoes.
+- `v0.0.95`: [UPDATE 01/04/2026 - 04:25 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do monorepo passou a validar `versions`, `current-version` e `publish` do `workflow-control` em runtime real com PostgreSQL.
+- `v0.0.95`: [UPDATE 01/04/2026 - 04:25 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O resumo relacional de `workflow-control` agora reflete tambem total de versoes e ultima publicacao por tenant, alinhando operacao e smoke ao historico versionado.

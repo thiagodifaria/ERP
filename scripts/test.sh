@@ -160,16 +160,18 @@ run_identity_database_smoke() {
       SELECT
         tenant.slug || '|' ||
         (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM workflow_control.workflow_definition_versions AS version WHERE version.tenant_id = tenant.id) || '|' ||
         (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id AND definition.status = 'draft') || '|' ||
         (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id AND definition.status = 'active') || '|' ||
-        (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id AND definition.status = 'archived')
+        (SELECT count(*) FROM workflow_control.workflow_definitions AS definition WHERE definition.tenant_id = tenant.id AND definition.status = 'archived') || '|' ||
+        (SELECT COALESCE(MAX(version.version_number), 0) FROM workflow_control.workflow_definition_versions AS version WHERE version.tenant_id = tenant.id)
       FROM identity.tenants AS tenant
       WHERE tenant.slug = '$smoke_slug';
     ")" 
 
   echo "[test] workflow-control db smoke => $workflow_control_summary"
 
-  if [[ "$workflow_control_summary" != "$smoke_slug|1|0|1|0" ]]; then
+  if [[ "$workflow_control_summary" != "$smoke_slug|1|1|0|1|0|1" ]]; then
     echo "[test] unexpected workflow-control db smoke summary"
     exit 1
   fi
@@ -340,6 +342,9 @@ run_workflow_control_runtime_smoke() {
   local list_response
   local create_response
   local created_key="runtime-flow"
+  local versions_response
+  local current_version_response
+  local publish_response
   local profile_response
   local detail_response
   local status_response
@@ -364,6 +369,16 @@ run_workflow_control_runtime_smoke() {
     exit 1
   fi
 
+  versions_response="$(curl -fsS "$base_url/api/workflow-control/definitions/lead-follow-up/versions")"
+  current_version_response="$(curl -fsS "$base_url/api/workflow-control/definitions/lead-follow-up/versions/current")"
+  echo "[test] workflow-control versions => $versions_response"
+  echo "[test] workflow-control current version => $current_version_response"
+
+  if [[ "$versions_response" != *'"versionNumber":1'* || "$current_version_response" != *'"versionNumber":1'* ]]; then
+    echo "[test] workflow-control bootstrap version history was not returned by the live API"
+    exit 1
+  fi
+
   create_response="$(curl -fsS \
     -X POST \
     -H "Content-Type: application/json" \
@@ -373,6 +388,16 @@ run_workflow_control_runtime_smoke() {
 
   if [[ "$create_response" != *"\"key\":\"$created_key\""* || "$create_response" != *'"status":"draft"'* ]]; then
     echo "[test] workflow-control create did not return the expected resource"
+    exit 1
+  fi
+
+  publish_response="$(curl -fsS \
+    -X POST \
+    "$base_url/api/workflow-control/definitions/$created_key/versions")"
+  echo "[test] workflow-control publish => $publish_response"
+
+  if [[ "$publish_response" != *'"versionNumber":1'* || "$publish_response" != *'"snapshotName":"Runtime Flow"'* ]]; then
+    echo "[test] workflow-control version publish did not persist"
     exit 1
   fi
 
