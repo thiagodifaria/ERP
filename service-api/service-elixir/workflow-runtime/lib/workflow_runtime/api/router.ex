@@ -43,7 +43,8 @@ defmodule WorkflowRuntime.Api.Router do
   end
 
   get "/api/workflow-runtime/executions/summary" do
-    json(conn, 200, ExecutionStore.summary())
+    conn = Plug.Conn.fetch_query_params(conn)
+    json(conn, 200, ExecutionStore.summary(conn.query_params))
   end
 
   get "/api/workflow-runtime/executions/:public_id" do

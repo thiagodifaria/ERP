@@ -59,11 +59,11 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     end
   end
 
-  def summary do
+  def summary(filters \\ %{}) do
     if postgres_driver?() do
-      summary_postgres()
+      summary_postgres(filters)
     else
-      summary_memory()
+      summary_memory(filters)
     end
   end
 
@@ -159,8 +159,8 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     end)
   end
 
-  defp summary_memory do
-    executions = list()
+  defp summary_memory(filters) do
+    executions = list(filters)
 
     %{
       total: length(executions),
@@ -359,19 +359,24 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     end
   end
 
-  defp summary_postgres do
+  defp summary_postgres(filters) do
+    filters = normalize_filters(filters)
+    {conditions, params} = postgres_filter_conditions(filters)
+
     statement = """
     SELECT
       count(*) AS total,
-      count(*) FILTER (WHERE status = 'pending') AS pending,
-      count(*) FILTER (WHERE status = 'running') AS running,
-      count(*) FILTER (WHERE status = 'completed') AS completed,
-      count(*) FILTER (WHERE status = 'failed') AS failed,
-      count(*) FILTER (WHERE status = 'cancelled') AS cancelled
-    FROM workflow_runtime.executions
+      count(*) FILTER (WHERE execution.status = 'pending') AS pending,
+      count(*) FILTER (WHERE execution.status = 'running') AS running,
+      count(*) FILTER (WHERE execution.status = 'completed') AS completed,
+      count(*) FILTER (WHERE execution.status = 'failed') AS failed,
+      count(*) FILTER (WHERE execution.status = 'cancelled') AS cancelled
+    FROM workflow_runtime.executions AS execution
+    JOIN identity.tenants AS tenant ON tenant.id = execution.tenant_id
+    #{build_where_clause(conditions)}
     """
 
-    [row] = Postgres.query!(statement, []).rows
+    [row] = Postgres.query!(statement, params).rows
 
     %{
       total: Enum.at(row, 0),

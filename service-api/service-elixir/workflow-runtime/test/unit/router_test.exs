@@ -208,6 +208,48 @@ defmodule WorkflowRuntime.Api.RouterTest do
     assert summary_payload["cancelled"] == 1
   end
 
+  test "execution summary filters by tenant and workflow definition" do
+    completed_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "tenantSlug" => "ops-east",
+        "workflowDefinitionKey" => "lead-follow-up",
+        "subjectType" => "crm.lead",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001294",
+        "initiatedBy" => "summary-user"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    failed_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "tenantSlug" => "ops-east",
+        "workflowDefinitionKey" => "quote-follow-up",
+        "subjectType" => "sales.quote",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001295",
+        "initiatedBy" => "summary-user"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    completed_public_id = Jason.decode!(completed_conn.resp_body)["publicId"]
+    failed_public_id = Jason.decode!(failed_conn.resp_body)["publicId"]
+
+    _start_conn = conn(:post, "/api/workflow-runtime/executions/#{completed_public_id}/start") |> Router.call([])
+    _complete_conn = conn(:post, "/api/workflow-runtime/executions/#{completed_public_id}/complete") |> Router.call([])
+    _fail_conn = conn(:post, "/api/workflow-runtime/executions/#{failed_public_id}/fail") |> Router.call([])
+
+    filtered_summary_conn =
+      conn(:get, "/api/workflow-runtime/executions/summary?tenantSlug=ops-east&workflowDefinitionKey=lead-follow-up")
+      |> Router.call([])
+
+    filtered_summary_payload = Jason.decode!(filtered_summary_conn.resp_body)
+
+    assert filtered_summary_conn.status == 200
+    assert filtered_summary_payload["total"] == 1
+    assert filtered_summary_payload["completed"] == 1
+    assert filtered_summary_payload["failed"] == 0
+  end
+
   test "execution blocks invalid lifecycle transition" do
     create_conn =
       conn(:post, "/api/workflow-runtime/executions", %{

@@ -738,6 +738,7 @@ run_workflow_runtime_smoke() {
   local complete_response
   local transitions_response
   local filtered_response
+  local filtered_summary_response
   local cancel_create_response
   local cancel_public_id
   local cancel_response
@@ -772,6 +773,7 @@ run_workflow_runtime_smoke() {
   complete_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/complete")"
   transitions_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/$created_public_id/transitions")"
   filtered_response="$(curl -fsS "$base_url/api/workflow-runtime/executions?tenantSlug=bootstrap-ops&status=completed")"
+  filtered_summary_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/summary?tenantSlug=bootstrap-ops&workflowDefinitionKey=lead-follow-up")"
 
   cancel_create_response="$(curl -fsS \
     -X POST \
@@ -806,6 +808,7 @@ run_workflow_runtime_smoke() {
   echo "[test] workflow-runtime complete => $complete_response"
   echo "[test] workflow-runtime transitions => $transitions_response"
   echo "[test] workflow-runtime filtered list => $filtered_response"
+  echo "[test] workflow-runtime filtered summary => $filtered_summary_response"
   echo "[test] workflow-runtime cancel => $cancel_response"
   echo "[test] workflow-runtime fail => $fail_response"
   echo "[test] workflow-runtime summary after transitions => $summary_response"
@@ -813,7 +816,7 @@ run_workflow_runtime_smoke() {
   echo "[test] workflow-runtime db summary => $db_summary"
 
   if [[ -z "$created_public_id" || -z "$cancel_public_id" || -z "$fail_public_id" || "$create_response" != *'"tenantSlug":"bootstrap-ops"'* || "$start_response" != *'"status":"running"'* || "$complete_response" != *'"status":"completed"'* || "$complete_response" != *'"completedAt":"'*
-    || "$transitions_response" != *'"status":"pending"'* || "$transitions_response" != *'"status":"running"'* || "$transitions_response" != *'"status":"completed"'* || "$filtered_response" != *"\"publicId\":\"$created_public_id\""* || "$filtered_response" != *'"tenantSlug":"bootstrap-ops"'* || "$cancel_response" != *'"status":"cancelled"'* || "$cancel_response" != *'"tenantSlug":"northwind-group"'* || "$cancel_response" != *'"cancelledAt":"'*
+    || "$transitions_response" != *'"status":"pending"'* || "$transitions_response" != *'"status":"running"'* || "$transitions_response" != *'"status":"completed"'* || "$filtered_response" != *"\"publicId\":\"$created_public_id\""* || "$filtered_response" != *'"tenantSlug":"bootstrap-ops"'* || "$filtered_summary_response" != *'"total":1'* || "$filtered_summary_response" != *'"completed":1'* || "$filtered_summary_response" != *'"failed":0'* || "$cancel_response" != *'"status":"cancelled"'* || "$cancel_response" != *'"tenantSlug":"northwind-group"'* || "$cancel_response" != *'"cancelledAt":"'*
     || "$fail_response" != *'"status":"failed"'* || "$fail_response" != *'"failedAt":"'*
     || "$summary_response" != *'"total":3'* || "$summary_response" != *'"completed":1'* || "$summary_response" != *'"failed":1'* || "$summary_response" != *'"cancelled":1'* || "$list_response" != *"\"publicId\":\"$cancel_public_id\""* || "$list_response" != *"\"publicId\":\"$fail_public_id\""* || "$db_summary" != '3|1|1|1|7' ]]; then
     echo "[test] workflow-runtime runtime lifecycle did not persist in postgresql as expected"
