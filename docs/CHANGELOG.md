@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.50`: [UPDATE 01/04/2026 - 09:22 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contexto PostgreSQL de `workflow-runtime` deixou de ser so planejamento e ganhou schema real com `executions`, `execution_transitions`, timestamps operacionais e trigger de `updated_at`.
+- `v0.1.50`: [UPDATE 01/04/2026 - 09:23 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `db.sh` passou a migrar e resumir o dominio `workflow-runtime`, enquanto a documentacao relacional do monorepo reconheceu oficialmente esse contexto como concreto.
 - `v0.1.49`: [UPDATE 01/04/2026 - 09:16 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` entrou no `docker-compose` local com bootstrap de tenant dedicado e passou a fazer parte da rotina `unit` do monorepo via container Elixir.
 - `v0.1.49`: [UPDATE 01/04/2026 - 09:17 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do monorepo agora sobe o `workflow-runtime`, valida health, create, filtros, ledger, `complete`, `cancel` e `fail` ao vivo no runtime HTTP.
 - `v0.1.48`: [UPDATE 01/04/2026 - 09:04 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` passou a carregar `tenantSlug` por execucao, ganhou filtros operacionais na listagem e abriu o ledger publico de transicoes por `GET /api/workflow-runtime/executions/{publicId}/transitions`.

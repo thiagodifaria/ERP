@@ -70,6 +70,7 @@ Usage:
   ./scripts/db.sh migrate crm
   ./scripts/db.sh migrate webhook-hub
   ./scripts/db.sh migrate workflow-control
+  ./scripts/db.sh migrate workflow-runtime
   ./scripts/db.sh migrate all
   ./scripts/db.sh seed identity
   ./scripts/db.sh seed crm
@@ -79,6 +80,7 @@ Usage:
   ./scripts/db.sh summary crm [tenant-slug]
   ./scripts/db.sh summary webhook-hub
   ./scripts/db.sh summary workflow-control [tenant-slug]
+  ./scripts/db.sh summary workflow-runtime [tenant-slug]
   ./scripts/db.sh psql
 EOF
 }
@@ -109,12 +111,16 @@ main() {
         workflow-control)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/migrations"
           ;;
+        workflow-runtime)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-runtime/migrations"
+          ;;
         all)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/common/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/webhook-hub/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-runtime/migrations"
           ;;
         *)
           usage
@@ -232,6 +238,31 @@ main() {
               (SELECT count(*) FROM workflow_control.workflow_runs AS workflow_run WHERE workflow_run.tenant_id = tenant.id AND workflow_run.status = 'failed') AS failed_runs,
               (SELECT count(*) FROM workflow_control.workflow_runs AS workflow_run WHERE workflow_run.tenant_id = tenant.id AND workflow_run.status = 'cancelled') AS cancelled_runs,
               (SELECT COALESCE(MAX(version.version_number), 0) FROM workflow_control.workflow_definition_versions AS version WHERE version.tenant_id = tenant.id) AS latest_version
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
+          ;;
+        workflow-runtime)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM workflow_runtime.executions AS execution WHERE execution.tenant_id = tenant.id) AS executions,
+              (SELECT count(*) FROM workflow_runtime.execution_transitions AS transition
+                JOIN workflow_runtime.executions AS execution ON execution.id = transition.execution_id
+               WHERE execution.tenant_id = tenant.id) AS transitions,
+              (SELECT count(*) FROM workflow_runtime.executions AS execution WHERE execution.tenant_id = tenant.id AND execution.status = 'pending') AS pending,
+              (SELECT count(*) FROM workflow_runtime.executions AS execution WHERE execution.tenant_id = tenant.id AND execution.status = 'running') AS running,
+              (SELECT count(*) FROM workflow_runtime.executions AS execution WHERE execution.tenant_id = tenant.id AND execution.status = 'completed') AS completed,
+              (SELECT count(*) FROM workflow_runtime.executions AS execution WHERE execution.tenant_id = tenant.id AND execution.status = 'failed') AS failed,
+              (SELECT count(*) FROM workflow_runtime.executions AS execution WHERE execution.tenant_id = tenant.id AND execution.status = 'cancelled') AS cancelled
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;

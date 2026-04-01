@@ -1,11 +1,11 @@
 # workflow-runtime
 
-This domain will own durable execution state, retries, timers and workflow runtime traces.
+This domain owns durable execution state, retries, timers and workflow runtime traces.
 
-Planned structure:
+Current relational scope:
 
-- migrations
-- seeds
-- views
-- functions
-- indexes
+- `workflow_runtime.executions`
+- `workflow_runtime.execution_transitions`
+- lifecycle timestamps and retry count
+- tenant-scoped indexes for execution reads
+- audit trail for status changes
