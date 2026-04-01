@@ -213,3 +213,5 @@
 - `v0.1.5`: [UPDATE 01/04/2026 - 05:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack `workflow-control` passou a ter validacoes dedicadas para `triggerEvent`, sujeito de negocio, iniciador e ciclo de vida de execucao.
 - `v0.1.6`: [UPDATE 01/04/2026 - 05:24 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` ganhou o contrato `WorkflowRunRepository` e o primeiro adapter em memoria com bootstrap de execucao para `lead-follow-up`.
 - `v0.1.6`: [UPDATE 01/04/2026 - 05:24 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack TypeScript passou a ter base explicita para listar, criar, localizar e transicionar runs antes da ligacao com PostgreSQL real.
+- `v0.1.7`: [UPDATE 01/04/2026 - 05:30 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` ganhou adapter PostgreSQL para `workflow_runs`, com suporte a listagem filtrada, leitura por `publicId`, escrita e transicao de status.
+- `v0.1.7`: [UPDATE 01/04/2026 - 05:30 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A trilha de execucao passou a espelhar no banco o mesmo contrato de runtime poliglota ja usado no catalogo principal e no historico de versoes.
