@@ -215,3 +215,5 @@
 - `v0.1.6`: [UPDATE 01/04/2026 - 05:24 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack TypeScript passou a ter base explicita para listar, criar, localizar e transicionar runs antes da ligacao com PostgreSQL real.
 - `v0.1.7`: [UPDATE 01/04/2026 - 05:30 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` ganhou adapter PostgreSQL para `workflow_runs`, com suporte a listagem filtrada, leitura por `publicId`, escrita e transicao de status.
 - `v0.1.7`: [UPDATE 01/04/2026 - 05:30 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A trilha de execucao passou a espelhar no banco o mesmo contrato de runtime poliglota ja usado no catalogo principal e no historico de versoes.
+- `v0.1.8`: [UPDATE 01/04/2026 - 05:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O container de runtime do `workflow-control` passou a instanciar `workflowRuns` com os drivers `memory` e `postgres`.
+- `v0.1.8`: [UPDATE 01/04/2026 - 05:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `health/details` agora reserva explicitamente a dependencia `workflow-runs`, preparando o servico para expor operacao viva de execucoes.

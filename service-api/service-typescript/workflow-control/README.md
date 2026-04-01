@@ -15,6 +15,7 @@ Initial scope:
 - version persistence ready for memory and PostgreSQL
 - workflow run repository abstraction ready for memory and PostgreSQL
 - workflow run PostgreSQL adapter ready for runtime read and write
+- runtime container wired for workflow run persistence and readiness
 - room for workflow definitions and future control-plane APIs
 
 Public routes:
@@ -55,6 +56,7 @@ Current unit scope:
 - workflow run aggregate validation helpers
 - workflow run repository bootstrap in memory
 - workflow run PostgreSQL persistence build
+- workflow run readiness dependency on runtime boot
 
 Current contract scope:
 

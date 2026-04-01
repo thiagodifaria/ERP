@@ -11,11 +11,14 @@ import { UpdateWorkflowDefinition } from "../application/update-workflow-definit
 import { UpdateWorkflowDefinitionStatus } from "../application/update-workflow-definition-status.js";
 import { WorkflowDefinitionRepository } from "../domain/workflow-definition-repository.js";
 import { WorkflowDefinitionVersionRepository } from "../domain/workflow-definition-version-repository.js";
+import { WorkflowRunRepository } from "../domain/workflow-run-repository.js";
 import { loadConfig } from "./env.js";
 import { InMemoryWorkflowDefinitionRepository } from "../infrastructure/in-memory-workflow-definition-repository.js";
 import { InMemoryWorkflowDefinitionVersionRepository } from "../infrastructure/in-memory-workflow-definition-version-repository.js";
+import { InMemoryWorkflowRunRepository } from "../infrastructure/in-memory-workflow-run-repository.js";
 import { PostgresWorkflowDefinitionRepository } from "../infrastructure/postgres-workflow-definition-repository.js";
 import { PostgresWorkflowDefinitionVersionRepository } from "../infrastructure/postgres-workflow-definition-version-repository.js";
+import { PostgresWorkflowRunRepository } from "../infrastructure/postgres-workflow-run-repository.js";
 import pg from "pg";
 
 const { Pool } = pg;
@@ -56,6 +59,24 @@ function buildVersionRepository(): WorkflowDefinitionVersionRepository {
   return new InMemoryWorkflowDefinitionVersionRepository();
 }
 
+function buildRunRepository(): WorkflowRunRepository {
+  if (config.repositoryDriver === "postgres") {
+    return new PostgresWorkflowRunRepository(
+      new Pool({
+        host: config.postgresHost,
+        port: Number(config.postgresPort),
+        database: config.postgresDatabase,
+        user: config.postgresUser,
+        password: config.postgresPassword,
+        ssl: config.postgresSslMode === "disable" ? false : { rejectUnauthorized: false }
+      }),
+      config.bootstrapTenantSlug
+    );
+  }
+
+  return new InMemoryWorkflowRunRepository();
+}
+
 export type ReadinessDependency = {
   name: string;
   status: string;
@@ -64,6 +85,13 @@ export type ReadinessDependency = {
 const config = loadConfig();
 const repository = buildRepository();
 const versionRepository = buildVersionRepository();
+const runRepository = buildRunRepository();
+
+export const repositories = {
+  workflowDefinitions: repository,
+  workflowDefinitionVersions: versionRepository,
+  workflowRuns: runRepository
+};
 
 export const services = {
   createWorkflowDefinition: new CreateWorkflowDefinition(repository),
@@ -85,24 +113,28 @@ export const runtime = {
     if (config.repositoryDriver !== "postgres") {
       return [
         { name: "router", status: "ready" },
-        { name: "definitions-catalog", status: "ready" }
+        { name: "definitions-catalog", status: "ready" },
+        { name: "workflow-runs", status: "ready" }
       ];
     }
 
     try {
       const postgresRepository = repository as PostgresWorkflowDefinitionRepository;
       await postgresRepository.list();
+      await runRepository.list();
 
       return [
         { name: "router", status: "ready" },
         { name: "postgresql", status: "ready" },
-        { name: "definitions-catalog", status: "ready" }
+        { name: "definitions-catalog", status: "ready" },
+        { name: "workflow-runs", status: "ready" }
       ];
     } catch {
       return [
         { name: "router", status: "ready" },
         { name: "postgresql", status: "not_ready" },
-        { name: "definitions-catalog", status: "not_ready" }
+        { name: "definitions-catalog", status: "not_ready" },
+        { name: "workflow-runs", status: "not_ready" }
       ];
     }
   }
