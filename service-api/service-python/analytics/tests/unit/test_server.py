@@ -34,3 +34,14 @@ def test_pipeline_summary_returns_operational_payload() -> None:
     assert payload["metrics"]["leadsCaptured"] == 128
     assert payload["bySource"]["whatsapp"] == 46
     assert payload["backlog"]["runningAutomations"] == 7
+
+
+def test_service_pulse_returns_cross_service_payload() -> None:
+    response = client.get("/api/analytics/reports/service-pulse?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["services"]["crm"]["totalLeads"] == 128
+    assert payload["services"]["workflowControl"]["activeDefinitions"] == 6
+    assert payload["services"]["webhookHub"]["forwarded"] == 87

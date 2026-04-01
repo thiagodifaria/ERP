@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.55`: [UPDATE 01/04/2026 - 10:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `analytics` ganhou o relatorio `GET /api/analytics/reports/service-pulse`, consolidando pulso operacional de CRM, `workflow-control`, `workflow-runtime` e `webhook-hub`.
+- `v0.1.55`: [UPDATE 01/04/2026 - 10:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do monorepo passou a validar esse pulso transversal em runtime real, checando definicoes ativas, runs, execucoes e webhooks a partir do PostgreSQL.
 - `v0.1.54`: [UPDATE 01/04/2026 - 10:12 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `analytics` passou a suportar driver selecionavel entre memoria e PostgreSQL, com dependencias Python para `psycopg` e health/details refletindo o backend relacional quando ativo.
 - `v0.1.54`: [UPDATE 01/04/2026 - 10:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `pipeline-summary` deixou de ser mock em runtime real e passou a ler CRM, `workflow-control`, `workflow-runtime` e `webhook-hub` no PostgreSQL do monorepo.
 - `v0.1.53`: [UPDATE 01/04/2026 - 10:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `analytics` entrou oficialmente no `docker-compose` local e passou a participar da rotina `unit` do monorepo via container Python.

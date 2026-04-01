@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from app.config.settings import settings
 from app.infrastructure.postgres import postgres_ready
 from app.reports.pipeline_summary import build_pipeline_summary
+from app.reports.service_pulse import build_service_pulse
 
 
 app = FastAPI(title=settings.service_name)
@@ -45,3 +46,8 @@ def details() -> dict:
 @app.get("/api/analytics/reports/pipeline-summary")
 def pipeline_summary(tenant_slug: str | None = None) -> dict:
     return build_pipeline_summary(tenant_slug)
+
+
+@app.get("/api/analytics/reports/service-pulse")
+def service_pulse(tenant_slug: str | None = None) -> dict:
+    return build_service_pulse(tenant_slug)

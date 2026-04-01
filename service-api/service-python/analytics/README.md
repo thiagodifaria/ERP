@@ -16,6 +16,7 @@ Public routes:
 - `GET /health/ready`
 - `GET /health/details`
 - `GET /api/analytics/reports/pipeline-summary`
+- `GET /api/analytics/reports/service-pulse`
 
 Container-first validation:
 
