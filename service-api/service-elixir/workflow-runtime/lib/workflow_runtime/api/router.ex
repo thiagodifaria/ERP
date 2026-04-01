@@ -25,13 +25,19 @@ defmodule WorkflowRuntime.Api.Router do
         %{name: "execution-store", status: "ready"}
       end
 
+    workflow_catalog_status =
+      case ExecutionStore.catalog_status() do
+        :ready -> "ready"
+        _ -> "not_ready"
+      end
+
     json(conn, 200, %{
       service: "workflow-runtime",
       status: "ready",
       dependencies: [
         repository_dependency,
         %{name: "timer-wheel", status: "ready"},
-        %{name: "workflow-catalog", status: "pending-runtime-wiring"}
+        %{name: "workflow-catalog", status: workflow_catalog_status}
       ]
     })
   end
@@ -120,6 +126,24 @@ defmodule WorkflowRuntime.Api.Router do
           json(conn, 404, %{
             code: "workflow_runtime_tenant_not_found",
             message: "Workflow runtime tenant was not found."
+          })
+
+        {:error, :workflow_definition_not_found} ->
+          json(conn, 404, %{
+            code: "workflow_runtime_definition_not_found",
+            message: "Workflow definition was not found in the runtime catalog."
+          })
+
+        {:error, :workflow_definition_version_not_found} ->
+          json(conn, 409, %{
+            code: "workflow_runtime_definition_version_not_found",
+            message: "Workflow definition has no published version available for runtime."
+          })
+
+        {:error, :workflow_definition_inactive} ->
+          json(conn, 409, %{
+            code: "workflow_runtime_definition_inactive",
+            message: "Workflow definition is not active for runtime execution."
           })
 
         execution ->

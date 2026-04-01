@@ -83,6 +83,14 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     end
   end
 
+  def catalog_status do
+    if postgres_driver?() do
+      catalog_status_postgres()
+    else
+      :ready
+    end
+  end
+
   defp list_memory(filters) do
     filters = normalize_filters(filters)
 
@@ -107,32 +115,39 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
 
   defp create_memory(attributes) do
     initiated_by = String.trim(attributes["initiatedBy"] || "")
+    workflow_definition_key = String.trim(attributes["workflowDefinitionKey"] || "")
 
-    execution = %{
-      "publicId" => generate_public_id(),
-      "tenantSlug" => normalize_tenant_slug(attributes["tenantSlug"]),
-      "workflowDefinitionKey" => String.trim(attributes["workflowDefinitionKey"] || ""),
-      "subjectType" => String.trim(attributes["subjectType"] || ""),
-      "subjectPublicId" => String.trim(attributes["subjectPublicId"] || ""),
-      "initiatedBy" => initiated_by,
-      "status" => "pending",
-      "retryCount" => 0,
-      "createdAt" => now(),
-      "startedAt" => nil,
-      "completedAt" => nil,
-      "failedAt" => nil,
-      "cancelledAt" => nil
-    }
+    case validate_catalog_memory(workflow_definition_key) do
+      :ok ->
+        execution = %{
+          "publicId" => generate_public_id(),
+          "tenantSlug" => normalize_tenant_slug(attributes["tenantSlug"]),
+          "workflowDefinitionKey" => workflow_definition_key,
+          "subjectType" => String.trim(attributes["subjectType"] || ""),
+          "subjectPublicId" => String.trim(attributes["subjectPublicId"] || ""),
+          "initiatedBy" => initiated_by,
+          "status" => "pending",
+          "retryCount" => 0,
+          "createdAt" => now(),
+          "startedAt" => nil,
+          "completedAt" => nil,
+          "failedAt" => nil,
+          "cancelledAt" => nil
+        }
 
-    Agent.update(__MODULE__, fn state ->
-      %{
-        state
-        | executions: [execution | state.executions],
-          transitions: Map.put(state.transitions, execution["publicId"], [build_transition("pending", initiated_by)])
-      }
-    end)
+        Agent.update(__MODULE__, fn state ->
+          %{
+            state
+            | executions: [execution | state.executions],
+              transitions: Map.put(state.transitions, execution["publicId"], [build_transition("pending", initiated_by)])
+          }
+        end)
 
-    execution
+        execution
+
+      error ->
+        {:error, error}
+    end
   end
 
   defp transition_memory(public_id, next_status, allowed_statuses) do
@@ -323,62 +338,69 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
   defp create_postgres(attributes) do
     tenant_slug = normalize_tenant_slug(attributes["tenantSlug"])
     initiated_by = String.trim(attributes["initiatedBy"] || "")
+    workflow_definition_key = String.trim(attributes["workflowDefinitionKey"] || "")
 
     case fetch_tenant_id(tenant_slug) do
       nil ->
         {:error, :tenant_not_found}
 
       tenant_id ->
-        public_id = generate_public_id()
-        transition_public_id = generate_public_id()
+        case validate_catalog_postgres(tenant_id, workflow_definition_key) do
+          :ok ->
+            public_id = generate_public_id()
+            transition_public_id = generate_public_id()
 
-        {:ok, :created} =
-          Postgres.transaction(fn connection ->
-            Postgrex.query!(
-              connection,
-              """
-              INSERT INTO workflow_runtime.executions (
-                tenant_id,
-                public_id,
-                workflow_definition_key,
-                subject_type,
-                subject_public_id,
-                initiated_by,
-                status,
-                retry_count
-              )
-              VALUES ($1, $2::uuid, $3, $4, $5::uuid, $6, 'pending', 0)
-              """,
-              [
-                tenant_id,
-                uuid_bytes(public_id),
-                String.trim(attributes["workflowDefinitionKey"] || ""),
-                String.trim(attributes["subjectType"] || ""),
-                uuid_bytes(String.trim(attributes["subjectPublicId"] || "")),
-                initiated_by
-              ]
-            )
+            {:ok, :created} =
+              Postgres.transaction(fn connection ->
+                Postgrex.query!(
+                  connection,
+                  """
+                  INSERT INTO workflow_runtime.executions (
+                    tenant_id,
+                    public_id,
+                    workflow_definition_key,
+                    subject_type,
+                    subject_public_id,
+                    initiated_by,
+                    status,
+                    retry_count
+                  )
+                  VALUES ($1, $2::uuid, $3, $4, $5::uuid, $6, 'pending', 0)
+                  """,
+                  [
+                    tenant_id,
+                    uuid_bytes(public_id),
+                    workflow_definition_key,
+                    String.trim(attributes["subjectType"] || ""),
+                    uuid_bytes(String.trim(attributes["subjectPublicId"] || "")),
+                    initiated_by
+                  ]
+                )
 
-            Postgrex.query!(
-              connection,
-              """
-              INSERT INTO workflow_runtime.execution_transitions (
-                public_id,
-                execution_id,
-                status,
-                changed_by
-              )
-              SELECT $1::uuid, execution.id, 'pending', $3
-              FROM workflow_runtime.executions AS execution
-              WHERE execution.public_id = $2::uuid
-              """,
-              [uuid_bytes(transition_public_id), uuid_bytes(public_id), initiated_by]
-            )
+                Postgrex.query!(
+                  connection,
+                  """
+                  INSERT INTO workflow_runtime.execution_transitions (
+                    public_id,
+                    execution_id,
+                    status,
+                    changed_by
+                  )
+                  SELECT $1::uuid, execution.id, 'pending', $3
+                  FROM workflow_runtime.executions AS execution
+                  WHERE execution.public_id = $2::uuid
+                  """,
+                  [uuid_bytes(transition_public_id), uuid_bytes(public_id), initiated_by]
+                )
 
-            :created
-          end)
+                :created
+              end)
 
-        find_postgres(public_id)
+            find_postgres(public_id)
+
+          error ->
+            {:error, error}
+        end
     end
   end
 
@@ -545,6 +567,23 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     Postgres.enabled?()
   end
 
+  defp catalog_status_postgres do
+    case Postgres.query!(
+           """
+           SELECT count(*)
+           FROM workflow_control.workflow_definitions AS definition
+           JOIN identity.tenants AS tenant ON tenant.id = definition.tenant_id
+           WHERE tenant.slug = $1
+           """,
+           [default_tenant_slug()]
+         ).rows do
+      [[count]] when count >= 0 -> :ready
+      _ -> :not_ready
+    end
+  rescue
+    _ -> :not_ready
+  end
+
   defp fetch_tenant_id(tenant_slug) do
     case Postgres.query!(
            "SELECT id FROM identity.tenants WHERE slug = $1 LIMIT 1",
@@ -552,6 +591,50 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
          ).rows do
       [[tenant_id]] -> tenant_id
       _ -> nil
+    end
+  end
+
+  defp validate_catalog_memory(workflow_definition_key) do
+    if workflow_definition_key in ["lead-follow-up", "deal-follow-up", "quote-follow-up"] do
+      :ok
+    else
+      :workflow_definition_not_found
+    end
+  end
+
+  defp validate_catalog_postgres(tenant_id, workflow_definition_key) do
+    case Postgres.query!(
+           """
+           SELECT
+             definition.status,
+             (
+               SELECT version.snapshot_status
+               FROM workflow_control.workflow_definition_versions AS version
+               WHERE version.workflow_definition_id = definition.id
+               ORDER BY version.version_number DESC
+               LIMIT 1
+             ) AS latest_snapshot_status
+           FROM workflow_control.workflow_definitions AS definition
+           WHERE definition.tenant_id = $1
+             AND definition.key = $2
+           LIMIT 1
+           """,
+           [tenant_id, workflow_definition_key]
+         ).rows do
+      [] ->
+        :workflow_definition_not_found
+
+      [[status, nil]] when status in ["draft", "active", "archived"] ->
+        :workflow_definition_version_not_found
+
+      [[status, _latest_snapshot_status]] when status != "active" ->
+        :workflow_definition_inactive
+
+      [[_status, latest_snapshot_status]] when latest_snapshot_status != "active" ->
+        :workflow_definition_inactive
+
+      [[_status, _latest_snapshot_status]] ->
+        :ok
     end
   end
 

@@ -23,6 +23,7 @@ defmodule WorkflowRuntime.Api.RouterTest do
     assert conn.status == 200
     assert payload["status"] == "ready"
     assert Enum.any?(payload["dependencies"], &(&1["name"] == "execution-store"))
+    assert Enum.any?(payload["dependencies"], &(&1["name"] == "workflow-catalog" and &1["status"] == "ready"))
   end
 
   test "execution list and summary start empty" do
@@ -85,6 +86,23 @@ defmodule WorkflowRuntime.Api.RouterTest do
 
     assert create_conn.status == 400
     assert payload["code"] == "workflow_runtime_execution_payload_invalid"
+  end
+
+  test "execution create rejects missing workflow definition from catalog" do
+    create_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "workflowDefinitionKey" => "missing-flow",
+        "subjectType" => "crm.lead",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001118",
+        "initiatedBy" => "unit-test"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    payload = Jason.decode!(create_conn.resp_body)
+
+    assert create_conn.status == 404
+    assert payload["code"] == "workflow_runtime_definition_not_found"
   end
 
   test "execution can start and complete through runtime lifecycle" do

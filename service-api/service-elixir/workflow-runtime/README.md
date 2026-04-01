@@ -12,6 +12,7 @@ Initial scope:
 - execution summary route
 - execution transition ledger
 - filtered operational reads by tenant and status
+- runtime catalog validation against published workflow definitions
 - room for timers, retries and durable orchestration
 - selectable repository driver between memory and PostgreSQL
 
