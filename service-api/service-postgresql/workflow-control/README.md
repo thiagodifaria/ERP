@@ -15,6 +15,7 @@ Current structure:
 - bootstrap seed for lead follow-up orchestration
 - bootstrap seed for version 1 of each base workflow
 - bootstrap seed for first workflow run per tenant
+- bootstrap seed for first workflow run event per tenant
 - views
 - functions
 - indexes
