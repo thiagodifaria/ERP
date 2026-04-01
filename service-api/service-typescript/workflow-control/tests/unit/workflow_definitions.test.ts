@@ -51,6 +51,19 @@ test("workflow definitions list should expose bootstrap catalog", async () => {
   assert.ok(payload.some((definition) => definition.key === "lead-follow-up"));
 });
 
+test("workflow runs list should expose bootstrap execution ledger", async () => {
+  const response = await request("/api/workflow-control/runs");
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.ok(Array.isArray(payload));
+  assert.equal(payload.length, 1);
+  assert.equal(payload[0].publicId, "00000000-0000-0000-0000-000000000301");
+  assert.equal(payload[0].status, "running");
+  assert.equal(payload[0].triggerEvent, "lead.created");
+  assert.equal(payload[0].subjectType, "crm.lead");
+});
+
 test("workflow definition detail should expose created resource by key", async () => {
   const key = `detail-${randomUUID()}`;
   const createResponse = await request("/api/workflow-control/definitions", {

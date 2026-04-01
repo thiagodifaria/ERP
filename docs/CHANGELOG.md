@@ -217,3 +217,5 @@
 - `v0.1.7`: [UPDATE 01/04/2026 - 05:30 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A trilha de execucao passou a espelhar no banco o mesmo contrato de runtime poliglota ja usado no catalogo principal e no historico de versoes.
 - `v0.1.8`: [UPDATE 01/04/2026 - 05:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O container de runtime do `workflow-control` passou a instanciar `workflowRuns` com os drivers `memory` e `postgres`.
 - `v0.1.8`: [UPDATE 01/04/2026 - 05:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `health/details` agora reserva explicitamente a dependencia `workflow-runs`, preparando o servico para expor operacao viva de execucoes.
+- `v0.1.9`: [UPDATE 01/04/2026 - 05:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/runs` como primeira superficie HTTP do ledger de execucao.
+- `v0.1.9`: [UPDATE 01/04/2026 - 05:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A suite unitaria passou a validar a exposicao da run bootstrap `lead-follow-up` pela API TypeScript.
