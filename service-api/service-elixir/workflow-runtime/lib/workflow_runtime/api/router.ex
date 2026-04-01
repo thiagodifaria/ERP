@@ -18,11 +18,18 @@ defmodule WorkflowRuntime.Api.Router do
   end
 
   get "/health/details" do
+    repository_dependency =
+      if WorkflowRuntime.Infrastructure.Postgres.enabled?() do
+        %{name: "postgresql", status: if(WorkflowRuntime.Infrastructure.Postgres.ready?(), do: "ready", else: "not_ready")}
+      else
+        %{name: "execution-store", status: "ready"}
+      end
+
     json(conn, 200, %{
       service: "workflow-runtime",
       status: "ready",
       dependencies: [
-        %{name: "execution-store", status: "ready"},
+        repository_dependency,
         %{name: "timer-wheel", status: "ready"},
         %{name: "workflow-catalog", status: "pending-runtime-wiring"}
       ]
@@ -86,8 +93,16 @@ defmodule WorkflowRuntime.Api.Router do
         message: "Execution payload is invalid."
       })
     else
-      execution = ExecutionStore.create(conn.body_params)
-      json(conn, 201, execution)
+      case ExecutionStore.create(conn.body_params) do
+        {:error, :tenant_not_found} ->
+          json(conn, 404, %{
+            code: "workflow_runtime_tenant_not_found",
+            message: "Workflow runtime tenant was not found."
+          })
+
+        execution ->
+          json(conn, 201, execution)
+      end
     end
   end
 

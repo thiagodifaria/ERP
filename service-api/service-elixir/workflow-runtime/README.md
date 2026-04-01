@@ -13,6 +13,7 @@ Initial scope:
 - execution transition ledger
 - filtered operational reads by tenant and status
 - room for timers, retries and durable orchestration
+- selectable repository driver between memory and PostgreSQL
 
 Public routes:
 
@@ -33,3 +34,7 @@ Container-first validation:
 
 - `docker run --rm -v ${PWD}:/workspace -w /workspace/service-api/service-elixir/workflow-runtime elixir:1.17-alpine sh -lc "apk add --no-cache build-base git && mix local.hex --force && mix local.rebar --force && mix deps.get && mix test"`
 - `docker build -t erp-workflow-runtime ./service-api/service-elixir/workflow-runtime`
+
+Runtime switch:
+
+- `WORKFLOW_RUNTIME_REPOSITORY_DRIVER=postgres`

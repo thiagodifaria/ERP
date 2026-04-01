@@ -4,10 +4,18 @@ defmodule WorkflowRuntime.Application do
   use Application
 
   def start(_type, _args) do
-    children = [
-      WorkflowRuntime.Application.ExecutionStore,
-      WorkflowRuntime.Server
-    ]
+    children =
+      if WorkflowRuntime.Infrastructure.Postgres.enabled?() do
+        [
+          WorkflowRuntime.Infrastructure.Postgres,
+          WorkflowRuntime.Server
+        ]
+      else
+        [
+          WorkflowRuntime.Application.ExecutionStore,
+          WorkflowRuntime.Server
+        ]
+      end
 
     opts = [strategy: :one_for_one, name: WorkflowRuntime.Supervisor]
     Supervisor.start_link(children, opts)
