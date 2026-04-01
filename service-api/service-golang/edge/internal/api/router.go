@@ -10,11 +10,11 @@ import (
   "github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/telemetry"
 )
 
-func NewRouter(logger *telemetry.Logger) http.Handler {
+func NewRouter(logger *telemetry.Logger, healthHandler handler.HealthHandler) http.Handler {
   mux := http.NewServeMux()
-  mux.HandleFunc("/health/live", handler.Live)
-  mux.HandleFunc("/health/ready", handler.Ready)
-  mux.HandleFunc("/health/details", handler.Details)
+  mux.HandleFunc("/health/live", healthHandler.Live)
+  mux.HandleFunc("/health/ready", healthHandler.Ready)
+  mux.HandleFunc("/health/details", healthHandler.Details)
 
   return middleware.WithCorrelation(logger, mux)
 }

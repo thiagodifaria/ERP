@@ -1,17 +1,30 @@
 package api
 
 import (
+  "context"
   "encoding/json"
   "net/http"
   "net/http/httptest"
   "testing"
 
   "github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/api/dto"
+  "github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/api/handler"
+  "github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/infrastructure/integration"
   "github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/telemetry"
 )
 
 func TestRouterShouldExposeHealthDetails(t *testing.T) {
-  router := NewRouter(telemetry.New("edge-test"))
+  router := NewRouter(
+    telemetry.New("edge-test"),
+    handler.NewHealthHandler(
+      "edge",
+      stubHealthChecker{},
+      []integration.ServiceEndpoint{
+        {Name: "identity", BaseURL: "http://identity.local"},
+        {Name: "crm", BaseURL: "http://crm.local"},
+      },
+    ),
+  )
   request := httptest.NewRequest(http.MethodGet, "/health/details", nil)
   recorder := httptest.NewRecorder()
 
@@ -36,5 +49,14 @@ func TestRouterShouldExposeHealthDetails(t *testing.T) {
 
   if len(response.Dependencies) != 3 {
     t.Fatalf("expected 3 dependencies, got %d", len(response.Dependencies))
+  }
+}
+
+type stubHealthChecker struct{}
+
+func (stubHealthChecker) Check(_ context.Context, endpoint integration.ServiceEndpoint) dto.DependencyResponse {
+  return dto.DependencyResponse{
+    Name:   endpoint.Name,
+    Status: "ready",
   }
 }

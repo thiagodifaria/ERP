@@ -3,46 +3,66 @@
 package handler
 
 import (
+  "context"
   "encoding/json"
   "net/http"
 
   "github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/api/dto"
+  "github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/infrastructure/integration"
 )
 
-func Live(writer http.ResponseWriter, request *http.Request) {
+type HealthHandler struct {
+  ServiceName  string
+  Checker      integration.HealthChecker
+  Dependencies []integration.ServiceEndpoint
+}
+
+func NewHealthHandler(serviceName string, checker integration.HealthChecker, dependencies []integration.ServiceEndpoint) HealthHandler {
+  return HealthHandler{
+    ServiceName:  serviceName,
+    Checker:      checker,
+    Dependencies: dependencies,
+  }
+}
+
+func (handler HealthHandler) Live(writer http.ResponseWriter, request *http.Request) {
   respond(writer, dto.HealthResponse{
-    Service: "edge",
+    Service: handler.ServiceName,
     Status:  "live",
   })
 }
 
-func Ready(writer http.ResponseWriter, request *http.Request) {
+func (handler HealthHandler) Ready(writer http.ResponseWriter, request *http.Request) {
   respond(writer, dto.HealthResponse{
-    Service: "edge",
+    Service: handler.ServiceName,
     Status:  "ready",
   })
 }
 
-func Details(writer http.ResponseWriter, request *http.Request) {
+func (handler HealthHandler) Details(writer http.ResponseWriter, request *http.Request) {
+  status := "ready"
+  dependencies := []dto.DependencyResponse{
+    {
+      Name:   "router",
+      Status: "ready",
+    },
+  }
+
+  for _, dependency := range handler.Dependencies {
+    health := handler.Checker.Check(context.Background(), dependency)
+    if health.Status != "ready" {
+      status = "degraded"
+    }
+
+    dependencies = append(dependencies, health)
+  }
+
   writer.Header().Set("Content-Type", "application/json")
   writer.WriteHeader(http.StatusOK)
   _ = json.NewEncoder(writer).Encode(dto.ReadinessResponse{
-    Service: "edge",
-    Status:  "ready",
-    Dependencies: []dto.DependencyResponse{
-      {
-        Name:   "router",
-        Status: "ready",
-      },
-      {
-        Name:   "postgresql",
-        Status: "pending-runtime-wiring",
-      },
-      {
-        Name:   "redis",
-        Status: "pending-runtime-wiring",
-      },
-    },
+    Service:      handler.ServiceName,
+    Status:       status,
+    Dependencies: dependencies,
   })
 }
 
