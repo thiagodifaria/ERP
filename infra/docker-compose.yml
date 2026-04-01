@@ -88,6 +88,22 @@ services:
     ports:
       - "${WORKFLOW_CONTROL_HTTP_PORT}:8084"
 
+  workflow-runtime:
+    build:
+      context: ../service-api/service-elixir/workflow-runtime
+    container_name: erp-workflow-runtime
+    environment:
+      WORKFLOW_RUNTIME_HTTP_HOST: "0.0.0.0"
+      WORKFLOW_RUNTIME_HTTP_PORT: "8085"
+      WORKFLOW_RUNTIME_BOOTSTRAP_TENANT_SLUG: "${WORKFLOW_RUNTIME_BOOTSTRAP_TENANT_SLUG}"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+      service-redis:
+        condition: service_healthy
+    ports:
+      - "${WORKFLOW_RUNTIME_HTTP_PORT}:8085"
+
   identity:
     build:
       context: ../service-api/service-csharp/identity

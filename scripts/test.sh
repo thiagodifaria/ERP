@@ -49,6 +49,14 @@ run_typescript_contract() {
     sh -lc "npm install && npm run test:contract && rm -rf node_modules dist"
 }
 
+run_elixir_unit() {
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-elixir/workflow-runtime:/workspace" \
+    -w /workspace \
+    elixir:1.17-alpine \
+    sh -lc "apk add --no-cache build-base git >/dev/null && mix local.hex --force >/dev/null && mix local.rebar --force >/dev/null && mix deps.get >/dev/null && mix test"
+}
+
 run_dotnet_build() {
   docker run --rm \
     -v "$ROOT_DIR/service-api/service-csharp/identity:/workspace" \
@@ -711,6 +719,88 @@ run_workflow_control_runtime_smoke() {
   fi
 }
 
+run_workflow_runtime_smoke() {
+  local base_url="http://localhost:${WORKFLOW_RUNTIME_HTTP_PORT:-8085}"
+  local health_details_response
+  local list_response
+  local summary_response
+  local create_response
+  local created_public_id
+  local start_response
+  local complete_response
+  local transitions_response
+  local filtered_response
+  local cancel_create_response
+  local cancel_public_id
+  local cancel_response
+  local fail_create_response
+  local fail_public_id
+  local fail_response
+
+  "${COMPOSE_CMD[@]}" up -d --build workflow-runtime
+  wait_for_http_ready "$base_url/health/ready"
+
+  health_details_response="$(curl -fsS "$base_url/health/details")"
+  list_response="$(curl -fsS "$base_url/api/workflow-runtime/executions")"
+  summary_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/summary")"
+  echo "[test] workflow-runtime health details => $health_details_response"
+  echo "[test] workflow-runtime list => $list_response"
+  echo "[test] workflow-runtime summary => $summary_response"
+
+  if [[ "$health_details_response" != *'"name":"execution-store","status":"ready"'* || "$health_details_response" != *'"name":"timer-wheel","status":"ready"'* || "$list_response" != '[]' || "$summary_response" != *'"total":0'* ]]; then
+    echo "[test] workflow-runtime bootstrap runtime state was not clean"
+    exit 1
+  fi
+
+  create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"ops-east","workflowDefinitionKey":"lead-follow-up","subjectType":"crm.lead","subjectPublicId":"00000000-0000-0000-0000-000000008851","initiatedBy":"runtime-smoke"}' \
+    "$base_url/api/workflow-runtime/executions")"
+  created_public_id="$(echo "$create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+
+  start_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/start")"
+  complete_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/complete")"
+  transitions_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/$created_public_id/transitions")"
+  filtered_response="$(curl -fsS "$base_url/api/workflow-runtime/executions?tenantSlug=ops-east&status=completed")"
+
+  cancel_create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"ops-west","workflowDefinitionKey":"deal-follow-up","subjectType":"crm.deal","subjectPublicId":"00000000-0000-0000-0000-000000008852","initiatedBy":"runtime-cancel"}' \
+    "$base_url/api/workflow-runtime/executions")"
+  cancel_public_id="$(echo "$cancel_create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  cancel_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$cancel_public_id/cancel")"
+
+  fail_create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"workflowDefinitionKey":"quote-follow-up","subjectType":"sales.quote","subjectPublicId":"00000000-0000-0000-0000-000000008853","initiatedBy":"runtime-fail"}' \
+    "$base_url/api/workflow-runtime/executions")"
+  fail_public_id="$(echo "$fail_create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  fail_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/fail")"
+  summary_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/summary")"
+  list_response="$(curl -fsS "$base_url/api/workflow-runtime/executions")"
+
+  echo "[test] workflow-runtime create => $create_response"
+  echo "[test] workflow-runtime start => $start_response"
+  echo "[test] workflow-runtime complete => $complete_response"
+  echo "[test] workflow-runtime transitions => $transitions_response"
+  echo "[test] workflow-runtime filtered list => $filtered_response"
+  echo "[test] workflow-runtime cancel => $cancel_response"
+  echo "[test] workflow-runtime fail => $fail_response"
+  echo "[test] workflow-runtime summary after transitions => $summary_response"
+  echo "[test] workflow-runtime list after transitions => $list_response"
+
+  if [[ -z "$created_public_id" || -z "$cancel_public_id" || -z "$fail_public_id" || "$create_response" != *'"tenantSlug":"ops-east"'* || "$start_response" != *'"status":"running"'* || "$complete_response" != *'"status":"completed"'* || "$complete_response" != *'"completedAt":"'*
+    || "$transitions_response" != *'"status":"pending"'* || "$transitions_response" != *'"status":"running"'* || "$transitions_response" != *'"status":"completed"'* || "$filtered_response" != *"\"publicId\":\"$created_public_id\""* || "$filtered_response" != *'"tenantSlug":"ops-east"'* || "$cancel_response" != *'"status":"cancelled"'* || "$cancel_response" != *'"cancelledAt":"'*
+    || "$fail_response" != *'"status":"failed"'* || "$fail_response" != *'"failedAt":"'*
+    || "$summary_response" != *'"total":3'* || "$summary_response" != *'"completed":1'* || "$summary_response" != *'"failed":1'* || "$summary_response" != *'"cancelled":1'* || "$list_response" != *"\"publicId\":\"$cancel_public_id\""* || "$list_response" != *"\"publicId\":\"$fail_public_id\""* ]]; then
+    echo "[test] workflow-runtime runtime lifecycle did not persist in memory as expected"
+    exit 1
+  fi
+}
+
 run_identity_runtime_smoke() {
   local base_url="http://localhost:${IDENTITY_HTTP_PORT:-8081}"
   local tenant_slug="runtime-identity-lab"
@@ -974,11 +1064,13 @@ run_smoke() {
   export IDENTITY_HTTP_PORT="${IDENTITY_HTTP_PORT_SMOKE:-18081}"
   export WEBHOOK_HUB_HTTP_PORT="${WEBHOOK_HUB_HTTP_PORT_SMOKE:-18082}"
   export WORKFLOW_CONTROL_HTTP_PORT="${WORKFLOW_CONTROL_HTTP_PORT_SMOKE:-18084}"
+  export WORKFLOW_RUNTIME_HTTP_PORT="${WORKFLOW_RUNTIME_HTTP_PORT_SMOKE:-18085}"
   bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
   "${COMPOSE_CMD[@]}" ps
   run_identity_database_smoke
   run_webhook_hub_runtime_smoke
   run_workflow_control_runtime_smoke
+  run_workflow_runtime_smoke
   run_crm_runtime_smoke
   run_identity_runtime_smoke
 }
@@ -1001,6 +1093,7 @@ main() {
     unit)
       run_go_unit
       run_typescript_unit
+      run_elixir_unit
       run_dotnet_build
       run_rust_unit
       ;;
@@ -1018,6 +1111,7 @@ main() {
     all)
       run_go_unit
       run_typescript_unit
+      run_elixir_unit
       run_dotnet_build
       run_dotnet_integration
       run_typescript_contract

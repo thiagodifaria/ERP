@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.49`: [UPDATE 01/04/2026 - 09:16 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` entrou no `docker-compose` local com bootstrap de tenant dedicado e passou a fazer parte da rotina `unit` do monorepo via container Elixir.
+- `v0.1.49`: [UPDATE 01/04/2026 - 09:17 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do monorepo agora sobe o `workflow-runtime`, valida health, create, filtros, ledger, `complete`, `cancel` e `fail` ao vivo no runtime HTTP.
 - `v0.1.48`: [UPDATE 01/04/2026 - 09:04 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` passou a carregar `tenantSlug` por execucao, ganhou filtros operacionais na listagem e abriu o ledger publico de transicoes por `GET /api/workflow-runtime/executions/{publicId}/transitions`.
 - `v0.1.48`: [UPDATE 01/04/2026 - 09:05 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O lifecycle do runtime em Elixir ganhou cancelamento, resumo com `cancelled` e cobertura unitária para filtros, ledger e novas transicoes.
 - `v0.1.47`: [UPDATE 01/04/2026 - 08:36 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O compose local passou a subir o `webhook-hub` em modo PostgreSQL por padrao, com variaveis dedicadas do dominio e readiness refletindo `postgresql=ready`.
