@@ -57,6 +57,14 @@ run_elixir_unit() {
     sh -lc "apk add --no-cache build-base git >/dev/null && mix local.hex --force >/dev/null && mix local.rebar --force >/dev/null && mix deps.get >/dev/null && mix test"
 }
 
+run_python_unit() {
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-python/analytics:/workspace" \
+    -w /workspace \
+    python:3.12-slim \
+    sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache analytics.egg-info"
+}
+
 run_dotnet_build() {
   docker run --rm \
     -v "$ROOT_DIR/service-api/service-csharp/identity:/workspace" \
@@ -813,6 +821,25 @@ run_workflow_runtime_smoke() {
   fi
 }
 
+run_analytics_runtime_smoke() {
+  local base_url="http://localhost:${ANALYTICS_HTTP_PORT:-8086}"
+  local health_details_response
+  local pipeline_summary_response
+
+  "${COMPOSE_CMD[@]}" up -d --build analytics
+  wait_for_http_ready "$base_url/health/ready"
+
+  health_details_response="$(curl -fsS "$base_url/health/details")"
+  pipeline_summary_response="$(curl -fsS "$base_url/api/analytics/reports/pipeline-summary?tenant_slug=bootstrap-ops")"
+  echo "[test] analytics health details => $health_details_response"
+  echo "[test] analytics pipeline summary => $pipeline_summary_response"
+
+  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"warehouse","status":"pending-runtime-wiring"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"leadsCaptured":128'* || "$pipeline_summary_response" != *'"runningAutomations":7'* ]]; then
+    echo "[test] analytics runtime bootstrap report did not return the expected payload"
+    exit 1
+  fi
+}
+
 run_identity_runtime_smoke() {
   local base_url="http://localhost:${IDENTITY_HTTP_PORT:-8081}"
   local tenant_slug="runtime-identity-lab"
@@ -1077,12 +1104,14 @@ run_smoke() {
   export WEBHOOK_HUB_HTTP_PORT="${WEBHOOK_HUB_HTTP_PORT_SMOKE:-18082}"
   export WORKFLOW_CONTROL_HTTP_PORT="${WORKFLOW_CONTROL_HTTP_PORT_SMOKE:-18084}"
   export WORKFLOW_RUNTIME_HTTP_PORT="${WORKFLOW_RUNTIME_HTTP_PORT_SMOKE:-18085}"
+  export ANALYTICS_HTTP_PORT="${ANALYTICS_HTTP_PORT_SMOKE:-18086}"
   bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
   "${COMPOSE_CMD[@]}" ps
   run_identity_database_smoke
   run_webhook_hub_runtime_smoke
   run_workflow_control_runtime_smoke
   run_workflow_runtime_smoke
+  run_analytics_runtime_smoke
   run_crm_runtime_smoke
   run_identity_runtime_smoke
 }
@@ -1106,6 +1135,7 @@ main() {
       run_go_unit
       run_typescript_unit
       run_elixir_unit
+      run_python_unit
       run_dotnet_build
       run_rust_unit
       ;;
@@ -1124,6 +1154,7 @@ main() {
       run_go_unit
       run_typescript_unit
       run_elixir_unit
+      run_python_unit
       run_dotnet_build
       run_dotnet_integration
       run_typescript_contract
