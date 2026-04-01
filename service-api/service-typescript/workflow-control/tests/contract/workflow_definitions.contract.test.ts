@@ -40,6 +40,16 @@ type WorkflowRunResponse = {
   cancelledAt: string | null;
 };
 
+type WorkflowRunEventResponse = {
+  id: number;
+  publicId: string;
+  workflowRunPublicId: string;
+  category: string;
+  body: string;
+  createdBy: string;
+  createdAt: string;
+};
+
 type ErrorResponse = {
   code: string;
   message: string;
@@ -127,6 +137,19 @@ test("workflow run contract should expose execution detail by public id", async 
   assert.equal(payload.status, "running");
   assert.equal(payload.triggerEvent, "lead.created");
   assert.equal(payload.subjectType, "crm.lead");
+});
+
+test("workflow run events contract should expose event history by run", async () => {
+  const response = await request("/api/workflow-control/runs/00000000-0000-0000-0000-000000000301/events");
+  const payload = await response.json() as WorkflowRunEventResponse[];
+
+  assert.equal(response.status, 200);
+  assert.ok(payload.length > 0);
+  assert.equal(payload[0].workflowRunPublicId, "00000000-0000-0000-0000-000000000301");
+  assert.equal(payload[0].category, "note");
+  assert.ok(payload[0].body.trim().length > 0);
+  assert.ok(payload[0].createdBy.trim().length > 0);
+  assert.ok(payload[0].createdAt.trim().length > 0);
 });
 
 test("workflow run contract should return created execution resource", async () => {

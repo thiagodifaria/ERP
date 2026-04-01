@@ -29,6 +29,7 @@ Public routes:
 - `GET /api/workflow-control/runs`
 - `GET /api/workflow-control/runs/summary`
 - `GET /api/workflow-control/runs/{publicId}`
+- `GET /api/workflow-control/runs/{publicId}/events`
 - `POST /api/workflow-control/runs/{publicId}/start`
 - `POST /api/workflow-control/runs/{publicId}/complete`
 - `POST /api/workflow-control/runs/{publicId}/fail`
@@ -59,6 +60,7 @@ Current unit scope:
 - workflow run detail read
 - workflow run create linked to current published version
 - workflow run summary read
+- workflow run event history read
 - workflow run start transition
 - workflow run complete transition
 - workflow run fail transition
@@ -82,6 +84,7 @@ Current contract scope:
 - public payload shape for workflow definition list
 - public payload shape for workflow run list
 - public payload shape for workflow run detail
+- public payload shape for workflow run event history
 - workflow run create payload and linkage to current version
 - workflow run operational summary payload
 - workflow run pending-to-running transition
@@ -92,6 +95,7 @@ Current contract scope:
 - contract coverage for workflow run list, detail and create
 - contract coverage for workflow run summary and filters
 - contract coverage for workflow run lifecycle transitions
+- contract coverage for workflow run event history
 - create/update/detail/status lifecycle
 - version list, publish and current-version lifecycle
 - version detail and restore lifecycle

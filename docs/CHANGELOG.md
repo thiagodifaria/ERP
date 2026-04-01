@@ -255,3 +255,5 @@
 - `v0.1.26`: [UPDATE 01/04/2026 - 07:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke relacional do monorepo agora confirma tambem o bootstrap de eventos do ledger operacional.
 - `v0.1.27`: [UPDATE 01/04/2026 - 07:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O dominio TypeScript ganhou `WorkflowRunEvent`, o contrato `WorkflowRunEventRepository` e bootstrap em memoria para eventos de execucao.
 - `v0.1.27`: [UPDATE 01/04/2026 - 07:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack `workflow-control` passou a suportar persistencia de eventos com drivers `memory` e `postgres`, preparando a proxima superficie HTTP do historico operacional.
+- `v0.1.28`: [UPDATE 01/04/2026 - 07:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/runs/{publicId}/events`, expondo o historico bootstrap de eventos por execucao.
+- `v0.1.28`: [UPDATE 01/04/2026 - 07:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A nova superficie de eventos ja entrou em unit, contract e smoke HTTP contra PostgreSQL real.

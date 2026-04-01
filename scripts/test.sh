@@ -348,6 +348,7 @@ run_workflow_control_runtime_smoke() {
   local base_url="http://localhost:${WORKFLOW_CONTROL_HTTP_PORT:-8084}"
   local list_response
   local runs_response
+  local run_events_response
   local runs_summary_response
   local create_response
   local created_key="runtime-flow"
@@ -388,9 +389,11 @@ run_workflow_control_runtime_smoke() {
 
   list_response="$(curl -fsS "$base_url/api/workflow-control/definitions")"
   runs_response="$(curl -fsS "$base_url/api/workflow-control/runs")"
+  run_events_response="$(curl -fsS "$base_url/api/workflow-control/runs/00000000-0000-0000-0000-000000000301/events")"
   runs_summary_response="$(curl -fsS "$base_url/api/workflow-control/runs/summary")"
   echo "[test] workflow-control list => $list_response"
   echo "[test] workflow-control runs => $runs_response"
+  echo "[test] workflow-control run events => $run_events_response"
   echo "[test] workflow-control runs summary => $runs_summary_response"
 
   if [[ "$list_response" != *'"key":"lead-follow-up"'* || "$list_response" != *'"status":"active"'* ]]; then
@@ -398,7 +401,7 @@ run_workflow_control_runtime_smoke() {
     exit 1
   fi
 
-  if [[ "$runs_response" != *'"status":"running"'* || "$runs_response" != *'"triggerEvent":"lead.created"'* || "$runs_summary_response" != *'"total":1'* || "$runs_summary_response" != *'"running":1'* ]]; then
+  if [[ "$runs_response" != *'"status":"running"'* || "$runs_response" != *'"triggerEvent":"lead.created"'* || "$run_events_response" != *'"category":"note"'* || "$run_events_response" != *'"createdBy":"bootstrap-seed"'* || "$runs_summary_response" != *'"total":1'* || "$runs_summary_response" != *'"running":1'* ]]; then
     echo "[test] workflow-control bootstrap run ledger was not returned by the live API"
     exit 1
   fi

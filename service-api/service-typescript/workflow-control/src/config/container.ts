@@ -11,6 +11,7 @@ import { GetWorkflowRunSummary } from "../application/get-workflow-run-summary.j
 import { GetWorkflowDefinitionVersionSummary } from "../application/get-workflow-definition-version-summary.js";
 import { ListWorkflowDefinitionVersions } from "../application/list-workflow-definition-versions.js";
 import { ListWorkflowDefinitions } from "../application/list-workflow-definitions.js";
+import { ListWorkflowRunEvents } from "../application/list-workflow-run-events.js";
 import { ListWorkflowRuns } from "../application/list-workflow-runs.js";
 import { PublishWorkflowDefinitionVersion } from "../application/publish-workflow-definition-version.js";
 import { RestoreWorkflowDefinitionVersion } from "../application/restore-workflow-definition-version.js";
@@ -138,6 +139,7 @@ export const services = {
   getWorkflowDefinitionVersionSummary: new GetWorkflowDefinitionVersionSummary(repository, versionRepository),
   listWorkflowDefinitionVersions: new ListWorkflowDefinitionVersions(repository, versionRepository),
   listWorkflowDefinitions: new ListWorkflowDefinitions(repository),
+  listWorkflowRunEvents: new ListWorkflowRunEvents(runRepository, runEventRepository),
   listWorkflowRuns: new ListWorkflowRuns(repository, runRepository),
   publishWorkflowDefinitionVersion: new PublishWorkflowDefinitionVersion(repository, versionRepository),
   restoreWorkflowDefinitionVersion: new RestoreWorkflowDefinitionVersion(repository, versionRepository),

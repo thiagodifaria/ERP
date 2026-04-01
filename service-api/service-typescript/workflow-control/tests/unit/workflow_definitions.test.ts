@@ -75,6 +75,18 @@ test("workflow run detail should expose bootstrap execution by public id", async
   assert.equal(payload.workflowDefinitionVersionId, 1);
 });
 
+test("workflow run events should expose bootstrap event ledger by run", async () => {
+  const response = await request("/api/workflow-control/runs/00000000-0000-0000-0000-000000000301/events");
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.ok(Array.isArray(payload));
+  assert.equal(payload.length, 1);
+  assert.equal(payload[0].publicId, "00000000-0000-0000-0000-000000000501");
+  assert.equal(payload[0].workflowRunPublicId, "00000000-0000-0000-0000-000000000301");
+  assert.equal(payload[0].category, "note");
+});
+
 test("workflow run create should append a pending execution linked to current version", async () => {
   const response = await request("/api/workflow-control/runs", {
     method: "POST",
