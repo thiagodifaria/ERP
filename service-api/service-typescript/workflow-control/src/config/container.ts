@@ -127,12 +127,12 @@ export const repositories = {
 };
 
 export const services = {
-  cancelWorkflowRun: new CancelWorkflowRun(runRepository),
-  completeWorkflowRun: new CompleteWorkflowRun(runRepository),
+  cancelWorkflowRun: new CancelWorkflowRun(runRepository, runEventRepository),
+  completeWorkflowRun: new CompleteWorkflowRun(runRepository, runEventRepository),
   createWorkflowDefinition: new CreateWorkflowDefinition(repository),
   createWorkflowRunNote: new CreateWorkflowRunNote(runRepository, runEventRepository),
   createWorkflowRun: new CreateWorkflowRun(repository, versionRepository, runRepository),
-  failWorkflowRun: new FailWorkflowRun(runRepository),
+  failWorkflowRun: new FailWorkflowRun(runRepository, runEventRepository),
   getCurrentWorkflowDefinitionVersion: new GetCurrentWorkflowDefinitionVersion(repository, versionRepository),
   getWorkflowDefinitionByKey: new GetWorkflowDefinitionByKey(repository),
   getWorkflowDefinitionVersionByNumber: new GetWorkflowDefinitionVersionByNumber(repository, versionRepository),
@@ -145,7 +145,7 @@ export const services = {
   listWorkflowRuns: new ListWorkflowRuns(repository, runRepository),
   publishWorkflowDefinitionVersion: new PublishWorkflowDefinitionVersion(repository, versionRepository),
   restoreWorkflowDefinitionVersion: new RestoreWorkflowDefinitionVersion(repository, versionRepository),
-  startWorkflowRun: new StartWorkflowRun(runRepository),
+  startWorkflowRun: new StartWorkflowRun(runRepository, runEventRepository),
   updateWorkflowDefinition: new UpdateWorkflowDefinition(repository),
   updateWorkflowDefinitionStatus: new UpdateWorkflowDefinitionStatus(repository)
 };

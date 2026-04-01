@@ -199,6 +199,45 @@ test("workflow run start should transition a pending execution to running", asyn
   assert.match(payload.startedAt, /.+/);
 });
 
+test("workflow run transitions should append status events to the execution ledger", async () => {
+  const createResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: "00000000-0000-0000-0000-000000008889",
+      initiatedBy: "ops-timeline"
+    })
+  });
+  const created = await createResponse.json();
+
+  assert.equal(createResponse.status, 201);
+
+  const startResponse = await request(`/api/workflow-control/runs/${created.publicId}/start`, {
+    method: "POST"
+  });
+  assert.equal(startResponse.status, 200);
+
+  const completeResponse = await request(`/api/workflow-control/runs/${created.publicId}/complete`, {
+    method: "POST"
+  });
+  assert.equal(completeResponse.status, 200);
+
+  const eventsResponse = await request(`/api/workflow-control/runs/${created.publicId}/events`);
+  const eventsPayload = await eventsResponse.json();
+
+  assert.equal(eventsResponse.status, 200);
+  assert.ok(Array.isArray(eventsPayload));
+  assert.equal(eventsPayload.length, 2);
+  assert.equal(eventsPayload[0].category, "status");
+  assert.equal(eventsPayload[0].body, "Workflow run moved to running.");
+  assert.equal(eventsPayload[0].createdBy, "workflow-control");
+  assert.equal(eventsPayload[1].body, "Workflow run moved to completed.");
+});
+
 test("workflow run complete should close a running execution", async () => {
   const createResponse = await request("/api/workflow-control/runs", {
     method: "POST",

@@ -63,6 +63,7 @@ Current unit scope:
 - workflow run summary read
 - workflow run event history read
 - workflow run note create
+- workflow run automatic status event ledger
 - workflow run start transition
 - workflow run complete transition
 - workflow run fail transition
@@ -88,6 +89,7 @@ Current contract scope:
 - public payload shape for workflow run detail
 - public payload shape for workflow run event history
 - public payload shape for workflow run note create
+- public payload shape for workflow run status event ledger
 - workflow run create payload and linkage to current version
 - workflow run operational summary payload
 - workflow run pending-to-running transition
