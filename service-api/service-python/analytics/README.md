@@ -19,6 +19,7 @@ Public routes:
 - `GET /api/analytics/reports/service-pulse`
 - `GET /api/analytics/reports/tenant-360`
 - `GET /api/analytics/reports/automation-board`
+- `GET /api/analytics/reports/delivery-reliability`
 
 Container-first validation:
 

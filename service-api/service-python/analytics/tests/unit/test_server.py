@@ -67,3 +67,14 @@ def test_automation_board_returns_delivery_and_runtime_board() -> None:
     assert payload["catalog"]["definitionsActive"] == 6
     assert payload["runtime"]["completedExecutions"] == 28
     assert payload["delivery"]["forwarded"] == 87
+
+
+def test_delivery_reliability_returns_webhook_operational_footprint() -> None:
+    response = client.get("/api/analytics/reports/delivery-reliability?provider=stripe")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["provider"] == "stripe"
+    assert payload["lifecycle"]["totalEvents"] == 93
+    assert payload["statusFootprint"]["forwarded"] == 87
+    assert payload["providerLeaderboard"][0]["provider"] == "stripe"

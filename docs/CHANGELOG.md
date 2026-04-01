@@ -316,3 +316,5 @@
 - `v0.1.56`: [UPDATE 01/04/2026 - 10:32 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do monorepo passou a validar esse snapshot 360 com PostgreSQL real, cobrindo contagens de empresas, usuarios, leads, runs e execucoes.
 - `v0.1.57`: [UPDATE 01/04/2026 - 10:44 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `analytics` ganhou o relatorio `GET /api/analytics/reports/automation-board`, cruzando catalogo, ledger do `workflow-control`, runtime em Elixir e entrega do `webhook-hub`.
 - `v0.1.57`: [UPDATE 01/04/2026 - 10:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke passou a validar backlog de definicoes, versoes publicadas, eventos gravados e transicoes do runtime diretamente do PostgreSQL.
+- `v0.1.58`: [UPDATE 01/04/2026 - 10:59 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `analytics` ganhou o relatorio `GET /api/analytics/reports/delivery-reliability`, lendo o footprint de status e a carga de transicoes do `webhook-hub`.
+- `v0.1.58`: [UPDATE 01/04/2026 - 11:00 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke passou a validar confiabilidade por provider, `avgTransitionsPerEvent` e leaderboard de entrega em runtime real.
