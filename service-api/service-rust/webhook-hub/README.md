@@ -21,6 +21,7 @@ Public routes:
 - `GET /api/webhook-hub/events`
 - `GET /api/webhook-hub/events/summary`
 - `GET /api/webhook-hub/events/{publicId}`
+- `GET /api/webhook-hub/events/{publicId}/transitions`
 - `POST /api/webhook-hub/events`
 - `POST /api/webhook-hub/events/{publicId}/validate`
 - `POST /api/webhook-hub/events/{publicId}/queue`

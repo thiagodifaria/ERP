@@ -28,6 +28,7 @@ pub fn build_router() -> Router {
         .route("/api/webhook-hub/events", get(list_events).post(create_event))
         .route("/api/webhook-hub/events/summary", get(get_event_summary))
         .route("/api/webhook-hub/events/:public_id", get(get_event_by_public_id))
+        .route("/api/webhook-hub/events/:public_id/transitions", get(list_event_transitions))
         .route("/api/webhook-hub/events/:public_id/validate", post(validate_event))
         .route("/api/webhook-hub/events/:public_id/queue", post(queue_event))
         .route("/api/webhook-hub/events/:public_id/process", post(process_event))
@@ -120,6 +121,22 @@ async fn get_event_by_public_id(
 ) -> Result<Json<WebhookEvent>, (StatusCode, Json<ErrorResponse>)> {
     match state.find_event_by_public_id(&public_id).await {
         Some(webhook_event) => Ok(Json(webhook_event)),
+        None => Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse::new(
+                "webhook_event_not_found",
+                "Webhook event was not found.",
+            )),
+        )),
+    }
+}
+
+async fn list_event_transitions(
+    State(state): State<WebhookHubState>,
+    Path(public_id): Path<String>,
+) -> Result<Json<Vec<WebhookEventStatusTransition>>, (StatusCode, Json<ErrorResponse>)> {
+    match state.list_event_transitions(&public_id).await {
+        Some(status_history) => Ok(Json(status_history)),
         None => Err((
             StatusCode::NOT_FOUND,
             Json(ErrorResponse::new(
@@ -286,6 +303,15 @@ impl WebhookHubState {
             .cloned()
     }
 
+    async fn list_event_transitions(&self, public_id: &str) -> Option<Vec<WebhookEventStatusTransition>> {
+        self.events
+            .read()
+            .await
+            .iter()
+            .find(|event| event.public_id == public_id)
+            .map(|event| event.status_history.clone())
+    }
+
     async fn push_event(
         &self,
         provider: String,
@@ -293,6 +319,7 @@ impl WebhookHubState {
         external_id: String,
         payload_summary: Option<String>,
     ) -> WebhookEvent {
+        let received_at = Utc::now().to_rfc3339();
         let webhook_event = WebhookEvent {
             id: self.next_id.fetch_add(1, Ordering::SeqCst) + 1,
             public_id: Uuid::new_v4().to_string(),
@@ -301,7 +328,8 @@ impl WebhookHubState {
             external_id,
             payload_summary: payload_summary.map(|value| value.trim().to_string()),
             status: "received".to_string(),
-            received_at: Utc::now().to_rfc3339(),
+            received_at: received_at.clone(),
+            status_history: vec![WebhookEventStatusTransition::new("received", received_at)],
         };
 
         self.events.write().await.push(webhook_event.clone());
@@ -325,6 +353,9 @@ impl WebhookHubState {
         }
 
         webhook_event.status = next_status.to_string();
+        webhook_event
+            .status_history
+            .push(WebhookEventStatusTransition::new(next_status, Utc::now().to_rfc3339()));
         Ok(webhook_event.clone())
     }
 
@@ -409,6 +440,22 @@ struct WebhookEvent {
     payload_summary: Option<String>,
     status: String,
     received_at: String,
+    status_history: Vec<WebhookEventStatusTransition>,
+}
+
+#[derive(Clone, serde::Serialize)]
+struct WebhookEventStatusTransition {
+    status: String,
+    changed_at: String,
+}
+
+impl WebhookEventStatusTransition {
+    fn new(status: &str, changed_at: String) -> Self {
+        Self {
+            status: status.to_string(),
+            changed_at,
+        }
+    }
 }
 
 #[derive(serde::Deserialize)]
@@ -556,6 +603,7 @@ mod tests {
         assert_eq!(list_payload[0]["provider"], "tiny");
 
         let summary_response = app
+            .clone()
             .oneshot(
                 Request::builder()
                     .uri("/api/webhook-hub/events/summary")
@@ -620,6 +668,7 @@ mod tests {
         assert_eq!(detail_payload["provider"], "shopify");
         assert_eq!(detail_payload["event_type"], "order.created");
         assert_eq!(detail_payload["external_id"], "ord_001");
+        assert_eq!(detail_payload["status_history"][0]["status"], "received");
     }
 
     #[tokio::test]
@@ -917,6 +966,7 @@ mod tests {
         assert_eq!(forward_payload["status"], "forwarded");
 
         let summary_response = app
+            .clone()
             .oneshot(
                 Request::builder()
                     .uri("/api/webhook-hub/events/summary")
@@ -931,6 +981,26 @@ mod tests {
         let summary_payload: Value = serde_json::from_slice(&summary_body).unwrap();
         assert_eq!(summary_payload["handled"], 1);
         assert_eq!(summary_payload["by_status"]["forwarded"], 1);
+
+        let transitions_response = app
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/api/webhook-hub/events/{public_id}/transitions"))
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(transitions_response.status(), StatusCode::OK);
+
+        let transitions_body = transitions_response.into_body().collect().await.unwrap().to_bytes();
+        let transitions_payload: Value = serde_json::from_slice(&transitions_body).unwrap();
+        assert_eq!(transitions_payload.as_array().unwrap().len(), 5);
+        assert_eq!(transitions_payload[0]["status"], "received");
+        assert_eq!(transitions_payload[1]["status"], "validated");
+        assert_eq!(transitions_payload[2]["status"], "queued");
+        assert_eq!(transitions_payload[3]["status"], "processing");
+        assert_eq!(transitions_payload[4]["status"], "forwarded");
     }
 
     #[tokio::test]
