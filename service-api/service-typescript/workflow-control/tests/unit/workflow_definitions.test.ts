@@ -64,6 +64,17 @@ test("workflow runs list should expose bootstrap execution ledger", async () => 
   assert.equal(payload[0].subjectType, "crm.lead");
 });
 
+test("workflow run detail should expose bootstrap execution by public id", async () => {
+  const response = await request("/api/workflow-control/runs/00000000-0000-0000-0000-000000000301");
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.publicId, "00000000-0000-0000-0000-000000000301");
+  assert.equal(payload.status, "running");
+  assert.equal(payload.workflowDefinitionId, 1);
+  assert.equal(payload.workflowDefinitionVersionId, 1);
+});
+
 test("workflow definition detail should expose created resource by key", async () => {
   const key = `detail-${randomUUID()}`;
   const createResponse = await request("/api/workflow-control/definitions", {

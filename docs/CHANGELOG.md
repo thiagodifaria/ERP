@@ -219,3 +219,5 @@
 - `v0.1.8`: [UPDATE 01/04/2026 - 05:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `health/details` agora reserva explicitamente a dependencia `workflow-runs`, preparando o servico para expor operacao viva de execucoes.
 - `v0.1.9`: [UPDATE 01/04/2026 - 05:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/runs` como primeira superficie HTTP do ledger de execucao.
 - `v0.1.9`: [UPDATE 01/04/2026 - 05:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A suite unitaria passou a validar a exposicao da run bootstrap `lead-follow-up` pela API TypeScript.
+- `v0.1.10`: [UPDATE 01/04/2026 - 05:44 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/runs/{publicId}` para leitura individual de execucoes pelo identificador publico.
+- `v0.1.10`: [UPDATE 01/04/2026 - 05:44 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A API TypeScript passou a responder `workflow_run_not_found` quando a run consultada nao existe no ledger bootstrap.

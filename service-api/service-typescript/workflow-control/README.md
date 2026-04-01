@@ -25,6 +25,7 @@ Public routes:
 - `GET /health/details`
 - `GET /api/workflow-control/definitions`
 - `GET /api/workflow-control/runs`
+- `GET /api/workflow-control/runs/{publicId}`
 - `GET /api/workflow-control/definitions/{key}`
 - `GET /api/workflow-control/definitions/{key}/versions`
 - `GET /api/workflow-control/definitions/{key}/versions/current`
@@ -48,6 +49,7 @@ Current unit scope:
 - health and readiness routes
 - workflow definition list, create, detail and status transitions
 - workflow run list read
+- workflow run detail read
 - workflow definition metadata update
 - workflow definition version history read
 - workflow definition manual publication
@@ -64,6 +66,7 @@ Current contract scope:
 
 - public payload shape for workflow definition list
 - public payload shape for workflow run list
+- public payload shape for workflow run detail
 - create/update/detail/status lifecycle
 - version list, publish and current-version lifecycle
 - version detail and restore lifecycle

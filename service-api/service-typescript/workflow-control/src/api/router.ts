@@ -103,6 +103,27 @@ export async function route(request: IncomingMessage, response: ServerResponse):
   }
 
   if (
+    request.method === "GET" &&
+    segments.length === 4 &&
+    segments[0] === "api" &&
+    segments[1] === "workflow-control" &&
+    segments[2] === "runs"
+  ) {
+    const workflowRun = await services.getWorkflowRunByPublicId.execute(segments[3]);
+
+    if (workflowRun === null) {
+      json(response, 404, {
+        code: "workflow_run_not_found",
+        message: "Workflow run was not found."
+      });
+      return;
+    }
+
+    json(response, 200, workflowRun);
+    return;
+  }
+
+  if (
     request.method === "POST" &&
     segments.length === 7 &&
     segments[0] === "api" &&
