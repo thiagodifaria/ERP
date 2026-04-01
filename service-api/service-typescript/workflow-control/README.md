@@ -28,6 +28,7 @@ Public routes:
 - `GET /api/workflow-control/runs`
 - `GET /api/workflow-control/runs/summary`
 - `GET /api/workflow-control/runs/{publicId}`
+- `POST /api/workflow-control/runs/{publicId}/start`
 - `GET /api/workflow-control/definitions/{key}`
 - `GET /api/workflow-control/definitions/{key}/versions`
 - `GET /api/workflow-control/definitions/{key}/versions/current`
@@ -54,6 +55,7 @@ Current unit scope:
 - workflow run detail read
 - workflow run create linked to current published version
 - workflow run summary read
+- workflow run start transition
 - workflow definition metadata update
 - workflow definition version history read
 - workflow definition manual publication
@@ -73,6 +75,7 @@ Current contract scope:
 - public payload shape for workflow run detail
 - workflow run create payload and linkage to current version
 - workflow run operational summary payload
+- workflow run pending-to-running transition
 - create/update/detail/status lifecycle
 - version list, publish and current-version lifecycle
 - version detail and restore lifecycle

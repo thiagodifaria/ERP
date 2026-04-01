@@ -11,6 +11,7 @@ import { ListWorkflowDefinitions } from "../application/list-workflow-definition
 import { ListWorkflowRuns } from "../application/list-workflow-runs.js";
 import { PublishWorkflowDefinitionVersion } from "../application/publish-workflow-definition-version.js";
 import { RestoreWorkflowDefinitionVersion } from "../application/restore-workflow-definition-version.js";
+import { StartWorkflowRun } from "../application/start-workflow-run.js";
 import { UpdateWorkflowDefinition } from "../application/update-workflow-definition.js";
 import { UpdateWorkflowDefinitionStatus } from "../application/update-workflow-definition-status.js";
 import { WorkflowDefinitionRepository } from "../domain/workflow-definition-repository.js";
@@ -111,6 +112,7 @@ export const services = {
   listWorkflowRuns: new ListWorkflowRuns(runRepository),
   publishWorkflowDefinitionVersion: new PublishWorkflowDefinitionVersion(repository, versionRepository),
   restoreWorkflowDefinitionVersion: new RestoreWorkflowDefinitionVersion(repository, versionRepository),
+  startWorkflowRun: new StartWorkflowRun(runRepository),
   updateWorkflowDefinition: new UpdateWorkflowDefinition(repository),
   updateWorkflowDefinitionStatus: new UpdateWorkflowDefinitionStatus(repository)
 };

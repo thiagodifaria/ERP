@@ -225,3 +225,5 @@
 - `v0.1.11`: [UPDATE 01/04/2026 - 05:50 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack TypeScript passou a ligar escrita de run a `workflowDefinitionKey`, `subjectType`, `subjectPublicId` e `initiatedBy`, com erro explicito quando o catalogo ou a versao corrente nao existem.
 - `v0.1.12`: [UPDATE 01/04/2026 - 05:55 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/runs/summary`, expondo total de execucoes e buckets por status.
 - `v0.1.12`: [UPDATE 01/04/2026 - 05:55 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ledger de execucao passou a ter um read-side leve para paineis operacionais e diagnostico rapido sem precisar baixar a lista completa.
+- `v0.1.13`: [UPDATE 01/04/2026 - 06:00 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `POST /api/workflow-control/runs/{publicId}/start`, registrando a partida de execucoes pendentes com `startedAt`.
+- `v0.1.13`: [UPDATE 01/04/2026 - 06:00 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A API passou a validar `workflow_run_transition_invalid` quando uma run tenta iniciar fora do estado `pending`.

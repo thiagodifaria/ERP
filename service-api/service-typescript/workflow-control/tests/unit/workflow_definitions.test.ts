@@ -115,6 +115,34 @@ test("workflow run summary should expose operational buckets", async () => {
   assert.equal(payload.cancelled, runs.filter((run) => run.status === "cancelled").length);
 });
 
+test("workflow run start should transition a pending execution to running", async () => {
+  const createResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: "00000000-0000-0000-0000-000000008888",
+      initiatedBy: "ops-console"
+    })
+  });
+  const created = await createResponse.json();
+
+  assert.equal(createResponse.status, 201);
+
+  const startResponse = await request(`/api/workflow-control/runs/${created.publicId}/start`, {
+    method: "POST"
+  });
+  const payload = await startResponse.json();
+
+  assert.equal(startResponse.status, 200);
+  assert.equal(payload.publicId, created.publicId);
+  assert.equal(payload.status, "running");
+  assert.match(payload.startedAt, /.+/);
+});
+
 test("workflow definition detail should expose created resource by key", async () => {
   const key = `detail-${randomUUID()}`;
   const createResponse = await request("/api/workflow-control/definitions", {
