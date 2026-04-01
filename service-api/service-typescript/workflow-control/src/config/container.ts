@@ -19,13 +19,16 @@ import { UpdateWorkflowDefinition } from "../application/update-workflow-definit
 import { UpdateWorkflowDefinitionStatus } from "../application/update-workflow-definition-status.js";
 import { WorkflowDefinitionRepository } from "../domain/workflow-definition-repository.js";
 import { WorkflowDefinitionVersionRepository } from "../domain/workflow-definition-version-repository.js";
+import { WorkflowRunEventRepository } from "../domain/workflow-run-event-repository.js";
 import { WorkflowRunRepository } from "../domain/workflow-run-repository.js";
 import { loadConfig } from "./env.js";
 import { InMemoryWorkflowDefinitionRepository } from "../infrastructure/in-memory-workflow-definition-repository.js";
 import { InMemoryWorkflowDefinitionVersionRepository } from "../infrastructure/in-memory-workflow-definition-version-repository.js";
+import { InMemoryWorkflowRunEventRepository } from "../infrastructure/in-memory-workflow-run-event-repository.js";
 import { InMemoryWorkflowRunRepository } from "../infrastructure/in-memory-workflow-run-repository.js";
 import { PostgresWorkflowDefinitionRepository } from "../infrastructure/postgres-workflow-definition-repository.js";
 import { PostgresWorkflowDefinitionVersionRepository } from "../infrastructure/postgres-workflow-definition-version-repository.js";
+import { PostgresWorkflowRunEventRepository } from "../infrastructure/postgres-workflow-run-event-repository.js";
 import { PostgresWorkflowRunRepository } from "../infrastructure/postgres-workflow-run-repository.js";
 import pg from "pg";
 
@@ -85,6 +88,24 @@ function buildRunRepository(): WorkflowRunRepository {
   return new InMemoryWorkflowRunRepository();
 }
 
+function buildRunEventRepository(): WorkflowRunEventRepository {
+  if (config.repositoryDriver === "postgres") {
+    return new PostgresWorkflowRunEventRepository(
+      new Pool({
+        host: config.postgresHost,
+        port: Number(config.postgresPort),
+        database: config.postgresDatabase,
+        user: config.postgresUser,
+        password: config.postgresPassword,
+        ssl: config.postgresSslMode === "disable" ? false : { rejectUnauthorized: false }
+      }),
+      config.bootstrapTenantSlug
+    );
+  }
+
+  return new InMemoryWorkflowRunEventRepository();
+}
+
 export type ReadinessDependency = {
   name: string;
   status: string;
@@ -94,11 +115,13 @@ const config = loadConfig();
 const repository = buildRepository();
 const versionRepository = buildVersionRepository();
 const runRepository = buildRunRepository();
+const runEventRepository = buildRunEventRepository();
 
 export const repositories = {
   workflowDefinitions: repository,
   workflowDefinitionVersions: versionRepository,
-  workflowRuns: runRepository
+  workflowRuns: runRepository,
+  workflowRunEvents: runEventRepository
 };
 
 export const services = {

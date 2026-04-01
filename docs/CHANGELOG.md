@@ -253,3 +253,5 @@
 - `v0.1.25`: [UPDATE 01/04/2026 - 07:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ledger relacional agora nasce com uma nota operacional ligada a cada execucao base, preparando leitura historica e diagnostico contextual.
 - `v0.1.26`: [UPDATE 01/04/2026 - 07:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/db.sh summary workflow-control` passou a expor tambem o total de `workflow_run_events` por tenant.
 - `v0.1.26`: [UPDATE 01/04/2026 - 07:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke relacional do monorepo agora confirma tambem o bootstrap de eventos do ledger operacional.
+- `v0.1.27`: [UPDATE 01/04/2026 - 07:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O dominio TypeScript ganhou `WorkflowRunEvent`, o contrato `WorkflowRunEventRepository` e bootstrap em memoria para eventos de execucao.
+- `v0.1.27`: [UPDATE 01/04/2026 - 07:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack `workflow-control` passou a suportar persistencia de eventos com drivers `memory` e `postgres`, preparando a proxima superficie HTTP do historico operacional.
