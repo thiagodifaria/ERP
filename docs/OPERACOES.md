@@ -52,3 +52,21 @@ Cada servico critico deve documentar:
 - changelog atualizado a cada entrega relevante
 - testes executados antes de subir uma entrega quando houver runtime suficiente para isso
 - commits curtos e versionados de forma progressiva
+
+## Automacao no GitHub
+
+- `.github/workflows/quality.yml` roda `unit`, `integration` e `contract` em `push` e `pull_request`, e executa `smoke` em `main` ou por `workflow_dispatch`
+- `.github/workflows/containers.yml` publica as imagens de `edge`, `crm`, `sales`, `identity`, `workflow-control`, `workflow-runtime`, `analytics` e `webhook-hub` no `ghcr.io`
+- o registro publica `latest` na branch principal, `sha-*` por commit e tags por release quando o push vier de `v*`
+- as imagens passam a aparecer na aba `Packages` do repositório depois da primeira execucao bem-sucedida do workflow de containers
+
+## Enderecos esperados no GHCR
+
+- `ghcr.io/thiagodifaria/erp-edge`
+- `ghcr.io/thiagodifaria/erp-crm`
+- `ghcr.io/thiagodifaria/erp-sales`
+- `ghcr.io/thiagodifaria/erp-identity`
+- `ghcr.io/thiagodifaria/erp-workflow-control`
+- `ghcr.io/thiagodifaria/erp-workflow-runtime`
+- `ghcr.io/thiagodifaria/erp-analytics`
+- `ghcr.io/thiagodifaria/erp-webhook-hub`
