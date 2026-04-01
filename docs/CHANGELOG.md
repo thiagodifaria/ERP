@@ -209,3 +209,5 @@
 - `v0.1.3`: [UPDATE 01/04/2026 - 05:10 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contexto relacional agora nasce com um exemplo real de execucao em andamento, facilitando observabilidade e validacoes de leitura sem depender de escrita previa.
 - `v0.1.4`: [UPDATE 01/04/2026 - 05:15 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/db.sh summary workflow-control` passou a expor total de `workflow_runs` e buckets por status de execucao.
 - `v0.1.4`: [UPDATE 01/04/2026 - 05:15 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional do monorepo foi atualizada para refletir que o contexto `workflow-control` agora ja pode ser diagnosticado tambem pelo angulo de execucao, e nao so de catalogo.
+- `v0.1.5`: [UPDATE 01/04/2026 - 05:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O dominio TypeScript ganhou o agregado `WorkflowRun`, com status operacionais, referencias de definicao/versao e metadados de disparo.
+- `v0.1.5`: [UPDATE 01/04/2026 - 05:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack `workflow-control` passou a ter validacoes dedicadas para `triggerEvent`, sujeito de negocio, iniciador e ciclo de vida de execucao.

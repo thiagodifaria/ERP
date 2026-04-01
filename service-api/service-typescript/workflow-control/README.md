@@ -11,6 +11,7 @@ Initial scope:
 - bootstrap workflow definition list
 - repository abstraction ready for memory and PostgreSQL
 - domain primitives ready for versioned publication history
+- domain primitives ready for workflow execution tracking
 - version persistence ready for memory and PostgreSQL
 - room for workflow definitions and future control-plane APIs
 
@@ -49,6 +50,7 @@ Current unit scope:
 - workflow definition version detail read
 - workflow definition version summary read
 - workflow definition restore from published snapshot
+- workflow run aggregate validation helpers
 
 Current contract scope:
 
