@@ -834,7 +834,7 @@ run_analytics_runtime_smoke() {
   echo "[test] analytics health details => $health_details_response"
   echo "[test] analytics pipeline summary => $pipeline_summary_response"
 
-  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"warehouse","status":"pending-runtime-wiring"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"leadsCaptured":128'* || "$pipeline_summary_response" != *'"runningAutomations":7'* ]]; then
+  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"dataSource":"postgresql"'* || "$pipeline_summary_response" != *'"leadsCaptured":1'* || "$pipeline_summary_response" != *'"conversions":1'* || "$pipeline_summary_response" != *'"manual":1'* || "$pipeline_summary_response" != *'"runningAutomations":1'* ]]; then
     echo "[test] analytics runtime bootstrap report did not return the expected payload"
     exit 1
   fi

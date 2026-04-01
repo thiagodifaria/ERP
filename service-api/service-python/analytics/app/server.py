@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 
 from app.config.settings import settings
+from app.infrastructure.postgres import postgres_ready
 from app.reports.pipeline_summary import build_pipeline_summary
 
 
@@ -21,14 +22,23 @@ def ready() -> dict:
 
 @app.get("/health/details")
 def details() -> dict:
+    dependencies = [
+        {"name": "report-engine", "status": "ready"},
+        {"name": "forecast-model", "status": "pending-runtime-wiring"},
+    ]
+
+    if settings.repository_driver == "postgres":
+        dependencies.insert(
+            1,
+            {"name": "postgresql", "status": "ready" if postgres_ready() else "not_ready"},
+        )
+    else:
+        dependencies.insert(1, {"name": "warehouse", "status": "pending-runtime-wiring"})
+
     return {
         "service": settings.service_name,
         "status": "ready",
-        "dependencies": [
-            {"name": "report-engine", "status": "ready"},
-            {"name": "warehouse", "status": "pending-runtime-wiring"},
-            {"name": "forecast-model", "status": "pending-runtime-wiring"},
-        ],
+        "dependencies": dependencies,
     }
 
 

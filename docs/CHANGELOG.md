@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.54`: [UPDATE 01/04/2026 - 10:12 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `analytics` passou a suportar driver selecionavel entre memoria e PostgreSQL, com dependencias Python para `psycopg` e health/details refletindo o backend relacional quando ativo.
+- `v0.1.54`: [UPDATE 01/04/2026 - 10:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `pipeline-summary` deixou de ser mock em runtime real e passou a ler CRM, `workflow-control`, `workflow-runtime` e `webhook-hub` no PostgreSQL do monorepo.
 - `v0.1.53`: [UPDATE 01/04/2026 - 10:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `analytics` entrou oficialmente no `docker-compose` local e passou a participar da rotina `unit` do monorepo via container Python.
 - `v0.1.53`: [UPDATE 01/04/2026 - 10:03 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do monorepo agora sobe `analytics` e valida `health/details` junto com o relatorio publico `GET /api/analytics/reports/pipeline-summary`.
 - `v0.1.52`: [UPDATE 01/04/2026 - 09:47 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `docker-compose` local passou a subir o `workflow-runtime` em modo PostgreSQL por padrao, com variaveis dedicadas do dominio e o backend relacional exposto em `health/details`.

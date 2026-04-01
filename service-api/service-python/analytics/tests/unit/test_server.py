@@ -22,6 +22,7 @@ def test_details_route_exposes_analytics_dependencies() -> None:
     assert response.status_code == 200
     assert payload["status"] == "ready"
     assert any(dependency["name"] == "report-engine" for dependency in payload["dependencies"])
+    assert any(dependency["name"] == "warehouse" for dependency in payload["dependencies"])
 
 
 def test_pipeline_summary_returns_operational_payload() -> None:
