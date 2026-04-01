@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.52`: [UPDATE 01/04/2026 - 09:47 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `docker-compose` local passou a subir o `workflow-runtime` em modo PostgreSQL por padrao, com variaveis dedicadas do dominio e o backend relacional exposto em `health/details`.
+- `v0.1.52`: [UPDATE 01/04/2026 - 09:48 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do monorepo endureceu a cobertura do `workflow-runtime`, validando create, filtros, transicoes e resumo persistidos no banco real com `7` linhas no ledger.
 - `v0.1.51`: [UPDATE 01/04/2026 - 09:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` passou a suportar driver selecionavel entre memoria e PostgreSQL, com conexao `Postgrex`, bootstrap dinamico no supervisor e health/details refletindo o backend ativo.
 - `v0.1.51`: [UPDATE 01/04/2026 - 09:35 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O store de execucoes em Elixir ganhou leitura, escrita, resumo e ledger relacional preparados para o schema `workflow_runtime`, mantendo a suite atual em memoria como fallback.
 - `v0.1.50`: [UPDATE 01/04/2026 - 09:22 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contexto PostgreSQL de `workflow-runtime` deixou de ser so planejamento e ganhou schema real com `executions`, `execution_transitions`, timestamps operacionais e trigger de `updated_at`.

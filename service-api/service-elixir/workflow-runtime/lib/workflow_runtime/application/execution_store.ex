@@ -223,7 +223,7 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     LIMIT 1
     """
 
-    case Postgres.query!(statement, [public_id]).rows do
+    case Postgres.query!(statement, [uuid_bytes(public_id)]).rows do
       [row] -> map_execution_row(row)
       _ -> nil
     end
@@ -242,7 +242,7 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     ORDER BY transition.id ASC
     """
 
-    Postgres.query!(statement, [public_id]).rows
+    Postgres.query!(statement, [uuid_bytes(public_id)]).rows
     |> Enum.map(&map_transition_row/1)
   end
 
@@ -258,46 +258,32 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
         public_id = generate_public_id()
         transition_public_id = generate_public_id()
 
-        {:ok, execution} =
+        {:ok, :created} =
           Postgres.transaction(fn connection ->
-            execution_result =
-              Postgrex.query!(
-                connection,
-                """
-                INSERT INTO workflow_runtime.executions (
-                  tenant_id,
-                  public_id,
-                  workflow_definition_key,
-                  subject_type,
-                  subject_public_id,
-                  initiated_by,
-                  status,
-                  retry_count
-                )
-                VALUES ($1, $2::uuid, $3, $4, $5::uuid, $6, 'pending', 0)
-                RETURNING
-                  public_id::text,
-                  workflow_definition_key,
-                  subject_type,
-                  subject_public_id::text,
-                  initiated_by,
-                  status,
-                  retry_count,
-                  created_at,
-                  started_at,
-                  completed_at,
-                  failed_at,
-                  cancelled_at
-                """,
-                [
-                  tenant_id,
-                  public_id,
-                  String.trim(attributes["workflowDefinitionKey"] || ""),
-                  String.trim(attributes["subjectType"] || ""),
-                  String.trim(attributes["subjectPublicId"] || ""),
-                  initiated_by
-                ]
+            Postgrex.query!(
+              connection,
+              """
+              INSERT INTO workflow_runtime.executions (
+                tenant_id,
+                public_id,
+                workflow_definition_key,
+                subject_type,
+                subject_public_id,
+                initiated_by,
+                status,
+                retry_count
               )
+              VALUES ($1, $2::uuid, $3, $4, $5::uuid, $6, 'pending', 0)
+              """,
+              [
+                tenant_id,
+                uuid_bytes(public_id),
+                String.trim(attributes["workflowDefinitionKey"] || ""),
+                String.trim(attributes["subjectType"] || ""),
+                uuid_bytes(String.trim(attributes["subjectPublicId"] || "")),
+                initiated_by
+              ]
+            )
 
             Postgrex.query!(
               connection,
@@ -312,13 +298,13 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
               FROM workflow_runtime.executions AS execution
               WHERE execution.public_id = $2::uuid
               """,
-              [transition_public_id, public_id, initiated_by]
+              [uuid_bytes(transition_public_id), uuid_bytes(public_id), initiated_by]
             )
 
-            map_execution_row(List.first(execution_result.rows), tenant_slug)
+            :created
           end)
 
-        execution
+        find_postgres(public_id)
     end
   end
 
@@ -332,34 +318,20 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
           transition_public_id = generate_public_id()
           timestamp_update = timestamp_update_clause(next_status)
 
-          {:ok, updated_execution} =
+          {:ok, :updated} =
             Postgres.transaction(fn connection ->
-              execution_result =
-                Postgrex.query!(
-                  connection,
-                  """
-                  UPDATE workflow_runtime.executions
-                  SET
-                    status = $2,
-                    updated_at = timezone('utc', now())
-                    #{timestamp_update}
-                  WHERE public_id = $1::uuid
-                  RETURNING
-                    public_id::text,
-                    workflow_definition_key,
-                    subject_type,
-                    subject_public_id::text,
-                    initiated_by,
-                    status,
-                    retry_count,
-                    created_at,
-                    started_at,
-                    completed_at,
-                    failed_at,
-                    cancelled_at
-                  """,
-                  [public_id, next_status]
-                )
+              Postgrex.query!(
+                connection,
+                """
+                UPDATE workflow_runtime.executions
+                SET
+                  status = $2,
+                  updated_at = timezone('utc', now())
+                  #{timestamp_update}
+                WHERE public_id = $1::uuid
+                """,
+                [uuid_bytes(public_id), next_status]
+              )
 
               Postgrex.query!(
                 connection,
@@ -374,13 +346,13 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
                 FROM workflow_runtime.executions AS runtime_execution
                 WHERE runtime_execution.public_id = $2::uuid
                 """,
-                [transition_public_id, public_id, next_status]
+                [uuid_bytes(transition_public_id), uuid_bytes(public_id), next_status]
               )
 
-              map_execution_row(List.first(execution_result.rows), execution["tenantSlug"])
+              :updated
             end)
 
-          {:ok, updated_execution}
+          {:ok, find_postgres(public_id)}
         else
           {:error, :invalid_transition}
         end
@@ -438,7 +410,7 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
       {"status", value}, {conditions, params} -> {[conditions | ["execution.status = $" <> Integer.to_string(length(params) + 1)]], params ++ [value]}
       {"workflowDefinitionKey", value}, {conditions, params} -> {[conditions | ["execution.workflow_definition_key = $" <> Integer.to_string(length(params) + 1)]], params ++ [value]}
       {"subjectType", value}, {conditions, params} -> {[conditions | ["execution.subject_type = $" <> Integer.to_string(length(params) + 1)]], params ++ [value]}
-      {"subjectPublicId", value}, {conditions, params} -> {[conditions | ["execution.subject_public_id = $" <> Integer.to_string(length(params) + 1) <> "::uuid"]], params ++ [value]}
+      {"subjectPublicId", value}, {conditions, params} -> {[conditions | ["execution.subject_public_id = $" <> Integer.to_string(length(params) + 1)]], params ++ [uuid_bytes(value)]}
       {"initiatedBy", value}, {conditions, params} -> {[conditions | ["execution.initiated_by = $" <> Integer.to_string(length(params) + 1)]], params ++ [value]}
     end)
     |> then(fn {conditions, params} -> {List.flatten(conditions), params} end)
@@ -482,6 +454,12 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
 
   defp encode_datetime(nil), do: nil
   defp encode_datetime(value), do: DateTime.to_iso8601(value)
+
+  defp uuid_bytes(value) do
+    value
+    |> String.replace("-", "")
+    |> Base.decode16!(case: :mixed)
+  end
 
   defp generate_public_id do
     <<part1::binary-size(4), part2::binary-size(2), part3::binary-size(2), part4::binary-size(2), part5::binary-size(6)>> =
