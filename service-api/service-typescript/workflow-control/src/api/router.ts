@@ -135,6 +135,45 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     segments[0] === "api" &&
     segments[1] === "workflow-control" &&
     segments[2] === "runs" &&
+    segments[4] === "complete"
+  ) {
+    try {
+      const workflowRun = await services.completeWorkflowRun.execute(segments[3]);
+      json(response, 200, workflowRun);
+      return;
+    } catch (error) {
+      const code = error instanceof Error ? error.message : "unexpected_error";
+
+      if (code === "workflow_run_not_found") {
+        json(response, 404, {
+          code,
+          message: "Workflow run was not found."
+        });
+        return;
+      }
+
+      if (code === "workflow_run_transition_invalid") {
+        json(response, 409, {
+          code,
+          message: "Workflow run transition is invalid."
+        });
+        return;
+      }
+
+      json(response, 500, {
+        code: "unexpected_error",
+        message: "Unexpected error."
+      });
+      return;
+    }
+  }
+
+  if (
+    request.method === "POST" &&
+    segments.length === 5 &&
+    segments[0] === "api" &&
+    segments[1] === "workflow-control" &&
+    segments[2] === "runs" &&
     segments[4] === "start"
   ) {
     try {

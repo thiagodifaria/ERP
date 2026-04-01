@@ -1,3 +1,4 @@
+import { CompleteWorkflowRun } from "../application/complete-workflow-run.js";
 import { CreateWorkflowDefinition } from "../application/create-workflow-definition.js";
 import { CreateWorkflowRun } from "../application/create-workflow-run.js";
 import { GetCurrentWorkflowDefinitionVersion } from "../application/get-current-workflow-definition-version.js";
@@ -99,6 +100,7 @@ export const repositories = {
 };
 
 export const services = {
+  completeWorkflowRun: new CompleteWorkflowRun(runRepository),
   createWorkflowDefinition: new CreateWorkflowDefinition(repository),
   createWorkflowRun: new CreateWorkflowRun(repository, versionRepository, runRepository),
   getCurrentWorkflowDefinitionVersion: new GetCurrentWorkflowDefinitionVersion(repository, versionRepository),

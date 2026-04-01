@@ -227,3 +227,5 @@
 - `v0.1.12`: [UPDATE 01/04/2026 - 05:55 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ledger de execucao passou a ter um read-side leve para paineis operacionais e diagnostico rapido sem precisar baixar a lista completa.
 - `v0.1.13`: [UPDATE 01/04/2026 - 06:00 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `POST /api/workflow-control/runs/{publicId}/start`, registrando a partida de execucoes pendentes com `startedAt`.
 - `v0.1.13`: [UPDATE 01/04/2026 - 06:00 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A API passou a validar `workflow_run_transition_invalid` quando uma run tenta iniciar fora do estado `pending`.
+- `v0.1.14`: [UPDATE 01/04/2026 - 06:05 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `POST /api/workflow-control/runs/{publicId}/complete`, fechando execucoes em `running` com `completedAt`.
+- `v0.1.14`: [UPDATE 01/04/2026 - 06:05 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ciclo de vida de runs passou a cobrir tambem o caminho de sucesso completo, de `pending` para `running` e depois `completed`.

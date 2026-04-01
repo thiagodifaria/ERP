@@ -143,6 +143,39 @@ test("workflow run start should transition a pending execution to running", asyn
   assert.match(payload.startedAt, /.+/);
 });
 
+test("workflow run complete should close a running execution", async () => {
+  const createResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: "00000000-0000-0000-0000-000000007777",
+      initiatedBy: "ops-console"
+    })
+  });
+  const created = await createResponse.json();
+
+  assert.equal(createResponse.status, 201);
+
+  const startResponse = await request(`/api/workflow-control/runs/${created.publicId}/start`, {
+    method: "POST"
+  });
+  assert.equal(startResponse.status, 200);
+
+  const completeResponse = await request(`/api/workflow-control/runs/${created.publicId}/complete`, {
+    method: "POST"
+  });
+  const payload = await completeResponse.json();
+
+  assert.equal(completeResponse.status, 200);
+  assert.equal(payload.publicId, created.publicId);
+  assert.equal(payload.status, "completed");
+  assert.match(payload.completedAt, /.+/);
+});
+
 test("workflow definition detail should expose created resource by key", async () => {
   const key = `detail-${randomUUID()}`;
   const createResponse = await request("/api/workflow-control/definitions", {
