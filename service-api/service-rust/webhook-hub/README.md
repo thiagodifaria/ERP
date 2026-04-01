@@ -10,6 +10,7 @@ Initial scope:
 - webhook intake list and ingest routes
 - webhook intake summary route
 - idempotent duplicate guard on intake by provider and external id
+- operational lifecycle summary by provider and status
 - room for signature validation, normalization and deduplication
 
 Public routes:

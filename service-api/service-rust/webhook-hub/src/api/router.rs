@@ -331,9 +331,11 @@ impl WebhookHubState {
     async fn summary(&self) -> WebhookEventSummary {
         let events = self.events.read().await;
         let mut by_provider = BTreeMap::new();
+        let mut by_status = BTreeMap::new();
 
         for event in events.iter() {
             *by_provider.entry(event.provider.clone()).or_insert(0) += 1;
+            *by_status.entry(event.status.clone()).or_insert(0) += 1;
         }
 
         WebhookEventSummary {
@@ -342,7 +344,16 @@ impl WebhookHubState {
                 .iter()
                 .filter(|event| event.status == "received")
                 .count() as u64,
+            pending_delivery: events
+                .iter()
+                .filter(|event| matches!(event.status.as_str(), "validated" | "queued" | "processing"))
+                .count() as u64,
+            handled: events
+                .iter()
+                .filter(|event| matches!(event.status.as_str(), "forwarded" | "failed" | "rejected"))
+                .count() as u64,
             by_provider,
+            by_status,
         }
     }
 }
@@ -419,7 +430,10 @@ struct ListWebhookEventsQuery {
 struct WebhookEventSummary {
     total: u64,
     received: u64,
+    pending_delivery: u64,
+    handled: u64,
     by_provider: BTreeMap<String, u64>,
+    by_status: BTreeMap<String, u64>,
 }
 
 #[derive(serde::Serialize)]
@@ -556,7 +570,10 @@ mod tests {
         let summary_payload: Value = serde_json::from_slice(&summary_body).unwrap();
         assert_eq!(summary_payload["total"], 1);
         assert_eq!(summary_payload["received"], 1);
+        assert_eq!(summary_payload["pending_delivery"], 0);
+        assert_eq!(summary_payload["handled"], 0);
         assert_eq!(summary_payload["by_provider"]["tiny"], 1);
+        assert_eq!(summary_payload["by_status"]["received"], 1);
     }
 
     #[tokio::test]
@@ -883,6 +900,7 @@ mod tests {
         assert_eq!(process_response.status(), StatusCode::OK);
 
         let forward_response = app
+            .clone()
             .oneshot(
                 Request::builder()
                     .method("POST")
@@ -897,6 +915,22 @@ mod tests {
         let forward_body = forward_response.into_body().collect().await.unwrap().to_bytes();
         let forward_payload: Value = serde_json::from_slice(&forward_body).unwrap();
         assert_eq!(forward_payload["status"], "forwarded");
+
+        let summary_response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/webhook-hub/events/summary")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(summary_response.status(), StatusCode::OK);
+
+        let summary_body = summary_response.into_body().collect().await.unwrap().to_bytes();
+        let summary_payload: Value = serde_json::from_slice(&summary_body).unwrap();
+        assert_eq!(summary_payload["handled"], 1);
+        assert_eq!(summary_payload["by_status"]["forwarded"], 1);
     }
 
     #[tokio::test]
@@ -950,6 +984,7 @@ mod tests {
         assert_eq!(queue_response.status(), StatusCode::OK);
 
         let fail_response = app
+            .clone()
             .oneshot(
                 Request::builder()
                     .method("POST")
@@ -964,5 +999,21 @@ mod tests {
         let fail_body = fail_response.into_body().collect().await.unwrap().to_bytes();
         let fail_payload: Value = serde_json::from_slice(&fail_body).unwrap();
         assert_eq!(fail_payload["status"], "failed");
+
+        let summary_response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/api/webhook-hub/events/summary")
+                    .body(axum::body::Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(summary_response.status(), StatusCode::OK);
+
+        let summary_body = summary_response.into_body().collect().await.unwrap().to_bytes();
+        let summary_payload: Value = serde_json::from_slice(&summary_body).unwrap();
+        assert_eq!(summary_payload["handled"], 1);
+        assert_eq!(summary_payload["by_status"]["failed"], 1);
     }
 }

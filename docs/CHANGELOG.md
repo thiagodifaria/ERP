@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.39`: [UPDATE 01/04/2026 - 06:58 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub passou a expor resumo operacional enriquecido com `pending_delivery`, `handled` e `by_status` em `GET /api/webhook-hub/events/summary`.
+- `v0.1.39`: [UPDATE 01/04/2026 - 06:59 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ampliado com testes e smoke cobrindo leitura de status terminal `forwarded` e `failed` no resumo do intake.
 - `v0.1.38`: [UPDATE 01/04/2026 - 06:51 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ganhou trilha operacional de processamento com `queue`, `process`, `forward` e `fail`, aproximando o intake do comportamento esperado para fan-in robusto.
 - `v0.1.38`: [UPDATE 01/04/2026 - 06:52 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ampliado com testes e smoke cobrindo happy path completo ate `forwarded` e caminho de falha apos fila.
 - `v0.1.37`: [UPDATE 01/04/2026 - 06:43 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Webhook-hub ganhou transicoes operacionais explicitas com `POST /api/webhook-hub/events/{publicId}/validate` e `POST /api/webhook-hub/events/{publicId}/reject`, abrindo o ciclo de vida inicial do intake.
