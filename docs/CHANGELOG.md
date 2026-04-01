@@ -195,3 +195,5 @@
 - `v0.0.96`: [UPDATE 01/04/2026 - 04:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A API passou a validar `workflow_definition_version_number_invalid` para consultas com numero de versao malformado.
 - `v0.0.97`: [UPDATE 01/04/2026 - 04:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `POST /api/workflow-control/definitions/{key}/versions/{versionNumber}/restore`, permitindo restaurar a definicao a partir de um snapshot publicado.
 - `v0.0.97`: [UPDATE 01/04/2026 - 04:37 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O fluxo unitario agora valida rollback completo de metadados e status a partir de uma versao historica.
+- `v0.0.98`: [UPDATE 01/04/2026 - 04:43 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` ganhou contract coverage para version detail e restore, congelando tambem o shape publico do rollback.
+- `v0.0.98`: [UPDATE 01/04/2026 - 04:43 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O README do servico passou a deixar explicito que o escopo contratual cobre agora o ciclo completo de versoes.

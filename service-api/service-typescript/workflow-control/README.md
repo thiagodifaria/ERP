@@ -53,4 +53,5 @@ Current contract scope:
 - public payload shape for workflow definition list
 - create/update/detail/status lifecycle
 - version list, publish and current-version lifecycle
+- version detail and restore lifecycle
 - not found error contract

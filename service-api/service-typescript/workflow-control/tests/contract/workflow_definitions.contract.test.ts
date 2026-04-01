@@ -192,6 +192,75 @@ test("workflow definition current version contract should expose latest version 
   assert.equal(payload.snapshotName, "Lead Follow-Up");
 });
 
+test("workflow definition version detail contract should expose requested snapshot", async () => {
+  const response = await request("/api/workflow-control/definitions/lead-follow-up/versions/1");
+  const payload = await response.json() as WorkflowDefinitionVersionResponse;
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.workflowDefinitionId, 1);
+  assert.equal(payload.versionNumber, 1);
+  assert.equal(payload.snapshotTrigger, "lead.created");
+});
+
+test("workflow definition restore contract should return restored definition resource", async () => {
+  const key = `contract-restore-${randomUUID()}`;
+  const createResponse = await request("/api/workflow-control/definitions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      key,
+      name: "Contract Restore Flow",
+      description: "Fluxo inicial para restore contratual.",
+      trigger: "lead.created"
+    })
+  });
+
+  assert.equal(createResponse.status, 201);
+
+  const publishV1Response = await request(`/api/workflow-control/definitions/${key}/versions`, {
+    method: "POST"
+  });
+  assert.equal(publishV1Response.status, 201);
+
+  const updateResponse = await request(`/api/workflow-control/definitions/${key}`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      name: "Contract Restore Flow Prime",
+      description: "Fluxo refinado antes do restore.",
+      trigger: "lead.qualified"
+    })
+  });
+  assert.equal(updateResponse.status, 200);
+
+  const statusResponse = await request(`/api/workflow-control/definitions/${key}/status`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      status: "active"
+    })
+  });
+  assert.equal(statusResponse.status, 200);
+
+  const restoreResponse = await request(`/api/workflow-control/definitions/${key}/versions/1/restore`, {
+    method: "POST"
+  });
+  const payload = await restoreResponse.json() as WorkflowDefinitionResponse;
+
+  assert.equal(restoreResponse.status, 200);
+  assert.equal(payload.key, key);
+  assert.equal(payload.name, "Contract Restore Flow");
+  assert.equal(payload.description, "Fluxo inicial para restore contratual.");
+  assert.equal(payload.trigger, "lead.created");
+  assert.equal(payload.status, "draft");
+});
+
 test("workflow definition contract should expose detail and status update", async () => {
   const key = `contract-status-${randomUUID()}`;
   const createResponse = await request("/api/workflow-control/definitions", {
