@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.43`: [UPDATE 01/04/2026 - 07:44 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` passou a criar execucoes em memoria com `POST /api/workflow-runtime/executions` e leitura individual por `GET /api/workflow-runtime/executions/{publicId}`.
+- `v0.1.43`: [UPDATE 01/04/2026 - 07:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O repositorio foi ajustado para ignorar artefatos `_build/` e `deps/` do Elixir, enquanto os testes do `workflow-runtime` passaram a cobrir create, detail e validacao de payload.
 - `v0.1.42`: [UPDATE 01/04/2026 - 07:33 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack Elixir finalmente entrou no projeto com o servico `workflow-runtime`, usando OTP, Plug e store em memoria para abrir o plano de execucao da automacao.
 - `v0.1.42`: [UPDATE 01/04/2026 - 07:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` ganhou `GET /health/live`, `GET /health/ready`, `GET /health/details`, `GET /api/workflow-runtime/executions` e `GET /api/workflow-runtime/executions/summary`, alem de Dockerfile e testes iniciais.
 - `v0.1.41`: [UPDATE 01/04/2026 - 07:17 BELO HORIZONTE, MINAS GERAIS, BRAZIL] PostgreSQL ganhou o dominio `webhook-hub` com schema proprio, tabela de eventos inbound e ledger de transicoes para sustentar persistencia real do intake em Rust.

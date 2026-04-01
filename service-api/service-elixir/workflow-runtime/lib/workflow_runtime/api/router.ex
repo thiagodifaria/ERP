@@ -37,6 +37,32 @@ defmodule WorkflowRuntime.Api.Router do
     json(conn, 200, ExecutionStore.summary())
   end
 
+  get "/api/workflow-runtime/executions/:public_id" do
+    case ExecutionStore.find(public_id) do
+      nil ->
+        json(conn, 404, %{code: "workflow_runtime_execution_not_found", message: "Execution was not found."})
+
+      execution ->
+        json(conn, 200, execution)
+    end
+  end
+
+  post "/api/workflow-runtime/executions" do
+    required_fields = ["workflowDefinitionKey", "subjectType", "subjectPublicId", "initiatedBy"]
+
+    if Enum.any?(required_fields, fn field ->
+         conn.body_params[field] |> to_string() |> String.trim() == ""
+       end) do
+      json(conn, 400, %{
+        code: "workflow_runtime_execution_payload_invalid",
+        message: "Execution payload is invalid."
+      })
+    else
+      execution = ExecutionStore.create(conn.body_params)
+      json(conn, 201, execution)
+    end
+  end
+
   match _ do
     json(conn, 404, %{code: "workflow_runtime_route_not_found", message: "Route was not found."})
   end

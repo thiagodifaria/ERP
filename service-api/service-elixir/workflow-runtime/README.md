@@ -18,7 +18,9 @@ Public routes:
 - `GET /health/ready`
 - `GET /health/details`
 - `GET /api/workflow-runtime/executions`
+- `GET /api/workflow-runtime/executions/{publicId}`
 - `GET /api/workflow-runtime/executions/summary`
+- `POST /api/workflow-runtime/executions`
 
 Container-first validation:
 

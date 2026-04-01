@@ -3,6 +3,8 @@ PLANEJAMENTO.md
 **/bin/
 **/obj/
 **/target/
+**/_build/
+**/deps/
 **/.pytest_cache/
 **/__pycache__/
 **/coverage/
