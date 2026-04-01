@@ -154,6 +154,53 @@ test("workflow run contract should return created execution resource", async () 
   assert.equal(payload.initiatedBy, "contract-suite");
 });
 
+test("workflow run summary contract should expose operational buckets", async () => {
+  const response = await request("/api/workflow-control/runs/summary");
+  const payload = await response.json() as {
+    total: number;
+    pending: number;
+    running: number;
+    completed: number;
+    failed: number;
+    cancelled: number;
+  };
+
+  assert.equal(response.status, 200);
+  assert.ok(payload.total >= 1);
+  assert.ok(payload.running >= 1);
+  assert.ok(payload.pending >= 0);
+  assert.ok(payload.completed >= 0);
+  assert.ok(payload.failed >= 0);
+  assert.ok(payload.cancelled >= 0);
+});
+
+test("workflow runs contract should support operational filters", async () => {
+  const subjectPublicId = randomUUID();
+  const createResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId,
+      initiatedBy: "contract-filter"
+    })
+  });
+
+  assert.equal(createResponse.status, 201);
+
+  const response = await request("/api/workflow-control/runs?status=pending&workflowDefinitionKey=lead-follow-up&subjectType=crm.lead&initiatedBy=contract-filter");
+  const payload = await response.json() as WorkflowRunResponse[];
+
+  assert.equal(response.status, 200);
+  assert.ok(payload.length >= 1);
+  assert.ok(payload.every((workflowRun) => workflowRun.status === "pending"));
+  assert.ok(payload.every((workflowRun) => workflowRun.subjectType === "crm.lead"));
+  assert.ok(payload.every((workflowRun) => workflowRun.initiatedBy === "contract-filter"));
+});
+
 test("workflow definition contract should return created resource", async () => {
   const key = `contract-${randomUUID()}`;
   const response = await request("/api/workflow-control/definitions", {

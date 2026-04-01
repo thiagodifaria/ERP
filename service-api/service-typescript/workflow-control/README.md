@@ -88,6 +88,7 @@ Current contract scope:
 - workflow run pending-or-running-to-cancelled transition
 - workflow run filters by status, definition key, subject type and initiator
 - contract coverage for workflow run list, detail and create
+- contract coverage for workflow run summary and filters
 - create/update/detail/status lifecycle
 - version list, publish and current-version lifecycle
 - version detail and restore lifecycle
