@@ -312,3 +312,5 @@
 - `v0.1.27`: [UPDATE 01/04/2026 - 07:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack `workflow-control` passou a suportar persistencia de eventos com drivers `memory` e `postgres`, preparando a proxima superficie HTTP do historico operacional.
 - `v0.1.28`: [UPDATE 01/04/2026 - 07:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/runs/{publicId}/events`, expondo o historico bootstrap de eventos por execucao.
 - `v0.1.28`: [UPDATE 01/04/2026 - 07:20 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A nova superficie de eventos ja entrou em unit, contract e smoke HTTP contra PostgreSQL real.
+- `v0.1.56`: [UPDATE 01/04/2026 - 10:31 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `analytics` ganhou o relatorio `GET /api/analytics/reports/tenant-360`, consolidando identidade, comercial e automacao em uma visao operacional unica por tenant.
+- `v0.1.56`: [UPDATE 01/04/2026 - 10:32 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke do monorepo passou a validar esse snapshot 360 com PostgreSQL real, cobrindo contagens de empresas, usuarios, leads, runs e execucoes.

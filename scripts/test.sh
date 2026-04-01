@@ -826,6 +826,7 @@ run_analytics_runtime_smoke() {
   local health_details_response
   local pipeline_summary_response
   local service_pulse_response
+  local tenant_360_response
 
   "${COMPOSE_CMD[@]}" up -d --build analytics
   wait_for_http_ready "$base_url/health/ready"
@@ -833,11 +834,13 @@ run_analytics_runtime_smoke() {
   health_details_response="$(curl -fsS "$base_url/health/details")"
   pipeline_summary_response="$(curl -fsS "$base_url/api/analytics/reports/pipeline-summary?tenant_slug=bootstrap-ops")"
   service_pulse_response="$(curl -fsS "$base_url/api/analytics/reports/service-pulse?tenant_slug=bootstrap-ops")"
+  tenant_360_response="$(curl -fsS "$base_url/api/analytics/reports/tenant-360?tenant_slug=bootstrap-ops")"
   echo "[test] analytics health details => $health_details_response"
   echo "[test] analytics pipeline summary => $pipeline_summary_response"
   echo "[test] analytics service pulse => $service_pulse_response"
+  echo "[test] analytics tenant 360 => $tenant_360_response"
 
-  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"dataSource":"postgresql"'* || "$pipeline_summary_response" != *'"leadsCaptured":1'* || "$pipeline_summary_response" != *'"conversions":1'* || "$pipeline_summary_response" != *'"manual":1'* || "$pipeline_summary_response" != *'"runningAutomations":2'* || "$service_pulse_response" != *'"tenantSlug":"bootstrap-ops"'* || "$service_pulse_response" != *'"dataSource":"postgresql"'* || "$service_pulse_response" != *'"totalLeads":1'* || "$service_pulse_response" != *'"activeDefinitions":1'* || "$service_pulse_response" != *'"runsRunning":2'* || "$service_pulse_response" != *'"runsCompleted":1'* || "$service_pulse_response" != *'"runsFailed":1'* || "$service_pulse_response" != *'"runsCancelled":1'* || "$service_pulse_response" != *'"totalExecutions":2'* || "$service_pulse_response" != *'"completed":1'* || "$service_pulse_response" != *'"failed":1'* || "$service_pulse_response" != *'"forwarded":1'* ]]; then
+  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"dataSource":"postgresql"'* || "$pipeline_summary_response" != *'"leadsCaptured":1'* || "$pipeline_summary_response" != *'"conversions":1'* || "$pipeline_summary_response" != *'"manual":1'* || "$pipeline_summary_response" != *'"runningAutomations":2'* || "$service_pulse_response" != *'"tenantSlug":"bootstrap-ops"'* || "$service_pulse_response" != *'"dataSource":"postgresql"'* || "$service_pulse_response" != *'"totalLeads":1'* || "$service_pulse_response" != *'"activeDefinitions":1'* || "$service_pulse_response" != *'"runsRunning":2'* || "$service_pulse_response" != *'"runsCompleted":1'* || "$service_pulse_response" != *'"runsFailed":1'* || "$service_pulse_response" != *'"runsCancelled":1'* || "$service_pulse_response" != *'"totalExecutions":2'* || "$service_pulse_response" != *'"completed":1'* || "$service_pulse_response" != *'"failed":1'* || "$service_pulse_response" != *'"forwarded":1'* || "$tenant_360_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_360_response" != *'"dataSource":"postgresql"'* || "$tenant_360_response" != *'"companies":1'* || "$tenant_360_response" != *'"users":1'* || "$tenant_360_response" != *'"teams":1'* || "$tenant_360_response" != *'"roles":5'* || "$tenant_360_response" != *'"assignedLeads":1'* || "$tenant_360_response" != *'"leadNotes":1'* || "$tenant_360_response" != *'"workflowRuns":5'* || "$tenant_360_response" != *'"runtimeExecutions":2'* ]]; then
     echo "[test] analytics runtime bootstrap report did not return the expected payload"
     exit 1
   fi
