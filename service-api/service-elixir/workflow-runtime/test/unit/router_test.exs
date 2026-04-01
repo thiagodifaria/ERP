@@ -83,4 +83,56 @@ defmodule WorkflowRuntime.Api.RouterTest do
     assert create_conn.status == 400
     assert payload["code"] == "workflow_runtime_execution_payload_invalid"
   end
+
+  test "execution can start and complete through runtime lifecycle" do
+    create_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "workflowDefinitionKey" => "lead-follow-up",
+        "subjectType" => "crm.lead",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001234",
+        "initiatedBy" => "unit-test"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    public_id = Jason.decode!(create_conn.resp_body)["publicId"]
+
+    start_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/start") |> Router.call([])
+    complete_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/complete") |> Router.call([])
+    summary_conn = conn(:get, "/api/workflow-runtime/executions/summary") |> Router.call([])
+
+    start_payload = Jason.decode!(start_conn.resp_body)
+    complete_payload = Jason.decode!(complete_conn.resp_body)
+    summary_payload = Jason.decode!(summary_conn.resp_body)
+
+    assert start_conn.status == 200
+    assert start_payload["status"] == "running"
+    assert start_payload["startedAt"] != nil
+
+    assert complete_conn.status == 200
+    assert complete_payload["status"] == "completed"
+    assert complete_payload["completedAt"] != nil
+
+    assert summary_payload["completed"] == 1
+  end
+
+  test "execution blocks invalid lifecycle transition" do
+    create_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "workflowDefinitionKey" => "lead-follow-up",
+        "subjectType" => "crm.lead",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001235",
+        "initiatedBy" => "unit-test"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    public_id = Jason.decode!(create_conn.resp_body)["publicId"]
+
+    invalid_complete_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/complete") |> Router.call([])
+    invalid_payload = Jason.decode!(invalid_complete_conn.resp_body)
+
+    assert invalid_complete_conn.status == 409
+    assert invalid_payload["code"] == "workflow_runtime_execution_transition_invalid"
+  end
 end

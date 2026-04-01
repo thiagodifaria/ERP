@@ -21,6 +21,9 @@ Public routes:
 - `GET /api/workflow-runtime/executions/{publicId}`
 - `GET /api/workflow-runtime/executions/summary`
 - `POST /api/workflow-runtime/executions`
+- `POST /api/workflow-runtime/executions/{publicId}/start`
+- `POST /api/workflow-runtime/executions/{publicId}/complete`
+- `POST /api/workflow-runtime/executions/{publicId}/fail`
 
 Container-first validation:
 

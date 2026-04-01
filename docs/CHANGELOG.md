@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.45`: [UPDATE 01/04/2026 - 08:05 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` ganhou ciclo de vida inicial de execucao com `start`, `complete` e `fail`, incluindo timestamps operacionais e resumo por status em memoria.
+- `v0.1.45`: [UPDATE 01/04/2026 - 08:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O repositorio passou a ignorar artefatos `*.egg-info` do Python, enquanto os testes do `workflow-runtime` cobriram transicoes validas e invalidas de execucao.
 - `v0.1.44`: [UPDATE 01/04/2026 - 07:58 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack Python entrou no projeto com o servico `analytics`, usando FastAPI, health endpoints e o primeiro relatorio publico `GET /api/analytics/reports/pipeline-summary`.
 - `v0.1.44`: [UPDATE 01/04/2026 - 07:59 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `analytics` ganhou `pyproject.toml`, Dockerfile e testes unitarios cobrindo bootstrap e payload operacional do resumo de pipeline.
 - `v0.1.43`: [UPDATE 01/04/2026 - 07:44 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-runtime` passou a criar execucoes em memoria com `POST /api/workflow-runtime/executions` e leitura individual por `GET /api/workflow-runtime/executions/{publicId}`.

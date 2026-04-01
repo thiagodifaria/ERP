@@ -25,11 +25,35 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
       "subjectPublicId" => String.trim(attributes["subjectPublicId"] || ""),
       "initiatedBy" => String.trim(attributes["initiatedBy"] || ""),
       "status" => "pending",
-      "createdAt" => DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
+      "createdAt" => now(),
+      "startedAt" => nil,
+      "completedAt" => nil,
+      "failedAt" => nil
     }
 
     Agent.update(__MODULE__, fn executions -> [execution | executions] end)
     execution
+  end
+
+  def transition(public_id, next_status, allowed_statuses) do
+    Agent.get_and_update(__MODULE__, fn executions ->
+      case Enum.split_with(executions, &(&1["publicId"] != public_id)) do
+        {_, []} ->
+          {{:error, :not_found}, executions}
+
+        {left, [execution | right]} ->
+          if execution["status"] in allowed_statuses do
+            updated_execution =
+              execution
+              |> Map.put("status", next_status)
+              |> maybe_put_timestamp(next_status)
+
+            {{:ok, updated_execution}, left ++ [updated_execution | right]}
+          else
+            {{:error, :invalid_transition}, executions}
+          end
+      end
+    end)
   end
 
   def reset do
@@ -60,5 +84,14 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
       Base.encode16(part5, case: :lower)
     ]
     |> Enum.join("-")
+  end
+
+  defp maybe_put_timestamp(execution, "running"), do: Map.put(execution, "startedAt", now())
+  defp maybe_put_timestamp(execution, "completed"), do: Map.put(execution, "completedAt", now())
+  defp maybe_put_timestamp(execution, "failed"), do: Map.put(execution, "failedAt", now())
+  defp maybe_put_timestamp(execution, _next_status), do: execution
+
+  defp now do
+    DateTime.utc_now() |> DateTime.truncate(:second) |> DateTime.to_iso8601()
   end
 end
