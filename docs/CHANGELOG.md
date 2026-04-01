@@ -177,3 +177,5 @@
 - `v0.0.87`: [UPDATE 01/04/2026 - 03:40 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O historico inicial de publicacao agora nasce alinhado ao catalogo base, evitando definicoes ativas sem snapshot versionado.
 - `v0.0.88`: [UPDATE 01/04/2026 - 03:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `scripts/db.sh summary workflow-control` passou a expor total de versoes publicadas e a ultima versao conhecida por tenant.
 - `v0.0.88`: [UPDATE 01/04/2026 - 03:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional do summary de workflow-control foi atualizada para refletir o novo foco em historico de publicacao.
+- `v0.0.89`: [UPDATE 01/04/2026 - 03:50 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O dominio TypeScript ganhou o agregado `WorkflowDefinitionVersion` e o contrato dedicado de repositorio para historico de publicacao.
+- `v0.0.89`: [UPDATE 01/04/2026 - 03:50 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O runtime em memoria passou a nascer com a versao `1` do fluxo bootstrap `lead-follow-up`, preparando as proximas APIs de versionamento.

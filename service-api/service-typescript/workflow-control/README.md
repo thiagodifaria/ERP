@@ -10,6 +10,7 @@ Initial scope:
 - health and readiness routes
 - bootstrap workflow definition list
 - repository abstraction ready for memory and PostgreSQL
+- domain primitives ready for versioned publication history
 - room for workflow definitions and future control-plane APIs
 
 Public routes:
