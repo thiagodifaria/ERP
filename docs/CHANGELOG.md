@@ -322,3 +322,5 @@
 - `v0.1.59`: [UPDATE 01/04/2026 - 11:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A configuracao do gateway ganhou URLs dedicadas por servico e timeout de downstream, preparando a camada publica para observabilidade operacional real.
 - `v0.1.60`: [UPDATE 01/04/2026 - 11:34 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `edge` ganhou `GET /api/edge/ops/health`, consolidando status, dependencias internas e resumo de prontidao dos demais servicos.
 - `v0.1.60`: [UPDATE 01/04/2026 - 11:35 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A camada Go passou a ler `health/details` dos downstreams e devolver um retrato unico de plataforma para diagnostico rapido.
+- `v0.1.61`: [UPDATE 01/04/2026 - 11:48 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `edge` ganhou `GET /api/edge/ops/tenant-overview`, agregando `pipeline-summary`, `service-pulse`, `tenant-360` e `automation-board` do `analytics`.
+- `v0.1.61`: [UPDATE 01/04/2026 - 11:49 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O gateway agora entrega um cockpit unico por tenant e responde `502` quando a dependencia analitica nao consegue ser lida.

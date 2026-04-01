@@ -24,10 +24,11 @@ func NewServer(cfg config.Config, logger *telemetry.Logger) *http.Server {
   }
   healthHandler := handler.NewHealthHandler(cfg.ServiceName, checker, dependencies)
   opsHandler := handler.NewOpsHandler(cfg.ServiceName, checker, dependencies)
+  tenantOverviewHandler := handler.NewTenantOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
 
   return &http.Server{
     Addr:              cfg.HTTPAddress,
-    Handler:           NewRouter(logger, healthHandler, opsHandler),
+    Handler:           NewRouter(logger, healthHandler, opsHandler, tenantOverviewHandler),
     ReadHeaderTimeout: 5 * time.Second,
   }
 }
