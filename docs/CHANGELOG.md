@@ -205,3 +205,5 @@
 - `v0.1.1`: [UPDATE 01/04/2026 - 05:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Cada run passa a guardar definicao, versao usada, status, evento de disparo, sujeito de negocio e carimbos de ciclo de vida no PostgreSQL.
 - `v0.1.2`: [UPDATE 01/04/2026 - 05:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow_runs` ganhou trigger de `updated_at` e indices por `trigger_event` e sujeito de negocio, preparando leitura operacional com baixo atrito.
 - `v0.1.2`: [UPDATE 01/04/2026 - 05:06 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contexto relacional de `workflow-control` agora trata runs mutaveis com o mesmo padrao tecnico ja usado em `identity`, `crm` e no catalogo do proprio servico.
+- `v0.1.3`: [UPDATE 01/04/2026 - 05:10 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` passou a semear uma primeira `workflow_run` bootstrap por tenant operacional, referenciando a definicao `lead-follow-up` e sua versao `1`.
+- `v0.1.3`: [UPDATE 01/04/2026 - 05:10 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O contexto relacional agora nasce com um exemplo real de execucao em andamento, facilitando observabilidade e validacoes de leitura sem depender de escrita previa.

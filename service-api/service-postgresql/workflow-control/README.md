@@ -13,6 +13,7 @@ Current structure:
 - subject and trigger indexes for workflow run lookups
 - bootstrap seed for lead follow-up orchestration
 - bootstrap seed for version 1 of each base workflow
+- bootstrap seed for first workflow run per tenant
 - views
 - functions
 - indexes
