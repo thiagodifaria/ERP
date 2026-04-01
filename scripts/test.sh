@@ -346,8 +346,13 @@ run_crm_runtime_smoke() {
 run_workflow_control_runtime_smoke() {
   local base_url="http://localhost:${WORKFLOW_CONTROL_HTTP_PORT:-8084}"
   local list_response
+  local runs_response
+  local runs_summary_response
   local create_response
   local created_key="runtime-flow"
+  local run_create_response
+  local created_run_public_id
+  local filtered_runs_response
   local versions_response
   local current_version_response
   local publish_response
@@ -371,10 +376,19 @@ run_workflow_control_runtime_smoke() {
   fi
 
   list_response="$(curl -fsS "$base_url/api/workflow-control/definitions")"
+  runs_response="$(curl -fsS "$base_url/api/workflow-control/runs")"
+  runs_summary_response="$(curl -fsS "$base_url/api/workflow-control/runs/summary")"
   echo "[test] workflow-control list => $list_response"
+  echo "[test] workflow-control runs => $runs_response"
+  echo "[test] workflow-control runs summary => $runs_summary_response"
 
   if [[ "$list_response" != *'"key":"lead-follow-up"'* || "$list_response" != *'"status":"active"'* ]]; then
     echo "[test] workflow-control bootstrap catalog was not returned by the live API"
+    exit 1
+  fi
+
+  if [[ "$runs_response" != *'"status":"running"'* || "$runs_response" != *'"triggerEvent":"lead.created"'* || "$runs_summary_response" != *'"total":1'* || "$runs_summary_response" != *'"running":1'* ]]; then
+    echo "[test] workflow-control bootstrap run ledger was not returned by the live API"
     exit 1
   fi
 
@@ -397,6 +411,29 @@ run_workflow_control_runtime_smoke() {
 
   if [[ "$create_response" != *"\"key\":\"$created_key\""* || "$create_response" != *'"status":"draft"'* ]]; then
     echo "[test] workflow-control create did not return the expected resource"
+    exit 1
+  fi
+
+  run_create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"workflowDefinitionKey":"lead-follow-up","subjectType":"crm.lead","subjectPublicId":"00000000-0000-0000-0000-000000009998","initiatedBy":"smoke-ops"}' \
+    "$base_url/api/workflow-control/runs")"
+  echo "[test] workflow-control create run => $run_create_response"
+
+  created_run_public_id="$(echo "$run_create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$created_run_public_id" || "$run_create_response" != *'"status":"pending"'* || "$run_create_response" != *'"initiatedBy":"smoke-ops"'* ]]; then
+    echo "[test] workflow-control run create did not persist"
+    exit 1
+  fi
+
+  filtered_runs_response="$(curl -fsS "$base_url/api/workflow-control/runs?status=pending&workflowDefinitionKey=lead-follow-up&subjectType=crm.lead&initiatedBy=smoke-ops")"
+  runs_summary_response="$(curl -fsS "$base_url/api/workflow-control/runs/summary")"
+  echo "[test] workflow-control filtered runs => $filtered_runs_response"
+  echo "[test] workflow-control runs summary after create => $runs_summary_response"
+
+  if [[ "$filtered_runs_response" != *"\"publicId\":\"$created_run_public_id\""* || "$runs_summary_response" != *'"total":2'* || "$runs_summary_response" != *'"pending":1'* || "$runs_summary_response" != *'"running":1'* ]]; then
+    echo "[test] workflow-control run filters or summary did not reflect live writes"
     exit 1
   fi
 

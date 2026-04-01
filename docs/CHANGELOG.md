@@ -243,3 +243,5 @@
 - `v0.1.20`: [UPDATE 01/04/2026 - 06:33 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ciclo de vida publico do ledger operacional ficou congelado tambem no nivel contratual, reduzindo risco de regressao nas transicoes.
 - `v0.1.21`: [UPDATE 01/04/2026 - 06:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `smoke` do monorepo passou a validar no banco o bootstrap de `workflow_runs`, incluindo total e distribuicao por status.
 - `v0.1.21`: [UPDATE 01/04/2026 - 06:39 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional foi ajustada para deixar explicito que o fluxo `smoke` agora cobre tambem o ledger de execucao do `workflow-control`.
+- `v0.1.22`: [UPDATE 01/04/2026 - 06:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O smoke HTTP do `workflow-control` passou a validar `GET /runs`, `GET /runs/summary`, `POST /runs` e filtros operacionais em runtime real com PostgreSQL.
+- `v0.1.22`: [UPDATE 01/04/2026 - 06:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O ledger de execucao agora tem cobertura ponta a ponta de leitura bootstrap, escrita e resumo vivo no stack local.
