@@ -19,6 +19,7 @@ Public routes:
 - `GET /health/details`
 - `GET /api/analytics/reports/pipeline-summary`
 - `GET /api/analytics/reports/service-pulse`
+- `GET /api/analytics/reports/sales-journey`
 - `GET /api/analytics/reports/tenant-360`
 - `GET /api/analytics/reports/automation-board`
 - `GET /api/analytics/reports/workflow-definition-health`

@@ -44,6 +44,7 @@ services:
       EDGE_WORKFLOW_RUNTIME_BASE_URL: "${EDGE_WORKFLOW_RUNTIME_BASE_URL}"
       EDGE_ANALYTICS_BASE_URL: "${EDGE_ANALYTICS_BASE_URL}"
       EDGE_WEBHOOK_HUB_BASE_URL: "${EDGE_WEBHOOK_HUB_BASE_URL}"
+      EDGE_SALES_BASE_URL: "${EDGE_SALES_BASE_URL}"
     depends_on:
       service-postgresql:
         condition: service_healthy
@@ -71,6 +72,26 @@ services:
         condition: service_healthy
     ports:
       - "${CRM_HTTP_PORT}:8083"
+
+  sales:
+    build:
+      context: ../service-api/service-golang/sales
+    container_name: erp-sales
+    environment:
+      SALES_HTTP_ADDRESS: ":8087"
+      SALES_REPOSITORY_DRIVER: "postgres"
+      SALES_BOOTSTRAP_TENANT_SLUG: "bootstrap-ops"
+      SALES_POSTGRES_HOST: "service-postgresql"
+      SALES_POSTGRES_PORT: "5432"
+      SALES_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      SALES_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      SALES_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      SALES_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+    ports:
+      - "${SALES_HTTP_PORT}:8087"
 
   workflow-control:
     build:

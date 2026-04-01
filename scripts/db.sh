@@ -68,16 +68,19 @@ Usage:
   ./scripts/db.sh migrate common
   ./scripts/db.sh migrate identity
   ./scripts/db.sh migrate crm
+  ./scripts/db.sh migrate sales
   ./scripts/db.sh migrate webhook-hub
   ./scripts/db.sh migrate workflow-control
   ./scripts/db.sh migrate workflow-runtime
   ./scripts/db.sh migrate all
   ./scripts/db.sh seed identity
   ./scripts/db.sh seed crm
+  ./scripts/db.sh seed sales
   ./scripts/db.sh seed workflow-control
   ./scripts/db.sh seed all
   ./scripts/db.sh summary identity [tenant-slug]
   ./scripts/db.sh summary crm [tenant-slug]
+  ./scripts/db.sh summary sales [tenant-slug]
   ./scripts/db.sh summary webhook-hub
   ./scripts/db.sh summary workflow-control [tenant-slug]
   ./scripts/db.sh summary workflow-runtime [tenant-slug]
@@ -105,6 +108,9 @@ main() {
         crm)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/migrations"
           ;;
+        sales)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/migrations"
+          ;;
         webhook-hub)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/webhook-hub/migrations"
           ;;
@@ -118,6 +124,7 @@ main() {
           apply_directory "$ROOT_DIR/service-api/service-postgresql/common/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/webhook-hub/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-runtime/migrations"
@@ -137,12 +144,16 @@ main() {
         crm)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/seeds"
           ;;
+        sales)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/seeds"
+          ;;
         workflow-control)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/seeds"
           ;;
         all)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/seeds"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/seeds"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/seeds"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/seeds"
           ;;
         *)
@@ -194,6 +205,30 @@ main() {
               (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.status = 'disqualified') AS disqualified,
               (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.owner_user_public_id IS NOT NULL) AS assigned,
               (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.owner_user_public_id IS NULL) AS unassigned
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
+          ;;
+        sales)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM sales.opportunities AS opportunity WHERE opportunity.tenant_id = tenant.id) AS opportunities,
+              (SELECT count(*) FROM sales.proposals AS proposal WHERE proposal.tenant_id = tenant.id) AS proposals,
+              (SELECT count(*) FROM sales.sales AS sale WHERE sale.tenant_id = tenant.id) AS sales,
+              (SELECT count(*) FROM sales.opportunities AS opportunity WHERE opportunity.tenant_id = tenant.id AND opportunity.stage = 'won') AS won,
+              (SELECT count(*) FROM sales.opportunities AS opportunity WHERE opportunity.tenant_id = tenant.id AND opportunity.stage = 'lost') AS lost,
+              (SELECT count(*) FROM sales.sales AS sale WHERE sale.tenant_id = tenant.id AND sale.status = 'active') AS active_sales,
+              (SELECT count(*) FROM sales.sales AS sale WHERE sale.tenant_id = tenant.id AND sale.status = 'invoiced') AS invoiced_sales,
+              (SELECT COALESCE(sum(sale.amount_cents), 0) FROM sales.sales AS sale WHERE sale.tenant_id = tenant.id AND sale.status <> 'cancelled') AS booked_revenue_cents
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;

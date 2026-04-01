@@ -64,16 +64,27 @@ OK enterprise observability stack designed from the foundation instead of late-s
 
 ## Current Status
 
-The repository is currently in the architectural foundation stage.
+The repository is no longer just in the foundation stage. The platform already has an operational backend MVP slice running in containers with real PostgreSQL-backed flows.
 
-The base monorepo layout is already in place together with the first service templates for:
+Current active services:
 
-- `edge`
-- `crm`
-- `identity`
-- `workflow-control`
-- `webhook-hub`
-- PostgreSQL ownership for `common` and `identity`
+- `identity` for tenants, companies, users, teams and roles
+- `crm` for leads, notes, ownership and qualification flow
+- `sales` for opportunities, proposals, conversions and revenue transitions
+- `workflow-control` for workflow catalog, versions, runs and operational events
+- `workflow-runtime` for execution lifecycle, retries and runtime transitions
+- `analytics` for pipeline, sales, tenant and automation reports
+- `webhook-hub` for controlled webhook intake and transition tracking
+- `edge` for operational cockpits and cross-service aggregation
+
+Current MVP vertical slice:
+
+- lead enters through `crm`
+- opportunity and proposal move through `sales`
+- conversion creates a sale and booked revenue
+- workflow run and runtime execution reflect the business subject
+- analytics exposes `pipeline-summary`, `sales-journey`, `tenant-360` and automation reports
+- edge exposes `tenant-overview`, `automation-overview` and `sales-overview`
 
 ---
 

@@ -16,6 +16,7 @@ func NewRouter(
 	opsHandler handler.OpsHandler,
 	tenantOverviewHandler handler.TenantOverviewHandler,
 	automationOverviewHandler handler.AutomationOverviewHandler,
+	salesOverviewHandler handler.SalesOverviewHandler,
 ) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health/live", healthHandler.Live)
@@ -24,6 +25,7 @@ func NewRouter(
 	mux.HandleFunc("/api/edge/ops/health", opsHandler.Health)
 	mux.HandleFunc("/api/edge/ops/tenant-overview", tenantOverviewHandler.Overview)
 	mux.HandleFunc("/api/edge/ops/automation-overview", automationOverviewHandler.Overview)
+	mux.HandleFunc("/api/edge/ops/sales-overview", salesOverviewHandler.Overview)
 
 	return middleware.WithCorrelation(logger, mux)
 }

@@ -17,6 +17,7 @@ type Config struct {
 	WorkflowRuntimeBaseURL string
 	AnalyticsBaseURL       string
 	WebhookHubBaseURL      string
+	SalesBaseURL           string
 }
 
 func Load() Config {
@@ -30,6 +31,7 @@ func Load() Config {
 		WorkflowRuntimeBaseURL: envOrDefault("EDGE_WORKFLOW_RUNTIME_BASE_URL", "http://workflow-runtime:8085"),
 		AnalyticsBaseURL:       envOrDefault("EDGE_ANALYTICS_BASE_URL", "http://analytics:8086"),
 		WebhookHubBaseURL:      envOrDefault("EDGE_WEBHOOK_HUB_BASE_URL", "http://webhook-hub:8082"),
+		SalesBaseURL:           envOrDefault("EDGE_SALES_BASE_URL", "http://sales:8087"),
 	}
 }
 

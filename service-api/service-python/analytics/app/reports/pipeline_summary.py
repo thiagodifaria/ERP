@@ -48,7 +48,7 @@ def build_postgres_pipeline_summary(tenant_slug: str | None = None) -> dict:
         lead_metrics = fetch_lead_metrics(connection, tenant_slug)
         source_rows = fetch_source_rows(connection, tenant_slug)
         running_automations = fetch_running_automations(connection, tenant_slug)
-        conversions = fetch_completed_runtime_executions(connection, tenant_slug)
+        conversions = fetch_sales_conversions(connection, tenant_slug)
         awaiting_financial_review = fetch_webhook_pending_review(connection)
 
     leads_captured = lead_metrics["total"]
@@ -150,14 +150,13 @@ def fetch_running_automations(connection: psycopg.Connection, tenant_slug: str |
     return int(workflow_control_row["total"] or 0) + int(workflow_runtime_row["total"] or 0)
 
 
-def fetch_completed_runtime_executions(connection: psycopg.Connection, tenant_slug: str | None) -> int:
+def fetch_sales_conversions(connection: psycopg.Connection, tenant_slug: str | None) -> int:
     filter_sql, params = tenant_filter("tenant.slug = %s", tenant_slug)
 
     query = f"""
         SELECT count(*) AS total
-        FROM workflow_runtime.executions AS execution
-        JOIN identity.tenants AS tenant ON tenant.id = execution.tenant_id
-        WHERE execution.status = 'completed'
+        FROM sales.sales AS sale
+        JOIN identity.tenants AS tenant ON tenant.id = sale.tenant_id
         {append_filter(filter_sql)}
     """
 

@@ -21,15 +21,17 @@ func NewServer(cfg config.Config, logger *telemetry.Logger) *http.Server {
 		{Name: "workflow-runtime", BaseURL: cfg.WorkflowRuntimeBaseURL},
 		{Name: "analytics", BaseURL: cfg.AnalyticsBaseURL},
 		{Name: "webhook-hub", BaseURL: cfg.WebhookHubBaseURL},
+		{Name: "sales", BaseURL: cfg.SalesBaseURL},
 	}
 	healthHandler := handler.NewHealthHandler(cfg.ServiceName, checker, dependencies)
 	opsHandler := handler.NewOpsHandler(cfg.ServiceName, checker, dependencies)
 	tenantOverviewHandler := handler.NewTenantOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
 	automationOverviewHandler := handler.NewAutomationOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
+	salesOverviewHandler := handler.NewSalesOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
 
 	return &http.Server{
 		Addr:              cfg.HTTPAddress,
-		Handler:           NewRouter(logger, healthHandler, opsHandler, tenantOverviewHandler, automationOverviewHandler),
+		Handler:           NewRouter(logger, healthHandler, opsHandler, tenantOverviewHandler, automationOverviewHandler, salesOverviewHandler),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }

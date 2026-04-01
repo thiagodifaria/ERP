@@ -22,6 +22,7 @@ def build_static_service_pulse(tenant_slug: str | None = None) -> dict:
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "services": {
             "crm": {"totalLeads": 128, "captured": 18, "contacted": 42, "qualified": 37, "disqualified": 31},
+            "sales": {"opportunitiesTotal": 34, "proposalsTotal": 21, "salesTotal": 12, "bookedRevenueCents": 1775000},
             "workflowControl": {"activeDefinitions": 6, "runsRunning": 7, "runsCompleted": 31, "runsFailed": 2, "runsCancelled": 1},
             "workflowRuntime": {"totalExecutions": 44, "running": 4, "completed": 28, "failed": 8, "cancelled": 4},
             "webhookHub": {"totalEvents": 93, "forwarded": 87, "queued": 2, "processing": 1, "failed": 3},
@@ -34,6 +35,7 @@ def build_postgres_service_pulse(tenant_slug: str | None = None) -> dict:
 
     with connect() as connection:
         crm_metrics = fetch_crm_metrics(connection, tenant_slug)
+        sales_metrics = fetch_sales_service_metrics(connection, tenant_slug)
         workflow_control_metrics = fetch_workflow_control_metrics(connection, tenant_slug)
         workflow_runtime_metrics = fetch_workflow_runtime_metrics(connection, tenant_slug)
         webhook_hub_metrics = fetch_webhook_hub_metrics(connection)
@@ -44,6 +46,7 @@ def build_postgres_service_pulse(tenant_slug: str | None = None) -> dict:
         "dataSource": "postgresql",
         "services": {
             "crm": crm_metrics,
+            "sales": sales_metrics,
             "workflowControl": workflow_control_metrics,
             "workflowRuntime": workflow_runtime_metrics,
             "webhookHub": webhook_hub_metrics,
@@ -76,6 +79,46 @@ def fetch_crm_metrics(connection, tenant_slug: str | None) -> dict:
         "contacted": int(row.get("contacted", 0) or 0),
         "qualified": int(row.get("qualified", 0) or 0),
         "disqualified": int(row.get("disqualified", 0) or 0),
+    }
+
+
+def fetch_sales_service_metrics(connection, tenant_slug: str | None) -> dict:
+    filter_sql, params = tenant_filter("slug = %s", tenant_slug)
+
+    query = f"""
+        SELECT
+            (
+                SELECT count(*)
+                FROM sales.opportunities
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS opportunities_total,
+            (
+                SELECT count(*)
+                FROM sales.proposals
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS proposals_total,
+            (
+                SELECT count(*)
+                FROM sales.sales
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS sales_total,
+            (
+                SELECT COALESCE(sum(amount_cents), 0)
+                FROM sales.sales
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status <> 'cancelled'
+            ) AS booked_revenue_cents
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params * 4)
+        row = cursor.fetchone() or {}
+
+    return {
+        "opportunitiesTotal": int(row.get("opportunities_total", 0) or 0),
+        "proposalsTotal": int(row.get("proposals_total", 0) or 0),
+        "salesTotal": int(row.get("sales_total", 0) or 0),
+        "bookedRevenueCents": int(row.get("booked_revenue_cents", 0) or 0),
     }
 
 

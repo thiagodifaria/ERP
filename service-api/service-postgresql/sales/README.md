@@ -1,11 +1,10 @@
 # sales
 
-This domain will own commercial opportunities, sales lifecycles and related operational structures.
+This domain owns commercial opportunities, proposals, sales lifecycles and related operational structures.
 
-Planned structure:
+Current structure:
 
 - migrations
 - seeds
-- views
-- functions
 - indexes
+- room for future views and functions

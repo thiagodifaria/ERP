@@ -32,6 +32,10 @@ def build_static_tenant_360(tenant_slug: str | None = None) -> dict:
             "qualifiedLeads": 37,
             "assignedLeads": 96,
             "leadNotes": 52,
+            "opportunities": 34,
+            "proposals": 21,
+            "sales": 12,
+            "bookedRevenueCents": 1775000,
         },
         "automation": {
             "activeDefinitions": 6,
@@ -110,6 +114,7 @@ def fetch_identity_metrics(connection, tenant_slug: str | None) -> dict:
 
 def fetch_commercial_metrics(connection, tenant_slug: str | None) -> dict:
     filter_sql, params = tenant_filter("tenant.slug = %s", tenant_slug)
+    tenant_subquery_filter_sql, tenant_subquery_params = tenant_filter("slug = %s", tenant_slug)
 
     leads_query = f"""
         SELECT
@@ -129,17 +134,48 @@ def fetch_commercial_metrics(connection, tenant_slug: str | None) -> dict:
         {filter_sql}
     """
 
+    sales_query = f"""
+        SELECT
+            (
+                SELECT count(*)
+                FROM sales.opportunities
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {tenant_subquery_filter_sql})
+            ) AS opportunities,
+            (
+                SELECT count(*)
+                FROM sales.proposals
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {tenant_subquery_filter_sql})
+            ) AS proposals,
+            (
+                SELECT count(*)
+                FROM sales.sales
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {tenant_subquery_filter_sql})
+            ) AS sales,
+            (
+                SELECT COALESCE(sum(amount_cents), 0)
+                FROM sales.sales
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {tenant_subquery_filter_sql})
+                  AND status <> 'cancelled'
+            ) AS booked_revenue_cents
+    """
+
     with connection.cursor() as cursor:
         cursor.execute(leads_query, params)
         leads_row = cursor.fetchone() or {}
         cursor.execute(notes_query, params)
         notes_row = cursor.fetchone() or {}
+        cursor.execute(sales_query, tenant_subquery_params * 4)
+        sales_row = cursor.fetchone() or {}
 
     return {
         "leads": int(leads_row.get("leads", 0) or 0),
         "qualifiedLeads": int(leads_row.get("qualified_leads", 0) or 0),
         "assignedLeads": int(leads_row.get("assigned_leads", 0) or 0),
         "leadNotes": int(notes_row.get("lead_notes", 0) or 0),
+        "opportunities": int(sales_row.get("opportunities", 0) or 0),
+        "proposals": int(sales_row.get("proposals", 0) or 0),
+        "sales": int(sales_row.get("sales", 0) or 0),
+        "bookedRevenueCents": int(sales_row.get("booked_revenue_cents", 0) or 0),
     }
 
 

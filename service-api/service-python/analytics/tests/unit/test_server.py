@@ -43,8 +43,21 @@ def test_service_pulse_returns_cross_service_payload() -> None:
     assert response.status_code == 200
     assert payload["tenantSlug"] == "bootstrap-ops"
     assert payload["services"]["crm"]["totalLeads"] == 128
+    assert payload["services"]["sales"]["salesTotal"] == 12
     assert payload["services"]["workflowControl"]["activeDefinitions"] == 6
     assert payload["services"]["webhookHub"]["forwarded"] == 87
+
+
+def test_sales_journey_returns_commercial_vertical_payload() -> None:
+    response = client.get("/api/analytics/reports/sales-journey?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["funnel"]["salesWon"] == 12
+    assert payload["opportunities"]["total"] == 34
+    assert payload["sales"]["bookedRevenueCents"] == 1775000
+    assert payload["automation"]["runtimeCompleted"] == 11
 
 
 def test_tenant_360_returns_tenant_operational_snapshot() -> None:
@@ -55,6 +68,7 @@ def test_tenant_360_returns_tenant_operational_snapshot() -> None:
     assert payload["tenantSlug"] == "bootstrap-ops"
     assert payload["identity"]["companies"] == 3
     assert payload["commercial"]["assignedLeads"] == 96
+    assert payload["commercial"]["sales"] == 12
     assert payload["automation"]["workflowRuns"] == 41
 
 

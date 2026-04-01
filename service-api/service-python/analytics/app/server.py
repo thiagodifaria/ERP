@@ -7,6 +7,7 @@ from app.infrastructure.postgres import postgres_ready
 from app.reports.automation_board import build_automation_board
 from app.reports.delivery_reliability import build_delivery_reliability
 from app.reports.pipeline_summary import build_pipeline_summary
+from app.reports.sales_journey import build_sales_journey
 from app.reports.service_pulse import build_service_pulse
 from app.reports.tenant_360 import build_tenant_360
 from app.reports.workflow_definition_health import build_workflow_definition_health
@@ -55,6 +56,11 @@ def pipeline_summary(tenant_slug: str | None = None) -> dict:
 @app.get("/api/analytics/reports/service-pulse")
 def service_pulse(tenant_slug: str | None = None) -> dict:
     return build_service_pulse(tenant_slug)
+
+
+@app.get("/api/analytics/reports/sales-journey")
+def sales_journey(tenant_slug: str | None = None) -> dict:
+    return build_sales_journey(tenant_slug)
 
 
 @app.get("/api/analytics/reports/tenant-360")

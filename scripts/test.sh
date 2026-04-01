@@ -31,6 +31,12 @@ run_go_unit() {
     -w /workspace \
     golang:1.24-alpine \
     go test ./...
+
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-golang/sales:/workspace" \
+    -w /workspace \
+    golang:1.24-alpine \
+    go test ./...
 }
 
 run_typescript_unit() {
@@ -92,6 +98,12 @@ run_dotnet_contract() {
 run_go_contract() {
   docker run --rm \
     -v "$ROOT_DIR/service-api/service-golang/crm:/workspace" \
+    -w /workspace \
+    golang:1.24-alpine \
+    go test -tags=contract ./tests/contract/...
+
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-golang/sales:/workspace" \
     -w /workspace \
     golang:1.24-alpine \
     go test -tags=contract ./tests/contract/...
@@ -188,6 +200,7 @@ run_identity_database_smoke() {
   local smoke_slug="smoke-identity-bootstrap"
   local summary
   local crm_summary
+  local sales_summary
   local workflow_control_summary
 
   bash "$ROOT_DIR/scripts/db.sh" up
@@ -247,6 +260,29 @@ run_identity_database_smoke() {
 
   if [[ "$crm_summary" != "$smoke_slug|1|1|0|0|0|1|0" ]]; then
     echo "[test] unexpected crm db smoke summary"
+    exit 1
+  fi
+
+  sales_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        tenant.slug || '|' ||
+        (SELECT count(*) FROM sales.opportunities AS opportunity WHERE opportunity.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM sales.proposals AS proposal WHERE proposal.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM sales.sales AS sale WHERE sale.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM sales.opportunities AS opportunity WHERE opportunity.tenant_id = tenant.id AND opportunity.stage = 'won') || '|' ||
+        (SELECT count(*) FROM sales.opportunities AS opportunity WHERE opportunity.tenant_id = tenant.id AND opportunity.stage = 'lost') || '|' ||
+        (SELECT count(*) FROM sales.sales AS sale WHERE sale.tenant_id = tenant.id AND sale.status = 'active') || '|' ||
+        (SELECT count(*) FROM sales.sales AS sale WHERE sale.tenant_id = tenant.id AND sale.status = 'invoiced') || '|' ||
+        (SELECT COALESCE(sum(sale.amount_cents), 0) FROM sales.sales AS sale WHERE sale.tenant_id = tenant.id AND sale.status <> 'cancelled')
+      FROM identity.tenants AS tenant
+      WHERE tenant.slug = '$smoke_slug';
+    ")"
+
+  echo "[test] sales db smoke => $sales_summary"
+
+  if [[ "$sales_summary" != "$smoke_slug|1|1|1|1|0|1|0|125000" ]]; then
+    echo "[test] unexpected sales db smoke summary"
     exit 1
   fi
 
@@ -435,6 +471,154 @@ run_crm_runtime_smoke() {
 
   if [[ "$summary_response" != *'"total":2'* || "$summary_response" != *'"assigned":2'* || "$summary_response" != *'"contacted":1'* || "$summary_response" != *'"instagram":1'* ]]; then
     echo "[test] runtime CRM summary did not reflect live updates"
+    exit 1
+  fi
+
+  CRM_RUNTIME_LEAD_PUBLIC_ID="$created_public_id"
+  CRM_RUNTIME_OWNER_PUBLIC_ID="$owner_public_id"
+}
+
+run_sales_runtime_smoke() {
+  local base_url="http://localhost:${SALES_HTTP_PORT:-8087}"
+  local workflow_control_base_url="http://localhost:${WORKFLOW_CONTROL_HTTP_PORT:-8084}"
+  local workflow_runtime_base_url="http://localhost:${WORKFLOW_RUNTIME_HTTP_PORT:-8085}"
+  local health_details_response
+  local list_response
+  local create_opportunity_response
+  local created_opportunity_public_id
+  local opportunity_detail_response
+  local create_proposal_response
+  local created_proposal_public_id
+  local proposals_response
+  local proposal_status_response
+  local opportunity_stage_response
+  local proposal_detail_response
+  local convert_response
+  local created_sale_public_id
+  local sale_status_response
+  local sale_detail_response
+  local opportunity_summary_response
+  local sales_summary_response
+  local workflow_run_create_response
+  local workflow_run_public_id
+  local workflow_run_start_response
+  local workflow_run_complete_response
+  local workflow_execution_create_response
+  local workflow_execution_public_id
+  local workflow_execution_start_response
+  local workflow_execution_complete_response
+  local db_summary
+
+  if [[ -z "${CRM_RUNTIME_LEAD_PUBLIC_ID:-}" || -z "${CRM_RUNTIME_OWNER_PUBLIC_ID:-}" ]]; then
+    echo "[test] CRM runtime identifiers were not captured before sales smoke"
+    exit 1
+  fi
+
+  "${COMPOSE_CMD[@]}" up -d --build sales
+  wait_for_http_ready "$base_url/health/ready"
+  wait_for_http_ready "$workflow_control_base_url/health/ready"
+  wait_for_http_ready "$workflow_runtime_base_url/health/ready"
+
+  health_details_response="$(curl -fsS "$base_url/health/details")"
+  list_response="$(curl -fsS "$base_url/api/sales/opportunities")"
+  echo "[test] sales health details => $health_details_response"
+  echo "[test] sales opportunity list => $list_response"
+
+  if [[ "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$list_response" != *'"title":"Bootstrap Ops Opportunity"'* ]]; then
+    echo "[test] sales bootstrap runtime state was not ready"
+    exit 1
+  fi
+
+  create_opportunity_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"leadPublicId\":\"$CRM_RUNTIME_LEAD_PUBLIC_ID\",\"title\":\"Runtime Expansion Opportunity\",\"ownerUserId\":\"$CRM_RUNTIME_OWNER_PUBLIC_ID\",\"amountCents\":99000}" \
+    "$base_url/api/sales/opportunities")"
+  created_opportunity_public_id="$(echo "$create_opportunity_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+
+  create_proposal_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"title":"Runtime Expansion Proposal","amountCents":99000}' \
+    "$base_url/api/sales/opportunities/$created_opportunity_public_id/proposals")"
+  created_proposal_public_id="$(echo "$create_proposal_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+
+  proposals_response="$(curl -fsS "$base_url/api/sales/opportunities/$created_opportunity_public_id/proposals")"
+  proposal_status_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d '{"status":"sent"}' \
+    "$base_url/api/sales/proposals/$created_proposal_public_id/status")"
+  opportunity_stage_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d '{"stage":"negotiation"}' \
+    "$base_url/api/sales/opportunities/$created_opportunity_public_id/stage")"
+  convert_response="$(curl -fsS -X POST "$base_url/api/sales/proposals/$created_proposal_public_id/convert")"
+  created_sale_public_id="$(echo "$convert_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  sale_status_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d '{"status":"invoiced"}' \
+    "$base_url/api/sales/sales/$created_sale_public_id/status")"
+  opportunity_detail_response="$(curl -fsS "$base_url/api/sales/opportunities/$created_opportunity_public_id")"
+  proposal_detail_response="$(curl -fsS "$base_url/api/sales/proposals/$created_proposal_public_id")"
+  sale_detail_response="$(curl -fsS "$base_url/api/sales/sales/$created_sale_public_id")"
+  opportunity_summary_response="$(curl -fsS "$base_url/api/sales/opportunities/summary")"
+  sales_summary_response="$(curl -fsS "$base_url/api/sales/sales/summary")"
+
+  workflow_run_create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"workflowDefinitionKey\":\"lead-follow-up\",\"subjectType\":\"crm.lead\",\"subjectPublicId\":\"$CRM_RUNTIME_LEAD_PUBLIC_ID\",\"initiatedBy\":\"sales-mvp\"}" \
+    "$workflow_control_base_url/api/workflow-control/runs")"
+  workflow_run_public_id="$(echo "$workflow_run_create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  workflow_run_start_response="$(curl -fsS -X POST "$workflow_control_base_url/api/workflow-control/runs/$workflow_run_public_id/start")"
+  workflow_run_complete_response="$(curl -fsS -X POST "$workflow_control_base_url/api/workflow-control/runs/$workflow_run_public_id/complete")"
+
+  workflow_execution_create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"bootstrap-ops\",\"workflowDefinitionKey\":\"lead-follow-up\",\"subjectType\":\"crm.lead\",\"subjectPublicId\":\"$CRM_RUNTIME_LEAD_PUBLIC_ID\",\"initiatedBy\":\"sales-mvp\"}" \
+    "$workflow_runtime_base_url/api/workflow-runtime/executions")"
+  workflow_execution_public_id="$(echo "$workflow_execution_create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  workflow_execution_start_response="$(curl -fsS -X POST "$workflow_runtime_base_url/api/workflow-runtime/executions/$workflow_execution_public_id/start")"
+  workflow_execution_complete_response="$(curl -fsS -X POST "$workflow_runtime_base_url/api/workflow-runtime/executions/$workflow_execution_public_id/complete")"
+
+  db_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        (SELECT count(*) FROM sales.opportunities AS opportunity INNER JOIN identity.tenants AS tenant ON tenant.id = opportunity.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM sales.proposals AS proposal INNER JOIN identity.tenants AS tenant ON tenant.id = proposal.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM sales.sales AS sale INNER JOIN identity.tenants AS tenant ON tenant.id = sale.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM sales.opportunities AS opportunity INNER JOIN identity.tenants AS tenant ON tenant.id = opportunity.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND opportunity.stage = 'won') || '|' ||
+        (SELECT count(*) FROM sales.sales AS sale INNER JOIN identity.tenants AS tenant ON tenant.id = sale.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND sale.status = 'active') || '|' ||
+        (SELECT count(*) FROM sales.sales AS sale INNER JOIN identity.tenants AS tenant ON tenant.id = sale.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND sale.status = 'invoiced') || '|' ||
+        (SELECT COALESCE(sum(sale.amount_cents), 0) FROM sales.sales AS sale INNER JOIN identity.tenants AS tenant ON tenant.id = sale.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND sale.status <> 'cancelled');
+    ")"
+
+  echo "[test] sales create opportunity => $create_opportunity_response"
+  echo "[test] sales create proposal => $create_proposal_response"
+  echo "[test] sales proposal list => $proposals_response"
+  echo "[test] sales proposal status => $proposal_status_response"
+  echo "[test] sales opportunity stage => $opportunity_stage_response"
+  echo "[test] sales convert proposal => $convert_response"
+  echo "[test] sales sale status => $sale_status_response"
+  echo "[test] sales opportunity detail => $opportunity_detail_response"
+  echo "[test] sales proposal detail => $proposal_detail_response"
+  echo "[test] sales sale detail => $sale_detail_response"
+  echo "[test] sales opportunity summary => $opportunity_summary_response"
+  echo "[test] sales sales summary => $sales_summary_response"
+  echo "[test] sales workflow-control create => $workflow_run_create_response"
+  echo "[test] sales workflow-control start => $workflow_run_start_response"
+  echo "[test] sales workflow-control complete => $workflow_run_complete_response"
+  echo "[test] sales workflow-runtime create => $workflow_execution_create_response"
+  echo "[test] sales workflow-runtime start => $workflow_execution_start_response"
+  echo "[test] sales workflow-runtime complete => $workflow_execution_complete_response"
+  echo "[test] sales db summary => $db_summary"
+
+  if [[ -z "$created_opportunity_public_id" || -z "$created_proposal_public_id" || -z "$created_sale_public_id" || -z "$workflow_run_public_id" || -z "$workflow_execution_public_id" || "$create_opportunity_response" != *'"stage":"qualified"'* || "$create_opportunity_response" != *"\"leadPublicId\":\"$CRM_RUNTIME_LEAD_PUBLIC_ID\""* || "$create_proposal_response" != *'"status":"draft"'* || "$proposals_response" != *'"title":"Runtime Expansion Proposal"'* || "$proposal_status_response" != *'"status":"sent"'* || "$opportunity_stage_response" != *'"stage":"negotiation"'* || "$convert_response" != *'"status":"active"'* || "$sale_status_response" != *'"status":"invoiced"'* || "$opportunity_detail_response" != *'"stage":"won"'* || "$proposal_detail_response" != *'"status":"accepted"'* || "$sale_detail_response" != *'"status":"invoiced"'* || "$opportunity_summary_response" != *'"total":2'* || "$opportunity_summary_response" != *'"totalAmountCents":224000'* || "$opportunity_summary_response" != *'"won":2'* || "$sales_summary_response" != *'"total":2'* || "$sales_summary_response" != *'"bookedRevenueCents":224000'* || "$sales_summary_response" != *'"active":1'* || "$sales_summary_response" != *'"invoiced":1'* || "$workflow_run_create_response" != *'"status":"pending"'* || "$workflow_run_start_response" != *'"status":"running"'* || "$workflow_run_complete_response" != *'"status":"completed"'* || "$workflow_execution_create_response" != *'"status":"pending"'* || "$workflow_execution_start_response" != *'"status":"running"'* || "$workflow_execution_complete_response" != *'"status":"completed"'* || "$db_summary" != '2|2|2|2|1|1|224000' ]]; then
+    echo "[test] sales runtime pipeline did not persist the expected vertical slice"
     exit 1
   fi
 }
@@ -845,6 +1029,7 @@ run_analytics_runtime_smoke() {
   local health_details_response
   local pipeline_summary_response
   local service_pulse_response
+  local sales_journey_response
   local tenant_360_response
   local automation_board_response
   local workflow_definition_health_response
@@ -856,6 +1041,7 @@ run_analytics_runtime_smoke() {
   health_details_response="$(curl -fsS "$base_url/health/details")"
   pipeline_summary_response="$(curl -fsS "$base_url/api/analytics/reports/pipeline-summary?tenant_slug=bootstrap-ops")"
   service_pulse_response="$(curl -fsS "$base_url/api/analytics/reports/service-pulse?tenant_slug=bootstrap-ops")"
+  sales_journey_response="$(curl -fsS "$base_url/api/analytics/reports/sales-journey?tenant_slug=bootstrap-ops")"
   tenant_360_response="$(curl -fsS "$base_url/api/analytics/reports/tenant-360?tenant_slug=bootstrap-ops")"
   automation_board_response="$(curl -fsS "$base_url/api/analytics/reports/automation-board?tenant_slug=bootstrap-ops")"
   workflow_definition_health_response="$(curl -fsS "$base_url/api/analytics/reports/workflow-definition-health?tenant_slug=bootstrap-ops")"
@@ -863,12 +1049,13 @@ run_analytics_runtime_smoke() {
   echo "[test] analytics health details => $health_details_response"
   echo "[test] analytics pipeline summary => $pipeline_summary_response"
   echo "[test] analytics service pulse => $service_pulse_response"
+  echo "[test] analytics sales journey => $sales_journey_response"
   echo "[test] analytics tenant 360 => $tenant_360_response"
   echo "[test] analytics automation board => $automation_board_response"
   echo "[test] analytics workflow definition health => $workflow_definition_health_response"
   echo "[test] analytics delivery reliability => $delivery_reliability_response"
 
-  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"dataSource":"postgresql"'* || "$pipeline_summary_response" != *'"leadsCaptured":1'* || "$pipeline_summary_response" != *'"conversions":2'* || "$pipeline_summary_response" != *'"manual":1'* || "$pipeline_summary_response" != *'"runningAutomations":2'* || "$service_pulse_response" != *'"tenantSlug":"bootstrap-ops"'* || "$service_pulse_response" != *'"dataSource":"postgresql"'* || "$service_pulse_response" != *'"totalLeads":1'* || "$service_pulse_response" != *'"activeDefinitions":1'* || "$service_pulse_response" != *'"runsRunning":2'* || "$service_pulse_response" != *'"runsCompleted":1'* || "$service_pulse_response" != *'"runsFailed":1'* || "$service_pulse_response" != *'"runsCancelled":1'* || "$service_pulse_response" != *'"totalExecutions":2'* || "$service_pulse_response" != *'"completed":2'* || "$service_pulse_response" != *'"failed":0'* || "$service_pulse_response" != *'"forwarded":1'* || "$tenant_360_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_360_response" != *'"dataSource":"postgresql"'* || "$tenant_360_response" != *'"companies":1'* || "$tenant_360_response" != *'"users":1'* || "$tenant_360_response" != *'"teams":1'* || "$tenant_360_response" != *'"roles":5'* || "$tenant_360_response" != *'"assignedLeads":1'* || "$tenant_360_response" != *'"leadNotes":1'* || "$tenant_360_response" != *'"workflowRuns":5'* || "$tenant_360_response" != *'"runtimeExecutions":2'* || "$tenant_360_response" != *'"runtimeCompleted":2'* || "$tenant_360_response" != *'"runtimeFailed":0'* || "$automation_board_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_board_response" != *'"dataSource":"postgresql"'* || "$automation_board_response" != *'"definitionsTotal":2'* || "$automation_board_response" != *'"definitionsActive":1'* || "$automation_board_response" != *'"definitionsDraft":1'* || "$automation_board_response" != *'"publishedVersions":3'* || "$automation_board_response" != *'"runsTotal":5'* || "$automation_board_response" != *'"runningRuns":2'* || "$automation_board_response" != *'"recordedEvents":8'* || "$automation_board_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$automation_board_response" != *'"executionsTotal":2'* || "$automation_board_response" != *'"completedExecutions":2'* || "$automation_board_response" != *'"failedExecutions":0'* || "$automation_board_response" != *'"retriesTotal":1'* || "$automation_board_response" != *'"recordedTransitions":8'* || "$automation_board_response" != *'"forwarded":1'* || "$workflow_definition_health_response" != *'"tenantSlug":"bootstrap-ops"'* || "$workflow_definition_health_response" != *'"dataSource":"postgresql"'* || "$workflow_definition_health_response" != *'"definitionsTotal":2'* || "$workflow_definition_health_response" != *'"stable":1'* || "$workflow_definition_health_response" != *'"attention":1'* || "$workflow_definition_health_response" != *'"critical":0'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$workflow_definition_health_response" != *'"health":"stable"'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"runtime-flow"'* || "$workflow_definition_health_response" != *'"health":"attention"'* || "$workflow_definition_health_response" != *'"definition-not-active"'* || "$delivery_reliability_response" != *'"provider":"stripe"'* || "$delivery_reliability_response" != *'"dataSource":"postgresql"'* || "$delivery_reliability_response" != *'"totalEvents":1'* || "$delivery_reliability_response" != *'"handledEvents":1'* || "$delivery_reliability_response" != *'"avgTransitionsPerEvent":5.0'* || "$delivery_reliability_response" != *'"received":1'* || "$delivery_reliability_response" != *'"validated":1'* || "$delivery_reliability_response" != *'"queued":1'* || "$delivery_reliability_response" != *'"processing":1'* || "$delivery_reliability_response" != *'"forwarded":1'* ]]; then
+  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"dataSource":"postgresql"'* || "$pipeline_summary_response" != *'"leadsCaptured":2'* || "$pipeline_summary_response" != *'"conversions":2'* || "$pipeline_summary_response" != *'"manual":1'* || "$pipeline_summary_response" != *'"instagram":1'* || "$pipeline_summary_response" != *'"runningAutomations":2'* || "$service_pulse_response" != *'"tenantSlug":"bootstrap-ops"'* || "$service_pulse_response" != *'"dataSource":"postgresql"'* || "$service_pulse_response" != *'"totalLeads":2'* || "$service_pulse_response" != *'"salesTotal":2'* || "$service_pulse_response" != *'"bookedRevenueCents":224000'* || "$service_pulse_response" != *'"activeDefinitions":1'* || "$service_pulse_response" != *'"runsRunning":2'* || "$service_pulse_response" != *'"runsCompleted":2'* || "$service_pulse_response" != *'"runsFailed":1'* || "$service_pulse_response" != *'"runsCancelled":1'* || "$service_pulse_response" != *'"totalExecutions":3'* || "$service_pulse_response" != *'"completed":3'* || "$service_pulse_response" != *'"failed":0'* || "$service_pulse_response" != *'"forwarded":1'* || "$sales_journey_response" != *'"tenantSlug":"bootstrap-ops"'* || "$sales_journey_response" != *'"dataSource":"postgresql"'* || "$sales_journey_response" != *'"leadsCaptured":2'* || "$sales_journey_response" != *'"leadsWithOpportunity":2'* || "$sales_journey_response" != *'"opportunitiesWithProposal":2'* || "$sales_journey_response" != *'"proposalsConverted":2'* || "$sales_journey_response" != *'"salesWon":2'* || "$sales_journey_response" != *'"leadToSaleConversionRate":1.0'* || "$sales_journey_response" != *'"totalAmountCents":224000'* || "$sales_journey_response" != *'"won":2'* || "$sales_journey_response" != *'"accepted":2'* || "$sales_journey_response" != *'"bookedRevenueCents":224000'* || "$sales_journey_response" != *'"active":1'* || "$sales_journey_response" != *'"invoiced":1'* || "$sales_journey_response" != *'"controlRuns":1'* || "$sales_journey_response" != *'"runtimeCompleted":1'* || "$tenant_360_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_360_response" != *'"dataSource":"postgresql"'* || "$tenant_360_response" != *'"companies":1'* || "$tenant_360_response" != *'"users":1'* || "$tenant_360_response" != *'"teams":1'* || "$tenant_360_response" != *'"roles":5'* || "$tenant_360_response" != *'"assignedLeads":2'* || "$tenant_360_response" != *'"leadNotes":2'* || "$tenant_360_response" != *'"opportunities":2'* || "$tenant_360_response" != *'"proposals":2'* || "$tenant_360_response" != *'"sales":2'* || "$tenant_360_response" != *'"bookedRevenueCents":224000'* || "$tenant_360_response" != *'"workflowRuns":6'* || "$tenant_360_response" != *'"workflowRunEvents":10'* || "$tenant_360_response" != *'"runtimeExecutions":3'* || "$tenant_360_response" != *'"runtimeCompleted":3'* || "$tenant_360_response" != *'"runtimeFailed":0'* || "$automation_board_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_board_response" != *'"dataSource":"postgresql"'* || "$automation_board_response" != *'"definitionsTotal":2'* || "$automation_board_response" != *'"definitionsActive":1'* || "$automation_board_response" != *'"definitionsDraft":1'* || "$automation_board_response" != *'"publishedVersions":3'* || "$automation_board_response" != *'"runsTotal":6'* || "$automation_board_response" != *'"runningRuns":2'* || "$automation_board_response" != *'"recordedEvents":10'* || "$automation_board_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$automation_board_response" != *'"executionsTotal":3'* || "$automation_board_response" != *'"completedExecutions":3'* || "$automation_board_response" != *'"failedExecutions":0'* || "$automation_board_response" != *'"retriesTotal":1'* || "$automation_board_response" != *'"recordedTransitions":11'* || "$automation_board_response" != *'"forwarded":1'* || "$workflow_definition_health_response" != *'"tenantSlug":"bootstrap-ops"'* || "$workflow_definition_health_response" != *'"dataSource":"postgresql"'* || "$workflow_definition_health_response" != *'"definitionsTotal":2'* || "$workflow_definition_health_response" != *'"stable":1'* || "$workflow_definition_health_response" != *'"attention":1'* || "$workflow_definition_health_response" != *'"critical":0'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$workflow_definition_health_response" != *'"health":"stable"'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"runtime-flow"'* || "$workflow_definition_health_response" != *'"health":"attention"'* || "$workflow_definition_health_response" != *'"definition-not-active"'* || "$delivery_reliability_response" != *'"provider":"stripe"'* || "$delivery_reliability_response" != *'"dataSource":"postgresql"'* || "$delivery_reliability_response" != *'"totalEvents":1'* || "$delivery_reliability_response" != *'"handledEvents":1'* || "$delivery_reliability_response" != *'"avgTransitionsPerEvent":5.0'* || "$delivery_reliability_response" != *'"received":1'* || "$delivery_reliability_response" != *'"validated":1'* || "$delivery_reliability_response" != *'"queued":1'* || "$delivery_reliability_response" != *'"processing":1'* || "$delivery_reliability_response" != *'"forwarded":1'* ]]; then
     echo "[test] analytics runtime bootstrap report did not return the expected payload"
     exit 1
   fi
@@ -1137,6 +1324,7 @@ run_edge_runtime_smoke() {
   local ops_health_response
   local tenant_overview_response
   local automation_overview_response
+  local sales_overview_response
 
   "${COMPOSE_CMD[@]}" up -d --build edge
   wait_for_http_ready "$base_url/health/ready"
@@ -1145,13 +1333,15 @@ run_edge_runtime_smoke() {
   ops_health_response="$(curl -fsS "$base_url/api/edge/ops/health")"
   tenant_overview_response="$(curl -fsS "$base_url/api/edge/ops/tenant-overview?tenantSlug=bootstrap-ops")"
   automation_overview_response="$(curl -fsS "$base_url/api/edge/ops/automation-overview?tenantSlug=bootstrap-ops")"
+  sales_overview_response="$(curl -fsS "$base_url/api/edge/ops/sales-overview?tenantSlug=bootstrap-ops")"
 
   echo "[test] edge health details => $details_response"
   echo "[test] edge ops health => $ops_health_response"
   echo "[test] edge tenant overview => $tenant_overview_response"
   echo "[test] edge automation overview => $automation_overview_response"
+  echo "[test] edge sales overview => $sales_overview_response"
 
-  if [[ "$details_response" != *'"service":"edge"'* || "$details_response" != *'"status":"ready"'* || "$details_response" != *'"name":"identity","status":"ready"'* || "$details_response" != *'"name":"analytics","status":"ready"'* || "$details_response" != *'"name":"webhook-hub","status":"ready"'* || "$ops_health_response" != *'"service":"edge"'* || "$ops_health_response" != *'"status":"ready"'* || "$ops_health_response" != *'"total":6'* || "$ops_health_response" != *'"ready":6'* || "$ops_health_response" != *'"degraded":0'* || "$ops_health_response" != *'"name":"workflow-runtime"'* || "$ops_health_response" != *'"name":"analytics"'* || "$tenant_overview_response" != *'"service":"edge"'* || "$tenant_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_overview_response" != *'"automationBoard"'* || "$tenant_overview_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$automation_overview_response" != *'"service":"edge"'* || "$automation_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_overview_response" != *'"status":"attention"'* || "$automation_overview_response" != *'"activeDefinitions":1'* || "$automation_overview_response" != *'"stableDefinitions":1'* || "$automation_overview_response" != *'"attentionDefinitions":1'* || "$automation_overview_response" != *'"criticalDefinitions":0'* || "$automation_overview_response" != *'"runningControlRuns":2'* || "$automation_overview_response" != *'"completedRuntimeExecutions":2'* || "$automation_overview_response" != *'"forwardedWebhookEvents":1'* || "$automation_overview_response" != *'"workflowDefinitionHealth"'* ]]; then
+  if [[ "$details_response" != *'"service":"edge"'* || "$details_response" != *'"status":"ready"'* || "$details_response" != *'"name":"identity","status":"ready"'* || "$details_response" != *'"name":"analytics","status":"ready"'* || "$details_response" != *'"name":"webhook-hub","status":"ready"'* || "$details_response" != *'"name":"sales","status":"ready"'* || "$ops_health_response" != *'"service":"edge"'* || "$ops_health_response" != *'"status":"ready"'* || "$ops_health_response" != *'"total":7'* || "$ops_health_response" != *'"ready":7'* || "$ops_health_response" != *'"degraded":0'* || "$ops_health_response" != *'"name":"workflow-runtime"'* || "$ops_health_response" != *'"name":"analytics"'* || "$ops_health_response" != *'"name":"sales"'* || "$tenant_overview_response" != *'"service":"edge"'* || "$tenant_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_overview_response" != *'"automationBoard"'* || "$tenant_overview_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$automation_overview_response" != *'"service":"edge"'* || "$automation_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_overview_response" != *'"status":"attention"'* || "$automation_overview_response" != *'"activeDefinitions":1'* || "$automation_overview_response" != *'"stableDefinitions":1'* || "$automation_overview_response" != *'"attentionDefinitions":1'* || "$automation_overview_response" != *'"criticalDefinitions":0'* || "$automation_overview_response" != *'"runningControlRuns":2'* || "$automation_overview_response" != *'"completedRuntimeExecutions":3'* || "$automation_overview_response" != *'"forwardedWebhookEvents":1'* || "$automation_overview_response" != *'"workflowDefinitionHealth"'* || "$sales_overview_response" != *'"service":"edge"'* || "$sales_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$sales_overview_response" != *'"status":"stable"'* || "$sales_overview_response" != *'"leadsCaptured":2'* || "$sales_overview_response" != *'"opportunities":2'* || "$sales_overview_response" != *'"proposals":2'* || "$sales_overview_response" != *'"salesWon":2'* || "$sales_overview_response" != *'"bookedRevenueCents":224000'* || "$sales_overview_response" != *'"completedAutomations":1'* || "$sales_overview_response" != *'"salesJourney"'* ]]; then
     echo "[test] edge automation cockpit did not aggregate the expected live payload"
     exit 1
   fi
@@ -1161,6 +1351,7 @@ run_smoke() {
   trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
   export EDGE_HTTP_PORT="${EDGE_HTTP_PORT_SMOKE:-18080}"
   export CRM_HTTP_PORT="${CRM_HTTP_PORT_SMOKE:-18083}"
+  export SALES_HTTP_PORT="${SALES_HTTP_PORT_SMOKE:-18087}"
   export IDENTITY_HTTP_PORT="${IDENTITY_HTTP_PORT_SMOKE:-18081}"
   export WEBHOOK_HUB_HTTP_PORT="${WEBHOOK_HUB_HTTP_PORT_SMOKE:-18082}"
   export WORKFLOW_CONTROL_HTTP_PORT="${WORKFLOW_CONTROL_HTTP_PORT_SMOKE:-18084}"
@@ -1172,8 +1363,9 @@ run_smoke() {
   run_webhook_hub_runtime_smoke
   run_workflow_control_runtime_smoke
   run_workflow_runtime_smoke
-  run_analytics_runtime_smoke
   run_crm_runtime_smoke
+  run_sales_runtime_smoke
+  run_analytics_runtime_smoke
   run_identity_runtime_smoke
   run_edge_runtime_smoke
 }
