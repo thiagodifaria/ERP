@@ -12,6 +12,7 @@ import { loadConfig } from "./env.js";
 import { InMemoryWorkflowDefinitionRepository } from "../infrastructure/in-memory-workflow-definition-repository.js";
 import { InMemoryWorkflowDefinitionVersionRepository } from "../infrastructure/in-memory-workflow-definition-version-repository.js";
 import { PostgresWorkflowDefinitionRepository } from "../infrastructure/postgres-workflow-definition-repository.js";
+import { PostgresWorkflowDefinitionVersionRepository } from "../infrastructure/postgres-workflow-definition-version-repository.js";
 import pg from "pg";
 
 const { Pool } = pg;
@@ -35,6 +36,20 @@ function buildRepository(): WorkflowDefinitionRepository {
 }
 
 function buildVersionRepository(): WorkflowDefinitionVersionRepository {
+  if (config.repositoryDriver === "postgres") {
+    return new PostgresWorkflowDefinitionVersionRepository(
+      new Pool({
+        host: config.postgresHost,
+        port: Number(config.postgresPort),
+        database: config.postgresDatabase,
+        user: config.postgresUser,
+        password: config.postgresPassword,
+        ssl: config.postgresSslMode === "disable" ? false : { rejectUnauthorized: false }
+      }),
+      config.bootstrapTenantSlug
+    );
+  }
+
   return new InMemoryWorkflowDefinitionVersionRepository();
 }
 

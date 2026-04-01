@@ -187,3 +187,5 @@
 - `v0.0.92`: [UPDATE 01/04/2026 - 04:08 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack TypeScript passou a distinguir explicitamente `workflow_definition_version_not_found` quando um fluxo ainda nao possui historico publicado.
 - `v0.0.93`: [UPDATE 01/04/2026 - 04:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` ganhou contract coverage para `versions`, `publish` e `current-version`, congelando o shape publico do historico versionado.
 - `v0.0.93`: [UPDATE 01/04/2026 - 04:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O README do servico passou a explicitar que o escopo contratual agora cobre tambem o ciclo de versoes publicadas.
+- `v0.0.94`: [UPDATE 01/04/2026 - 04:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` ganhou adapter PostgreSQL para `workflow_definition_versions`, fechando listagem, leitura corrente e publicacao numerada em runtime real.
+- `v0.0.94`: [UPDATE 01/04/2026 - 04:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack TypeScript agora trata persistencia de versions com os mesmos drivers `memory` e `postgres` usados no catalogo principal de definicoes.

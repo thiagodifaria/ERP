@@ -11,6 +11,7 @@ Initial scope:
 - bootstrap workflow definition list
 - repository abstraction ready for memory and PostgreSQL
 - domain primitives ready for versioned publication history
+- version persistence ready for memory and PostgreSQL
 - room for workflow definitions and future control-plane APIs
 
 Public routes:
