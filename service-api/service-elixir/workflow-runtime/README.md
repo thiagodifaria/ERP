@@ -25,6 +25,7 @@ Public routes:
 - `GET /api/workflow-runtime/executions/{publicId}/transitions`
 - `GET /api/workflow-runtime/executions/summary`
 - `GET /api/workflow-runtime/executions/summary?tenantSlug=...&workflowDefinitionKey=...`
+- `GET /api/workflow-runtime/executions/summary/by-workflow`
 - `POST /api/workflow-runtime/executions`
 - `POST /api/workflow-runtime/executions/{publicId}/start`
 - `POST /api/workflow-runtime/executions/{publicId}/complete`

@@ -66,6 +66,9 @@ def test_automation_board_returns_delivery_and_runtime_board() -> None:
     assert payload["tenantSlug"] == "bootstrap-ops"
     assert payload["catalog"]["definitionsActive"] == 6
     assert payload["runtime"]["completedExecutions"] == 28
+    assert payload["runtime"]["byWorkflow"][0]["workflowDefinitionKey"] == "lead-follow-up"
+    assert payload["runtime"]["byWorkflow"][0]["retriesTotal"] == 3
+    assert payload["control"]["byWorkflow"][0]["workflowDefinitionKey"] == "lead-follow-up"
     assert payload["delivery"]["forwarded"] == 87
 
 

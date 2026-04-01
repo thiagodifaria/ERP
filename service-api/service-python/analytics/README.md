@@ -7,6 +7,7 @@ Initial scope:
 - FastAPI service bootstrap
 - health and readiness routes
 - first operational pipeline summary report
+- automation board with workflow-level operational breakdown
 - selectable repository driver between memory and PostgreSQL
 - room for warehouse ingestion, ETL and forecasting models
 

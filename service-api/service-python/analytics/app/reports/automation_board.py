@@ -34,6 +34,24 @@ def build_static_automation_board(tenant_slug: str | None = None) -> dict:
             "failedRuns": 2,
             "cancelledRuns": 1,
             "recordedEvents": 84,
+            "byWorkflow": [
+                {
+                    "workflowDefinitionKey": "lead-follow-up",
+                    "total": 21,
+                    "running": 4,
+                    "completed": 15,
+                    "failed": 1,
+                    "cancelled": 1,
+                },
+                {
+                    "workflowDefinitionKey": "proposal-reminder",
+                    "total": 20,
+                    "running": 3,
+                    "completed": 13,
+                    "failed": 1,
+                    "cancelled": 0,
+                },
+            ],
         },
         "runtime": {
             "executionsTotal": 44,
@@ -43,6 +61,28 @@ def build_static_automation_board(tenant_slug: str | None = None) -> dict:
             "failedExecutions": 8,
             "cancelledExecutions": 4,
             "recordedTransitions": 116,
+            "byWorkflow": [
+                {
+                    "workflowDefinitionKey": "lead-follow-up",
+                    "total": 24,
+                    "pending": 2,
+                    "running": 2,
+                    "completed": 16,
+                    "failed": 3,
+                    "cancelled": 1,
+                    "retriesTotal": 3,
+                },
+                {
+                    "workflowDefinitionKey": "proposal-reminder",
+                    "total": 20,
+                    "pending": 2,
+                    "running": 2,
+                    "completed": 12,
+                    "failed": 5,
+                    "cancelled": 3,
+                    "retriesTotal": 5,
+                },
+            ],
         },
         "delivery": {
             "eventsTotal": 93,
@@ -148,6 +188,7 @@ def fetch_control_metrics(connection, tenant_slug: str | None) -> dict:
         "failedRuns": int(runs_row.get("failed_runs", 0) or 0),
         "cancelledRuns": int(runs_row.get("cancelled_runs", 0) or 0),
         "recordedEvents": int(events_row.get("recorded_events", 0) or 0),
+        "byWorkflow": fetch_control_by_workflow(connection, tenant_slug),
     }
 
 
@@ -189,7 +230,83 @@ def fetch_runtime_metrics(connection, tenant_slug: str | None) -> dict:
         "failedExecutions": int(executions_row.get("failed_executions", 0) or 0),
         "cancelledExecutions": int(executions_row.get("cancelled_executions", 0) or 0),
         "recordedTransitions": int(transitions_row.get("recorded_transitions", 0) or 0),
+        "byWorkflow": fetch_runtime_by_workflow(connection, tenant_slug),
     }
+
+
+def fetch_control_by_workflow(connection, tenant_slug: str | None) -> list[dict]:
+    filter_sql, params = tenant_filter("tenant.slug = %s", tenant_slug)
+
+    query = f"""
+        SELECT
+            definition.key AS workflow_definition_key,
+            count(*) AS total,
+            count(*) FILTER (WHERE run.status = 'running') AS running,
+            count(*) FILTER (WHERE run.status = 'completed') AS completed,
+            count(*) FILTER (WHERE run.status = 'failed') AS failed,
+            count(*) FILTER (WHERE run.status = 'cancelled') AS cancelled
+        FROM workflow_control.workflow_runs AS run
+        JOIN workflow_control.workflow_definitions AS definition ON definition.id = run.workflow_definition_id
+        JOIN identity.tenants AS tenant ON tenant.id = run.tenant_id
+        {filter_sql}
+        GROUP BY definition.key
+        ORDER BY definition.key ASC
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        rows = cursor.fetchall() or []
+
+    return [
+        {
+            "workflowDefinitionKey": row["workflow_definition_key"],
+            "total": int(row.get("total", 0) or 0),
+            "running": int(row.get("running", 0) or 0),
+            "completed": int(row.get("completed", 0) or 0),
+            "failed": int(row.get("failed", 0) or 0),
+            "cancelled": int(row.get("cancelled", 0) or 0),
+        }
+        for row in rows
+    ]
+
+
+def fetch_runtime_by_workflow(connection, tenant_slug: str | None) -> list[dict]:
+    filter_sql, params = tenant_filter("tenant.slug = %s", tenant_slug)
+
+    query = f"""
+        SELECT
+            execution.workflow_definition_key,
+            count(*) AS total,
+            count(*) FILTER (WHERE execution.status = 'pending') AS pending,
+            count(*) FILTER (WHERE execution.status = 'running') AS running,
+            count(*) FILTER (WHERE execution.status = 'completed') AS completed,
+            count(*) FILTER (WHERE execution.status = 'failed') AS failed,
+            count(*) FILTER (WHERE execution.status = 'cancelled') AS cancelled,
+            coalesce(sum(execution.retry_count), 0) AS retries_total
+        FROM workflow_runtime.executions AS execution
+        JOIN identity.tenants AS tenant ON tenant.id = execution.tenant_id
+        {filter_sql}
+        GROUP BY execution.workflow_definition_key
+        ORDER BY execution.workflow_definition_key ASC
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        rows = cursor.fetchall() or []
+
+    return [
+        {
+            "workflowDefinitionKey": row["workflow_definition_key"],
+            "total": int(row.get("total", 0) or 0),
+            "pending": int(row.get("pending", 0) or 0),
+            "running": int(row.get("running", 0) or 0),
+            "completed": int(row.get("completed", 0) or 0),
+            "failed": int(row.get("failed", 0) or 0),
+            "cancelled": int(row.get("cancelled", 0) or 0),
+            "retriesTotal": int(row.get("retries_total", 0) or 0),
+        }
+        for row in rows
+    ]
 
 
 def fetch_delivery_metrics(connection) -> dict:

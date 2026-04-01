@@ -75,6 +75,14 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     end
   end
 
+  def summary_by_workflow(filters \\ %{}) do
+    if postgres_driver?() do
+      summary_by_workflow_postgres(filters)
+    else
+      summary_by_workflow_memory(filters)
+    end
+  end
+
   defp list_memory(filters) do
     filters = normalize_filters(filters)
 
@@ -216,6 +224,25 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
             {{:error, :invalid_transition}, state}
           end
       end
+    end)
+  end
+
+  defp summary_by_workflow_memory(filters) do
+    filters
+    |> list()
+    |> Enum.group_by(& &1["workflowDefinitionKey"])
+    |> Enum.sort_by(fn {workflow_definition_key, _executions} -> workflow_definition_key end)
+    |> Enum.map(fn {workflow_definition_key, executions} ->
+      %{
+        "workflowDefinitionKey" => workflow_definition_key,
+        "total" => length(executions),
+        "pending" => Enum.count(executions, &(&1["status"] == "pending")),
+        "running" => Enum.count(executions, &(&1["status"] == "running")),
+        "completed" => Enum.count(executions, &(&1["status"] == "completed")),
+        "failed" => Enum.count(executions, &(&1["status"] == "failed")),
+        "cancelled" => Enum.count(executions, &(&1["status"] == "cancelled")),
+        "retriesTotal" => Enum.reduce(executions, 0, &(&1["retryCount"] + &2))
+      }
     end)
   end
 
@@ -489,6 +516,31 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     end
   end
 
+  defp summary_by_workflow_postgres(filters) do
+    filters = normalize_filters(filters)
+    {conditions, params} = postgres_filter_conditions(filters)
+
+    statement = """
+    SELECT
+      execution.workflow_definition_key,
+      count(*) AS total,
+      count(*) FILTER (WHERE execution.status = 'pending') AS pending,
+      count(*) FILTER (WHERE execution.status = 'running') AS running,
+      count(*) FILTER (WHERE execution.status = 'completed') AS completed,
+      count(*) FILTER (WHERE execution.status = 'failed') AS failed,
+      count(*) FILTER (WHERE execution.status = 'cancelled') AS cancelled,
+      coalesce(sum(execution.retry_count), 0) AS retries_total
+    FROM workflow_runtime.executions AS execution
+    JOIN identity.tenants AS tenant ON tenant.id = execution.tenant_id
+    #{build_where_clause(conditions)}
+    GROUP BY execution.workflow_definition_key
+    ORDER BY execution.workflow_definition_key ASC
+    """
+
+    Postgres.query!(statement, params).rows
+    |> Enum.map(&map_workflow_summary_row/1)
+  end
+
   defp postgres_driver? do
     Postgres.enabled?()
   end
@@ -555,6 +607,19 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
       "status" => Enum.at(row, 1),
       "changedBy" => Enum.at(row, 2),
       "createdAt" => encode_datetime(Enum.at(row, 3))
+    }
+  end
+
+  defp map_workflow_summary_row(row) do
+    %{
+      "workflowDefinitionKey" => Enum.at(row, 0),
+      "total" => Enum.at(row, 1),
+      "pending" => Enum.at(row, 2),
+      "running" => Enum.at(row, 3),
+      "completed" => Enum.at(row, 4),
+      "failed" => Enum.at(row, 5),
+      "cancelled" => Enum.at(row, 6),
+      "retriesTotal" => Enum.at(row, 7)
     }
   end
 

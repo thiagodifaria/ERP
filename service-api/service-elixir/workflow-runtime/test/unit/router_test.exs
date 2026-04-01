@@ -250,6 +250,58 @@ defmodule WorkflowRuntime.Api.RouterTest do
     assert filtered_summary_payload["failed"] == 0
   end
 
+  test "execution summary by workflow groups runtime state and retries" do
+    first_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "tenantSlug" => "ops-east",
+        "workflowDefinitionKey" => "lead-follow-up",
+        "subjectType" => "crm.lead",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001298",
+        "initiatedBy" => "board-user"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    second_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "tenantSlug" => "ops-east",
+        "workflowDefinitionKey" => "quote-follow-up",
+        "subjectType" => "sales.quote",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001299",
+        "initiatedBy" => "board-user"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    first_public_id = Jason.decode!(first_conn.resp_body)["publicId"]
+    second_public_id = Jason.decode!(second_conn.resp_body)["publicId"]
+
+    _start_first_conn = conn(:post, "/api/workflow-runtime/executions/#{first_public_id}/start") |> Router.call([])
+    _complete_conn = conn(:post, "/api/workflow-runtime/executions/#{first_public_id}/complete") |> Router.call([])
+    _fail_conn = conn(:post, "/api/workflow-runtime/executions/#{second_public_id}/fail") |> Router.call([])
+    _retry_conn = conn(:post, "/api/workflow-runtime/executions/#{second_public_id}/retry") |> Router.call([])
+
+    grouped_summary_conn =
+      conn(:get, "/api/workflow-runtime/executions/summary/by-workflow?tenantSlug=ops-east") |> Router.call([])
+
+    grouped_summary_payload = Jason.decode!(grouped_summary_conn.resp_body)
+
+    lead_follow_up =
+      Enum.find(grouped_summary_payload, &(&1["workflowDefinitionKey"] == "lead-follow-up"))
+
+    quote_follow_up =
+      Enum.find(grouped_summary_payload, &(&1["workflowDefinitionKey"] == "quote-follow-up"))
+
+    assert grouped_summary_conn.status == 200
+    assert lead_follow_up["total"] == 1
+    assert lead_follow_up["completed"] == 1
+    assert lead_follow_up["retriesTotal"] == 0
+    assert quote_follow_up["total"] == 1
+    assert quote_follow_up["pending"] == 1
+    assert quote_follow_up["failed"] == 0
+    assert quote_follow_up["retriesTotal"] == 1
+  end
+
   test "execution can be retried after failure and resume lifecycle" do
     create_conn =
       conn(:post, "/api/workflow-runtime/executions", %{
