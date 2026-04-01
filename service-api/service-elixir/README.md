@@ -6,6 +6,10 @@ Planned services:
 
 - workflow-runtime
 
+Already started:
+
+- `workflow-runtime`
+
 Standard layout:
 
 - `lib/<service>/application.ex`

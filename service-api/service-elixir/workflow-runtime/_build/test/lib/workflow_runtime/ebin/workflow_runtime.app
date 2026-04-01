@@ -1,0 +1,12 @@
+{application,workflow_runtime,
+             [{config_mtime,1775036358},
+              {optional_applications,[]},
+              {applications,[kernel,stdlib,elixir,logger,jason,plug_cowboy]},
+              {description,"workflow_runtime"},
+              {modules,['Elixir.WorkflowRuntime.Api.Router',
+                        'Elixir.WorkflowRuntime.Application',
+                        'Elixir.WorkflowRuntime.Application.ExecutionStore',
+                        'Elixir.WorkflowRuntime.Server']},
+              {registered,[]},
+              {vsn,"0.1.0"},
+              {mod,{'Elixir.WorkflowRuntime.Application',[]}}]}.
