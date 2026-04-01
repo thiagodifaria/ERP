@@ -180,6 +180,55 @@ test("workflow run event summary should expose counters and latest event metadat
   assert.match(summaryPayload.latestCreatedAt, /.+/);
 });
 
+test("workflow run events should support filtering by category and creator", async () => {
+  const createRunResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: "00000000-0000-0000-0000-000000009993",
+      initiatedBy: "ops-filters"
+    })
+  });
+  const createdRun = await createRunResponse.json();
+
+  assert.equal(createRunResponse.status, 201);
+
+  const startResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/start`, {
+    method: "POST"
+  });
+  assert.equal(startResponse.status, 200);
+
+  const noteResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/events`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      body: "Filtro operacional de nota criado para leitura segmentada.",
+      createdBy: "ops-filters"
+    })
+  });
+  assert.equal(noteResponse.status, 201);
+
+  const statusEventsResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/events?category=status`);
+  const statusEventsPayload = await statusEventsResponse.json();
+  assert.equal(statusEventsResponse.status, 200);
+  assert.equal(statusEventsPayload.length, 1);
+  assert.equal(statusEventsPayload[0].category, "status");
+  assert.equal(statusEventsPayload[0].createdBy, "workflow-control");
+
+  const noteEventsResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/events?createdBy=ops-filters`);
+  const noteEventsPayload = await noteEventsResponse.json();
+  assert.equal(noteEventsResponse.status, 200);
+  assert.equal(noteEventsPayload.length, 1);
+  assert.equal(noteEventsPayload[0].category, "note");
+  assert.equal(noteEventsPayload[0].createdBy, "ops-filters");
+});
+
 test("workflow run create should append a pending execution linked to current version", async () => {
   const response = await request("/api/workflow-control/runs", {
     method: "POST",

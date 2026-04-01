@@ -349,6 +349,8 @@ run_workflow_control_runtime_smoke() {
   local list_response
   local runs_response
   local run_events_response
+  local run_events_status_response
+  local run_events_creator_response
   local run_events_summary_response
   local run_note_response
   local runs_summary_response
@@ -470,12 +472,16 @@ run_workflow_control_runtime_smoke() {
     -d '{"body":"Anotacao operacional criada no smoke do workflow-control.","createdBy":"smoke-ops"}' \
     "$base_url/api/workflow-control/runs/$created_run_public_id/events")"
   run_events_response="$(curl -fsS "$base_url/api/workflow-control/runs/$created_run_public_id/events")"
+  run_events_status_response="$(curl -fsS "$base_url/api/workflow-control/runs/$created_run_public_id/events?category=status")"
+  run_events_creator_response="$(curl -fsS "$base_url/api/workflow-control/runs/$created_run_public_id/events?createdBy=smoke-ops")"
   run_events_summary_response="$(curl -fsS "$base_url/api/workflow-control/runs/$created_run_public_id/events/summary")"
   echo "[test] workflow-control create run note => $run_note_response"
   echo "[test] workflow-control runtime run events => $run_events_response"
+  echo "[test] workflow-control runtime run events status filter => $run_events_status_response"
+  echo "[test] workflow-control runtime run events creator filter => $run_events_creator_response"
   echo "[test] workflow-control runtime run events summary => $run_events_summary_response"
 
-  if [[ "$run_note_response" != *"\"workflowRunPublicId\":\"$created_run_public_id\""* || "$run_note_response" != *'"category":"note"'* || "$run_events_response" != *'"createdBy":"smoke-ops"'* || "$run_events_response" != *'"body":"Anotacao operacional criada no smoke do workflow-control."'* || "$run_events_response" != *'"body":"Workflow run moved to running."'* || "$run_events_response" != *'"createdBy":"workflow-control"'* || "$run_events_summary_response" != *"\"workflowRunPublicId\":\"$created_run_public_id\""* || "$run_events_summary_response" != *'"total":2'* || "$run_events_summary_response" != *'"status":1'* || "$run_events_summary_response" != *'"note":1'* || "$run_events_summary_response" != *'"latestCategory":"note"'* ]]; then
+  if [[ "$run_note_response" != *"\"workflowRunPublicId\":\"$created_run_public_id\""* || "$run_note_response" != *'"category":"note"'* || "$run_events_response" != *'"createdBy":"smoke-ops"'* || "$run_events_response" != *'"body":"Anotacao operacional criada no smoke do workflow-control."'* || "$run_events_response" != *'"body":"Workflow run moved to running."'* || "$run_events_response" != *'"createdBy":"workflow-control"'* || "$run_events_status_response" != *'"category":"status"'* || "$run_events_status_response" != *'"createdBy":"workflow-control"'* || "$run_events_creator_response" != *'"category":"note"'* || "$run_events_creator_response" != *'"createdBy":"smoke-ops"'* || "$run_events_summary_response" != *"\"workflowRunPublicId\":\"$created_run_public_id\""* || "$run_events_summary_response" != *'"total":2'* || "$run_events_summary_response" != *'"status":1'* || "$run_events_summary_response" != *'"note":1'* || "$run_events_summary_response" != *'"latestCategory":"note"'* ]]; then
     echo "[test] workflow-control run note create did not persist"
     exit 1
   fi

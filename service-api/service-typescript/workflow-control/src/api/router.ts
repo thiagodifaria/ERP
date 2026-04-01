@@ -205,7 +205,11 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     segments[4] === "events"
   ) {
     try {
-      const workflowRunEvents = await services.listWorkflowRunEvents.execute(segments[3]);
+      const params = searchParams(request);
+      const workflowRunEvents = await services.listWorkflowRunEvents.execute(segments[3], {
+        category: params.get("category") ?? undefined,
+        createdBy: params.get("createdBy") ?? undefined
+      });
       json(response, 200, workflowRunEvents);
       return;
     } catch (error) {
@@ -215,6 +219,14 @@ export async function route(request: IncomingMessage, response: ServerResponse):
         json(response, 404, {
           code,
           message: "Workflow run was not found."
+        });
+        return;
+      }
+
+      if (code === "workflow_run_event_category_invalid") {
+        json(response, 400, {
+          code,
+          message: "Workflow run event filter is invalid."
         });
         return;
       }

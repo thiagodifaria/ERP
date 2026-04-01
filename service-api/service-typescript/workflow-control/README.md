@@ -32,6 +32,11 @@ Public routes:
 - `GET /api/workflow-control/runs/{publicId}/events`
 - `GET /api/workflow-control/runs/{publicId}/events/summary`
 - `POST /api/workflow-control/runs/{publicId}/events`
+
+Event query params:
+
+- `category=status|note`
+- `createdBy=<actor>`
 - `POST /api/workflow-control/runs/{publicId}/start`
 - `POST /api/workflow-control/runs/{publicId}/complete`
 - `POST /api/workflow-control/runs/{publicId}/fail`
@@ -66,6 +71,7 @@ Current unit scope:
 - workflow run note create
 - workflow run automatic status event ledger
 - workflow run event summary
+- workflow run event filters by category and creator
 - workflow run start transition
 - workflow run complete transition
 - workflow run fail transition
@@ -93,6 +99,7 @@ Current contract scope:
 - public payload shape for workflow run note create
 - public payload shape for workflow run status event ledger
 - public payload shape for workflow run event summary
+- public payload shape for workflow run event filters
 - workflow run create payload and linkage to current version
 - workflow run operational summary payload
 - workflow run pending-to-running transition

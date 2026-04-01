@@ -249,6 +249,55 @@ test("workflow run event summary contract should expose counters and latest meta
   assert.ok(payload.latestCreatedAt);
 });
 
+test("workflow run events contract should support category and creator filters", async () => {
+  const createRunResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: randomUUID(),
+      initiatedBy: "contract-filters"
+    })
+  });
+  const createdRun = await createRunResponse.json() as WorkflowRunResponse;
+
+  assert.equal(createRunResponse.status, 201);
+
+  const startResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/start`, {
+    method: "POST"
+  });
+  assert.equal(startResponse.status, 200);
+
+  const noteResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/events`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      body: "Filtro contratual registrado no ledger da execucao.",
+      createdBy: "contract-filters"
+    })
+  });
+  assert.equal(noteResponse.status, 201);
+
+  const statusResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/events?category=status`);
+  const statusPayload = await statusResponse.json() as WorkflowRunEventResponse[];
+  assert.equal(statusResponse.status, 200);
+  assert.equal(statusPayload.length, 1);
+  assert.equal(statusPayload[0].category, "status");
+  assert.equal(statusPayload[0].createdBy, "workflow-control");
+
+  const noteFilterResponse = await request(`/api/workflow-control/runs/${createdRun.publicId}/events?createdBy=contract-filters`);
+  const noteFilterPayload = await noteFilterResponse.json() as WorkflowRunEventResponse[];
+  assert.equal(noteFilterResponse.status, 200);
+  assert.equal(noteFilterPayload.length, 1);
+  assert.equal(noteFilterPayload[0].category, "note");
+  assert.equal(noteFilterPayload[0].createdBy, "contract-filters");
+});
+
 test("workflow run contract should return created execution resource", async () => {
   const response = await request("/api/workflow-control/runs", {
     method: "POST",

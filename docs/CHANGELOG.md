@@ -1,5 +1,7 @@
 # CHANGELOG
 
+- `v0.1.32`: [UPDATE 01/04/2026 - 06:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Workflow-control passou a aceitar filtros `category` e `createdBy` em `GET /api/workflow-control/runs/{publicId}/events` para leitura segmentada do ledger operacional.
+- `v0.1.32`: [UPDATE 01/04/2026 - 06:03 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Workflow-control ampliado com unit, contract e smoke cobrindo filtros de eventos por categoria e autor em runtime com PostgreSQL.
 - `v0.1.31`: [UPDATE 01/04/2026 - 05:55 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Workflow-control ganhou `GET /api/workflow-control/runs/{publicId}/events/summary` para resumir volume, categorias e ultimo evento do ledger por execucao.
 - `v0.1.31`: [UPDATE 01/04/2026 - 05:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Workflow-control ampliado com unit, contract e smoke validando resumo operacional de eventos em runtime com PostgreSQL.
 - `v0.1.30`: [UPDATE 01/04/2026 - 05:48 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Workflow-control passou a registrar eventos automáticos de status no ledger de workflow runs durante transicoes `start`, `complete`, `fail` e `cancel`.
