@@ -19,20 +19,14 @@ export class InMemoryWorkflowDefinitionVersionRepository implements WorkflowDefi
     ];
   }
 
-  public async listByDefinitionKey(definitionKey: string): Promise<WorkflowDefinitionVersion[]> {
-    const workflowDefinitionId = this.resolveDefinitionId(definitionKey);
-
-    if (workflowDefinitionId === null) {
-      return [];
-    }
-
+  public async listByWorkflowDefinitionId(workflowDefinitionId: number): Promise<WorkflowDefinitionVersion[]> {
     return this.versions
       .filter((version) => version.workflowDefinitionId === workflowDefinitionId)
       .sort((left, right) => right.versionNumber - left.versionNumber);
   }
 
-  public async findCurrentByDefinitionKey(definitionKey: string): Promise<WorkflowDefinitionVersion | null> {
-    const versions = await this.listByDefinitionKey(definitionKey);
+  public async findCurrentByWorkflowDefinitionId(workflowDefinitionId: number): Promise<WorkflowDefinitionVersion | null> {
+    const versions = await this.listByWorkflowDefinitionId(workflowDefinitionId);
     return versions[0] ?? null;
   }
 
@@ -53,16 +47,5 @@ export class InMemoryWorkflowDefinitionVersionRepository implements WorkflowDefi
 
     this.versions.push(createdVersion);
     return createdVersion;
-  }
-
-  private resolveDefinitionId(definitionKey: string): number | null {
-    const normalizedKey = definitionKey.trim().toLowerCase();
-
-    if (normalizedKey === "lead-follow-up") {
-      return 1;
-    }
-
-    const version = this.versions.find((candidate) => candidate.workflowDefinitionId > 1 && candidate.snapshotName.length > 0 && normalizedKey.length > 0);
-    return version?.workflowDefinitionId ?? null;
   }
 }

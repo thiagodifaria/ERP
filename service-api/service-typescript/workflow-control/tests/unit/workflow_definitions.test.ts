@@ -77,6 +77,18 @@ test("workflow definition detail should expose created resource by key", async (
   assert.equal(detailPayload.trigger, "lead.qualified");
 });
 
+test("workflow definition versions should expose bootstrap publication history", async () => {
+  const response = await request("/api/workflow-control/definitions/lead-follow-up/versions");
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.ok(Array.isArray(payload));
+  assert.equal(payload.length, 1);
+  assert.equal(payload[0].workflowDefinitionId, 1);
+  assert.equal(payload[0].versionNumber, 1);
+  assert.equal(payload[0].snapshotTrigger, "lead.created");
+});
+
 test("workflow definition create should normalize payload and return draft status", async () => {
   const key = `create-${randomUUID()}`;
   const response = await request("/api/workflow-control/definitions", {

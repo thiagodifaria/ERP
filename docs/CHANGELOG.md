@@ -179,3 +179,5 @@
 - `v0.0.88`: [UPDATE 01/04/2026 - 03:45 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A documentacao operacional do summary de workflow-control foi atualizada para refletir o novo foco em historico de publicacao.
 - `v0.0.89`: [UPDATE 01/04/2026 - 03:50 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O dominio TypeScript ganhou o agregado `WorkflowDefinitionVersion` e o contrato dedicado de repositorio para historico de publicacao.
 - `v0.0.89`: [UPDATE 01/04/2026 - 03:50 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O runtime em memoria passou a nascer com a versao `1` do fluxo bootstrap `lead-follow-up`, preparando as proximas APIs de versionamento.
+- `v0.0.90`: [UPDATE 01/04/2026 - 03:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/definitions/{key}/versions` como primeiro read-side de historico versionado.
+- `v0.0.90`: [UPDATE 01/04/2026 - 03:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O fluxo unitario passou a validar a exposicao da versao bootstrap `1` do `lead-follow-up` pela API TypeScript.

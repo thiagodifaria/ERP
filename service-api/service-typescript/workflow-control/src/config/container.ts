@@ -1,11 +1,14 @@
 import { CreateWorkflowDefinition } from "../application/create-workflow-definition.js";
 import { GetWorkflowDefinitionByKey } from "../application/get-workflow-definition-by-key.js";
+import { ListWorkflowDefinitionVersions } from "../application/list-workflow-definition-versions.js";
 import { ListWorkflowDefinitions } from "../application/list-workflow-definitions.js";
 import { UpdateWorkflowDefinition } from "../application/update-workflow-definition.js";
 import { UpdateWorkflowDefinitionStatus } from "../application/update-workflow-definition-status.js";
 import { WorkflowDefinitionRepository } from "../domain/workflow-definition-repository.js";
+import { WorkflowDefinitionVersionRepository } from "../domain/workflow-definition-version-repository.js";
 import { loadConfig } from "./env.js";
 import { InMemoryWorkflowDefinitionRepository } from "../infrastructure/in-memory-workflow-definition-repository.js";
+import { InMemoryWorkflowDefinitionVersionRepository } from "../infrastructure/in-memory-workflow-definition-version-repository.js";
 import { PostgresWorkflowDefinitionRepository } from "../infrastructure/postgres-workflow-definition-repository.js";
 import pg from "pg";
 
@@ -29,6 +32,10 @@ function buildRepository(): WorkflowDefinitionRepository {
   return new InMemoryWorkflowDefinitionRepository();
 }
 
+function buildVersionRepository(): WorkflowDefinitionVersionRepository {
+  return new InMemoryWorkflowDefinitionVersionRepository();
+}
+
 export type ReadinessDependency = {
   name: string;
   status: string;
@@ -36,10 +43,12 @@ export type ReadinessDependency = {
 
 const config = loadConfig();
 const repository = buildRepository();
+const versionRepository = buildVersionRepository();
 
 export const services = {
   createWorkflowDefinition: new CreateWorkflowDefinition(repository),
   getWorkflowDefinitionByKey: new GetWorkflowDefinitionByKey(repository),
+  listWorkflowDefinitionVersions: new ListWorkflowDefinitionVersions(repository, versionRepository),
   listWorkflowDefinitions: new ListWorkflowDefinitions(repository),
   updateWorkflowDefinition: new UpdateWorkflowDefinition(repository),
   updateWorkflowDefinitionStatus: new UpdateWorkflowDefinitionStatus(repository)
