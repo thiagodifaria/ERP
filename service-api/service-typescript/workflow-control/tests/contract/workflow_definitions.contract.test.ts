@@ -14,6 +14,16 @@ type WorkflowDefinitionResponse = {
   trigger: string;
 };
 
+type WorkflowDefinitionVersionResponse = {
+  id: number;
+  workflowDefinitionId: number;
+  versionNumber: number;
+  snapshotName: string;
+  snapshotDescription: string | null;
+  snapshotStatus: string;
+  snapshotTrigger: string;
+};
+
 type ErrorResponse = {
   code: string;
   message: string;
@@ -131,6 +141,55 @@ test("workflow definition contract should return updated metadata resource", asy
   assert.equal(payload.name, "Contract Update Flow Prime");
   assert.equal(payload.description, "Fluxo revisado pelo contract test.");
   assert.equal(payload.trigger, "lead.qualified");
+});
+
+test("workflow definition versions contract should expose version history", async () => {
+  const response = await request("/api/workflow-control/definitions/lead-follow-up/versions");
+  const payload = await response.json() as WorkflowDefinitionVersionResponse[];
+
+  assert.equal(response.status, 200);
+  assert.ok(payload.length > 0);
+  assert.equal(payload[0].versionNumber, 1);
+});
+
+test("workflow definition publish contract should return created version resource", async () => {
+  const key = `contract-publish-${randomUUID()}`;
+  const createResponse = await request("/api/workflow-control/definitions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      key,
+      name: "Contract Publish Flow",
+      description: "Fluxo publicado via contract test.",
+      trigger: "lead.created"
+    })
+  });
+
+  assert.equal(createResponse.status, 201);
+
+  const publishResponse = await request(`/api/workflow-control/definitions/${key}/versions`, {
+    method: "POST"
+  });
+  const payload = await publishResponse.json() as WorkflowDefinitionVersionResponse;
+
+  assert.equal(publishResponse.status, 201);
+  assert.ok(payload.id > 0);
+  assert.ok(payload.workflowDefinitionId > 0);
+  assert.equal(payload.versionNumber, 1);
+  assert.equal(payload.snapshotName, "Contract Publish Flow");
+  assert.equal(payload.snapshotTrigger, "lead.created");
+});
+
+test("workflow definition current version contract should expose latest version snapshot", async () => {
+  const response = await request("/api/workflow-control/definitions/lead-follow-up/versions/current");
+  const payload = await response.json() as WorkflowDefinitionVersionResponse;
+
+  assert.equal(response.status, 200);
+  assert.equal(payload.workflowDefinitionId, 1);
+  assert.equal(payload.versionNumber, 1);
+  assert.equal(payload.snapshotName, "Lead Follow-Up");
 });
 
 test("workflow definition contract should expose detail and status update", async () => {

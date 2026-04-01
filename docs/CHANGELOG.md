@@ -185,3 +185,5 @@
 - `v0.0.91`: [UPDATE 01/04/2026 - 04:02 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O runtime em memoria passou a validar publicacao manual de versoes para definicoes criadas durante a execucao.
 - `v0.0.92`: [UPDATE 01/04/2026 - 04:08 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `workflow-control` ganhou `GET /api/workflow-control/definitions/{key}/versions/current` para leitura direta do snapshot corrente.
 - `v0.0.92`: [UPDATE 01/04/2026 - 04:08 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A stack TypeScript passou a distinguir explicitamente `workflow_definition_version_not_found` quando um fluxo ainda nao possui historico publicado.
+- `v0.0.93`: [UPDATE 01/04/2026 - 04:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `workflow-control` ganhou contract coverage para `versions`, `publish` e `current-version`, congelando o shape publico do historico versionado.
+- `v0.0.93`: [UPDATE 01/04/2026 - 04:13 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O README do servico passou a explicitar que o escopo contratual agora cobre tambem o ciclo de versoes publicadas.
