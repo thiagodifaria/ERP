@@ -102,8 +102,10 @@ docker compose --env-file .env.example -f infra/docker-compose.yml up --build -d
 - Workflow Runtime: `http://localhost:8085`
 - Analytics: `http://localhost:8086`
 - Sales: `http://localhost:8087`
-- PostgreSQL: `localhost:5432`
-- Redis: `localhost:6379`
+- PostgreSQL: `localhost:5432` by default
+- Redis: `localhost:6379` by default
+
+If one of these host ports is already in use, the container-first scripts remap it automatically during local runtime and smoke validation.
 
 ---
 

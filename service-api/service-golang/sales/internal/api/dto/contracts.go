@@ -89,3 +89,31 @@ type SaleSummaryResponse struct {
 type UpdateSaleStatusRequest struct {
 	Status string `json:"status"`
 }
+
+type InvoiceResponse struct {
+	PublicID     string `json:"publicId"`
+	SalePublicID string `json:"salePublicId"`
+	Number       string `json:"number"`
+	Status       string `json:"status"`
+	AmountCents  int64  `json:"amountCents"`
+	DueDate      string `json:"dueDate"`
+	PaidAt       string `json:"paidAt"`
+}
+
+type InvoiceSummaryResponse struct {
+	Total              int            `json:"total"`
+	OpenAmountCents    int64          `json:"openAmountCents"`
+	PaidAmountCents    int64          `json:"paidAmountCents"`
+	OverdueAmountCents int64          `json:"overdueAmountCents"`
+	OverdueCount       int            `json:"overdueCount"`
+	ByStatus           map[string]int `json:"byStatus"`
+}
+
+type CreateInvoiceRequest struct {
+	Number  string `json:"number"`
+	DueDate string `json:"dueDate"`
+}
+
+type UpdateInvoiceStatusRequest struct {
+	Status string `json:"status"`
+}

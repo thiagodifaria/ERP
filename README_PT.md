@@ -314,8 +314,10 @@ docker compose --env-file .env.example -f infra/docker-compose.yml up --build -d
 - Workflow Runtime: `http://localhost:8085`
 - Analytics: `http://localhost:8086`
 - Sales: `http://localhost:8087`
-- PostgreSQL: `localhost:5432`
-- Redis: `localhost:6379`
+- PostgreSQL: `localhost:5432` por padrao
+- Redis: `localhost:6379` por padrao
+
+Se alguma dessas portas do host ja estiver ocupada, os scripts container-first remapeiam automaticamente durante a subida local e a validacao smoke.
 
 ---
 

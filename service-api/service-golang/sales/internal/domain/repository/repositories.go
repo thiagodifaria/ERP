@@ -25,3 +25,11 @@ type SaleRepository interface {
 	Save(sale entity.Sale) entity.Sale
 	Update(sale entity.Sale) entity.Sale
 }
+
+type InvoiceRepository interface {
+	List() []entity.Invoice
+	FindByPublicID(publicID string) *entity.Invoice
+	FindBySalePublicID(salePublicID string) *entity.Invoice
+	Save(invoice entity.Invoice) entity.Invoice
+	Update(invoice entity.Invoice) entity.Invoice
+}

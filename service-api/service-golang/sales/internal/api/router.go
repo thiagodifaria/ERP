@@ -18,8 +18,9 @@ func NewRouter(
 	opportunityRepository repository.OpportunityRepository,
 	proposalRepository repository.ProposalRepository,
 	saleRepository repository.SaleRepository,
+	invoiceRepository repository.InvoiceRepository,
 ) http.Handler {
-	return NewRouterWithRuntime(logger, opportunityRepository, proposalRepository, saleRepository, "memory")
+	return NewRouterWithRuntime(logger, opportunityRepository, proposalRepository, saleRepository, invoiceRepository, "memory")
 }
 
 func NewRouterWithRuntime(
@@ -27,6 +28,7 @@ func NewRouterWithRuntime(
 	opportunityRepository repository.OpportunityRepository,
 	proposalRepository repository.ProposalRepository,
 	saleRepository repository.SaleRepository,
+	invoiceRepository repository.InvoiceRepository,
 	repositoryDriver string,
 ) http.Handler {
 	mux := http.NewServeMux()
@@ -51,6 +53,13 @@ func NewRouterWithRuntime(
 		query.NewGetSaleByPublicID(saleRepository),
 		command.NewUpdateSaleStatus(saleRepository),
 	)
+	invoiceHandler := handler.NewInvoiceHandler(
+		query.NewListInvoices(invoiceRepository),
+		query.NewGetInvoiceSummary(invoiceRepository),
+		query.NewGetInvoiceByPublicID(invoiceRepository),
+		command.NewCreateInvoice(saleRepository, invoiceRepository),
+		command.NewUpdateInvoiceStatus(invoiceRepository),
+	)
 
 	mux.HandleFunc("/health/live", handler.Live)
 	mux.HandleFunc("/health/ready", handler.Ready)
@@ -70,6 +79,11 @@ func NewRouterWithRuntime(
 	mux.HandleFunc("GET /api/sales/sales/summary", saleHandler.Summary)
 	mux.HandleFunc("GET /api/sales/sales/{publicId}", saleHandler.GetByPublicID)
 	mux.HandleFunc("PATCH /api/sales/sales/{publicId}/status", saleHandler.UpdateStatus)
+	mux.HandleFunc("POST /api/sales/sales/{publicId}/invoice", invoiceHandler.Create)
+	mux.HandleFunc("GET /api/sales/invoices", invoiceHandler.List)
+	mux.HandleFunc("GET /api/sales/invoices/summary", invoiceHandler.Summary)
+	mux.HandleFunc("GET /api/sales/invoices/{publicId}", invoiceHandler.GetByPublicID)
+	mux.HandleFunc("PATCH /api/sales/invoices/{publicId}/status", invoiceHandler.UpdateStatus)
 
 	return middleware.WithCorrelation(logger, mux)
 }

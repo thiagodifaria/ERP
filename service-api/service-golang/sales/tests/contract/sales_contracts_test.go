@@ -51,6 +51,16 @@ type saleResponse struct {
 	AmountCents         int64  `json:"amountCents"`
 }
 
+type invoiceResponse struct {
+	PublicID     string `json:"publicId"`
+	SalePublicID string `json:"salePublicId"`
+	Number       string `json:"number"`
+	Status       string `json:"status"`
+	AmountCents  int64  `json:"amountCents"`
+	DueDate      string `json:"dueDate"`
+	PaidAt       string `json:"paidAt"`
+}
+
 type errorResponse struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
@@ -151,6 +161,104 @@ func TestProposalConversionContractShouldReturnSale(t *testing.T) {
 	}
 }
 
+func TestInvoiceLifecycleContractShouldExposeBillableSaleShape(t *testing.T) {
+	router := newContractRouter()
+
+	createInvoice := performRequest(
+		t,
+		router,
+		http.MethodPost,
+		"/api/sales/sales/"+persistence.BootstrapSalePublicID+"/invoice",
+		bytes.NewBufferString(`{"number":"BOOTSTRAP-INV-0002","dueDate":"2026-05-25"}`),
+	)
+	if createInvoice.Code != http.StatusConflict {
+		t.Fatalf("expected bootstrap sale to reject duplicate invoice, got %d", createInvoice.Code)
+	}
+
+	createOpportunity := performRequest(
+		t,
+		router,
+		http.MethodPost,
+		"/api/sales/opportunities",
+		bytes.NewBufferString(`{"leadPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000031","title":"Contract Billing","ownerUserId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000032","amountCents":121000}`),
+	)
+	if createOpportunity.Code != http.StatusCreated {
+		t.Fatalf("expected opportunity create success, got %d", createOpportunity.Code)
+	}
+
+	var opportunity opportunityResponse
+	_ = json.Unmarshal(createOpportunity.Body.Bytes(), &opportunity)
+
+	createProposal := performRequest(
+		t,
+		router,
+		http.MethodPost,
+		"/api/sales/opportunities/"+opportunity.PublicID+"/proposals",
+		bytes.NewBufferString(`{"title":"Contract Billing Proposal","amountCents":121000}`),
+	)
+	if createProposal.Code != http.StatusCreated {
+		t.Fatalf("expected proposal create success, got %d", createProposal.Code)
+	}
+
+	var proposal proposalResponse
+	_ = json.Unmarshal(createProposal.Body.Bytes(), &proposal)
+
+	performRequest(
+		t,
+		router,
+		http.MethodPatch,
+		"/api/sales/proposals/"+proposal.PublicID+"/status",
+		bytes.NewBufferString(`{"status":"sent"}`),
+	)
+	convertProposal := performRequest(t, router, http.MethodPost, "/api/sales/proposals/"+proposal.PublicID+"/convert", nil)
+	if convertProposal.Code != http.StatusCreated {
+		t.Fatalf("expected convert success, got %d", convertProposal.Code)
+	}
+
+	var sale saleResponse
+	_ = json.Unmarshal(convertProposal.Body.Bytes(), &sale)
+
+	createInvoice = performRequest(
+		t,
+		router,
+		http.MethodPost,
+		"/api/sales/sales/"+sale.PublicID+"/invoice",
+		bytes.NewBufferString(`{"number":"CONTRACT-INV-0001","dueDate":"2026-05-25"}`),
+	)
+	if createInvoice.Code != http.StatusCreated {
+		t.Fatalf("expected invoice create success, got %d", createInvoice.Code)
+	}
+
+	var invoice invoiceResponse
+	if err := json.Unmarshal(createInvoice.Body.Bytes(), &invoice); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if invoice.Status != "draft" || invoice.Number != "CONTRACT-INV-0001" {
+		t.Fatalf("unexpected invoice payload: %+v", invoice)
+	}
+
+	payInvoice := performRequest(
+		t,
+		router,
+		http.MethodPatch,
+		"/api/sales/invoices/"+invoice.PublicID+"/status",
+		bytes.NewBufferString(`{"status":"paid"}`),
+	)
+	if payInvoice.Code != http.StatusOK {
+		t.Fatalf("expected paid status update success, got %d", payInvoice.Code)
+	}
+
+	var paid invoiceResponse
+	if err := json.Unmarshal(payInvoice.Body.Bytes(), &paid); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if paid.PaidAt == "" {
+		t.Fatalf("expected paidAt to be exposed")
+	}
+}
+
 func TestHealthDetailsContractShouldExposeDependencyShape(t *testing.T) {
 	response := performRequest(t, newContractRouter(), http.MethodGet, "/health/details", nil)
 	if response.Code != http.StatusOK {
@@ -219,6 +327,7 @@ func newContractRouter() http.Handler {
 		persistence.NewInMemoryOpportunityRepository(),
 		persistence.NewInMemoryProposalRepository(),
 		persistence.NewInMemorySaleRepository(),
+		persistence.NewInMemoryInvoiceRepository(),
 		"postgres",
 	)
 }

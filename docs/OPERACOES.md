@@ -31,6 +31,7 @@ Cada servico critico deve documentar:
 - `./scripts/up.sh` sobe o ecossistema local definido em compose
 - `./scripts/down.sh` derruba os containers e remove orfaos
 - `./scripts/logs.sh <servico>` consulta logs do servico informado
+- quando o host ja estiver usando portas como `5432`, `6379` ou `808x`, os scripts container-first remapeiam automaticamente as exposicoes locais para manter o fluxo de runtime e smoke previsivel
 - `./scripts/db.sh migrate all` aplica a base `common`, `identity` e `crm`
 - `./scripts/db.sh migrate crm` aplica apenas o contexto relacional de CRM
 - `./scripts/db.sh migrate workflow-control` aplica apenas o contexto relacional de workflow-control

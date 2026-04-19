@@ -14,6 +14,7 @@ const (
 	BootstrapOpportunityPublicID = "0195e7a0-7a9c-7c1f-8a44-4a6e71000001"
 	BootstrapProposalPublicID    = "0195e7a0-7a9c-7c1f-8a44-4a6e71000002"
 	BootstrapSalePublicID        = "0195e7a0-7a9c-7c1f-8a44-4a6e71000003"
+	BootstrapInvoicePublicID     = "0195e7a0-7a9c-7c1f-8a44-4a6e71000004"
 )
 
 type InMemoryOpportunityRepository struct {
@@ -29,6 +30,11 @@ type InMemoryProposalRepository struct {
 type InMemorySaleRepository struct {
 	sync.Mutex
 	sales []entity.Sale
+}
+
+type InMemoryInvoiceRepository struct {
+	sync.Mutex
+	invoices []entity.Invoice
 }
 
 func NewInMemoryOpportunityRepository() *InMemoryOpportunityRepository {
@@ -214,6 +220,82 @@ func (repository *InMemorySaleRepository) Save(sale entity.Sale) entity.Sale {
 
 	repository.sales = append(repository.sales, sale)
 	return sale
+}
+
+func NewInMemoryInvoiceRepository() *InMemoryInvoiceRepository {
+	invoice, _ := entity.RestoreInvoice(
+		BootstrapInvoicePublicID,
+		BootstrapSalePublicID,
+		"BOOTSTRAP-OPS-INV-0001",
+		125000,
+		"2026-05-10",
+		"sent",
+		"",
+	)
+
+	return &InMemoryInvoiceRepository{
+		invoices: []entity.Invoice{invoice},
+	}
+}
+
+func (repository *InMemoryInvoiceRepository) List() []entity.Invoice {
+	repository.Lock()
+	defer repository.Unlock()
+
+	copied := make([]entity.Invoice, len(repository.invoices))
+	copy(copied, repository.invoices)
+	return copied
+}
+
+func (repository *InMemoryInvoiceRepository) FindByPublicID(publicID string) *entity.Invoice {
+	repository.Lock()
+	defer repository.Unlock()
+
+	for _, invoice := range repository.invoices {
+		if invoice.PublicID == strings.TrimSpace(publicID) {
+			copied := invoice
+			return &copied
+		}
+	}
+
+	return nil
+}
+
+func (repository *InMemoryInvoiceRepository) FindBySalePublicID(salePublicID string) *entity.Invoice {
+	repository.Lock()
+	defer repository.Unlock()
+
+	for _, invoice := range repository.invoices {
+		if invoice.SalePublicID == strings.TrimSpace(salePublicID) {
+			copied := invoice
+			return &copied
+		}
+	}
+
+	return nil
+}
+
+func (repository *InMemoryInvoiceRepository) Save(invoice entity.Invoice) entity.Invoice {
+	repository.Lock()
+	defer repository.Unlock()
+
+	repository.invoices = append(repository.invoices, invoice)
+	return invoice
+}
+
+func (repository *InMemoryInvoiceRepository) Update(invoice entity.Invoice) entity.Invoice {
+	repository.Lock()
+	defer repository.Unlock()
+
+	for index, current := range repository.invoices {
+		if current.PublicID == invoice.PublicID {
+			repository.invoices[index] = invoice
+			return invoice
+		}
+	}
+
+	repository.invoices = append(repository.invoices, invoice)
+	return invoice
 }
 
 func (repository *InMemorySaleRepository) Update(sale entity.Sale) entity.Sale {

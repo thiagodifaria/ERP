@@ -1,6 +1,6 @@
 # sales
 
-This domain owns commercial opportunities, proposals, sales lifecycles and related operational structures.
+This domain owns commercial opportunities, proposals, sales lifecycles, invoices and related operational structures.
 
 Current structure:
 

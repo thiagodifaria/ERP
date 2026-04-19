@@ -51,3 +51,15 @@ func mapSale(sale entity.Sale) dto.SaleResponse {
 		AmountCents:         sale.AmountCents,
 	}
 }
+
+func mapInvoice(invoice entity.Invoice) dto.InvoiceResponse {
+	return dto.InvoiceResponse{
+		PublicID:     invoice.PublicID,
+		SalePublicID: invoice.SalePublicID,
+		Number:       invoice.Number,
+		Status:       invoice.Status,
+		AmountCents:  invoice.AmountCents,
+		DueDate:      invoice.DueDate,
+		PaidAt:       invoice.PaidAt,
+	}
+}

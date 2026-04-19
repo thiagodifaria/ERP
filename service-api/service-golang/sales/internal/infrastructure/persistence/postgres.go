@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"errors"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/thiagodifaria/erp/service-api/service-golang/sales/internal/domain/entity"
@@ -22,6 +23,11 @@ type PostgresProposalRepository struct {
 }
 
 type PostgresSaleRepository struct {
+	database *sql.DB
+	tenantID int64
+}
+
+type PostgresInvoiceRepository struct {
 	database *sql.DB
 	tenantID int64
 }
@@ -308,6 +314,18 @@ func NewPostgresSaleRepository(database *sql.DB, tenantSlug string) (*PostgresSa
 	}, nil
 }
 
+func NewPostgresInvoiceRepository(database *sql.DB, tenantSlug string) (*PostgresInvoiceRepository, error) {
+	tenantID, err := lookupTenantID(database, tenantSlug)
+	if err != nil {
+		return nil, err
+	}
+
+	return &PostgresInvoiceRepository{
+		database: database,
+		tenantID: tenantID,
+	}, nil
+}
+
 func (repository *PostgresSaleRepository) List() []entity.Sale {
 	rows, err := repository.database.Query(
 		`
@@ -465,6 +483,172 @@ func (repository *PostgresSaleRepository) Update(sale entity.Sale) entity.Sale {
 	return updated
 }
 
+func (repository *PostgresInvoiceRepository) List() []entity.Invoice {
+	rows, err := repository.database.Query(
+		`
+      SELECT invoice.public_id::text, sale.public_id::text, invoice.invoice_number, invoice.status, invoice.amount_cents, to_char(invoice.due_date, 'YYYY-MM-DD'), COALESCE(to_char(invoice.paid_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), '')
+      FROM sales.invoices AS invoice
+      INNER JOIN sales.sales AS sale
+        ON sale.id = invoice.sale_id
+      WHERE invoice.tenant_id = $1
+      ORDER BY invoice.created_at, invoice.id
+    `,
+		repository.tenantID,
+	)
+	if err != nil {
+		return []entity.Invoice{}
+	}
+	defer rows.Close()
+
+	response := make([]entity.Invoice, 0)
+	for rows.Next() {
+		invoice, scanErr := scanInvoice(rows)
+		if scanErr == nil {
+			response = append(response, invoice)
+		}
+	}
+
+	return response
+}
+
+func (repository *PostgresInvoiceRepository) FindByPublicID(publicID string) *entity.Invoice {
+	parsedPublicID, err := uuid.Parse(strings.TrimSpace(publicID))
+	if err != nil {
+		return nil
+	}
+
+	row := repository.database.QueryRow(
+		`
+      SELECT invoice.public_id::text, sale.public_id::text, invoice.invoice_number, invoice.status, invoice.amount_cents, to_char(invoice.due_date, 'YYYY-MM-DD'), COALESCE(to_char(invoice.paid_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), '')
+      FROM sales.invoices AS invoice
+      INNER JOIN sales.sales AS sale
+        ON sale.id = invoice.sale_id
+      WHERE invoice.tenant_id = $1
+        AND invoice.public_id = $2
+    `,
+		repository.tenantID,
+		parsedPublicID,
+	)
+
+	invoice, err := scanInvoice(row)
+	if err != nil {
+		return nil
+	}
+
+	return &invoice
+}
+
+func (repository *PostgresInvoiceRepository) FindBySalePublicID(salePublicID string) *entity.Invoice {
+	parsedSalePublicID, err := uuid.Parse(strings.TrimSpace(salePublicID))
+	if err != nil {
+		return nil
+	}
+
+	row := repository.database.QueryRow(
+		`
+      SELECT invoice.public_id::text, sale.public_id::text, invoice.invoice_number, invoice.status, invoice.amount_cents, to_char(invoice.due_date, 'YYYY-MM-DD'), COALESCE(to_char(invoice.paid_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), '')
+      FROM sales.invoices AS invoice
+      INNER JOIN sales.sales AS sale
+        ON sale.id = invoice.sale_id
+      WHERE invoice.tenant_id = $1
+        AND sale.public_id = $2
+    `,
+		repository.tenantID,
+		parsedSalePublicID,
+	)
+
+	invoice, err := scanInvoice(row)
+	if err != nil {
+		return nil
+	}
+
+	return &invoice
+}
+
+func (repository *PostgresInvoiceRepository) Save(invoice entity.Invoice) entity.Invoice {
+	salePublicID := uuid.MustParse(invoice.SalePublicID)
+	publicID := uuid.MustParse(invoice.PublicID)
+	var paidAt *time.Time
+	if strings.TrimSpace(invoice.PaidAt) != "" {
+		parsedPaidAt := mustParseRFC3339(invoice.PaidAt)
+		paidAt = &parsedPaidAt
+	}
+
+	row := repository.database.QueryRow(
+		`
+      INSERT INTO sales.invoices (tenant_id, sale_id, public_id, invoice_number, status, amount_cents, due_date, paid_at)
+      SELECT
+        $1,
+        sale.id,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7::date,
+        $8
+      FROM sales.sales AS sale
+      WHERE sale.tenant_id = $1
+        AND sale.public_id = $2
+      RETURNING $3::text, $2::text, invoice_number, status, amount_cents, to_char(due_date, 'YYYY-MM-DD'), COALESCE(to_char(paid_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), '')
+    `,
+		repository.tenantID,
+		salePublicID,
+		publicID,
+		invoice.Number,
+		invoice.Status,
+		invoice.AmountCents,
+		invoice.DueDate,
+		paidAt,
+	)
+
+	saved, err := scanInvoice(row)
+	if err != nil {
+		return invoice
+	}
+
+	return saved
+}
+
+func (repository *PostgresInvoiceRepository) Update(invoice entity.Invoice) entity.Invoice {
+	publicID := uuid.MustParse(invoice.PublicID)
+	var paidAt *time.Time
+	if strings.TrimSpace(invoice.PaidAt) != "" {
+		parsedPaidAt := mustParseRFC3339(invoice.PaidAt)
+		paidAt = &parsedPaidAt
+	}
+
+	row := repository.database.QueryRow(
+		`
+      UPDATE sales.invoices AS invoice
+      SET
+        invoice_number = $3,
+        status = $4,
+        amount_cents = $5,
+        due_date = $6::date,
+        paid_at = $7
+      FROM sales.sales AS sale
+      WHERE invoice.tenant_id = $1
+        AND invoice.public_id = $2
+        AND sale.id = invoice.sale_id
+      RETURNING invoice.public_id::text, sale.public_id::text, invoice.invoice_number, invoice.status, invoice.amount_cents, to_char(invoice.due_date, 'YYYY-MM-DD'), COALESCE(to_char(invoice.paid_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), '')
+    `,
+		repository.tenantID,
+		publicID,
+		invoice.Number,
+		invoice.Status,
+		invoice.AmountCents,
+		invoice.DueDate,
+		paidAt,
+	)
+
+	updated, err := scanInvoice(row)
+	if err != nil {
+		return invoice
+	}
+
+	return updated
+}
+
 func lookupTenantID(database *sql.DB, tenantSlug string) (int64, error) {
 	var tenantID int64
 	if err := database.QueryRow(
@@ -538,4 +722,33 @@ func scanSale(scanner scanner) (entity.Sale, error) {
 	}
 
 	return entity.RestoreSale(publicID, opportunityPublicID, proposalPublicID, amountCents, status)
+}
+
+func scanInvoice(scanner scanner) (entity.Invoice, error) {
+	var publicID string
+	var salePublicID string
+	var number string
+	var status string
+	var amountCents int64
+	var dueDate string
+	var paidAt string
+
+	if err := scanner.Scan(&publicID, &salePublicID, &number, &status, &amountCents, &dueDate, &paidAt); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return entity.Invoice{}, err
+		}
+
+		return entity.Invoice{}, err
+	}
+
+	return entity.RestoreInvoice(publicID, salePublicID, number, amountCents, dueDate, status, paidAt)
+}
+
+func mustParseRFC3339(value string) time.Time {
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return time.Time{}
+	}
+
+	return parsed
 }

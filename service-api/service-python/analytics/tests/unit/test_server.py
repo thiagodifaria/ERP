@@ -110,3 +110,15 @@ def test_delivery_reliability_returns_webhook_operational_footprint() -> None:
     assert payload["lifecycle"]["totalEvents"] == 93
     assert payload["statusFootprint"]["forwarded"] == 87
     assert payload["providerLeaderboard"][0]["provider"] == "stripe"
+
+
+def test_revenue_operations_returns_financial_operational_payload() -> None:
+    response = client.get("/api/analytics/reports/revenue-operations?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["sales"]["bookedRevenueCents"] == 1775000
+    assert payload["invoices"]["paidAmountCents"] == 845000
+    assert payload["collections"]["invoiceCoverageRate"] == 0.75
+    assert payload["risk"]["overdueInvoices"] == 1

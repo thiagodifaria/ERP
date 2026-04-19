@@ -1,6 +1,6 @@
 # sales
 
-The sales service owns opportunities, proposals, closing flows and revenue transitions.
+The sales service owns opportunities, proposals, closing flows, invoicing and early revenue operations.
 
 Initial scope:
 
@@ -9,9 +9,11 @@ Initial scope:
 - opportunity pipeline with controlled stage transitions
 - proposal catalog linked to opportunities
 - sale conversion flow linked to accepted proposals
+- invoice creation linked to closed sales
+- collection summary with open, paid and overdue footprints
 - selectable repository driver with PostgreSQL-backed persistence for a bootstrap tenant
-- contract and smoke coverage for opportunities, proposals and sales
-- room for invoicing, commissions and deeper revenue operations
+- contract and smoke coverage for opportunities, proposals, sales and invoices
+- room for commissions and deeper revenue operations
 
 Public routes:
 
@@ -33,6 +35,11 @@ Public routes:
 - `GET /api/sales/sales/summary`
 - `GET /api/sales/sales/{publicId}`
 - `PATCH /api/sales/sales/{publicId}/status`
+- `POST /api/sales/sales/{publicId}/invoice`
+- `GET /api/sales/invoices`
+- `GET /api/sales/invoices/summary`
+- `GET /api/sales/invoices/{publicId}`
+- `PATCH /api/sales/invoices/{publicId}/status`
 
 Container-first validation:
 

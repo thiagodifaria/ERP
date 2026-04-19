@@ -18,6 +18,7 @@ func newTestRouter() http.Handler {
 		persistence.NewInMemoryOpportunityRepository(),
 		persistence.NewInMemoryProposalRepository(),
 		persistence.NewInMemorySaleRepository(),
+		persistence.NewInMemoryInvoiceRepository(),
 	)
 }
 
@@ -129,5 +130,51 @@ func TestRouterShouldCreateOpportunityAndConvertProposal(t *testing.T) {
 
 	if createdSale.Status != "active" {
 		t.Fatalf("expected sale status active, got %s", createdSale.Status)
+	}
+
+	createInvoiceRequest := httptest.NewRequest(
+		http.MethodPost,
+		"/api/sales/sales/"+createdSale.PublicID+"/invoice",
+		bytes.NewBufferString(`{"number":"RUNTIME-INV-0001","dueDate":"2026-05-20"}`),
+	)
+	createInvoiceResponse := httptest.NewRecorder()
+	router.ServeHTTP(createInvoiceResponse, createInvoiceRequest)
+
+	if createInvoiceResponse.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, createInvoiceResponse.Code)
+	}
+
+	var createdInvoice dto.InvoiceResponse
+	if err := json.Unmarshal(createInvoiceResponse.Body.Bytes(), &createdInvoice); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	updateInvoiceRequest := httptest.NewRequest(
+		http.MethodPatch,
+		"/api/sales/invoices/"+createdInvoice.PublicID+"/status",
+		bytes.NewBufferString(`{"status":"paid"}`),
+	)
+	updateInvoiceResponse := httptest.NewRecorder()
+	router.ServeHTTP(updateInvoiceResponse, updateInvoiceRequest)
+
+	if updateInvoiceResponse.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, updateInvoiceResponse.Code)
+	}
+
+	invoiceSummaryRequest := httptest.NewRequest(http.MethodGet, "/api/sales/invoices/summary", nil)
+	invoiceSummaryResponse := httptest.NewRecorder()
+	router.ServeHTTP(invoiceSummaryResponse, invoiceSummaryRequest)
+
+	if invoiceSummaryResponse.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, invoiceSummaryResponse.Code)
+	}
+
+	var summary dto.InvoiceSummaryResponse
+	if err := json.Unmarshal(invoiceSummaryResponse.Body.Bytes(), &summary); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if summary.PaidAmountCents < createdInvoice.AmountCents {
+		t.Fatalf("expected paid amount to include runtime invoice")
 	}
 }

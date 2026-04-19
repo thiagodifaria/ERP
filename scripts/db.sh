@@ -11,9 +11,73 @@ if [[ ! -f "$ENV_FILE" ]]; then
   ENV_FILE="$ROOT_DIR/.env.example"
 fi
 
-set -a
-source "$ENV_FILE"
-set +a
+load_env_file_preserving_env() {
+  local line
+  local key
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    [[ -z "$line" || "$line" =~ ^[[:space:]]*# ]] && continue
+    key="${line%%=*}"
+
+    if [[ -n "${!key+x}" ]]; then
+      continue
+    fi
+
+    export "$line"
+  done < "$ENV_FILE"
+}
+
+load_env_file_preserving_env
+
+is_tcp_port_in_use() {
+  local port="$1"
+
+  if command -v ss >/dev/null 2>&1; then
+    ss -H -ltn "( sport = :$port )" 2>/dev/null | grep -q .
+    return
+  fi
+
+  if command -v netstat >/dev/null 2>&1; then
+    netstat -ltn 2>/dev/null | awk '{print $4}' | grep -Eq "(^|:)$port$"
+    return
+  fi
+
+  (echo >"/dev/tcp/127.0.0.1/$port") >/dev/null 2>&1
+}
+
+find_available_port() {
+  local port="$1"
+
+  while is_tcp_port_in_use "$port"; do
+    port=$((port + 1))
+  done
+
+  echo "$port"
+}
+
+prepare_database_port() {
+  if [[ -n "${ERP_HOST_PORTS_LOCKED:-}" ]]; then
+    return
+  fi
+
+  local requested_port="${POSTGRES_PORT:-}"
+
+  if [[ -z "$requested_port" ]]; then
+    return
+  fi
+
+  if ! is_tcp_port_in_use "$requested_port"; then
+    return
+  fi
+
+  local fallback_start=$((requested_port + 1000))
+  local fallback_port
+  fallback_port="$(find_available_port "$fallback_start")"
+  export POSTGRES_PORT="$fallback_port"
+  echo "[db] remapped postgresql host port from $requested_port to $fallback_port because it is already in use"
+}
+
+prepare_database_port
 
 COMPOSE_CMD=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 DB_NAME="${ERP_POSTGRES_DB:-erp}"
@@ -224,11 +288,15 @@ main() {
               (SELECT count(*) FROM sales.opportunities AS opportunity WHERE opportunity.tenant_id = tenant.id) AS opportunities,
               (SELECT count(*) FROM sales.proposals AS proposal WHERE proposal.tenant_id = tenant.id) AS proposals,
               (SELECT count(*) FROM sales.sales AS sale WHERE sale.tenant_id = tenant.id) AS sales,
+              (SELECT count(*) FROM sales.invoices AS invoice WHERE invoice.tenant_id = tenant.id) AS invoices,
               (SELECT count(*) FROM sales.opportunities AS opportunity WHERE opportunity.tenant_id = tenant.id AND opportunity.stage = 'won') AS won,
               (SELECT count(*) FROM sales.opportunities AS opportunity WHERE opportunity.tenant_id = tenant.id AND opportunity.stage = 'lost') AS lost,
               (SELECT count(*) FROM sales.sales AS sale WHERE sale.tenant_id = tenant.id AND sale.status = 'active') AS active_sales,
               (SELECT count(*) FROM sales.sales AS sale WHERE sale.tenant_id = tenant.id AND sale.status = 'invoiced') AS invoiced_sales,
-              (SELECT COALESCE(sum(sale.amount_cents), 0) FROM sales.sales AS sale WHERE sale.tenant_id = tenant.id AND sale.status <> 'cancelled') AS booked_revenue_cents
+              (SELECT count(*) FROM sales.invoices AS invoice WHERE invoice.tenant_id = tenant.id AND invoice.status = 'paid') AS paid_invoices,
+              (SELECT count(*) FROM sales.invoices AS invoice WHERE invoice.tenant_id = tenant.id AND invoice.status NOT IN ('paid', 'cancelled')) AS open_invoices,
+              (SELECT COALESCE(sum(sale.amount_cents), 0) FROM sales.sales AS sale WHERE sale.tenant_id = tenant.id AND sale.status <> 'cancelled') AS booked_revenue_cents,
+              (SELECT COALESCE(sum(invoice.amount_cents), 0) FROM sales.invoices AS invoice WHERE invoice.tenant_id = tenant.id AND invoice.status = 'paid') AS collected_revenue_cents
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;

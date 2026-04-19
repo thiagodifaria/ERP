@@ -24,12 +24,12 @@ type App struct {
 func NewApp() (*App, error) {
 	cfg := config.Load()
 	logger := telemetry.New(cfg.ServiceName)
-	opportunityRepository, proposalRepository, saleRepository, database, err := buildRepositories(cfg)
+	opportunityRepository, proposalRepository, saleRepository, invoiceRepository, database, err := buildRepositories(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	server := api.NewServer(cfg, logger, opportunityRepository, proposalRepository, saleRepository)
+	server := api.NewServer(cfg, logger, opportunityRepository, proposalRepository, saleRepository, invoiceRepository)
 
 	return &App{
 		Config:   cfg,
@@ -44,38 +44,44 @@ func (app *App) Run() error {
 	return app.Server.ListenAndServe()
 }
 
-func buildRepositories(cfg config.Config) (repository.OpportunityRepository, repository.ProposalRepository, repository.SaleRepository, *sql.DB, error) {
+func buildRepositories(cfg config.Config) (repository.OpportunityRepository, repository.ProposalRepository, repository.SaleRepository, repository.InvoiceRepository, *sql.DB, error) {
 	if cfg.RepositoryDriver != "postgres" {
-		return persistence.NewInMemoryOpportunityRepository(), persistence.NewInMemoryProposalRepository(), persistence.NewInMemorySaleRepository(), nil, nil
+		return persistence.NewInMemoryOpportunityRepository(), persistence.NewInMemoryProposalRepository(), persistence.NewInMemorySaleRepository(), persistence.NewInMemoryInvoiceRepository(), nil, nil
 	}
 
 	database, err := sql.Open("pgx", cfg.PostgresDSN())
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
 	if err := database.Ping(); err != nil {
 		_ = database.Close()
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
 	opportunityRepository, err := persistence.NewPostgresOpportunityRepository(database, cfg.BootstrapTenantSlug)
 	if err != nil {
 		_ = database.Close()
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
 	proposalRepository, err := persistence.NewPostgresProposalRepository(database, cfg.BootstrapTenantSlug)
 	if err != nil {
 		_ = database.Close()
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
 	saleRepository, err := persistence.NewPostgresSaleRepository(database, cfg.BootstrapTenantSlug)
 	if err != nil {
 		_ = database.Close()
-		return nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, err
 	}
 
-	return opportunityRepository, proposalRepository, saleRepository, database, nil
+	invoiceRepository, err := persistence.NewPostgresInvoiceRepository(database, cfg.BootstrapTenantSlug)
+	if err != nil {
+		_ = database.Close()
+		return nil, nil, nil, nil, nil, err
+	}
+
+	return opportunityRepository, proposalRepository, saleRepository, invoiceRepository, database, nil
 }
