@@ -14,6 +14,23 @@ type WorkflowDefinitionResponse = {
   trigger: string;
 };
 
+type WorkflowTriggerCatalogResponse = {
+  key: string;
+  name: string;
+  description: string;
+  category: string;
+  subjectTypes: string[];
+};
+
+type WorkflowActionCatalogResponse = {
+  key: string;
+  name: string;
+  description: string;
+  kind: string;
+  supportsCompensation: boolean;
+  requiresRuntime: boolean;
+};
+
 type WorkflowDefinitionVersionResponse = {
   id: number;
   workflowDefinitionId: number;
@@ -91,6 +108,26 @@ async function request(pathname: string, init?: RequestInit): Promise<Response> 
 
   return fetch(`http://127.0.0.1:${address.port}${pathname}`, init);
 }
+
+test("workflow trigger catalog contract should expose public fields", async () => {
+  const response = await request("/api/workflow-control/catalog/triggers");
+  const payload = await response.json() as WorkflowTriggerCatalogResponse[];
+
+  assert.equal(response.status, 200);
+  assert.ok(payload.length > 0);
+  assert.ok(payload.some((trigger) => trigger.key === "lead.created"));
+  assert.ok(payload.every((trigger) => Array.isArray(trigger.subjectTypes)));
+});
+
+test("workflow action catalog contract should expose public fields", async () => {
+  const response = await request("/api/workflow-control/catalog/actions");
+  const payload = await response.json() as WorkflowActionCatalogResponse[];
+
+  assert.equal(response.status, 200);
+  assert.ok(payload.length > 0);
+  assert.ok(payload.some((action) => action.key === "delay.wait"));
+  assert.ok(payload.every((action) => typeof action.supportsCompensation === "boolean"));
+});
 
 test("workflow definitions contract should expose public fields on list", async () => {
   const response = await request("/api/workflow-control/definitions");

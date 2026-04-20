@@ -17,6 +17,9 @@ Initial scope:
 - workflow run PostgreSQL adapter ready for runtime read and write
 - runtime container wired for workflow run persistence and readiness
 - workflow run event repositories ready for memory and PostgreSQL
+- workflow trigger catalog bootstrap with public read-side
+- workflow action catalog bootstrap with public read-side
+- workflow definition trigger validation against the published catalog
 - room for workflow definitions and future control-plane APIs
 
 Public routes:
@@ -24,6 +27,8 @@ Public routes:
 - `GET /health/live`
 - `GET /health/ready`
 - `GET /health/details`
+- `GET /api/workflow-control/catalog/triggers`
+- `GET /api/workflow-control/catalog/actions`
 - `GET /api/workflow-control/definitions`
 - `POST /api/workflow-control/runs`
 - `GET /api/workflow-control/runs`
@@ -78,6 +83,8 @@ Current unit scope:
 - workflow run cancel transition
 - workflow run filtered list read
 - workflow definition metadata update
+- workflow trigger and action catalog read
+- workflow definition trigger validation against catalog dependencies
 - workflow definition version history read
 - workflow definition manual publication
 - workflow definition current-version read
@@ -112,6 +119,7 @@ Current contract scope:
 - contract coverage for workflow run lifecycle transitions
 - contract coverage for workflow run event history
 - create/update/detail/status lifecycle
+- trigger and action catalog payloads
 - version list, publish and current-version lifecycle
 - version detail and restore lifecycle
 - not found error contract

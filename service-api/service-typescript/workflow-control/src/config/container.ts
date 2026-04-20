@@ -13,13 +13,17 @@ import { GetWorkflowRunSummary } from "../application/get-workflow-run-summary.j
 import { GetWorkflowDefinitionVersionSummary } from "../application/get-workflow-definition-version-summary.js";
 import { ListWorkflowDefinitionVersions } from "../application/list-workflow-definition-versions.js";
 import { ListWorkflowDefinitions } from "../application/list-workflow-definitions.js";
+import { ListWorkflowActionCatalog } from "../application/list-workflow-action-catalog.js";
+import { ListWorkflowTriggerCatalog } from "../application/list-workflow-trigger-catalog.js";
 import { ListWorkflowRunEvents } from "../application/list-workflow-run-events.js";
 import { ListWorkflowRuns } from "../application/list-workflow-runs.js";
+import { WorkflowCatalogRepository } from "../domain/workflow-catalog.js";
 import { PublishWorkflowDefinitionVersion } from "../application/publish-workflow-definition-version.js";
 import { RestoreWorkflowDefinitionVersion } from "../application/restore-workflow-definition-version.js";
 import { StartWorkflowRun } from "../application/start-workflow-run.js";
 import { UpdateWorkflowDefinition } from "../application/update-workflow-definition.js";
 import { UpdateWorkflowDefinitionStatus } from "../application/update-workflow-definition-status.js";
+import { BootstrapWorkflowCatalogRepository } from "../infrastructure/bootstrap-workflow-catalog.js";
 import { WorkflowDefinitionRepository } from "../domain/workflow-definition-repository.js";
 import { WorkflowDefinitionVersionRepository } from "../domain/workflow-definition-version-repository.js";
 import { WorkflowRunEventRepository } from "../domain/workflow-run-event-repository.js";
@@ -109,6 +113,10 @@ function buildRunEventRepository(): WorkflowRunEventRepository {
   return new InMemoryWorkflowRunEventRepository();
 }
 
+function buildCatalogRepository(): WorkflowCatalogRepository {
+  return new BootstrapWorkflowCatalogRepository();
+}
+
 export type ReadinessDependency = {
   name: string;
   status: string;
@@ -119,18 +127,20 @@ const repository = buildRepository();
 const versionRepository = buildVersionRepository();
 const runRepository = buildRunRepository();
 const runEventRepository = buildRunEventRepository();
+const catalogRepository = buildCatalogRepository();
 
 export const repositories = {
   workflowDefinitions: repository,
   workflowDefinitionVersions: versionRepository,
   workflowRuns: runRepository,
-  workflowRunEvents: runEventRepository
+  workflowRunEvents: runEventRepository,
+  workflowCatalog: catalogRepository
 };
 
 export const services = {
   cancelWorkflowRun: new CancelWorkflowRun(runRepository, runEventRepository),
   completeWorkflowRun: new CompleteWorkflowRun(runRepository, runEventRepository),
-  createWorkflowDefinition: new CreateWorkflowDefinition(repository),
+  createWorkflowDefinition: new CreateWorkflowDefinition(repository, catalogRepository),
   createWorkflowRunNote: new CreateWorkflowRunNote(runRepository, runEventRepository),
   createWorkflowRun: new CreateWorkflowRun(repository, versionRepository, runRepository),
   failWorkflowRun: new FailWorkflowRun(runRepository, runEventRepository),
@@ -141,14 +151,16 @@ export const services = {
   getWorkflowRunByPublicId: new GetWorkflowRunByPublicId(runRepository),
   getWorkflowRunSummary: new GetWorkflowRunSummary(runRepository),
   getWorkflowDefinitionVersionSummary: new GetWorkflowDefinitionVersionSummary(repository, versionRepository),
+  listWorkflowActionCatalog: new ListWorkflowActionCatalog(catalogRepository),
   listWorkflowDefinitionVersions: new ListWorkflowDefinitionVersions(repository, versionRepository),
   listWorkflowDefinitions: new ListWorkflowDefinitions(repository),
+  listWorkflowTriggerCatalog: new ListWorkflowTriggerCatalog(catalogRepository),
   listWorkflowRunEvents: new ListWorkflowRunEvents(runRepository, runEventRepository),
   listWorkflowRuns: new ListWorkflowRuns(repository, runRepository),
   publishWorkflowDefinitionVersion: new PublishWorkflowDefinitionVersion(repository, versionRepository),
   restoreWorkflowDefinitionVersion: new RestoreWorkflowDefinitionVersion(repository, versionRepository),
   startWorkflowRun: new StartWorkflowRun(runRepository, runEventRepository),
-  updateWorkflowDefinition: new UpdateWorkflowDefinition(repository),
+  updateWorkflowDefinition: new UpdateWorkflowDefinition(repository, catalogRepository),
   updateWorkflowDefinitionStatus: new UpdateWorkflowDefinitionStatus(repository)
 };
 
@@ -158,6 +170,8 @@ export const runtime = {
     if (config.repositoryDriver !== "postgres") {
       return [
         { name: "router", status: "ready" },
+        { name: "trigger-catalog", status: "ready" },
+        { name: "action-catalog", status: "ready" },
         { name: "definitions-catalog", status: "ready" },
         { name: "workflow-runs", status: "ready" }
       ];
@@ -171,6 +185,8 @@ export const runtime = {
       return [
         { name: "router", status: "ready" },
         { name: "postgresql", status: "ready" },
+        { name: "trigger-catalog", status: "ready" },
+        { name: "action-catalog", status: "ready" },
         { name: "definitions-catalog", status: "ready" },
         { name: "workflow-runs", status: "ready" }
       ];
@@ -178,6 +194,8 @@ export const runtime = {
       return [
         { name: "router", status: "ready" },
         { name: "postgresql", status: "not_ready" },
+        { name: "trigger-catalog", status: "ready" },
+        { name: "action-catalog", status: "ready" },
         { name: "definitions-catalog", status: "not_ready" },
         { name: "workflow-runs", status: "not_ready" }
       ];

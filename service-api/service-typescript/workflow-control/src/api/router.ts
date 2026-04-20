@@ -76,6 +76,16 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     return;
   }
 
+  if (request.method === "GET" && request.url === "/api/workflow-control/catalog/triggers") {
+    json(response, 200, await services.listWorkflowTriggerCatalog.execute());
+    return;
+  }
+
+  if (request.method === "GET" && request.url === "/api/workflow-control/catalog/actions") {
+    json(response, 200, await services.listWorkflowActionCatalog.execute());
+    return;
+  }
+
   if (request.method === "GET" && request.url === "/api/workflow-control/definitions") {
     json(response, 200, await services.listWorkflowDefinitions.execute());
     return;
@@ -713,7 +723,8 @@ export async function route(request: IncomingMessage, response: ServerResponse):
       if (
         code === "workflow_definition_update_required" ||
         code === "workflow_definition_name_required" ||
-        code === "workflow_definition_trigger_required"
+        code === "workflow_definition_trigger_required" ||
+        code === "workflow_definition_trigger_unknown"
       ) {
         json(response, 400, {
           code,
@@ -829,7 +840,12 @@ export async function route(request: IncomingMessage, response: ServerResponse):
         return;
       }
 
-      if (code === "workflow_definition_key_required" || code === "workflow_definition_name_required" || code === "workflow_definition_trigger_required") {
+      if (
+        code === "workflow_definition_key_required" ||
+        code === "workflow_definition_name_required" ||
+        code === "workflow_definition_trigger_required" ||
+        code === "workflow_definition_trigger_unknown"
+      ) {
         json(response, 400, {
           code,
           message: "Workflow definition payload is invalid."

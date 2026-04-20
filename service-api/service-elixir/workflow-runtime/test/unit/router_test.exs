@@ -26,6 +26,18 @@ defmodule WorkflowRuntime.Api.RouterTest do
     assert Enum.any?(payload["dependencies"], &(&1["name"] == "workflow-catalog" and &1["status"] == "ready"))
   end
 
+  test "capabilities route exposes runtime foundations" do
+    conn = conn(:get, "/api/workflow-runtime/capabilities") |> Router.call([])
+    payload = Jason.decode!(conn.resp_body)
+
+    assert conn.status == 200
+    assert payload["service"] == "workflow-runtime"
+    assert payload["timers"]["enabled"] == true
+    assert payload["timers"]["supportsDelayActions"] == true
+    assert payload["retries"]["enabled"] == true
+    assert payload["compensations"]["mode"] == "basic"
+  end
+
   test "execution list and summary start empty" do
     list_conn = conn(:get, "/api/workflow-runtime/executions") |> Router.call([])
     summary_conn = conn(:get, "/api/workflow-runtime/executions/summary") |> Router.call([])

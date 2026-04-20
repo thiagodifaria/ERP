@@ -13,6 +13,7 @@ Initial scope:
 - execution transition ledger
 - filtered operational reads by tenant and status
 - runtime catalog validation against published workflow definitions
+- runtime capability snapshot for timers, retries and compensations
 - room for timers, retries and durable orchestration
 - selectable repository driver between memory and PostgreSQL
 
@@ -21,6 +22,7 @@ Public routes:
 - `GET /health/live`
 - `GET /health/ready`
 - `GET /health/details`
+- `GET /api/workflow-runtime/capabilities`
 - `GET /api/workflow-runtime/executions`
 - `GET /api/workflow-runtime/executions/{publicId}`
 - `GET /api/workflow-runtime/executions/{publicId}/transitions`

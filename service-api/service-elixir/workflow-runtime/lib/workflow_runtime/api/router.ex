@@ -42,6 +42,16 @@ defmodule WorkflowRuntime.Api.Router do
     })
   end
 
+  get "/api/workflow-runtime/capabilities" do
+    json(conn, 200, %{
+      service: "workflow-runtime",
+      timers: %{enabled: true, mode: "timer-wheel", supportsDelayActions: true, supportsSchedules: false},
+      retries: %{enabled: true, maxAttempts: 5, supportsManualRetry: true},
+      compensations: %{enabled: true, mode: "basic"},
+      transports: %{catalogValidation: true, postgres: WorkflowRuntime.Infrastructure.Postgres.enabled?()}
+    })
+  end
+
   get "/api/workflow-runtime/executions" do
     conn = Plug.Conn.fetch_query_params(conn)
 

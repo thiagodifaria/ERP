@@ -51,6 +51,27 @@ test("workflow definitions list should expose bootstrap catalog", async () => {
   assert.ok(payload.some((definition) => definition.key === "lead-follow-up"));
 });
 
+test("workflow trigger catalog should expose supported trigger foundations", async () => {
+  const response = await request("/api/workflow-control/catalog/triggers");
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.ok(Array.isArray(payload));
+  assert.ok(payload.some((trigger) => trigger.key === "lead.created"));
+  assert.ok(payload.some((trigger) => trigger.key === "lead.qualified"));
+  assert.ok(payload.some((trigger) => trigger.key === "manual.dispatch"));
+});
+
+test("workflow action catalog should expose runtime action foundations", async () => {
+  const response = await request("/api/workflow-control/catalog/actions");
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.ok(Array.isArray(payload));
+  assert.ok(payload.some((action) => action.key === "delay.wait"));
+  assert.ok(payload.some((action) => action.supportsCompensation === true));
+});
+
 test("workflow runs list should expose bootstrap execution ledger", async () => {
   const response = await request("/api/workflow-control/runs");
   const payload = await response.json();
@@ -644,6 +665,24 @@ test("workflow definition create should normalize payload and return draft statu
   assert.equal(payload.description, "Fluxo criado para validar normalizacao.");
   assert.equal(payload.trigger, "lead.created");
   assert.equal(payload.status, "draft");
+});
+
+test("workflow definition create should reject unknown trigger catalog entries", async () => {
+  const response = await request("/api/workflow-control/definitions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      key: `flow-${randomUUID()}`,
+      name: "Unknown Trigger Flow",
+      trigger: "missing.trigger"
+    })
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(payload.code, "workflow_definition_trigger_unknown");
 });
 
 test("workflow definition status should update created resource", async () => {
