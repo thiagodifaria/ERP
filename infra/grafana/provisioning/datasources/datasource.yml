@@ -1,0 +1,9 @@
+apiVersion: 1
+
+datasources:
+  - name: ERP Prometheus
+    type: prometheus
+    access: proxy
+    url: http://service-prometheus:9090
+    isDefault: true
+    editable: false

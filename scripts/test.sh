@@ -78,6 +78,10 @@ remap_host_port_if_needed() {
 prepare_runtime_ports() {
   remap_host_port_if_needed "POSTGRES_PORT" "postgresql"
   remap_host_port_if_needed "REDIS_PORT" "redis"
+  remap_host_port_if_needed "KAFKA_PORT" "kafka"
+  remap_host_port_if_needed "PROMETHEUS_PORT" "prometheus"
+  remap_host_port_if_needed "GRAFANA_PORT" "grafana"
+  remap_host_port_if_needed "KEYCLOAK_PORT" "keycloak"
   remap_host_port_if_needed "EDGE_HTTP_PORT" "edge"
   remap_host_port_if_needed "IDENTITY_HTTP_PORT" "identity"
   remap_host_port_if_needed "WEBHOOK_HUB_HTTP_PORT" "webhook-hub"
@@ -204,6 +208,44 @@ run_rust_unit() {
     -w /workspace \
     rust:1 \
     cargo test
+}
+
+run_platform_runtime_smoke() {
+  local keycloak_url="http://localhost:${KEYCLOAK_PORT:-8089}"
+  local prometheus_url="http://localhost:${PROMETHEUS_PORT:-9090}"
+  local grafana_url="http://localhost:${GRAFANA_PORT:-3000}"
+  local realm_response
+  local prometheus_targets_response
+  local prometheus_probe_response
+  local grafana_response
+  local kafka_list_response
+
+  "${COMPOSE_CMD[@]}" up -d service-postgresql service-redis service-kafka service-keycloak service-blackbox-exporter service-prometheus service-grafana
+  wait_for_http_ready "$keycloak_url/realms/${KEYCLOAK_REALM:-erp-local}"
+  wait_for_http_ready "$prometheus_url/-/ready"
+  wait_for_http_ready "$grafana_url/api/health"
+  wait_for_prometheus_probe_success "$prometheus_url" "blackbox-http" "http://service-keycloak:8080/realms/${KEYCLOAK_REALM:-erp-local}"
+  wait_for_prometheus_probe_success "$prometheus_url" "blackbox-http" "http://service-grafana:3000/api/health"
+  wait_for_prometheus_probe_success "$prometheus_url" "blackbox-tcp" "service-postgresql:5432"
+  wait_for_prometheus_probe_success "$prometheus_url" "blackbox-tcp" "service-redis:6379"
+  wait_for_prometheus_probe_success "$prometheus_url" "blackbox-tcp" "service-kafka:9092"
+
+  realm_response="$(curl -fsS "$keycloak_url/realms/${KEYCLOAK_REALM:-erp-local}")"
+  prometheus_targets_response="$(curl -fsS "$prometheus_url/api/v1/targets")"
+  prometheus_probe_response="$(curl -fsS --get --data-urlencode 'query=probe_success' "$prometheus_url/api/v1/query")"
+  grafana_response="$(curl -fsS "$grafana_url/api/health")"
+  kafka_list_response="$("${COMPOSE_CMD[@]}" exec -T service-kafka kafka-topics --bootstrap-server service-kafka:9092 --list || true)"
+
+  echo "[test] platform keycloak realm => $realm_response"
+  echo "[test] platform prometheus targets => $prometheus_targets_response"
+  echo "[test] platform prometheus probes => $prometheus_probe_response"
+  echo "[test] platform grafana health => $grafana_response"
+  echo "[test] platform kafka topics => $kafka_list_response"
+
+  if [[ "$realm_response" != *"\"realm\":\"${KEYCLOAK_REALM:-erp-local}\""* || "$prometheus_targets_response" != *"service-keycloak:8080/realms/${KEYCLOAK_REALM:-erp-local}"* || "$prometheus_targets_response" != *'service-postgresql:5432'* || "$prometheus_targets_response" != *'service-kafka:9092'* || "$prometheus_probe_response" != *'"status":"success"'* || "$grafana_response" != *'"database"'* || "$grafana_response" != *'"ok"'* ]]; then
+    echo "[test] platform runtime stack did not expose the expected local foundations"
+    exit 1
+  fi
 }
 
 run_webhook_hub_runtime_smoke() {
@@ -417,6 +459,25 @@ wait_for_http_ready() {
 
     if [[ "$attempts" -ge 30 ]]; then
       echo "[test] http endpoint did not become ready: $url"
+      exit 1
+    fi
+
+    sleep 1
+  done
+}
+
+wait_for_prometheus_probe_success() {
+  local prometheus_url="$1"
+  local job="$2"
+  local instance="$3"
+  local attempts=0
+  local response
+
+  until response="$(curl -fsS --get --data-urlencode "query=probe_success{job=\"$job\",instance=\"$instance\"}" "$prometheus_url/api/v1/query")" && [[ "$response" == *'"value":'*'"1"'* ]]; do
+    attempts=$((attempts + 1))
+
+    if [[ "$attempts" -ge 45 ]]; then
+      echo "[test] prometheus probe did not become successful for $job => $instance"
       exit 1
     fi
 
@@ -1560,6 +1621,12 @@ run_edge_runtime_smoke() {
 
 run_smoke() {
   trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
+  export POSTGRES_PORT="${POSTGRES_PORT_SMOKE:-16432}"
+  export REDIS_PORT="${REDIS_PORT_SMOKE:-16379}"
+  export KAFKA_PORT="${KAFKA_PORT_SMOKE:-19092}"
+  export PROMETHEUS_PORT="${PROMETHEUS_PORT_SMOKE:-19090}"
+  export GRAFANA_PORT="${GRAFANA_PORT_SMOKE:-13000}"
+  export KEYCLOAK_PORT="${KEYCLOAK_PORT_SMOKE:-18089}"
   export EDGE_HTTP_PORT="${EDGE_HTTP_PORT_SMOKE:-18080}"
   export CRM_HTTP_PORT="${CRM_HTTP_PORT_SMOKE:-18083}"
   export SALES_HTTP_PORT="${SALES_HTTP_PORT_SMOKE:-18087}"
@@ -1571,6 +1638,7 @@ run_smoke() {
   export ENGAGEMENT_HTTP_PORT="${ENGAGEMENT_HTTP_PORT_SMOKE:-18088}"
   bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
   "${COMPOSE_CMD[@]}" ps
+  run_platform_runtime_smoke
   run_identity_database_smoke
   run_webhook_hub_runtime_smoke
   run_workflow_control_runtime_smoke
@@ -1589,6 +1657,7 @@ Usage:
   ./scripts/test.sh unit
   ./scripts/test.sh integration
   ./scripts/test.sh contract
+  ./scripts/test.sh platform
   ./scripts/test.sh smoke
   ./scripts/test.sh all
 EOF
@@ -1613,6 +1682,17 @@ main() {
       run_typescript_contract
       run_go_contract
       run_dotnet_contract
+      ;;
+    platform)
+      trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
+      export POSTGRES_PORT="${POSTGRES_PORT_PLATFORM:-16432}"
+      export REDIS_PORT="${REDIS_PORT_PLATFORM:-16379}"
+      export KAFKA_PORT="${KAFKA_PORT_PLATFORM:-19092}"
+      export PROMETHEUS_PORT="${PROMETHEUS_PORT_PLATFORM:-19090}"
+      export GRAFANA_PORT="${GRAFANA_PORT_PLATFORM:-13000}"
+      export KEYCLOAK_PORT="${KEYCLOAK_PORT_PLATFORM:-18089}"
+      bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
+      run_platform_runtime_smoke
       ;;
     smoke)
       run_smoke

@@ -85,6 +85,11 @@ remap_host_port_if_needed "WORKFLOW_CONTROL_HTTP_PORT" "workflow-control"
 remap_host_port_if_needed "WORKFLOW_RUNTIME_HTTP_PORT" "workflow-runtime"
 remap_host_port_if_needed "ANALYTICS_HTTP_PORT" "analytics"
 remap_host_port_if_needed "SALES_HTTP_PORT" "sales"
+remap_host_port_if_needed "ENGAGEMENT_HTTP_PORT" "engagement"
+remap_host_port_if_needed "KEYCLOAK_PORT" "keycloak"
+remap_host_port_if_needed "KAFKA_PORT" "kafka"
+remap_host_port_if_needed "PROMETHEUS_PORT" "prometheus"
+remap_host_port_if_needed "GRAFANA_PORT" "grafana"
 export ERP_HOST_PORTS_LOCKED=1
 
 docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d --build "$@"
