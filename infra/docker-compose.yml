@@ -45,6 +45,7 @@ services:
       EDGE_ANALYTICS_BASE_URL: "${EDGE_ANALYTICS_BASE_URL}"
       EDGE_WEBHOOK_HUB_BASE_URL: "${EDGE_WEBHOOK_HUB_BASE_URL}"
       EDGE_SALES_BASE_URL: "${EDGE_SALES_BASE_URL}"
+      EDGE_ENGAGEMENT_BASE_URL: "${EDGE_ENGAGEMENT_BASE_URL}"
     depends_on:
       service-postgresql:
         condition: service_healthy
@@ -115,6 +116,29 @@ services:
         condition: service_healthy
     ports:
       - "${WORKFLOW_CONTROL_HTTP_PORT}:8084"
+
+  engagement:
+    build:
+      context: ../service-api/service-typescript/engagement
+    container_name: erp-engagement
+    environment:
+      ENGAGEMENT_HTTP_HOST: "0.0.0.0"
+      ENGAGEMENT_HTTP_PORT: "8088"
+      ENGAGEMENT_REPOSITORY_DRIVER: "postgres"
+      ENGAGEMENT_BOOTSTRAP_TENANT_SLUG: "${ENGAGEMENT_BOOTSTRAP_TENANT_SLUG}"
+      ENGAGEMENT_POSTGRES_HOST: "service-postgresql"
+      ENGAGEMENT_POSTGRES_PORT: "5432"
+      ENGAGEMENT_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      ENGAGEMENT_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      ENGAGEMENT_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      ENGAGEMENT_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+      service-redis:
+        condition: service_healthy
+    ports:
+      - "${ENGAGEMENT_HTTP_PORT}:8088"
 
   workflow-runtime:
     build:

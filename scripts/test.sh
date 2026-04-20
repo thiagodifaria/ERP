@@ -86,6 +86,7 @@ prepare_runtime_ports() {
   remap_host_port_if_needed "WORKFLOW_RUNTIME_HTTP_PORT" "workflow-runtime"
   remap_host_port_if_needed "ANALYTICS_HTTP_PORT" "analytics"
   remap_host_port_if_needed "SALES_HTTP_PORT" "sales"
+  remap_host_port_if_needed "ENGAGEMENT_HTTP_PORT" "engagement"
 }
 
 prepare_runtime_ports
@@ -121,11 +122,23 @@ run_typescript_unit() {
     -w /workspace \
     node:22-alpine \
     sh -lc "npm install && npm run test:unit && rm -rf node_modules dist"
+
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-typescript/engagement:/workspace" \
+    -w /workspace \
+    node:22-alpine \
+    sh -lc "npm install && npm run test:unit && rm -rf node_modules dist"
 }
 
 run_typescript_contract() {
   docker run --rm \
     -v "$ROOT_DIR/service-api/service-typescript/workflow-control:/workspace" \
+    -w /workspace \
+    node:22-alpine \
+    sh -lc "npm install && npm run test:contract && rm -rf node_modules dist"
+
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-typescript/engagement:/workspace" \
     -w /workspace \
     node:22-alpine \
     sh -lc "npm install && npm run test:contract && rm -rf node_modules dist"
@@ -1128,6 +1141,94 @@ run_workflow_runtime_smoke() {
   fi
 }
 
+run_engagement_runtime_smoke() {
+  local base_url="http://localhost:${ENGAGEMENT_HTTP_PORT:-8088}"
+  local health_details_response
+  local campaigns_response
+  local bootstrap_summary_response
+  local create_campaign_response
+  local created_campaign_public_id
+  local update_campaign_status_response
+  local create_touchpoint_response
+  local created_touchpoint_public_id
+  local update_touchpoint_status_response
+  local touchpoint_detail_response
+  local filtered_touchpoints_response
+  local summary_response
+  local db_summary
+
+  if [[ -z "${CRM_RUNTIME_LEAD_PUBLIC_ID:-}" ]]; then
+    echo "[test] CRM runtime identifiers were not captured before engagement smoke"
+    exit 1
+  fi
+
+  "${COMPOSE_CMD[@]}" up -d --build engagement
+  wait_for_http_ready "$base_url/health/ready"
+
+  health_details_response="$(curl -fsS "$base_url/health/details")"
+  campaigns_response="$(curl -fsS "$base_url/api/engagement/campaigns?tenantSlug=bootstrap-ops")"
+  bootstrap_summary_response="$(curl -fsS "$base_url/api/engagement/touchpoints/summary?tenantSlug=bootstrap-ops")"
+
+  echo "[test] engagement health details => $health_details_response"
+  echo "[test] engagement campaigns => $campaigns_response"
+  echo "[test] engagement bootstrap summary => $bootstrap_summary_response"
+
+  if [[ "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$campaigns_response" != *'"key":"lead-follow-up-campaign"'* || "$bootstrap_summary_response" != *'"workflowDispatched":1'* || "$bootstrap_summary_response" != *'"responded":1'* ]]; then
+    echo "[test] engagement bootstrap runtime state was not ready"
+    exit 1
+  fi
+
+  create_campaign_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","key":"runtime-reactivation","name":"Runtime Reactivation","description":"Campanha criada no smoke do engagement.","channel":"email","touchpointGoal":"revive-lead","workflowDefinitionKey":"lead-follow-up","budgetCents":48000}' \
+    "$base_url/api/engagement/campaigns")"
+  created_campaign_public_id="$(echo "$create_campaign_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  update_campaign_status_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d '{"status":"active"}' \
+    "$base_url/api/engagement/campaigns/$created_campaign_public_id/status")"
+  create_touchpoint_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"bootstrap-ops\",\"campaignPublicId\":\"$created_campaign_public_id\",\"leadPublicId\":\"$CRM_RUNTIME_LEAD_PUBLIC_ID\",\"contactValue\":\"runtime.lead.prime@example.com\",\"source\":\"sales\",\"createdBy\":\"engagement-smoke\",\"notes\":\"Touchpoint criado no smoke do engagement.\"}" \
+    "$base_url/api/engagement/touchpoints")"
+  created_touchpoint_public_id="$(echo "$create_touchpoint_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  update_touchpoint_status_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d '{"status":"converted","lastWorkflowRunPublicId":"00000000-0000-0000-0000-000000000390"}' \
+    "$base_url/api/engagement/touchpoints/$created_touchpoint_public_id/status")"
+  touchpoint_detail_response="$(curl -fsS "$base_url/api/engagement/touchpoints/$created_touchpoint_public_id")"
+  filtered_touchpoints_response="$(curl -fsS "$base_url/api/engagement/touchpoints?tenantSlug=bootstrap-ops&status=converted&channel=email")"
+  summary_response="$(curl -fsS "$base_url/api/engagement/touchpoints/summary?tenantSlug=bootstrap-ops")"
+  db_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        (SELECT count(*) FROM engagement.campaigns AS campaign INNER JOIN identity.tenants AS tenant ON tenant.id = campaign.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM engagement.touchpoints AS touchpoint INNER JOIN identity.tenants AS tenant ON tenant.id = touchpoint.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM engagement.campaigns AS campaign INNER JOIN identity.tenants AS tenant ON tenant.id = campaign.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND campaign.status = 'active') || '|' ||
+        (SELECT count(*) FROM engagement.touchpoints AS touchpoint INNER JOIN identity.tenants AS tenant ON tenant.id = touchpoint.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND touchpoint.status = 'responded') || '|' ||
+        (SELECT count(*) FROM engagement.touchpoints AS touchpoint INNER JOIN identity.tenants AS tenant ON tenant.id = touchpoint.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND touchpoint.status = 'converted') || '|' ||
+        (SELECT count(*) FROM engagement.touchpoints AS touchpoint INNER JOIN identity.tenants AS tenant ON tenant.id = touchpoint.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND touchpoint.last_workflow_run_public_id IS NOT NULL);
+    ")"
+
+  echo "[test] engagement create campaign => $create_campaign_response"
+  echo "[test] engagement update campaign status => $update_campaign_status_response"
+  echo "[test] engagement create touchpoint => $create_touchpoint_response"
+  echo "[test] engagement update touchpoint status => $update_touchpoint_status_response"
+  echo "[test] engagement touchpoint detail => $touchpoint_detail_response"
+  echo "[test] engagement filtered touchpoints => $filtered_touchpoints_response"
+  echo "[test] engagement summary => $summary_response"
+  echo "[test] engagement db summary => $db_summary"
+
+  if [[ -z "$created_campaign_public_id" || -z "$created_touchpoint_public_id" || "$update_campaign_status_response" != *'"status":"active"'* || "$create_touchpoint_response" != *"\"leadPublicId\":\"$CRM_RUNTIME_LEAD_PUBLIC_ID\""* || "$create_touchpoint_response" != *'"status":"queued"'* || "$update_touchpoint_status_response" != *'"status":"converted"'* || "$update_touchpoint_status_response" != *'"lastWorkflowRunPublicId":"00000000-0000-0000-0000-000000000390"'* || "$touchpoint_detail_response" != *'"channel":"email"'* || "$filtered_touchpoints_response" != *"\"publicId\":\"$created_touchpoint_public_id\""* || "$summary_response" != *'"touchpoints":2'* || "$summary_response" != *'"workflowDispatched":2'* || "$summary_response" != *'"converted":1'* || "$summary_response" != *'"email":1'* || "$db_summary" != "3|2|2|1|1|2" ]]; then
+    echo "[test] engagement runtime flow did not persist the expected omnichannel slice"
+    exit 1
+  fi
+}
+
 run_analytics_runtime_smoke() {
   local base_url="http://localhost:${ANALYTICS_HTTP_PORT:-8086}"
   local health_details_response
@@ -1467,6 +1568,7 @@ run_smoke() {
   export WORKFLOW_CONTROL_HTTP_PORT="${WORKFLOW_CONTROL_HTTP_PORT_SMOKE:-18084}"
   export WORKFLOW_RUNTIME_HTTP_PORT="${WORKFLOW_RUNTIME_HTTP_PORT_SMOKE:-18085}"
   export ANALYTICS_HTTP_PORT="${ANALYTICS_HTTP_PORT_SMOKE:-18086}"
+  export ENGAGEMENT_HTTP_PORT="${ENGAGEMENT_HTTP_PORT_SMOKE:-18088}"
   bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
   "${COMPOSE_CMD[@]}" ps
   run_identity_database_smoke
@@ -1475,6 +1577,7 @@ run_smoke() {
   run_workflow_runtime_smoke
   run_crm_runtime_smoke
   run_sales_runtime_smoke
+  run_engagement_runtime_smoke
   run_analytics_runtime_smoke
   run_identity_runtime_smoke
   run_edge_runtime_smoke

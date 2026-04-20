@@ -133,6 +133,7 @@ Usage:
   ./scripts/db.sh migrate identity
   ./scripts/db.sh migrate crm
   ./scripts/db.sh migrate sales
+  ./scripts/db.sh migrate engagement
   ./scripts/db.sh migrate webhook-hub
   ./scripts/db.sh migrate workflow-control
   ./scripts/db.sh migrate workflow-runtime
@@ -140,11 +141,13 @@ Usage:
   ./scripts/db.sh seed identity
   ./scripts/db.sh seed crm
   ./scripts/db.sh seed sales
+  ./scripts/db.sh seed engagement
   ./scripts/db.sh seed workflow-control
   ./scripts/db.sh seed all
   ./scripts/db.sh summary identity [tenant-slug]
   ./scripts/db.sh summary crm [tenant-slug]
   ./scripts/db.sh summary sales [tenant-slug]
+  ./scripts/db.sh summary engagement [tenant-slug]
   ./scripts/db.sh summary webhook-hub
   ./scripts/db.sh summary workflow-control [tenant-slug]
   ./scripts/db.sh summary workflow-runtime [tenant-slug]
@@ -175,6 +178,9 @@ main() {
         sales)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/migrations"
           ;;
+        engagement)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/migrations"
+          ;;
         webhook-hub)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/webhook-hub/migrations"
           ;;
@@ -189,6 +195,7 @@ main() {
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/webhook-hub/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-runtime/migrations"
@@ -211,6 +218,9 @@ main() {
         sales)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/seeds"
           ;;
+        engagement)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/seeds"
+          ;;
         workflow-control)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/seeds"
           ;;
@@ -218,6 +228,7 @@ main() {
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/seeds"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/seeds"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/seeds"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/seeds"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/seeds"
           ;;
         *)
@@ -297,6 +308,29 @@ main() {
               (SELECT count(*) FROM sales.invoices AS invoice WHERE invoice.tenant_id = tenant.id AND invoice.status NOT IN ('paid', 'cancelled')) AS open_invoices,
               (SELECT COALESCE(sum(sale.amount_cents), 0) FROM sales.sales AS sale WHERE sale.tenant_id = tenant.id AND sale.status <> 'cancelled') AS booked_revenue_cents,
               (SELECT COALESCE(sum(invoice.amount_cents), 0) FROM sales.invoices AS invoice WHERE invoice.tenant_id = tenant.id AND invoice.status = 'paid') AS collected_revenue_cents
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
+          ;;
+        engagement)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM engagement.campaigns AS campaign WHERE campaign.tenant_id = tenant.id) AS campaigns,
+              (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id) AS touchpoints,
+              (SELECT count(*) FROM engagement.campaigns AS campaign WHERE campaign.tenant_id = tenant.id AND campaign.status = 'active') AS active_campaigns,
+              (SELECT count(*) FROM engagement.campaigns AS campaign WHERE campaign.tenant_id = tenant.id AND campaign.status = 'paused') AS paused_campaigns,
+              (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.status = 'responded') AS responded_touchpoints,
+              (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.status = 'converted') AS converted_touchpoints,
+              (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.last_workflow_run_public_id IS NOT NULL) AS workflow_dispatched
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;

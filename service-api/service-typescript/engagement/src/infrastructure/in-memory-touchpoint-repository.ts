@@ -1,12 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { campaignChannels } from "../domain/campaign.js";
 import {
+  buildTouchpointSummary,
   CreateTouchpointInput,
   Touchpoint,
   TouchpointFilters,
   TouchpointStatus,
-  TouchpointSummary,
-  touchpointStatuses
+  TouchpointSummary
 } from "../domain/touchpoint.js";
 import { TouchpointRepository } from "../domain/touchpoint-repository.js";
 
@@ -120,39 +119,6 @@ export class InMemoryTouchpointRepository implements TouchpointRepository {
 
   async getSummary(filters: TouchpointFilters = {}): Promise<TouchpointSummary> {
     const touchpoints = await this.list(filters);
-    const campaignIds = new Set(touchpoints.map((touchpoint) => touchpoint.campaignPublicId));
-    const byStatus = Object.fromEntries(touchpointStatuses.map((status) => [status, 0])) as Record<TouchpointStatus, number>;
-    const byChannel = Object.fromEntries(campaignChannels.map((channel) => [channel, 0])) as Record<Touchpoint["channel"], number>;
-
-    for (const touchpoint of touchpoints) {
-      byStatus[touchpoint.status] += 1;
-      byChannel[touchpoint.channel] += 1;
-    }
-
-    const responded = byStatus.responded + byStatus.converted;
-    const converted = byStatus.converted;
-    const failed = byStatus.failed;
-    const sentBase = byStatus.sent + byStatus.delivered + byStatus.responded + byStatus.converted;
-    const responseBase = byStatus.responded + byStatus.converted + byStatus.failed;
-
-    return {
-      tenantSlug: filters.tenantSlug ?? "global",
-      generatedAt: new Date().toISOString(),
-      totals: {
-        campaigns: campaignIds.size,
-        touchpoints: touchpoints.length,
-        workflowConfigured: touchpoints.filter((touchpoint) => touchpoint.workflowDefinitionKey !== null).length,
-        workflowDispatched: touchpoints.filter((touchpoint) => touchpoint.lastWorkflowRunPublicId !== null).length
-      },
-      byStatus,
-      byChannel,
-      outcomes: {
-        responded,
-        converted,
-        failed,
-        responseRate: sentBase > 0 ? Number((responded / sentBase).toFixed(4)) : 0,
-        conversionRate: responseBase > 0 ? Number((converted / responseBase).toFixed(4)) : 0
-      }
-    };
+    return buildTouchpointSummary(touchpoints, filters.tenantSlug);
   }
 }

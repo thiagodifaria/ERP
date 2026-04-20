@@ -5,6 +5,8 @@ import { HealthResponse, ReadinessResponse } from "./dto/health.js";
 import { UpdateCampaignStatusRequest } from "./dto/update-campaign-status-request.js";
 import { UpdateTouchpointStatusRequest } from "./dto/update-touchpoint-status-request.js";
 import { runtime, services } from "../config/container.js";
+import { CampaignChannel, CampaignStatus } from "../domain/campaign.js";
+import { TouchpointStatus } from "../domain/touchpoint.js";
 
 function json(response: ServerResponse, statusCode: number, body: unknown): void {
   response.writeHead(statusCode, { "content-type": "application/json" });
@@ -121,8 +123,8 @@ export async function route(request: IncomingMessage, response: ServerResponse):
         200,
         await services.listCampaigns.execute({
           tenantSlug: params.get("tenantSlug") ?? undefined,
-          status: params.get("status") ?? undefined,
-          channel: params.get("channel") ?? undefined,
+          status: (params.get("status") ?? undefined) as CampaignStatus | undefined,
+          channel: (params.get("channel") ?? undefined) as CampaignChannel | undefined,
           q: params.get("q") ?? undefined
         })
       );
@@ -149,8 +151,8 @@ export async function route(request: IncomingMessage, response: ServerResponse):
       await services.getTouchpointSummary.execute({
         tenantSlug: params.get("tenantSlug") ?? undefined,
         campaignPublicId: params.get("campaignPublicId") ?? undefined,
-        status: params.get("status") ?? undefined,
-        channel: params.get("channel") ?? undefined,
+        status: (params.get("status") ?? undefined) as TouchpointStatus | undefined,
+        channel: (params.get("channel") ?? undefined) as CampaignChannel | undefined,
         leadPublicId: params.get("leadPublicId") ?? undefined
       })
     );
@@ -168,8 +170,8 @@ export async function route(request: IncomingMessage, response: ServerResponse):
         await services.listTouchpoints.execute({
           tenantSlug: params.get("tenantSlug") ?? undefined,
           campaignPublicId: params.get("campaignPublicId") ?? undefined,
-          status: params.get("status") ?? undefined,
-          channel: params.get("channel") ?? undefined,
+          status: (params.get("status") ?? undefined) as TouchpointStatus | undefined,
+          channel: (params.get("channel") ?? undefined) as CampaignChannel | undefined,
           leadPublicId: params.get("leadPublicId") ?? undefined
         })
       );

@@ -65,6 +65,46 @@ export type TouchpointSummary = {
   };
 };
 
+export function buildTouchpointSummary(
+  touchpoints: Touchpoint[],
+  tenantSlug?: string
+): TouchpointSummary {
+  const campaignIds = new Set(touchpoints.map((touchpoint) => touchpoint.campaignPublicId));
+  const byStatus = Object.fromEntries(touchpointStatuses.map((status) => [status, 0])) as Record<TouchpointStatus, number>;
+  const byChannel = Object.fromEntries(campaignChannels.map((channel) => [channel, 0])) as Record<CampaignChannel, number>;
+
+  for (const touchpoint of touchpoints) {
+    byStatus[touchpoint.status] += 1;
+    byChannel[touchpoint.channel] += 1;
+  }
+
+  const responded = byStatus.responded + byStatus.converted;
+  const converted = byStatus.converted;
+  const failed = byStatus.failed;
+  const sentBase = byStatus.sent + byStatus.delivered + byStatus.responded + byStatus.converted;
+  const responseBase = byStatus.responded + byStatus.converted + byStatus.failed;
+
+  return {
+    tenantSlug: tenantSlug ?? "global",
+    generatedAt: new Date().toISOString(),
+    totals: {
+      campaigns: campaignIds.size,
+      touchpoints: touchpoints.length,
+      workflowConfigured: touchpoints.filter((touchpoint) => touchpoint.workflowDefinitionKey !== null).length,
+      workflowDispatched: touchpoints.filter((touchpoint) => touchpoint.lastWorkflowRunPublicId !== null).length
+    },
+    byStatus,
+    byChannel,
+    outcomes: {
+      responded,
+      converted,
+      failed,
+      responseRate: sentBase > 0 ? Number((responded / sentBase).toFixed(4)) : 0,
+      conversionRate: responseBase > 0 ? Number((converted / responseBase).toFixed(4)) : 0
+    }
+  };
+}
+
 function ensureIncluded<T extends string>(value: string, items: readonly T[], errorCode: string): T {
   const normalizedValue = value.trim().toLowerCase();
 
