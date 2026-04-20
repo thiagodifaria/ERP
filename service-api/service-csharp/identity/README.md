@@ -10,9 +10,14 @@ Current scope:
 - company, user and team management in bootstrap mode
 - team memberships and direct user-role assignments
 - consolidated tenant access snapshot
+- invite lifecycle for tenant onboarding
+- session login and refresh flow
+- tenant access resolution for downstream gateways
+- MFA enrollment, verification and disable flow
+- security audit trail for access-sensitive actions
 - selectable repository driver with PostgreSQL-backed runtime support
-- company update path started for existing tenant structure records
-- user update path started for existing tenant records
+- Keycloak-backed identity provider integration
+- OpenFGA-backed tenant authorization graph
 - runtime smoke now exercises the live HTTP API against PostgreSQL
 - unit, integration and contract coverage in container-first flow
 
@@ -36,6 +41,10 @@ Public routes:
 - `GET /api/identity/tenants/{slug}/users/{userPublicId}/roles`
 - `POST /api/identity/tenants/{slug}/users/{userPublicId}/roles`
 - `DELETE /api/identity/tenants/{slug}/users/{userPublicId}/roles/{roleCode}`
+- `PATCH /api/identity/tenants/{slug}/users/{userPublicId}/access`
+- `POST /api/identity/tenants/{slug}/users/{userPublicId}/mfa/enroll`
+- `POST /api/identity/tenants/{slug}/users/{userPublicId}/mfa/verify`
+- `DELETE /api/identity/tenants/{slug}/users/{userPublicId}/mfa`
 - `GET /api/identity/tenants/{slug}/teams`
 - `POST /api/identity/tenants/{slug}/teams`
 - `PATCH /api/identity/tenants/{slug}/teams/{teamPublicId}`
@@ -43,9 +52,17 @@ Public routes:
 - `POST /api/identity/tenants/{slug}/teams/{teamPublicId}/members`
 - `DELETE /api/identity/tenants/{slug}/teams/{teamPublicId}/members/{userPublicId}`
 - `GET /api/identity/tenants/{slug}/roles`
+- `POST /api/identity/tenants/{slug}/invites`
+- `GET /api/identity/tenants/{slug}/invites`
+- `POST /api/identity/invites/{inviteToken}/accept`
+- `POST /api/identity/sessions/login`
+- `POST /api/identity/sessions/refresh`
+- `GET /api/identity/tenants/{slug}/access`
+- `GET /api/identity/tenants/{slug}/security/audit`
 
 Container-first validation:
 
 - `docker run --rm -v ${PWD}:/workspace -w /workspace/service-api/service-csharp/identity mcr.microsoft.com/dotnet/sdk:8.0 dotnet test tests/Identity.UnitTests/Identity.UnitTests.csproj`
 - `docker run --rm -v ${PWD}:/workspace -w /workspace/service-api/service-csharp/identity mcr.microsoft.com/dotnet/sdk:8.0 dotnet test tests/Identity.IntegrationTests/Identity.IntegrationTests.csproj`
 - `docker run --rm -v ${PWD}:/workspace -w /workspace/service-api/service-csharp/identity mcr.microsoft.com/dotnet/sdk:8.0 dotnet test tests/Identity.ContractTests/Identity.ContractTests.csproj`
+- `bash scripts/test.sh smoke`

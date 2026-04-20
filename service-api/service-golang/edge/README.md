@@ -40,3 +40,8 @@ Protected operational routes require:
 - `Authorization: Bearer <sessionToken>`
 - `tenantSlug` query parameter
 - successful access resolution via `GET /api/identity/tenants/{slug}/access`
+
+Container-first validation:
+
+- `docker run --rm -v ${PWD}:/workspace -w /workspace/service-api/service-golang/edge golang:1.24-alpine go test ./...`
+- `bash scripts/test.sh smoke`
