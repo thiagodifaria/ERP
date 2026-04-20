@@ -1,0 +1,21 @@
+{
+  "name": "@erp/engagement",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/src/server.js",
+    "test:unit": "node --import tsx --test tests/unit/**/*.test.ts",
+    "test:contract": "node --import tsx --test tests/contract/**/*.test.ts"
+  },
+  "dependencies": {
+    "pg": "8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "24.6.0",
+    "@types/pg": "8.15.5",
+    "tsx": "4.20.5",
+    "typescript": "5.9.3"
+  }
+}
