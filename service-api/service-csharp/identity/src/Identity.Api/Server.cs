@@ -310,6 +310,18 @@ public static class Server
       {
         return ToResult(useCase.Execute(request), TypedResults.Ok);
       });
+    app.MapPost(
+      "/api/identity/password-recovery",
+      (StartPasswordRecoveryRequest request, StartIdentityPasswordRecovery useCase) =>
+      {
+        return ToResult(useCase.Execute(request), TypedResults.Ok);
+      });
+    app.MapPost(
+      "/api/identity/password-recovery/{resetToken}/complete",
+      (string resetToken, ResetPasswordRequest request, CompleteIdentityPasswordRecovery useCase) =>
+      {
+        return ToResult(useCase.Execute(resetToken, request), TypedResults.Ok);
+      });
     app.MapGet(
       "/api/identity/tenants/{slug}/access",
       (string slug, HttpRequest request, ResolveTenantAccess useCase) =>
@@ -353,6 +365,24 @@ public static class Server
       (string slug, ListIdentitySecurityAuditEvents useCase) =>
       {
         return ToResult(useCase.Execute(slug), TypedResults.Ok);
+      });
+    app.MapGet(
+      "/api/identity/tenants/{slug}/users/{userPublicId:guid}/sessions",
+      (string slug, Guid userPublicId, ListIdentityUserSessions useCase) =>
+      {
+        return ToResult(useCase.Execute(slug, userPublicId), TypedResults.Ok);
+      });
+    app.MapDelete(
+      "/api/identity/tenants/{slug}/sessions/{sessionPublicId:guid}",
+      (string slug, Guid sessionPublicId, RevokeIdentitySession useCase) =>
+      {
+        return ToResult(useCase.Execute(slug, sessionPublicId), TypedResults.Ok);
+      });
+    app.MapDelete(
+      "/api/identity/tenants/{slug}/users/{userPublicId:guid}/sessions",
+      (string slug, Guid userPublicId, RevokeIdentityUserSessions useCase) =>
+      {
+        return ToResult(useCase.Execute(slug, userPublicId), TypedResults.Ok);
       });
     app.MapGet(
       "/api/identity/tenants",

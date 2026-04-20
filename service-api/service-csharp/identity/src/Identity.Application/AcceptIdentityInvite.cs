@@ -89,7 +89,7 @@ public sealed class AcceptIdentityInvite
         new ErrorResponse("invalid_display_name", "Display name is required."));
     }
 
-    if (!IsStrongPassword(request.Password))
+    if (!PasswordStrength.IsStrong(request.Password))
     {
       return OperationResult<AcceptInviteResponse>.BadRequest(
         new ErrorResponse("invalid_password", "Password must be at least 10 characters and include upper, lower and number."));
@@ -175,14 +175,5 @@ public sealed class AcceptIdentityInvite
     return string.IsNullOrWhiteSpace(value)
       ? null
       : value.Trim();
-  }
-
-  private static bool IsStrongPassword(string password)
-  {
-    return !string.IsNullOrWhiteSpace(password)
-      && password.Length >= 10
-      && password.Any(char.IsUpper)
-      && password.Any(char.IsLower)
-      && password.Any(char.IsDigit);
   }
 }

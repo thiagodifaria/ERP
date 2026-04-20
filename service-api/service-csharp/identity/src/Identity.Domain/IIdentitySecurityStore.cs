@@ -22,11 +22,23 @@ public interface IIdentitySecurityStore
 
   Session? FindSessionByRefreshToken(string refreshToken);
 
+  Session? FindSessionByPublicId(Guid sessionPublicId);
+
+  IReadOnlyCollection<Session> ListSessionsByTenantIdAndUserId(long tenantId, long userId);
+
   Session AddSession(Session session);
 
   Session UpdateSession(Session session);
 
   int RevokeSessionsByUserId(long tenantId, long userId, DateTimeOffset revokedAt);
+
+  PasswordResetToken? FindPasswordResetTokenByResetToken(string resetToken);
+
+  PasswordResetToken? FindPendingPasswordResetTokenByTenantIdAndUserId(long tenantId, long userId);
+
+  PasswordResetToken AddPasswordResetToken(PasswordResetToken passwordResetToken);
+
+  PasswordResetToken UpdatePasswordResetToken(PasswordResetToken passwordResetToken);
 
   IReadOnlyCollection<SecurityAuditEvent> ListSecurityAuditByTenantId(long tenantId, int limit);
 
@@ -35,6 +47,8 @@ public interface IIdentitySecurityStore
   long NextInviteId();
 
   long NextSessionId();
+
+  long NextPasswordResetTokenId();
 
   long NextSecurityAuditEventId();
 }

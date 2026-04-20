@@ -198,6 +198,48 @@ public sealed class PostgresIdentitySecurityStore : IIdentitySecurityStore
     return reader.Read() ? MapSession(reader) : null;
   }
 
+  public Session? FindSessionByPublicId(Guid sessionPublicId)
+  {
+    const string sql = """
+      SELECT id, tenant_id, user_id, public_id, session_token, refresh_token, identity_provider_subject, identity_provider_refresh_token, status, expires_at, refresh_expires_at, created_at, last_used_at, revoked_at
+      FROM identity.sessions
+      WHERE public_id = @public_id
+      LIMIT 1;
+      """;
+
+    using var connection = OpenConnection();
+    using var command = new NpgsqlCommand(sql, connection);
+    command.Parameters.AddWithValue("public_id", sessionPublicId);
+    using var reader = command.ExecuteReader();
+
+    return reader.Read() ? MapSession(reader) : null;
+  }
+
+  public IReadOnlyCollection<Session> ListSessionsByTenantIdAndUserId(long tenantId, long userId)
+  {
+    const string sql = """
+      SELECT id, tenant_id, user_id, public_id, session_token, refresh_token, identity_provider_subject, identity_provider_refresh_token, status, expires_at, refresh_expires_at, created_at, last_used_at, revoked_at
+      FROM identity.sessions
+      WHERE tenant_id = @tenant_id
+        AND user_id = @user_id
+      ORDER BY created_at DESC;
+      """;
+
+    using var connection = OpenConnection();
+    using var command = new NpgsqlCommand(sql, connection);
+    command.Parameters.AddWithValue("tenant_id", tenantId);
+    command.Parameters.AddWithValue("user_id", userId);
+    using var reader = command.ExecuteReader();
+
+    var sessions = new List<Session>();
+    while (reader.Read())
+    {
+      sessions.Add(MapSession(reader));
+    }
+
+    return sessions;
+  }
+
   public Session AddSession(Session session)
   {
     const string sql = """
@@ -261,6 +303,82 @@ public sealed class PostgresIdentitySecurityStore : IIdentitySecurityStore
     return command.ExecuteNonQuery();
   }
 
+  public PasswordResetToken? FindPasswordResetTokenByResetToken(string resetToken)
+  {
+    const string sql = """
+      SELECT id, tenant_id, user_id, public_id, reset_token, status, expires_at, consumed_at, created_at
+      FROM identity.password_reset_tokens
+      WHERE reset_token = @reset_token
+      LIMIT 1;
+      """;
+
+    using var connection = OpenConnection();
+    using var command = new NpgsqlCommand(sql, connection);
+    command.Parameters.AddWithValue("reset_token", resetToken);
+    using var reader = command.ExecuteReader();
+
+    return reader.Read() ? MapPasswordResetToken(reader) : null;
+  }
+
+  public PasswordResetToken? FindPendingPasswordResetTokenByTenantIdAndUserId(long tenantId, long userId)
+  {
+    const string sql = """
+      SELECT id, tenant_id, user_id, public_id, reset_token, status, expires_at, consumed_at, created_at
+      FROM identity.password_reset_tokens
+      WHERE tenant_id = @tenant_id
+        AND user_id = @user_id
+        AND status = 'pending'
+      ORDER BY created_at DESC
+      LIMIT 1;
+      """;
+
+    using var connection = OpenConnection();
+    using var command = new NpgsqlCommand(sql, connection);
+    command.Parameters.AddWithValue("tenant_id", tenantId);
+    command.Parameters.AddWithValue("user_id", userId);
+    using var reader = command.ExecuteReader();
+
+    return reader.Read() ? MapPasswordResetToken(reader) : null;
+  }
+
+  public PasswordResetToken AddPasswordResetToken(PasswordResetToken passwordResetToken)
+  {
+    const string sql = """
+      INSERT INTO identity.password_reset_tokens (tenant_id, user_id, public_id, reset_token, status, expires_at, consumed_at, created_at)
+      VALUES (@tenant_id, @user_id, @public_id, @reset_token, @status, @expires_at, @consumed_at, @created_at)
+      RETURNING id, tenant_id, user_id, public_id, reset_token, status, expires_at, consumed_at, created_at;
+      """;
+
+    using var connection = OpenConnection();
+    using var command = new NpgsqlCommand(sql, connection);
+    BindPasswordResetToken(command, passwordResetToken);
+    using var reader = command.ExecuteReader();
+    reader.Read();
+
+    return MapPasswordResetToken(reader);
+  }
+
+  public PasswordResetToken UpdatePasswordResetToken(PasswordResetToken passwordResetToken)
+  {
+    const string sql = """
+      UPDATE identity.password_reset_tokens
+      SET status = @status,
+          expires_at = @expires_at,
+          consumed_at = @consumed_at
+      WHERE id = @id
+      RETURNING id, tenant_id, user_id, public_id, reset_token, status, expires_at, consumed_at, created_at;
+      """;
+
+    using var connection = OpenConnection();
+    using var command = new NpgsqlCommand(sql, connection);
+    BindPasswordResetToken(command, passwordResetToken);
+    command.Parameters.AddWithValue("id", passwordResetToken.Id);
+    using var reader = command.ExecuteReader();
+    reader.Read();
+
+    return MapPasswordResetToken(reader);
+  }
+
   public IReadOnlyCollection<SecurityAuditEvent> ListSecurityAuditByTenantId(long tenantId, int limit)
   {
     const string sql = """
@@ -320,6 +438,11 @@ public sealed class PostgresIdentitySecurityStore : IIdentitySecurityStore
     return NextId("identity.sessions");
   }
 
+  public long NextPasswordResetTokenId()
+  {
+    return NextId("identity.password_reset_tokens");
+  }
+
   public long NextSecurityAuditEventId()
   {
     return NextId("identity.security_audit_events");
@@ -374,6 +497,18 @@ public sealed class PostgresIdentitySecurityStore : IIdentitySecurityStore
     command.Parameters.AddWithValue("created_at", session.CreatedAt);
     command.Parameters.AddWithValue("last_used_at", (object?)session.LastUsedAt ?? DBNull.Value);
     command.Parameters.AddWithValue("revoked_at", (object?)session.RevokedAt ?? DBNull.Value);
+  }
+
+  private static void BindPasswordResetToken(NpgsqlCommand command, PasswordResetToken passwordResetToken)
+  {
+    command.Parameters.AddWithValue("tenant_id", passwordResetToken.TenantId);
+    command.Parameters.AddWithValue("user_id", passwordResetToken.UserId);
+    command.Parameters.AddWithValue("public_id", passwordResetToken.PublicId);
+    command.Parameters.AddWithValue("reset_token", passwordResetToken.ResetToken);
+    command.Parameters.AddWithValue("status", passwordResetToken.Status);
+    command.Parameters.AddWithValue("expires_at", passwordResetToken.ExpiresAt);
+    command.Parameters.AddWithValue("consumed_at", (object?)passwordResetToken.ConsumedAt ?? DBNull.Value);
+    command.Parameters.AddWithValue("created_at", passwordResetToken.CreatedAt);
   }
 
   private long NextId(string tableName)
@@ -436,6 +571,20 @@ public sealed class PostgresIdentitySecurityStore : IIdentitySecurityStore
       reader.GetFieldValue<DateTimeOffset>(11),
       reader.IsDBNull(12) ? null : reader.GetFieldValue<DateTimeOffset>(12),
       reader.IsDBNull(13) ? null : reader.GetFieldValue<DateTimeOffset>(13));
+  }
+
+  private static PasswordResetToken MapPasswordResetToken(NpgsqlDataReader reader)
+  {
+    return new PasswordResetToken(
+      reader.GetInt64(0),
+      reader.GetInt64(1),
+      reader.GetInt64(2),
+      reader.GetGuid(3),
+      reader.GetString(4),
+      reader.GetString(5),
+      reader.GetFieldValue<DateTimeOffset>(6),
+      reader.IsDBNull(7) ? null : reader.GetFieldValue<DateTimeOffset>(7),
+      reader.GetFieldValue<DateTimeOffset>(8));
   }
 
   private static SecurityAuditEvent MapSecurityAuditEvent(NpgsqlDataReader reader)

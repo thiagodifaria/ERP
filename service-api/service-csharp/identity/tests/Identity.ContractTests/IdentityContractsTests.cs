@@ -478,4 +478,109 @@ public sealed class IdentityContractsTests : IClassFixture<WebApplicationFactory
       Assert.False(string.IsNullOrWhiteSpace(auditEvent.Summary));
     });
   }
+
+  [Fact]
+  public async Task PasswordRecoveryContractShouldExposePublicFields()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Contract Password Recovery");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var inviteResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/invites",
+      new CreateInviteRequest(
+        $"contract.password@{tenantPayload.Slug}.local",
+        "Contract Password User",
+        ["viewer"],
+        null,
+        7));
+    var invitePayload = await inviteResponse.Content.ReadFromJsonAsync<InviteResponse>();
+
+    Assert.NotNull(invitePayload);
+
+    await _client.PostAsJsonAsync(
+      $"/api/identity/invites/{invitePayload!.InviteToken}/accept",
+      new AcceptInviteRequest("Contract Password User", "Contract", "Password", "PhaseTwo123"));
+
+    var response = await _client.PostAsJsonAsync(
+      "/api/identity/password-recovery",
+      new StartPasswordRecoveryRequest(
+        tenantPayload.Slug,
+        $"contract.password@{tenantPayload.Slug}.local",
+        30));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<PasswordRecoveryResponse>();
+
+    Assert.NotNull(payload);
+    Assert.NotEqual(Guid.Empty, payload!.PublicId);
+    Assert.NotEqual(Guid.Empty, payload.UserPublicId);
+    Assert.Equal("pending", payload.Status);
+    Assert.False(string.IsNullOrWhiteSpace(payload.ResetToken));
+    Assert.True(payload.ExpiresAt > DateTimeOffset.UtcNow);
+  }
+
+  [Fact]
+  public async Task UserSessionListContractShouldExposePublicFields()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Contract Session List");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var inviteResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/invites",
+      new CreateInviteRequest(
+        $"contract.session.list@{tenantPayload.Slug}.local",
+        "Contract Session List User",
+        ["viewer"],
+        null,
+        7));
+    var invitePayload = await inviteResponse.Content.ReadFromJsonAsync<InviteResponse>();
+
+    Assert.NotNull(invitePayload);
+
+    var acceptResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/invites/{invitePayload!.InviteToken}/accept",
+      new AcceptInviteRequest("Contract Session List User", "Contract", "Session", "PhaseTwo123"));
+    var acceptedPayload = await acceptResponse.Content.ReadFromJsonAsync<AcceptInviteResponse>();
+
+    Assert.NotNull(acceptedPayload);
+
+    await _client.PostAsJsonAsync(
+      "/api/identity/sessions/login",
+      new LoginSessionRequest(
+        tenantPayload.Slug,
+        acceptedPayload!.User.Email,
+        "PhaseTwo123",
+        null));
+
+    var response = await _client.GetAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{acceptedPayload.User.PublicId}/sessions");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<UserSessionResponse[]>();
+
+    Assert.NotNull(payload);
+    Assert.NotEmpty(payload);
+    Assert.All(payload!, session =>
+    {
+      Assert.NotEqual(Guid.Empty, session.PublicId);
+      Assert.NotEqual(Guid.Empty, session.UserPublicId);
+      Assert.False(string.IsNullOrWhiteSpace(session.Status));
+      Assert.True(session.ExpiresAt > DateTimeOffset.UtcNow);
+      Assert.True(session.RefreshExpiresAt >= session.ExpiresAt);
+    });
+  }
 }

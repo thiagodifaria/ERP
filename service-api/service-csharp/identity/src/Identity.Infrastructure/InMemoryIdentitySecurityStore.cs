@@ -10,10 +10,14 @@ public sealed class InMemoryIdentitySecurityStore : IIdentitySecurityStore
   private readonly Dictionary<long, Invite> _invitesById = [];
   private readonly Dictionary<string, Session> _sessionsByToken = new(StringComparer.Ordinal);
   private readonly Dictionary<string, Session> _sessionsByRefreshToken = new(StringComparer.Ordinal);
+  private readonly Dictionary<Guid, Session> _sessionsByPublicId = [];
   private readonly Dictionary<long, Session> _sessionsById = [];
+  private readonly Dictionary<string, PasswordResetToken> _passwordResetTokensByToken = new(StringComparer.Ordinal);
+  private readonly Dictionary<long, PasswordResetToken> _passwordResetTokensById = [];
   private readonly List<SecurityAuditEvent> _auditEvents = [];
   private long _inviteSequence = 1;
   private long _sessionSequence = 1;
+  private long _passwordResetTokenSequence = 1;
   private long _auditSequence = 1;
 
   public UserSecurityProfile GetOrCreateProfile(long userId)
@@ -84,9 +88,25 @@ public sealed class InMemoryIdentitySecurityStore : IIdentitySecurityStore
       : null;
   }
 
+  public Session? FindSessionByPublicId(Guid sessionPublicId)
+  {
+    return _sessionsByPublicId.TryGetValue(sessionPublicId, out var session)
+      ? session
+      : null;
+  }
+
+  public IReadOnlyCollection<Session> ListSessionsByTenantIdAndUserId(long tenantId, long userId)
+  {
+    return _sessionsById.Values
+      .Where(session => session.TenantId == tenantId && session.UserId == userId)
+      .OrderByDescending(session => session.CreatedAt)
+      .ToArray();
+  }
+
   public Session AddSession(Session session)
   {
     _sessionsById[session.Id] = session;
+    _sessionsByPublicId[session.PublicId] = session;
     _sessionsByToken[session.SessionToken] = session;
     _sessionsByRefreshToken[session.RefreshToken] = session;
     return session;
@@ -96,11 +116,13 @@ public sealed class InMemoryIdentitySecurityStore : IIdentitySecurityStore
   {
     if (_sessionsById.TryGetValue(session.Id, out var current))
     {
+      _sessionsByPublicId.Remove(current.PublicId);
       _sessionsByToken.Remove(current.SessionToken);
       _sessionsByRefreshToken.Remove(current.RefreshToken);
     }
 
     _sessionsById[session.Id] = session;
+    _sessionsByPublicId[session.PublicId] = session;
     _sessionsByToken[session.SessionToken] = session;
     _sessionsByRefreshToken[session.RefreshToken] = session;
     return session;
@@ -118,6 +140,35 @@ public sealed class InMemoryIdentitySecurityStore : IIdentitySecurityStore
     }
 
     return sessions.Length;
+  }
+
+  public PasswordResetToken? FindPasswordResetTokenByResetToken(string resetToken)
+  {
+    return _passwordResetTokensByToken.TryGetValue(resetToken, out var passwordResetToken)
+      ? passwordResetToken
+      : null;
+  }
+
+  public PasswordResetToken? FindPendingPasswordResetTokenByTenantIdAndUserId(long tenantId, long userId)
+  {
+    return _passwordResetTokensById.Values
+      .Where(passwordResetToken => passwordResetToken.TenantId == tenantId && passwordResetToken.UserId == userId && passwordResetToken.Status == "pending")
+      .OrderByDescending(passwordResetToken => passwordResetToken.CreatedAt)
+      .FirstOrDefault();
+  }
+
+  public PasswordResetToken AddPasswordResetToken(PasswordResetToken passwordResetToken)
+  {
+    _passwordResetTokensById[passwordResetToken.Id] = passwordResetToken;
+    _passwordResetTokensByToken[passwordResetToken.ResetToken] = passwordResetToken;
+    return passwordResetToken;
+  }
+
+  public PasswordResetToken UpdatePasswordResetToken(PasswordResetToken passwordResetToken)
+  {
+    _passwordResetTokensById[passwordResetToken.Id] = passwordResetToken;
+    _passwordResetTokensByToken[passwordResetToken.ResetToken] = passwordResetToken;
+    return passwordResetToken;
   }
 
   public IReadOnlyCollection<SecurityAuditEvent> ListSecurityAuditByTenantId(long tenantId, int limit)
@@ -143,6 +194,11 @@ public sealed class InMemoryIdentitySecurityStore : IIdentitySecurityStore
   public long NextSessionId()
   {
     return _sessionSequence++;
+  }
+
+  public long NextPasswordResetTokenId()
+  {
+    return _passwordResetTokenSequence++;
   }
 
   public long NextSecurityAuditEventId()

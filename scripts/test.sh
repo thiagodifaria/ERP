@@ -901,15 +901,26 @@ run_workflow_control_runtime_smoke() {
   local detail_response
   local status_response
   local health_details_response
+  local trigger_catalog_response
+  local action_catalog_response
 
   "${COMPOSE_CMD[@]}" up -d --build workflow-control
   wait_for_http_ready "$base_url/health/ready"
 
   health_details_response="$(curl -fsS "$base_url/health/details")"
+  trigger_catalog_response="$(curl -fsS "$base_url/api/workflow-control/catalog/triggers")"
+  action_catalog_response="$(curl -fsS "$base_url/api/workflow-control/catalog/actions")"
   echo "[test] workflow-control health details => $health_details_response"
+  echo "[test] workflow-control trigger catalog => $trigger_catalog_response"
+  echo "[test] workflow-control action catalog => $action_catalog_response"
 
-  if [[ "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"definitions-catalog","status":"ready"'* ]]; then
+  if [[ "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"trigger-catalog","status":"ready"'* || "$health_details_response" != *'"name":"action-catalog","status":"ready"'* || "$health_details_response" != *'"name":"definitions-catalog","status":"ready"'* ]]; then
     echo "[test] workflow-control health details did not expose the expected postgresql-backed catalog dependencies"
+    exit 1
+  fi
+
+  if [[ "$trigger_catalog_response" != *'"key":"lead.created"'* || "$trigger_catalog_response" != *'"key":"manual.dispatch"'* || "$action_catalog_response" != *'"key":"delay.wait"'* || "$action_catalog_response" != *'"supportsCompensation":true'* ]]; then
+    echo "[test] workflow-control catalogs were not returned by the live API"
     exit 1
   fi
 
@@ -1157,6 +1168,7 @@ run_workflow_control_runtime_smoke() {
 run_workflow_runtime_smoke() {
   local base_url="http://localhost:${WORKFLOW_RUNTIME_HTTP_PORT:-8085}"
   local health_details_response
+  local capabilities_response
   local list_response
   local summary_response
   local create_response
@@ -1183,13 +1195,15 @@ run_workflow_runtime_smoke() {
   wait_for_http_ready "$base_url/health/ready"
 
   health_details_response="$(curl -fsS "$base_url/health/details")"
+  capabilities_response="$(curl -fsS "$base_url/api/workflow-runtime/capabilities")"
   list_response="$(curl -fsS "$base_url/api/workflow-runtime/executions")"
   summary_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/summary")"
   echo "[test] workflow-runtime health details => $health_details_response"
+  echo "[test] workflow-runtime capabilities => $capabilities_response"
   echo "[test] workflow-runtime list => $list_response"
   echo "[test] workflow-runtime summary => $summary_response"
 
-  if [[ "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"timer-wheel","status":"ready"'* || "$health_details_response" != *'"name":"workflow-catalog","status":"ready"'* || "$list_response" != '[]' || "$summary_response" != *'"total":0'* ]]; then
+  if [[ "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"timer-wheel","status":"ready"'* || "$health_details_response" != *'"name":"workflow-catalog","status":"ready"'* || "$capabilities_response" != *'"supportsDelayActions":true'* || "$capabilities_response" != *'"supportsManualRetry":true'* || "$capabilities_response" != *'"mode":"basic"'* || "$list_response" != '[]' || "$summary_response" != *'"total":0'* ]]; then
     echo "[test] workflow-runtime bootstrap runtime state was not clean"
     exit 1
   fi
@@ -1434,7 +1448,15 @@ run_identity_runtime_smoke() {
   local session_token
   local refresh_token
   local access_response
+  local sessions_response
   local refresh_session_response
+  local password_recovery_response
+  local password_recovery_token
+  local password_reset_response
+  local recovered_login_response
+  local recovered_session_public_id
+  local recovered_session_token
+  local revoke_session_response
   local blocked_access_response
   local audit_response
 
@@ -1780,6 +1802,99 @@ run_identity_runtime_smoke() {
     exit 1
   fi
 
+  sessions_response="$(curl -fsS \
+    "$base_url/api/identity/tenants/$tenant_slug/users/$invited_user_public_id/sessions")"
+  echo "[test] identity api sessions => $sessions_response"
+
+  if [[ "$sessions_response" != *"\"userPublicId\":\"$invited_user_public_id\""* || "$sessions_response" != *'"status":"active"'* ]]; then
+    echo "[test] runtime identity session list did not expose the active login"
+    exit 1
+  fi
+
+  password_recovery_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"$tenant_slug\",\"email\":\"invite.flow@$tenant_slug.local\",\"expiresInMinutes\":45}" \
+    "$base_url/api/identity/password-recovery")"
+  echo "[test] identity api password recovery => $password_recovery_response"
+
+  password_recovery_token="$(echo "$password_recovery_response" | sed -n 's/.*"resetToken":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$password_recovery_token" || "$password_recovery_response" != *'"status":"pending"'* ]]; then
+    echo "[test] runtime identity password recovery request did not return a reset token"
+    exit 1
+  fi
+
+  password_reset_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"password":"PhaseThree123"}' \
+    "$base_url/api/identity/password-recovery/$password_recovery_token/complete")"
+  echo "[test] identity api password reset complete => $password_reset_response"
+
+  if [[ "$password_reset_response" != *'"status":"consumed"'* ]]; then
+    echo "[test] runtime identity password reset completion did not consume the token"
+    exit 1
+  fi
+
+  login_without_otp_response="$(curl -sS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"$tenant_slug\",\"email\":\"invite.flow@$tenant_slug.local\",\"password\":\"PhaseTwo123\",\"otpCode\":\"$(compute_totp "$mfa_secret")\"}" \
+    -w ' HTTP_STATUS:%{http_code}' \
+    "$base_url/api/identity/sessions/login")"
+  echo "[test] identity api login with old password after reset => $login_without_otp_response"
+
+  if [[ "$login_without_otp_response" != *'"code":"invalid_credentials"'* || "$login_without_otp_response" != *'HTTP_STATUS:401'* ]]; then
+    echo "[test] runtime identity password reset did not invalidate the old password"
+    exit 1
+  fi
+
+  access_response="$(curl -sS \
+    -H "Authorization: Bearer $session_token" \
+    -w ' HTTP_STATUS:%{http_code}' \
+    "$base_url/api/identity/tenants/$tenant_slug/access")"
+  echo "[test] identity api access after reset => $access_response"
+
+  if [[ "$access_response" != *'"code":"invalid_session"'* || "$access_response" != *'HTTP_STATUS:401'* ]]; then
+    echo "[test] runtime identity password reset should revoke active sessions"
+    exit 1
+  fi
+
+  recovered_login_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"$tenant_slug\",\"email\":\"invite.flow@$tenant_slug.local\",\"password\":\"PhaseThree123\",\"otpCode\":\"$(compute_totp "$mfa_secret")\"}" \
+    "$base_url/api/identity/sessions/login")"
+  echo "[test] identity api login with recovered password => $recovered_login_response"
+
+  recovered_session_public_id="$(echo "$recovered_login_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  recovered_session_token="$(echo "$recovered_login_response" | sed -n 's/.*"sessionToken":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$recovered_session_public_id" || -z "$recovered_session_token" || "$recovered_login_response" != *'"mfaEnabled":true'* ]]; then
+    echo "[test] runtime identity login with recovered password did not create a usable session"
+    exit 1
+  fi
+
+  revoke_session_response="$(curl -fsS \
+    -X DELETE \
+    "$base_url/api/identity/tenants/$tenant_slug/sessions/$recovered_session_public_id")"
+  echo "[test] identity api revoke session => $revoke_session_response"
+
+  if [[ "$revoke_session_response" != *"\"publicId\":\"$recovered_session_public_id\""* || "$revoke_session_response" != *'"status":"revoked"'* ]]; then
+    echo "[test] runtime identity session revoke did not persist"
+    exit 1
+  fi
+
+  access_response="$(curl -sS \
+    -H "Authorization: Bearer $recovered_session_token" \
+    -w ' HTTP_STATUS:%{http_code}' \
+    "$base_url/api/identity/tenants/$tenant_slug/access")"
+  echo "[test] identity api access after session revoke => $access_response"
+
+  if [[ "$access_response" != *'"code":"invalid_session"'* || "$access_response" != *'HTTP_STATUS:401'* ]]; then
+    echo "[test] runtime identity revoked session should no longer resolve tenant access"
+    exit 1
+  fi
+
   blocked_access_response="$(curl -fsS \
     -X PATCH \
     -H "Content-Type: application/json" \
@@ -1819,7 +1934,7 @@ run_identity_runtime_smoke() {
   audit_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/security/audit")"
   echo "[test] identity api security audit => $audit_response"
 
-  if [[ "$audit_response" != *'"eventCode":"invite_created"'* || "$audit_response" != *'"eventCode":"invite_accepted"'* || "$audit_response" != *'"eventCode":"mfa_enabled"'* || "$audit_response" != *'"eventCode":"access_blocked"'* ]]; then
+  if [[ "$audit_response" != *'"eventCode":"invite_created"'* || "$audit_response" != *'"eventCode":"invite_accepted"'* || "$audit_response" != *'"eventCode":"mfa_enabled"'* || "$audit_response" != *'"eventCode":"password_reset_requested"'* || "$audit_response" != *'"eventCode":"password_reset_completed"'* || "$audit_response" != *'"eventCode":"session_revoked"'* || "$audit_response" != *'"eventCode":"access_blocked"'* ]]; then
     echo "[test] runtime identity security audit did not capture the expected events"
     exit 1
   fi

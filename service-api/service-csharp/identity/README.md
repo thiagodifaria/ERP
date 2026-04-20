@@ -14,6 +14,8 @@ Current scope:
 - session login and refresh flow
 - tenant access resolution for downstream gateways
 - MFA enrollment, verification and disable flow
+- password recovery and reset flow with strong password validation
+- session governance with tenant-scoped session list and revocation
 - security audit trail for access-sensitive actions
 - selectable repository driver with PostgreSQL-backed runtime support
 - Keycloak-backed identity provider integration
@@ -57,7 +59,12 @@ Public routes:
 - `POST /api/identity/invites/{inviteToken}/accept`
 - `POST /api/identity/sessions/login`
 - `POST /api/identity/sessions/refresh`
+- `POST /api/identity/password-recovery`
+- `POST /api/identity/password-recovery/{resetToken}/complete`
 - `GET /api/identity/tenants/{slug}/access`
+- `GET /api/identity/tenants/{slug}/users/{userPublicId}/sessions`
+- `DELETE /api/identity/tenants/{slug}/sessions/{sessionPublicId}`
+- `DELETE /api/identity/tenants/{slug}/users/{userPublicId}/sessions`
 - `GET /api/identity/tenants/{slug}/security/audit`
 
 Container-first validation:

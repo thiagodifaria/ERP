@@ -45,4 +45,29 @@ internal static class IdentityResponseMapper
       auditEvent.Summary,
       auditEvent.CreatedAt);
   }
+
+  public static PasswordRecoveryResponse ToResponse(this PasswordResetToken passwordResetToken, string tenantSlug, User user)
+  {
+    return new PasswordRecoveryResponse(
+      passwordResetToken.PublicId,
+      tenantSlug,
+      user.PublicId,
+      user.Email,
+      passwordResetToken.Status,
+      passwordResetToken.ResetToken,
+      passwordResetToken.ExpiresAt);
+  }
+
+  public static UserSessionResponse ToResponse(this Session session, Guid userPublicId)
+  {
+    return new UserSessionResponse(
+      session.PublicId,
+      userPublicId,
+      session.Status,
+      session.ExpiresAt,
+      session.RefreshExpiresAt,
+      session.CreatedAt,
+      session.LastUsedAt,
+      session.RevokedAt);
+  }
 }

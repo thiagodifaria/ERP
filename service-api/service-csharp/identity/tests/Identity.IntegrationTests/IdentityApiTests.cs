@@ -1365,6 +1365,171 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
     Assert.Contains(auditPayload!, auditEvent => auditEvent.EventCode == "access_blocked");
   }
 
+  [Fact]
+  public async Task PasswordRecoveryShouldRotateCredentialsAndRevokeSessions()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Identity Password Recovery");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var inviteResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/invites",
+      new CreateInviteRequest(
+        $"password.flow@{tenantPayload.Slug}.local",
+        "Password Flow User",
+        ["viewer"],
+        null,
+        7));
+    var invitePayload = await inviteResponse.Content.ReadFromJsonAsync<InviteResponse>();
+
+    Assert.NotNull(invitePayload);
+
+    var acceptResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/invites/{invitePayload!.InviteToken}/accept",
+      new AcceptInviteRequest("Password Flow User", "Password", "Flow", "PhaseTwo123"));
+    var acceptedPayload = await acceptResponse.Content.ReadFromJsonAsync<AcceptInviteResponse>();
+
+    Assert.NotNull(acceptedPayload);
+
+    var loginResponse = await _client.PostAsJsonAsync(
+      "/api/identity/sessions/login",
+      new LoginSessionRequest(
+        tenantPayload.Slug,
+        acceptedPayload!.User.Email,
+        "PhaseTwo123",
+        null));
+    var sessionPayload = await loginResponse.Content.ReadFromJsonAsync<SessionResponse>();
+
+    Assert.NotNull(sessionPayload);
+
+    var startRecoveryResponse = await _client.PostAsJsonAsync(
+      "/api/identity/password-recovery",
+      new StartPasswordRecoveryRequest(
+        tenantPayload.Slug,
+        acceptedPayload.User.Email,
+        45));
+
+    Assert.Equal(HttpStatusCode.OK, startRecoveryResponse.StatusCode);
+
+    var recoveryPayload = await startRecoveryResponse.Content.ReadFromJsonAsync<PasswordRecoveryResponse>();
+
+    Assert.NotNull(recoveryPayload);
+    Assert.False(string.IsNullOrWhiteSpace(recoveryPayload!.ResetToken));
+
+    var completeRecoveryResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/password-recovery/{recoveryPayload.ResetToken}/complete",
+      new ResetPasswordRequest("PhaseThree123"));
+
+    Assert.Equal(HttpStatusCode.OK, completeRecoveryResponse.StatusCode);
+
+    var accessRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/identity/tenants/{tenantPayload.Slug}/access");
+    accessRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", sessionPayload!.SessionToken);
+    var staleAccessResponse = await _client.SendAsync(accessRequest);
+
+    Assert.Equal(HttpStatusCode.Unauthorized, staleAccessResponse.StatusCode);
+
+    var staleLoginResponse = await _client.PostAsJsonAsync(
+      "/api/identity/sessions/login",
+      new LoginSessionRequest(
+        tenantPayload.Slug,
+        acceptedPayload.User.Email,
+        "PhaseTwo123",
+        null));
+
+    Assert.Equal(HttpStatusCode.Unauthorized, staleLoginResponse.StatusCode);
+
+    var freshLoginResponse = await _client.PostAsJsonAsync(
+      "/api/identity/sessions/login",
+      new LoginSessionRequest(
+        tenantPayload.Slug,
+        acceptedPayload.User.Email,
+        "PhaseThree123",
+        null));
+
+    Assert.Equal(HttpStatusCode.OK, freshLoginResponse.StatusCode);
+  }
+
+  [Fact]
+  public async Task UserSessionsEndpointsShouldListAndRevokeLiveSessions()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Identity Session Governance");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var inviteResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/invites",
+      new CreateInviteRequest(
+        $"session.flow@{tenantPayload.Slug}.local",
+        "Session Flow User",
+        ["viewer"],
+        null,
+        7));
+    var invitePayload = await inviteResponse.Content.ReadFromJsonAsync<InviteResponse>();
+
+    Assert.NotNull(invitePayload);
+
+    var acceptResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/invites/{invitePayload!.InviteToken}/accept",
+      new AcceptInviteRequest("Session Flow User", "Session", "Flow", "PhaseTwo123"));
+    var acceptedPayload = await acceptResponse.Content.ReadFromJsonAsync<AcceptInviteResponse>();
+
+    Assert.NotNull(acceptedPayload);
+
+    await _client.PostAsJsonAsync(
+      "/api/identity/sessions/login",
+      new LoginSessionRequest(
+        tenantPayload.Slug,
+        acceptedPayload!.User.Email,
+        "PhaseTwo123",
+        null));
+    var secondLoginResponse = await _client.PostAsJsonAsync(
+      "/api/identity/sessions/login",
+      new LoginSessionRequest(
+        tenantPayload.Slug,
+        acceptedPayload.User.Email,
+        "PhaseTwo123",
+        null));
+    var secondSession = await secondLoginResponse.Content.ReadFromJsonAsync<SessionResponse>();
+
+    Assert.NotNull(secondSession);
+
+    var listResponse = await _client.GetAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{acceptedPayload.User.PublicId}/sessions");
+
+    Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+
+    var listedSessions = await listResponse.Content.ReadFromJsonAsync<UserSessionResponse[]>();
+
+    Assert.NotNull(listedSessions);
+    Assert.Equal(2, listedSessions!.Length);
+    Assert.Contains(listedSessions, session => session.Status == "active");
+
+    var revokeResponse = await _client.DeleteAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/sessions/{secondSession!.PublicId}");
+
+    Assert.Equal(HttpStatusCode.OK, revokeResponse.StatusCode);
+
+    var revokeAllResponse = await _client.DeleteAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{acceptedPayload.User.PublicId}/sessions");
+
+    Assert.Equal(HttpStatusCode.OK, revokeAllResponse.StatusCode);
+
+    var revokedSessions = await revokeAllResponse.Content.ReadFromJsonAsync<UserSessionResponse[]>();
+
+    Assert.NotNull(revokedSessions);
+    Assert.All(revokedSessions!, session => Assert.Equal("revoked", session.Status));
+  }
+
   private static string ComputeTotp(string secret)
   {
     var alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
