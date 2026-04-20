@@ -49,6 +49,7 @@ test("workflow definitions list should expose bootstrap catalog", async () => {
   assert.equal(response.status, 200);
   assert.ok(Array.isArray(payload));
   assert.ok(payload.some((definition) => definition.key === "lead-follow-up"));
+  assert.ok(payload.some((definition) => Array.isArray(definition.actions) && definition.actions.length > 0));
 });
 
 test("workflow trigger catalog should expose supported trigger foundations", async () => {
@@ -531,7 +532,15 @@ test("workflow definition publish should create a new version snapshot", async (
       key,
       name: "Publish Flow",
       description: "Fluxo para testar publicacao manual de versao.",
-      trigger: "lead.created"
+      trigger: "lead.created",
+      actions: [
+        {
+          stepId: "create-task",
+          actionKey: "task.create",
+          label: "Criar tarefa inicial",
+          compensationActionKey: "task.create"
+        }
+      ]
     })
   });
 
@@ -547,6 +556,8 @@ test("workflow definition publish should create a new version snapshot", async (
   assert.equal(publishPayload.versionNumber, 1);
   assert.equal(publishPayload.snapshotName, "Publish Flow");
   assert.equal(publishPayload.snapshotTrigger, "lead.created");
+  assert.equal(publishPayload.snapshotActions.length, 1);
+  assert.equal(publishPayload.snapshotActions[0].stepId, "create-task");
 });
 
 test("workflow definition current version should expose latest snapshot", async () => {
@@ -591,7 +602,15 @@ test("workflow definition restore should bring metadata back from a published ve
       key,
       name: "Restore Flow",
       description: "Fluxo inicial para restore.",
-      trigger: "lead.created"
+      trigger: "lead.created",
+      actions: [
+        {
+          stepId: "wait-touchpoint",
+          actionKey: "delay.wait",
+          label: "Aguardar retorno",
+          delaySeconds: 2
+        }
+      ]
     })
   });
 
@@ -610,7 +629,15 @@ test("workflow definition restore should bring metadata back from a published ve
     body: JSON.stringify({
       name: "Restore Flow Prime",
       description: "Fluxo refinado antes do rollback.",
-      trigger: "lead.qualified"
+      trigger: "lead.qualified",
+      actions: [
+        {
+          stepId: "notify-webhook",
+          actionKey: "integration.webhook",
+          label: "Emitir webhook de refinamento",
+          compensationActionKey: "integration.webhook"
+        }
+      ]
     })
   });
   assert.equal(updateResponse.status, 200);
@@ -641,6 +668,8 @@ test("workflow definition restore should bring metadata back from a published ve
   assert.equal(restorePayload.description, "Fluxo inicial para restore.");
   assert.equal(restorePayload.trigger, "lead.created");
   assert.equal(restorePayload.status, "draft");
+  assert.equal(restorePayload.actions.length, 1);
+  assert.equal(restorePayload.actions[0].actionKey, "delay.wait");
 });
 
 test("workflow definition create should normalize payload and return draft status", async () => {
@@ -654,7 +683,15 @@ test("workflow definition create should normalize payload and return draft statu
       key: `  ${key.toUpperCase()}  `,
       name: "  Create Flow  ",
       description: "  Fluxo criado para validar normalizacao.  ",
-      trigger: "  LEAD.CREATED  "
+      trigger: "  LEAD.CREATED  ",
+      actions: [
+        {
+          stepId: "  create-task  ",
+          actionKey: "  TASK.CREATE  ",
+          label: "  Criar tarefa inicial  ",
+          compensationActionKey: "  TASK.CREATE  "
+        }
+      ]
     })
   });
   const payload = await response.json();
@@ -665,6 +702,9 @@ test("workflow definition create should normalize payload and return draft statu
   assert.equal(payload.description, "Fluxo criado para validar normalizacao.");
   assert.equal(payload.trigger, "lead.created");
   assert.equal(payload.status, "draft");
+  assert.equal(payload.actions[0].stepId, "create-task");
+  assert.equal(payload.actions[0].actionKey, "task.create");
+  assert.equal(payload.actions[0].label, "Criar tarefa inicial");
 });
 
 test("workflow definition create should reject unknown trigger catalog entries", async () => {
@@ -683,6 +723,31 @@ test("workflow definition create should reject unknown trigger catalog entries",
 
   assert.equal(response.status, 400);
   assert.equal(payload.code, "workflow_definition_trigger_unknown");
+});
+
+test("workflow definition create should reject invalid action plans", async () => {
+  const response = await request("/api/workflow-control/definitions", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      key: `flow-${randomUUID()}`,
+      name: "Invalid Action Flow",
+      trigger: "lead.created",
+      actions: [
+        {
+          stepId: "broken-delay",
+          actionKey: "delay.wait",
+          label: "Delay sem duracao"
+        }
+      ]
+    })
+  });
+  const payload = await response.json();
+
+  assert.equal(response.status, 400);
+  assert.equal(payload.code, "workflow_definition_action_delay_invalid");
 });
 
 test("workflow definition status should update created resource", async () => {
@@ -728,7 +793,15 @@ test("workflow definition update should persist metadata changes", async () => {
       key,
       name: "Profile Flow",
       description: "Descricao inicial do fluxo.",
-      trigger: "lead.created"
+      trigger: "lead.created",
+      actions: [
+        {
+          stepId: "create-task",
+          actionKey: "task.create",
+          label: "Criar tarefa inicial",
+          compensationActionKey: "task.create"
+        }
+      ]
     })
   });
 
@@ -742,7 +815,15 @@ test("workflow definition update should persist metadata changes", async () => {
     body: JSON.stringify({
       name: "Profile Flow Prime",
       description: "Descricao refinada para operacao comercial.",
-      trigger: "lead.qualified"
+      trigger: "lead.qualified",
+      actions: [
+        {
+          stepId: "notify-webhook",
+          actionKey: "integration.webhook",
+          label: "Emitir webhook refinado",
+          compensationActionKey: "integration.webhook"
+        }
+      ]
     })
   });
   const updatePayload = await updateResponse.json();
@@ -752,6 +833,8 @@ test("workflow definition update should persist metadata changes", async () => {
   assert.equal(updatePayload.name, "Profile Flow Prime");
   assert.equal(updatePayload.description, "Descricao refinada para operacao comercial.");
   assert.equal(updatePayload.trigger, "lead.qualified");
+  assert.equal(updatePayload.actions.length, 1);
+  assert.equal(updatePayload.actions[0].actionKey, "integration.webhook");
 });
 
 test("workflow definition update should reject empty payload", async () => {

@@ -724,7 +724,13 @@ export async function route(request: IncomingMessage, response: ServerResponse):
         code === "workflow_definition_update_required" ||
         code === "workflow_definition_name_required" ||
         code === "workflow_definition_trigger_required" ||
-        code === "workflow_definition_trigger_unknown"
+        code === "workflow_definition_trigger_unknown" ||
+        code === "workflow_definition_action_key_required" ||
+        code === "workflow_definition_action_key_unknown" ||
+        code === "workflow_definition_action_label_required" ||
+        code === "workflow_definition_action_step_id_required" ||
+        code === "workflow_definition_action_step_id_conflict" ||
+        code === "workflow_definition_action_delay_invalid"
       ) {
         json(response, 400, {
           code,
@@ -844,7 +850,13 @@ export async function route(request: IncomingMessage, response: ServerResponse):
         code === "workflow_definition_key_required" ||
         code === "workflow_definition_name_required" ||
         code === "workflow_definition_trigger_required" ||
-        code === "workflow_definition_trigger_unknown"
+        code === "workflow_definition_trigger_unknown" ||
+        code === "workflow_definition_action_key_required" ||
+        code === "workflow_definition_action_key_unknown" ||
+        code === "workflow_definition_action_label_required" ||
+        code === "workflow_definition_action_step_id_required" ||
+        code === "workflow_definition_action_step_id_conflict" ||
+        code === "workflow_definition_action_delay_invalid"
       ) {
         json(response, 400, {
           code,

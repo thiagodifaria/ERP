@@ -1,6 +1,11 @@
 import pg from "pg";
 import { WorkflowDefinitionRepository } from "../domain/workflow-definition-repository.js";
-import { WorkflowDefinition, WorkflowDefinitionStatus, createWorkflowDefinition } from "../domain/workflow-definition.js";
+import {
+  WorkflowActionDefinition,
+  WorkflowDefinition,
+  WorkflowDefinitionStatus,
+  createWorkflowDefinition
+} from "../domain/workflow-definition.js";
 
 const { Pool } = pg;
 
@@ -11,6 +16,7 @@ type WorkflowDefinitionRow = {
   description: string | null;
   status: WorkflowDefinitionStatus;
   trigger: string;
+  actions: WorkflowActionDefinition[];
 };
 
 export class PostgresWorkflowDefinitionRepository implements WorkflowDefinitionRepository {
@@ -25,7 +31,7 @@ export class PostgresWorkflowDefinitionRepository implements WorkflowDefinitionR
     const tenantId = await this.resolveTenantId();
     const result = await this.pool.query<WorkflowDefinitionRow>(
       `
-        SELECT id, key, name, description, status, trigger
+        SELECT id, key, name, description, status, trigger, actions
         FROM workflow_control.workflow_definitions
         WHERE tenant_id = $1
         ORDER BY id
@@ -40,7 +46,7 @@ export class PostgresWorkflowDefinitionRepository implements WorkflowDefinitionR
     const tenantId = await this.resolveTenantId();
     const result = await this.pool.query<WorkflowDefinitionRow>(
       `
-        SELECT id, key, name, description, status, trigger
+        SELECT id, key, name, description, status, trigger, actions
         FROM workflow_control.workflow_definitions
         WHERE tenant_id = $1
           AND key = $2
@@ -64,7 +70,8 @@ export class PostgresWorkflowDefinitionRepository implements WorkflowDefinitionR
           name,
           description,
           status,
-          trigger
+          trigger,
+          actions
         )
         VALUES (
           $1,
@@ -74,9 +81,10 @@ export class PostgresWorkflowDefinitionRepository implements WorkflowDefinitionR
           $4,
           $5,
           $6,
-          $7
+          $7,
+          $8::jsonb
         )
-        RETURNING id, key, name, description, status, trigger
+        RETURNING id, key, name, description, status, trigger, actions
       `,
       [
         definition.id,
@@ -85,7 +93,8 @@ export class PostgresWorkflowDefinitionRepository implements WorkflowDefinitionR
         definition.name,
         definition.description,
         definition.status,
-        definition.trigger
+        definition.trigger,
+        JSON.stringify(definition.actions)
       ]
     );
 
@@ -99,12 +108,20 @@ export class PostgresWorkflowDefinitionRepository implements WorkflowDefinitionR
         UPDATE workflow_control.workflow_definitions
         SET name = $3,
             description = $4,
-            trigger = $5
+            trigger = $5,
+            actions = $6::jsonb
         WHERE tenant_id = $1
           AND key = $2
-        RETURNING id, key, name, description, status, trigger
+        RETURNING id, key, name, description, status, trigger, actions
       `,
-      [tenantId, key.trim().toLowerCase(), definition.name, definition.description, definition.trigger]
+      [
+        tenantId,
+        key.trim().toLowerCase(),
+        definition.name,
+        definition.description,
+        definition.trigger,
+        JSON.stringify(definition.actions)
+      ]
     );
 
     if (result.rowCount === 0) {
@@ -122,7 +139,7 @@ export class PostgresWorkflowDefinitionRepository implements WorkflowDefinitionR
         SET status = $3
         WHERE tenant_id = $1
           AND key = $2
-        RETURNING id, key, name, description, status, trigger
+        RETURNING id, key, name, description, status, trigger, actions
       `,
       [tenantId, key.trim().toLowerCase(), status]
     );
@@ -175,7 +192,8 @@ export class PostgresWorkflowDefinitionRepository implements WorkflowDefinitionR
       name: row.name,
       description: row.description,
       status: row.status,
-      trigger: row.trigger
+      trigger: row.trigger,
+      actions: row.actions
     });
   }
 }

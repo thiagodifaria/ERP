@@ -115,4 +115,9 @@ export class BootstrapWorkflowCatalogRepository implements WorkflowCatalogReposi
     const normalizedTriggerKey = triggerKey.trim().toLowerCase();
     return triggerCatalog.some((trigger) => trigger.key === normalizedTriggerKey);
   }
+
+  public async hasAction(actionKey: string): Promise<boolean> {
+    const normalizedActionKey = actionKey.trim().toLowerCase();
+    return actionCatalog.some((action) => action.key === normalizedActionKey);
+  }
 }

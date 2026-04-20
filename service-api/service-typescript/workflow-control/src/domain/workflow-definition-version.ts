@@ -1,3 +1,4 @@
+import { WorkflowActionDefinition, normalizeWorkflowActions } from "./workflow-definition.js";
 import { WorkflowDefinitionStatus } from "./workflow-definition.js";
 
 export type WorkflowDefinitionVersion = {
@@ -8,6 +9,7 @@ export type WorkflowDefinitionVersion = {
   snapshotDescription: string | null;
   snapshotStatus: WorkflowDefinitionStatus;
   snapshotTrigger: string;
+  snapshotActions: WorkflowActionDefinition[];
 };
 
 export function createWorkflowDefinitionVersion(input: {
@@ -18,6 +20,7 @@ export function createWorkflowDefinitionVersion(input: {
   snapshotDescription?: string | null;
   snapshotStatus: WorkflowDefinitionStatus;
   snapshotTrigger: string;
+  snapshotActions?: WorkflowActionDefinition[];
 }): WorkflowDefinitionVersion {
   const snapshotName = input.snapshotName.trim();
   const snapshotTrigger = input.snapshotTrigger.trim().toLowerCase();
@@ -41,6 +44,7 @@ export function createWorkflowDefinitionVersion(input: {
     snapshotName,
     snapshotDescription: input.snapshotDescription?.trim() || null,
     snapshotStatus: input.snapshotStatus,
-    snapshotTrigger
+    snapshotTrigger,
+    snapshotActions: normalizeWorkflowActions(input.snapshotActions)
   };
 }

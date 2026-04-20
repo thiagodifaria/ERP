@@ -13,6 +13,7 @@ export class CreateWorkflowDefinition {
     name: string;
     description?: string | null;
     trigger: string;
+    actions?: WorkflowDefinition["actions"];
   }): Promise<WorkflowDefinition> {
     if (await this.repository.findByKey(input.key) !== null) {
       throw new Error("workflow_definition_key_conflict");
@@ -22,13 +23,26 @@ export class CreateWorkflowDefinition {
       throw new Error("workflow_definition_trigger_unknown");
     }
 
+    if (input.actions !== undefined) {
+      for (const action of input.actions) {
+        if (!(await this.catalogRepository.hasAction(action.actionKey))) {
+          throw new Error("workflow_definition_action_key_unknown");
+        }
+
+        if (action.compensationActionKey && !(await this.catalogRepository.hasAction(action.compensationActionKey))) {
+          throw new Error("workflow_definition_action_key_unknown");
+        }
+      }
+    }
+
     const definition = createWorkflowDefinition({
       id: await this.repository.nextId(),
       key: input.key,
       name: input.name,
       description: input.description,
       status: "draft",
-      trigger: input.trigger
+      trigger: input.trigger,
+      actions: input.actions
     });
 
     return this.repository.add(definition);

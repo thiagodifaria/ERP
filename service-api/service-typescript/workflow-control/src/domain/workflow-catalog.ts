@@ -19,4 +19,5 @@ export interface WorkflowCatalogRepository {
   listTriggers(): Promise<WorkflowTriggerCatalogItem[]>;
   listActions(): Promise<WorkflowActionCatalogItem[]>;
   hasTrigger(triggerKey: string): Promise<boolean>;
+  hasAction(actionKey: string): Promise<boolean>;
 }

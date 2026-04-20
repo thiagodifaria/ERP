@@ -12,6 +12,13 @@ type WorkflowDefinitionResponse = {
   description: string | null;
   status: string;
   trigger: string;
+  actions: Array<{
+    stepId: string;
+    actionKey: string;
+    label: string;
+    delaySeconds: number | null;
+    compensationActionKey: string | null;
+  }>;
 };
 
 type WorkflowTriggerCatalogResponse = {
@@ -39,6 +46,7 @@ type WorkflowDefinitionVersionResponse = {
   snapshotDescription: string | null;
   snapshotStatus: string;
   snapshotTrigger: string;
+  snapshotActions: WorkflowDefinitionResponse["actions"];
 };
 
 type WorkflowRunResponse = {
@@ -142,6 +150,7 @@ test("workflow definitions contract should expose public fields on list", async 
     assert.ok(definition.name.trim().length > 0);
     assert.ok(definition.status.trim().length > 0);
     assert.ok(definition.trigger.trim().length > 0);
+    assert.ok(Array.isArray(definition.actions));
   }
 });
 
@@ -648,7 +657,16 @@ test("workflow definition publish contract should return created version resourc
       key,
       name: "Contract Publish Flow",
       description: "Fluxo publicado via contract test.",
-      trigger: "lead.created"
+      trigger: "lead.created",
+      actions: [
+        {
+          stepId: "create-task",
+          actionKey: "task.create",
+          label: "Criar tarefa inicial",
+          delaySeconds: null,
+          compensationActionKey: "task.create"
+        }
+      ]
     })
   });
 
@@ -665,6 +683,8 @@ test("workflow definition publish contract should return created version resourc
   assert.equal(payload.versionNumber, 1);
   assert.equal(payload.snapshotName, "Contract Publish Flow");
   assert.equal(payload.snapshotTrigger, "lead.created");
+  assert.equal(payload.snapshotActions.length, 1);
+  assert.equal(payload.snapshotActions[0].actionKey, "task.create");
 });
 
 test("workflow definition current version contract should expose latest version snapshot", async () => {
@@ -698,7 +718,16 @@ test("workflow definition restore contract should return restored definition res
       key,
       name: "Contract Restore Flow",
       description: "Fluxo inicial para restore contratual.",
-      trigger: "lead.created"
+      trigger: "lead.created",
+      actions: [
+        {
+          stepId: "wait-touchpoint",
+          actionKey: "delay.wait",
+          label: "Aguardar retorno",
+          delaySeconds: 2,
+          compensationActionKey: null
+        }
+      ]
     })
   });
 
@@ -717,7 +746,16 @@ test("workflow definition restore contract should return restored definition res
     body: JSON.stringify({
       name: "Contract Restore Flow Prime",
       description: "Fluxo refinado antes do restore.",
-      trigger: "lead.qualified"
+      trigger: "lead.qualified",
+      actions: [
+        {
+          stepId: "notify-webhook",
+          actionKey: "integration.webhook",
+          label: "Emitir webhook refinado",
+          delaySeconds: null,
+          compensationActionKey: "integration.webhook"
+        }
+      ]
     })
   });
   assert.equal(updateResponse.status, 200);
@@ -744,6 +782,8 @@ test("workflow definition restore contract should return restored definition res
   assert.equal(payload.description, "Fluxo inicial para restore contratual.");
   assert.equal(payload.trigger, "lead.created");
   assert.equal(payload.status, "draft");
+  assert.equal(payload.actions.length, 1);
+  assert.equal(payload.actions[0].actionKey, "delay.wait");
 });
 
 test("workflow definition contract should expose detail and status update", async () => {

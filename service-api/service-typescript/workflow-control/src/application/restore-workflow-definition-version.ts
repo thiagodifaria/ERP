@@ -27,7 +27,8 @@ export class RestoreWorkflowDefinitionVersion {
       name: version.snapshotName,
       description: version.snapshotDescription,
       status: version.snapshotStatus,
-      trigger: version.snapshotTrigger
+      trigger: version.snapshotTrigger,
+      actions: version.snapshotActions
     });
 
     await this.definitionRepository.updateDefinition(definition.key, restoredDefinition);

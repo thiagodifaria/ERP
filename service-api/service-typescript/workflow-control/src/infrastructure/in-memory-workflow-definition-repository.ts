@@ -12,7 +12,23 @@ export class InMemoryWorkflowDefinitionRepository implements WorkflowDefinitionR
         name: "Lead Follow-Up",
         description: "Orquestra o acompanhamento inicial de novos leads do CRM.",
         status: "active",
-        trigger: "lead.created"
+        trigger: "lead.created",
+        actions: [
+          {
+            stepId: "create-task",
+            actionKey: "task.create",
+            label: "Criar tarefa comercial inicial",
+            delaySeconds: null,
+            compensationActionKey: "task.create"
+          },
+          {
+            stepId: "notify-webhook",
+            actionKey: "integration.webhook",
+            label: "Emitir webhook operacional",
+            delaySeconds: null,
+            compensationActionKey: "integration.webhook"
+          }
+        ]
       })
     ];
   }
@@ -43,6 +59,7 @@ export class InMemoryWorkflowDefinitionRepository implements WorkflowDefinitionR
     currentDefinition.name = definition.name;
     currentDefinition.description = definition.description;
     currentDefinition.trigger = definition.trigger;
+    currentDefinition.actions = definition.actions;
 
     return currentDefinition;
   }

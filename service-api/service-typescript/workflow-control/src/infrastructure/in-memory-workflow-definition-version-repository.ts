@@ -14,7 +14,23 @@ export class InMemoryWorkflowDefinitionVersionRepository implements WorkflowDefi
         snapshotName: "Lead Follow-Up",
         snapshotDescription: "Orquestra o acompanhamento inicial de novos leads do CRM.",
         snapshotStatus: "active",
-        snapshotTrigger: "lead.created"
+        snapshotTrigger: "lead.created",
+        snapshotActions: [
+          {
+            stepId: "create-task",
+            actionKey: "task.create",
+            label: "Criar tarefa comercial inicial",
+            delaySeconds: null,
+            compensationActionKey: "task.create"
+          },
+          {
+            stepId: "notify-webhook",
+            actionKey: "integration.webhook",
+            label: "Emitir webhook operacional",
+            delaySeconds: null,
+            compensationActionKey: "integration.webhook"
+          }
+        ]
       })
     ];
   }
@@ -52,7 +68,8 @@ export class InMemoryWorkflowDefinitionVersionRepository implements WorkflowDefi
       snapshotName: definition.name,
       snapshotDescription: definition.description,
       snapshotStatus: definition.status,
-      snapshotTrigger: definition.trigger
+      snapshotTrigger: definition.trigger,
+      snapshotActions: definition.actions
     });
 
     this.versions.push(createdVersion);

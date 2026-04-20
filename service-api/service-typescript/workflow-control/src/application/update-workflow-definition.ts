@@ -19,6 +19,18 @@ export class UpdateWorkflowDefinition {
       throw new Error("workflow_definition_trigger_unknown");
     }
 
+    if (input.actions !== undefined) {
+      for (const action of input.actions) {
+        if (!(await this.catalogRepository.hasAction(action.actionKey))) {
+          throw new Error("workflow_definition_action_key_unknown");
+        }
+
+        if (action.compensationActionKey && !(await this.catalogRepository.hasAction(action.compensationActionKey))) {
+          throw new Error("workflow_definition_action_key_unknown");
+        }
+      }
+    }
+
     const updatedDefinition = applyWorkflowDefinitionUpdate(currentDefinition, input);
     return this.repository.updateDefinition(currentDefinition.key, updatedDefinition);
   }

@@ -1,5 +1,5 @@
 import pg from "pg";
-import { WorkflowDefinition } from "../domain/workflow-definition.js";
+import { WorkflowActionDefinition, WorkflowDefinition } from "../domain/workflow-definition.js";
 import { WorkflowDefinitionVersionRepository } from "../domain/workflow-definition-version-repository.js";
 import { WorkflowDefinitionVersion, createWorkflowDefinitionVersion } from "../domain/workflow-definition-version.js";
 
@@ -13,6 +13,7 @@ type WorkflowDefinitionVersionRow = {
   snapshot_description: string | null;
   snapshot_status: "draft" | "active" | "archived";
   snapshot_trigger: string;
+  snapshot_actions: WorkflowActionDefinition[];
 };
 
 export class PostgresWorkflowDefinitionVersionRepository implements WorkflowDefinitionVersionRepository {
@@ -34,7 +35,8 @@ export class PostgresWorkflowDefinitionVersionRepository implements WorkflowDefi
           snapshot_name,
           snapshot_description,
           snapshot_status,
-          snapshot_trigger
+          snapshot_trigger,
+          snapshot_actions
         FROM workflow_control.workflow_definition_versions
         WHERE tenant_id = $1
           AND workflow_definition_id = $2
@@ -60,7 +62,8 @@ export class PostgresWorkflowDefinitionVersionRepository implements WorkflowDefi
           snapshot_name,
           snapshot_description,
           snapshot_status,
-          snapshot_trigger
+          snapshot_trigger,
+          snapshot_actions
         FROM workflow_control.workflow_definition_versions
         WHERE tenant_id = $1
           AND workflow_definition_id = $2
@@ -92,9 +95,10 @@ export class PostgresWorkflowDefinitionVersionRepository implements WorkflowDefi
           snapshot_name,
           snapshot_description,
           snapshot_status,
-          snapshot_trigger
+          snapshot_trigger,
+          snapshot_actions
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb)
         RETURNING
           id,
           workflow_definition_id,
@@ -102,7 +106,8 @@ export class PostgresWorkflowDefinitionVersionRepository implements WorkflowDefi
           snapshot_name,
           snapshot_description,
           snapshot_status,
-          snapshot_trigger
+          snapshot_trigger,
+          snapshot_actions
       `,
       [
         tenantId,
@@ -111,7 +116,8 @@ export class PostgresWorkflowDefinitionVersionRepository implements WorkflowDefi
         definition.name,
         definition.description,
         definition.status,
-        definition.trigger
+        definition.trigger,
+        JSON.stringify(definition.actions)
       ]
     );
 
@@ -149,7 +155,8 @@ export class PostgresWorkflowDefinitionVersionRepository implements WorkflowDefi
       snapshotName: row.snapshot_name,
       snapshotDescription: row.snapshot_description,
       snapshotStatus: row.snapshot_status,
-      snapshotTrigger: row.snapshot_trigger
+      snapshotTrigger: row.snapshot_trigger,
+      snapshotActions: row.snapshot_actions
     });
   }
 }
