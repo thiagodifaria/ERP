@@ -24,3 +24,24 @@ Initial scope:
 - contract and smoke coverage now exercise live lead note history over HTTP
 - contract coverage for public HTTP routes and public error shape
 - unit validation for bootstrap and domain basics
+- customer conversion flow from qualified lead into active customer
+- customer list and detail endpoints backed by memory and PostgreSQL
+- bootstrap customer seed aligned with the first converted commercial account
+
+Public routes:
+
+- `GET /health/live`
+- `GET /health/ready`
+- `GET /health/details`
+- `GET /api/crm/leads`
+- `GET /api/crm/leads/summary`
+- `POST /api/crm/leads`
+- `GET /api/crm/leads/{publicId}`
+- `POST /api/crm/leads/{publicId}/convert`
+- `PATCH /api/crm/leads/{publicId}`
+- `PATCH /api/crm/leads/{publicId}/owner`
+- `PATCH /api/crm/leads/{publicId}/status`
+- `GET /api/crm/leads/{publicId}/notes`
+- `POST /api/crm/leads/{publicId}/notes`
+- `GET /api/crm/customers`
+- `GET /api/crm/customers/{publicId}`

@@ -19,6 +19,8 @@ func newTestRouter() http.Handler {
 		persistence.NewInMemoryProposalRepository(),
 		persistence.NewInMemorySaleRepository(),
 		persistence.NewInMemoryInvoiceRepository(),
+		persistence.NewInMemoryCommercialEventRepository(),
+		persistence.NewInMemoryOutboxEventRepository(),
 	)
 }
 

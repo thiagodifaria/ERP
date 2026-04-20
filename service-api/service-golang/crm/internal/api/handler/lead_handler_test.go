@@ -415,11 +415,13 @@ func TestUpdateOwnerShouldRejectInvalidUUID(t *testing.T) {
 }
 
 func newLeadHandlerForTest(repository *persistence.InMemoryLeadRepository) LeadHandler {
+	customerRepository := persistence.NewInMemoryCustomerRepository()
 	return NewLeadHandler(
 		query.NewListLeads(repository),
 		query.NewGetLeadPipelineSummary(repository),
 		query.NewGetLeadByPublicID(repository),
 		command.NewCreateLead(repository),
+		command.NewConvertLeadToCustomer(repository, customerRepository),
 		command.NewUpdateLeadProfile(repository),
 		command.NewUpdateLeadOwner(repository),
 		command.NewUpdateLeadStatus(repository),

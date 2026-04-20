@@ -10,6 +10,7 @@ import (
 
 type CreateOpportunity struct {
 	opportunityRepository repository.OpportunityRepository
+	eventRepository       repository.CommercialEventRepository
 }
 
 type CreateOpportunityInput struct {
@@ -26,8 +27,11 @@ type CreateOpportunityResult struct {
 	BadRequest  bool
 }
 
-func NewCreateOpportunity(opportunityRepository repository.OpportunityRepository) CreateOpportunity {
-	return CreateOpportunity{opportunityRepository: opportunityRepository}
+func NewCreateOpportunity(opportunityRepository repository.OpportunityRepository, eventRepository repository.CommercialEventRepository) CreateOpportunity {
+	return CreateOpportunity{
+		opportunityRepository: opportunityRepository,
+		eventRepository:       eventRepository,
+	}
 }
 
 func (useCase CreateOpportunity) Execute(input CreateOpportunityInput) CreateOpportunityResult {
@@ -37,11 +41,13 @@ func (useCase CreateOpportunity) Execute(input CreateOpportunityInput) CreateOpp
 	}
 
 	created := useCase.opportunityRepository.Save(opportunity)
+	recordCommercialEvent(useCase.eventRepository, "opportunity", created.PublicID, "opportunity_created", "sales", "Opportunity created in sales pipeline.")
 	return CreateOpportunityResult{Opportunity: &created}
 }
 
 type UpdateOpportunityProfile struct {
 	opportunityRepository repository.OpportunityRepository
+	eventRepository       repository.CommercialEventRepository
 }
 
 type UpdateOpportunityProfileInput struct {
@@ -59,8 +65,11 @@ type UpdateOpportunityProfileResult struct {
 	NotFound    bool
 }
 
-func NewUpdateOpportunityProfile(opportunityRepository repository.OpportunityRepository) UpdateOpportunityProfile {
-	return UpdateOpportunityProfile{opportunityRepository: opportunityRepository}
+func NewUpdateOpportunityProfile(opportunityRepository repository.OpportunityRepository, eventRepository repository.CommercialEventRepository) UpdateOpportunityProfile {
+	return UpdateOpportunityProfile{
+		opportunityRepository: opportunityRepository,
+		eventRepository:       eventRepository,
+	}
 }
 
 func (useCase UpdateOpportunityProfile) Execute(input UpdateOpportunityProfileInput) UpdateOpportunityProfileResult {
@@ -84,11 +93,13 @@ func (useCase UpdateOpportunityProfile) Execute(input UpdateOpportunityProfileIn
 	}
 
 	updated := useCase.opportunityRepository.Update(revised)
+	recordCommercialEvent(useCase.eventRepository, "opportunity", updated.PublicID, "opportunity_updated", "sales", "Opportunity profile updated.")
 	return UpdateOpportunityProfileResult{Opportunity: &updated}
 }
 
 type UpdateOpportunityStage struct {
 	opportunityRepository repository.OpportunityRepository
+	eventRepository       repository.CommercialEventRepository
 }
 
 type UpdateOpportunityStageInput struct {
@@ -104,8 +115,11 @@ type UpdateOpportunityStageResult struct {
 	NotFound    bool
 }
 
-func NewUpdateOpportunityStage(opportunityRepository repository.OpportunityRepository) UpdateOpportunityStage {
-	return UpdateOpportunityStage{opportunityRepository: opportunityRepository}
+func NewUpdateOpportunityStage(opportunityRepository repository.OpportunityRepository, eventRepository repository.CommercialEventRepository) UpdateOpportunityStage {
+	return UpdateOpportunityStage{
+		opportunityRepository: opportunityRepository,
+		eventRepository:       eventRepository,
+	}
 }
 
 func (useCase UpdateOpportunityStage) Execute(input UpdateOpportunityStageInput) UpdateOpportunityStageResult {
@@ -137,6 +151,7 @@ func (useCase UpdateOpportunityStage) Execute(input UpdateOpportunityStageInput)
 	}
 
 	saved := useCase.opportunityRepository.Update(updatedOpportunity)
+	recordCommercialEvent(useCase.eventRepository, "opportunity", saved.PublicID, "opportunity_stage_changed", "sales", "Opportunity stage transitioned to "+saved.Stage+".")
 	return UpdateOpportunityStageResult{Opportunity: &saved}
 }
 

@@ -10,6 +10,8 @@ type ConvertProposalToSale struct {
 	opportunityRepository repository.OpportunityRepository
 	proposalRepository    repository.ProposalRepository
 	saleRepository        repository.SaleRepository
+	eventRepository       repository.CommercialEventRepository
+	outboxRepository      repository.OutboxEventRepository
 }
 
 type ConvertProposalToSaleInput struct {
@@ -29,11 +31,15 @@ func NewConvertProposalToSale(
 	opportunityRepository repository.OpportunityRepository,
 	proposalRepository repository.ProposalRepository,
 	saleRepository repository.SaleRepository,
+	eventRepository repository.CommercialEventRepository,
+	outboxRepository repository.OutboxEventRepository,
 ) ConvertProposalToSale {
 	return ConvertProposalToSale{
 		opportunityRepository: opportunityRepository,
 		proposalRepository:    proposalRepository,
 		saleRepository:        saleRepository,
+		eventRepository:       eventRepository,
+		outboxRepository:      outboxRepository,
 	}
 }
 
@@ -122,11 +128,21 @@ func (useCase ConvertProposalToSale) Execute(input ConvertProposalToSaleInput) C
 	}
 
 	created := useCase.saleRepository.Save(sale)
+	recordCommercialEvent(useCase.eventRepository, "sale", created.PublicID, "sale_created", "sales", "Proposal converted into sale.")
+	appendOutboxEvent(useCase.outboxRepository, "sale", created.PublicID, "sale.created", map[string]any{
+		"salePublicId":        created.PublicID,
+		"opportunityPublicId": created.OpportunityPublicID,
+		"proposalPublicId":    created.ProposalPublicID,
+		"status":              created.Status,
+		"amountCents":         created.AmountCents,
+	})
 	return ConvertProposalToSaleResult{Sale: &created}
 }
 
 type UpdateSaleStatus struct {
 	saleRepository repository.SaleRepository
+	eventRepository repository.CommercialEventRepository
+	outboxRepository repository.OutboxEventRepository
 }
 
 type UpdateSaleStatusInput struct {
@@ -142,8 +158,16 @@ type UpdateSaleStatusResult struct {
 	NotFound   bool
 }
 
-func NewUpdateSaleStatus(saleRepository repository.SaleRepository) UpdateSaleStatus {
-	return UpdateSaleStatus{saleRepository: saleRepository}
+func NewUpdateSaleStatus(
+	saleRepository repository.SaleRepository,
+	eventRepository repository.CommercialEventRepository,
+	outboxRepository repository.OutboxEventRepository,
+) UpdateSaleStatus {
+	return UpdateSaleStatus{
+		saleRepository: saleRepository,
+		eventRepository: eventRepository,
+		outboxRepository: outboxRepository,
+	}
 }
 
 func (useCase UpdateSaleStatus) Execute(input UpdateSaleStatusInput) UpdateSaleStatusResult {
@@ -175,5 +199,11 @@ func (useCase UpdateSaleStatus) Execute(input UpdateSaleStatusInput) UpdateSaleS
 	}
 
 	saved := useCase.saleRepository.Update(updatedSale)
+	recordCommercialEvent(useCase.eventRepository, "sale", saved.PublicID, "sale_status_changed", "sales", "Sale status transitioned to "+saved.Status+".")
+	appendOutboxEvent(useCase.outboxRepository, "sale", saved.PublicID, "sale.status_changed", map[string]any{
+		"salePublicId": saved.PublicID,
+		"status":       saved.Status,
+		"amountCents":  saved.AmountCents,
+	})
 	return UpdateSaleStatusResult{Sale: &saved}
 }

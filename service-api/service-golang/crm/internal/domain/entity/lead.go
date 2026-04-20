@@ -29,10 +29,19 @@ type Lead struct {
 }
 
 func NewLead(publicID string, name string, email string, source string, ownerUserID string) (Lead, error) {
+	return restoreLead(publicID, name, email, source, "captured", ownerUserID)
+}
+
+func RestoreLead(publicID string, name string, email string, source string, status string, ownerUserID string) (Lead, error) {
+	return restoreLead(publicID, name, email, source, status, ownerUserID)
+}
+
+func restoreLead(publicID string, name string, email string, source string, status string, ownerUserID string) (Lead, error) {
 	normalizedPublicID := strings.TrimSpace(publicID)
 	normalizedName := strings.TrimSpace(name)
 	normalizedEmail := strings.ToLower(strings.TrimSpace(email))
 	normalizedSource := strings.TrimSpace(source)
+	normalizedStatus := normalizeStatus(status)
 	normalizedOwnerUserID := strings.TrimSpace(ownerUserID)
 
 	if _, err := uuid.Parse(normalizedPublicID); err != nil {
@@ -57,12 +66,16 @@ func NewLead(publicID string, name string, email string, source string, ownerUse
 		}
 	}
 
+	if !isValidStatus(normalizedStatus) {
+		return Lead{}, ErrLeadStatusInvalid
+	}
+
 	return Lead{
 		PublicID:    normalizedPublicID,
 		Name:        normalizedName,
 		Email:       normalizedEmail,
 		Source:      normalizedSource,
-		Status:      "captured",
+		Status:      normalizedStatus,
 		OwnerUserID: normalizedOwnerUserID,
 	}, nil
 }
@@ -87,12 +100,10 @@ func (lead Lead) TransitionTo(status string) (Lead, error) {
 }
 
 func (lead Lead) ReviseProfile(name string, email string, source string) (Lead, error) {
-	revisedLead, err := NewLead(lead.PublicID, name, email, source, lead.OwnerUserID)
+	revisedLead, err := restoreLead(lead.PublicID, name, email, source, lead.Status, lead.OwnerUserID)
 	if err != nil {
 		return Lead{}, err
 	}
-
-	revisedLead.Status = normalizeStatus(lead.Status)
 	return revisedLead, nil
 }
 

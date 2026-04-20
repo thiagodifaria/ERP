@@ -17,6 +17,7 @@ func TestRouterShouldExposeHealthDetails(t *testing.T) {
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
 		persistence.NewInMemoryLeadNoteRepository(),
+		persistence.NewInMemoryCustomerRepository(),
 	)
 	request := httptest.NewRequest(http.MethodGet, "/health/details", nil)
 	recorder := httptest.NewRecorder()
@@ -50,6 +51,7 @@ func TestRouterShouldExposeLeadList(t *testing.T) {
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
 		persistence.NewInMemoryLeadNoteRepository(),
+		persistence.NewInMemoryCustomerRepository(),
 	)
 	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads", nil)
 	recorder := httptest.NewRecorder()
@@ -75,6 +77,7 @@ func TestRouterShouldExposeLeadSummary(t *testing.T) {
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
 		persistence.NewInMemoryLeadNoteRepository(),
+		persistence.NewInMemoryCustomerRepository(),
 	)
 	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/summary", nil)
 	recorder := httptest.NewRecorder()
@@ -100,6 +103,7 @@ func TestRouterShouldExposeLeadByPublicID(t *testing.T) {
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
 		persistence.NewInMemoryLeadNoteRepository(),
+		persistence.NewInMemoryCustomerRepository(),
 	)
 	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/"+persistence.BootstrapLeadPublicID, nil)
 	recorder := httptest.NewRecorder()
@@ -125,6 +129,7 @@ func TestRouterShouldUpdateLeadOwner(t *testing.T) {
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
 		persistence.NewInMemoryLeadNoteRepository(),
+		persistence.NewInMemoryCustomerRepository(),
 	)
 	request := httptest.NewRequest(
 		http.MethodPatch,
@@ -154,6 +159,7 @@ func TestRouterShouldUpdateLeadProfile(t *testing.T) {
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
 		persistence.NewInMemoryLeadNoteRepository(),
+		persistence.NewInMemoryCustomerRepository(),
 	)
 	request := httptest.NewRequest(
 		http.MethodPatch,
@@ -183,6 +189,7 @@ func TestRouterShouldExposeLeadNotes(t *testing.T) {
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
 		persistence.NewInMemoryLeadNoteRepository(),
+		persistence.NewInMemoryCustomerRepository(),
 	)
 	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/notes", nil)
 	recorder := httptest.NewRecorder()
@@ -208,6 +215,7 @@ func TestRouterShouldCreateLeadNote(t *testing.T) {
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryLeadRepository(),
 		persistence.NewInMemoryLeadNoteRepository(),
+		persistence.NewInMemoryCustomerRepository(),
 	)
 	request := httptest.NewRequest(
 		http.MethodPost,

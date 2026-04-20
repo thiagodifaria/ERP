@@ -11,6 +11,8 @@ import (
 type CreateInvoice struct {
 	saleRepository    repository.SaleRepository
 	invoiceRepository repository.InvoiceRepository
+	eventRepository   repository.CommercialEventRepository
+	outboxRepository  repository.OutboxEventRepository
 }
 
 type CreateInvoiceInput struct {
@@ -28,10 +30,17 @@ type CreateInvoiceResult struct {
 	Conflict   bool
 }
 
-func NewCreateInvoice(saleRepository repository.SaleRepository, invoiceRepository repository.InvoiceRepository) CreateInvoice {
+func NewCreateInvoice(
+	saleRepository repository.SaleRepository,
+	invoiceRepository repository.InvoiceRepository,
+	eventRepository repository.CommercialEventRepository,
+	outboxRepository repository.OutboxEventRepository,
+) CreateInvoice {
 	return CreateInvoice{
 		saleRepository:    saleRepository,
 		invoiceRepository: invoiceRepository,
+		eventRepository:   eventRepository,
+		outboxRepository:  outboxRepository,
 	}
 }
 
@@ -75,6 +84,15 @@ func (useCase CreateInvoice) Execute(input CreateInvoiceInput) CreateInvoiceResu
 		}
 	}
 
+	recordCommercialEvent(useCase.eventRepository, "invoice", created.PublicID, "invoice_created", "sales", "Invoice created for sale.")
+	appendOutboxEvent(useCase.outboxRepository, "invoice", created.PublicID, "invoice.created", map[string]any{
+		"invoicePublicId": created.PublicID,
+		"salePublicId":    created.SalePublicID,
+		"number":          created.Number,
+		"status":          created.Status,
+		"amountCents":     created.AmountCents,
+		"dueDate":         created.DueDate,
+	})
 	return CreateInvoiceResult{Invoice: &created}
 }
 
@@ -93,6 +111,8 @@ func mapCreateInvoiceValidationError(err error) CreateInvoiceResult {
 
 type UpdateInvoiceStatus struct {
 	invoiceRepository repository.InvoiceRepository
+	eventRepository   repository.CommercialEventRepository
+	outboxRepository  repository.OutboxEventRepository
 }
 
 type UpdateInvoiceStatusInput struct {
@@ -108,8 +128,16 @@ type UpdateInvoiceStatusResult struct {
 	NotFound   bool
 }
 
-func NewUpdateInvoiceStatus(invoiceRepository repository.InvoiceRepository) UpdateInvoiceStatus {
-	return UpdateInvoiceStatus{invoiceRepository: invoiceRepository}
+func NewUpdateInvoiceStatus(
+	invoiceRepository repository.InvoiceRepository,
+	eventRepository repository.CommercialEventRepository,
+	outboxRepository repository.OutboxEventRepository,
+) UpdateInvoiceStatus {
+	return UpdateInvoiceStatus{
+		invoiceRepository: invoiceRepository,
+		eventRepository:   eventRepository,
+		outboxRepository:  outboxRepository,
+	}
 }
 
 func (useCase UpdateInvoiceStatus) Execute(input UpdateInvoiceStatusInput) UpdateInvoiceStatusResult {
@@ -141,5 +169,13 @@ func (useCase UpdateInvoiceStatus) Execute(input UpdateInvoiceStatusInput) Updat
 	}
 
 	saved := useCase.invoiceRepository.Update(updatedInvoice)
+	recordCommercialEvent(useCase.eventRepository, "invoice", saved.PublicID, "invoice_status_changed", "sales", "Invoice status transitioned to "+saved.Status+".")
+	appendOutboxEvent(useCase.outboxRepository, "invoice", saved.PublicID, "invoice.status_changed", map[string]any{
+		"invoicePublicId": saved.PublicID,
+		"salePublicId":    saved.SalePublicID,
+		"status":          saved.Status,
+		"paidAt":          saved.PaidAt,
+		"amountCents":     saved.AmountCents,
+	})
 	return UpdateInvoiceStatusResult{Invoice: &saved}
 }

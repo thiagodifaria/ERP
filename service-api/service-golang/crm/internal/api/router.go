@@ -17,6 +17,7 @@ func NewRouter(
 	logger *telemetry.Logger,
 	leadRepository repository.LeadRepository,
 	leadNoteRepository repository.LeadNoteRepository,
+	customerRepository repository.CustomerRepository,
 ) http.Handler {
 	mux := http.NewServeMux()
 	leadHandler := handler.NewLeadHandler(
@@ -24,9 +25,14 @@ func NewRouter(
 		query.NewGetLeadPipelineSummary(leadRepository),
 		query.NewGetLeadByPublicID(leadRepository),
 		command.NewCreateLead(leadRepository),
+		command.NewConvertLeadToCustomer(leadRepository, customerRepository),
 		command.NewUpdateLeadProfile(leadRepository),
 		command.NewUpdateLeadOwner(leadRepository),
 		command.NewUpdateLeadStatus(leadRepository),
+	)
+	customerHandler := handler.NewCustomerHandler(
+		query.NewListCustomers(customerRepository),
+		query.NewGetCustomerByPublicID(customerRepository),
 	)
 	leadNoteHandler := handler.NewLeadNoteHandler(
 		query.NewGetLeadByPublicID(leadRepository),
@@ -41,8 +47,11 @@ func NewRouter(
 	mux.HandleFunc("GET /api/crm/leads", leadHandler.List)
 	mux.HandleFunc("POST /api/crm/leads", leadHandler.Create)
 	mux.HandleFunc("GET /api/crm/leads/{publicId}", leadHandler.GetByPublicID)
+	mux.HandleFunc("POST /api/crm/leads/{publicId}/convert", leadHandler.Convert)
 	mux.HandleFunc("GET /api/crm/leads/{publicId}/notes", leadNoteHandler.List)
 	mux.HandleFunc("POST /api/crm/leads/{publicId}/notes", leadNoteHandler.Create)
+	mux.HandleFunc("GET /api/crm/customers", customerHandler.List)
+	mux.HandleFunc("GET /api/crm/customers/{publicId}", customerHandler.GetByPublicID)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}", leadHandler.UpdateProfile)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/owner", leadHandler.UpdateOwner)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/status", leadHandler.UpdateStatus)
@@ -54,6 +63,7 @@ func NewRouterWithRuntime(
 	logger *telemetry.Logger,
 	leadRepository repository.LeadRepository,
 	leadNoteRepository repository.LeadNoteRepository,
+	customerRepository repository.CustomerRepository,
 	repositoryDriver string,
 ) http.Handler {
 	mux := http.NewServeMux()
@@ -62,9 +72,14 @@ func NewRouterWithRuntime(
 		query.NewGetLeadPipelineSummary(leadRepository),
 		query.NewGetLeadByPublicID(leadRepository),
 		command.NewCreateLead(leadRepository),
+		command.NewConvertLeadToCustomer(leadRepository, customerRepository),
 		command.NewUpdateLeadProfile(leadRepository),
 		command.NewUpdateLeadOwner(leadRepository),
 		command.NewUpdateLeadStatus(leadRepository),
+	)
+	customerHandler := handler.NewCustomerHandler(
+		query.NewListCustomers(customerRepository),
+		query.NewGetCustomerByPublicID(customerRepository),
 	)
 	leadNoteHandler := handler.NewLeadNoteHandler(
 		query.NewGetLeadByPublicID(leadRepository),
@@ -79,8 +94,11 @@ func NewRouterWithRuntime(
 	mux.HandleFunc("GET /api/crm/leads", leadHandler.List)
 	mux.HandleFunc("POST /api/crm/leads", leadHandler.Create)
 	mux.HandleFunc("GET /api/crm/leads/{publicId}", leadHandler.GetByPublicID)
+	mux.HandleFunc("POST /api/crm/leads/{publicId}/convert", leadHandler.Convert)
 	mux.HandleFunc("GET /api/crm/leads/{publicId}/notes", leadNoteHandler.List)
 	mux.HandleFunc("POST /api/crm/leads/{publicId}/notes", leadNoteHandler.Create)
+	mux.HandleFunc("GET /api/crm/customers", customerHandler.List)
+	mux.HandleFunc("GET /api/crm/customers/{publicId}", customerHandler.GetByPublicID)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}", leadHandler.UpdateProfile)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/owner", leadHandler.UpdateOwner)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/status", leadHandler.UpdateStatus)

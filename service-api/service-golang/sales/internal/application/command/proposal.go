@@ -11,6 +11,7 @@ import (
 type CreateProposal struct {
 	opportunityRepository repository.OpportunityRepository
 	proposalRepository    repository.ProposalRepository
+	eventRepository       repository.CommercialEventRepository
 }
 
 type CreateProposalInput struct {
@@ -27,10 +28,15 @@ type CreateProposalResult struct {
 	NotFound   bool
 }
 
-func NewCreateProposal(opportunityRepository repository.OpportunityRepository, proposalRepository repository.ProposalRepository) CreateProposal {
+func NewCreateProposal(
+	opportunityRepository repository.OpportunityRepository,
+	proposalRepository repository.ProposalRepository,
+	eventRepository repository.CommercialEventRepository,
+) CreateProposal {
 	return CreateProposal{
 		opportunityRepository: opportunityRepository,
 		proposalRepository:    proposalRepository,
+		eventRepository:       eventRepository,
 	}
 }
 
@@ -57,11 +63,13 @@ func (useCase CreateProposal) Execute(input CreateProposalInput) CreateProposalR
 	}
 
 	created := useCase.proposalRepository.Save(proposal)
+	recordCommercialEvent(useCase.eventRepository, "proposal", created.PublicID, "proposal_created", "sales", "Proposal created for opportunity.")
 	return CreateProposalResult{Proposal: &created}
 }
 
 type UpdateProposalStatus struct {
 	proposalRepository repository.ProposalRepository
+	eventRepository    repository.CommercialEventRepository
 }
 
 type UpdateProposalStatusInput struct {
@@ -77,8 +85,11 @@ type UpdateProposalStatusResult struct {
 	NotFound   bool
 }
 
-func NewUpdateProposalStatus(proposalRepository repository.ProposalRepository) UpdateProposalStatus {
-	return UpdateProposalStatus{proposalRepository: proposalRepository}
+func NewUpdateProposalStatus(proposalRepository repository.ProposalRepository, eventRepository repository.CommercialEventRepository) UpdateProposalStatus {
+	return UpdateProposalStatus{
+		proposalRepository: proposalRepository,
+		eventRepository:    eventRepository,
+	}
 }
 
 func (useCase UpdateProposalStatus) Execute(input UpdateProposalStatusInput) UpdateProposalStatusResult {
@@ -110,6 +121,7 @@ func (useCase UpdateProposalStatus) Execute(input UpdateProposalStatusInput) Upd
 	}
 
 	saved := useCase.proposalRepository.Update(updatedProposal)
+	recordCommercialEvent(useCase.eventRepository, "proposal", saved.PublicID, "proposal_status_changed", "sales", "Proposal status transitioned to "+saved.Status+".")
 	return UpdateProposalStatusResult{Proposal: &saved}
 }
 

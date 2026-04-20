@@ -18,10 +18,12 @@ func NewServer(
 	proposalRepository repository.ProposalRepository,
 	saleRepository repository.SaleRepository,
 	invoiceRepository repository.InvoiceRepository,
+	eventRepository repository.CommercialEventRepository,
+	outboxRepository repository.OutboxEventRepository,
 ) *http.Server {
 	return &http.Server{
 		Addr:              cfg.HTTPAddress,
-		Handler:           NewRouterWithRuntime(logger, opportunityRepository, proposalRepository, saleRepository, invoiceRepository, cfg.RepositoryDriver),
+		Handler:           NewRouterWithRuntime(logger, opportunityRepository, proposalRepository, saleRepository, invoiceRepository, eventRepository, outboxRepository, cfg.RepositoryDriver),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }

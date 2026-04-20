@@ -2,10 +2,13 @@
 
 .NET is reserved for enterprise-sensitive services with stronger security and financial concerns.
 
-Planned services:
+Implemented or active services:
 
 - identity
 - finance
+
+Reserved next services:
+
 - billing
 - shared
 

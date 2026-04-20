@@ -11,6 +11,8 @@ Initial scope:
 - sale conversion flow linked to accepted proposals
 - invoice creation linked to closed sales
 - collection summary with open, paid and overdue footprints
+- commercial history ledger by aggregate
+- transactional outbox for downstream consumers
 - selectable repository driver with PostgreSQL-backed persistence for a bootstrap tenant
 - contract and smoke coverage for opportunities, proposals, sales and invoices
 - room for commissions and deeper revenue operations
@@ -24,22 +26,27 @@ Public routes:
 - `GET /api/sales/opportunities/summary`
 - `POST /api/sales/opportunities`
 - `GET /api/sales/opportunities/{publicId}`
+- `GET /api/sales/opportunities/{publicId}/history`
 - `PATCH /api/sales/opportunities/{publicId}`
 - `PATCH /api/sales/opportunities/{publicId}/stage`
 - `GET /api/sales/opportunities/{publicId}/proposals`
 - `POST /api/sales/opportunities/{publicId}/proposals`
 - `GET /api/sales/proposals/{publicId}`
+- `GET /api/sales/proposals/{publicId}/history`
 - `PATCH /api/sales/proposals/{publicId}/status`
 - `POST /api/sales/proposals/{publicId}/convert`
 - `GET /api/sales/sales`
 - `GET /api/sales/sales/summary`
 - `GET /api/sales/sales/{publicId}`
+- `GET /api/sales/sales/{publicId}/history`
 - `PATCH /api/sales/sales/{publicId}/status`
 - `POST /api/sales/sales/{publicId}/invoice`
 - `GET /api/sales/invoices`
 - `GET /api/sales/invoices/summary`
 - `GET /api/sales/invoices/{publicId}`
+- `GET /api/sales/invoices/{publicId}/history`
 - `PATCH /api/sales/invoices/{publicId}/status`
+- `GET /api/sales/outbox/pending`
 
 Container-first validation:
 

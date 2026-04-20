@@ -224,6 +224,24 @@ services:
     ports:
       - "${SALES_HTTP_PORT}:8087"
 
+  finance:
+    build:
+      context: ../service-api/service-csharp/finance
+    container_name: erp-finance
+    environment:
+      FINANCE_BOOTSTRAP_TENANT_SLUG: "${FINANCE_BOOTSTRAP_TENANT_SLUG}"
+      FINANCE_POSTGRES_HOST: "service-postgresql"
+      FINANCE_POSTGRES_PORT: "5432"
+      FINANCE_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      FINANCE_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      FINANCE_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      FINANCE_POSTGRES_SSL_MODE: "Disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+    ports:
+      - "${FINANCE_HTTP_PORT}:8089"
+
   workflow-control:
     build:
       context: ../service-api/service-typescript/workflow-control

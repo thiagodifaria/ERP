@@ -33,3 +33,15 @@ type InvoiceRepository interface {
 	Save(invoice entity.Invoice) entity.Invoice
 	Update(invoice entity.Invoice) entity.Invoice
 }
+
+type CommercialEventRepository interface {
+	ListByAggregate(aggregateType string, aggregatePublicID string) []entity.CommercialEvent
+	Save(event entity.CommercialEvent) entity.CommercialEvent
+}
+
+type OutboxEventRepository interface {
+	ListPending(limit int) []entity.OutboxEvent
+	FindByPublicID(publicID string) *entity.OutboxEvent
+	Save(event entity.OutboxEvent) entity.OutboxEvent
+	Update(event entity.OutboxEvent) entity.OutboxEvent
+}

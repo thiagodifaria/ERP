@@ -94,6 +94,7 @@ prepare_runtime_ports() {
   remap_host_port_if_needed "ANALYTICS_HTTP_PORT" "analytics"
   remap_host_port_if_needed "SALES_HTTP_PORT" "sales"
   remap_host_port_if_needed "ENGAGEMENT_HTTP_PORT" "engagement"
+  remap_host_port_if_needed "FINANCE_HTTP_PORT" "finance"
 }
 
 prepare_runtime_ports
@@ -173,6 +174,12 @@ run_dotnet_build() {
     -w /workspace \
     mcr.microsoft.com/dotnet/sdk:8.0 \
     dotnet test tests/Identity.UnitTests/Identity.UnitTests.csproj -c Release
+
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-csharp/finance:/workspace" \
+    -w /workspace \
+    mcr.microsoft.com/dotnet/sdk:8.0 \
+    dotnet build src/Finance.Api/Finance.Api.csproj -c Release
 }
 
 run_dotnet_integration() {
@@ -862,6 +869,56 @@ run_sales_runtime_smoke() {
     || "$opportunity_detail_response" != *'"stage":"won"'* || "$proposal_detail_response" != *'"status":"accepted"'* || "$sale_detail_response" != *'"status":"invoiced"'* || "$invoice_detail_response" != *'"number":"RUNTIME-INV-0001"'* || "$invoice_detail_response" != *'"status":"paid"'* || "$invoice_list_response" != *'"number":"RUNTIME-INV-0001"'* || "$opportunity_summary_response" != *'"total":2'* || "$opportunity_summary_response" != *'"totalAmountCents":224000'* || "$opportunity_summary_response" != *'"won":2'* || "$sales_summary_response" != *'"total":2'* || "$sales_summary_response" != *'"bookedRevenueCents":224000'* || "$sales_summary_response" != *'"active":1'* || "$sales_summary_response" != *'"invoiced":1'* || "$invoice_summary_response" != *'"total":2'* || "$invoice_summary_response" != *'"openAmountCents":125000'* || "$invoice_summary_response" != *'"paidAmountCents":99000'* || "$invoice_summary_response" != *'"overdueCount":0'* || "$invoice_summary_response" != *'"sent":1'* || "$invoice_summary_response" != *'"paid":1'*
     || "$workflow_run_create_response" != *'"status":"pending"'* || "$workflow_run_start_response" != *'"status":"running"'* || "$workflow_run_complete_response" != *'"status":"completed"'* || "$workflow_execution_create_response" != *'"status":"pending"'* || "$workflow_execution_start_response" != *'"status":"running"'* || "$workflow_execution_complete_response" != *'"status":"completed"'* || "$db_summary" != '2|2|2|2|2|1|1|1|1|224000|99000' ]]; then
     echo "[test] sales runtime pipeline did not persist the expected vertical slice"
+    exit 1
+  fi
+}
+
+run_finance_runtime_smoke() {
+  local base_url="http://localhost:${FINANCE_HTTP_PORT:-8092}"
+  local health_details_response
+  local ingest_response
+  local projections_response
+  local paid_projections_response
+  local summary_response
+  local db_summary
+
+  "${COMPOSE_CMD[@]}" up -d --build finance
+  wait_for_http_ready "$base_url/health/ready"
+
+  health_details_response="$(curl -fsS "$base_url/health/details")"
+  ingest_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","limit":20}' \
+    "$base_url/api/finance/projections/ingest")"
+  projections_response="$(curl -fsS "$base_url/api/finance/projections?tenantSlug=bootstrap-ops")"
+  paid_projections_response="$(curl -fsS "$base_url/api/finance/projections?tenantSlug=bootstrap-ops&status=paid")"
+  summary_response="$(curl -fsS "$base_url/api/finance/projections/summary?tenantSlug=bootstrap-ops")"
+  db_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        count(*) || '|' ||
+        count(*) FILTER (WHERE status = 'forecast') || '|' ||
+        count(*) FILTER (WHERE status = 'open') || '|' ||
+        count(*) FILTER (WHERE status = 'paid') || '|' ||
+        count(*) FILTER (WHERE status = 'cancelled') || '|' ||
+        COALESCE(sum(amount_cents) FILTER (WHERE status IN ('forecast', 'open')), 0) || '|' ||
+        COALESCE(sum(amount_cents) FILTER (WHERE status = 'paid'), 0)
+      FROM finance.receivable_projections AS projection
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = projection.tenant_id
+      WHERE tenant.slug = 'bootstrap-ops';
+    ")"
+
+  echo "[test] finance health details => $health_details_response"
+  echo "[test] finance ingest => $ingest_response"
+  echo "[test] finance projections => $projections_response"
+  echo "[test] finance paid projections => $paid_projections_response"
+  echo "[test] finance summary => $summary_response"
+  echo "[test] finance db summary => $db_summary"
+
+  if [[ "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$ingest_response" != *'"tenantSlug":"bootstrap-ops"'* || "$ingest_response" != *'"processedEvents":4'* || "$ingest_response" != *'"createdProjections":2'* || "$ingest_response" != *'"updatedProjections":2'* || "$projections_response" != *'"projectionKind":"sale-booking"'* || "$projections_response" != *'"projectionKind":"invoice"'* || "$projections_response" != *'"status":"open"'* || "$projections_response" != *'"status":"paid"'* || "$paid_projections_response" != *'"status":"paid"'* || "$summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$summary_response" != *'"total":2'* || "$summary_response" != *'"pipelineAmountCents":99000'* || "$summary_response" != *'"paidAmountCents":99000'* || "$summary_response" != *'"open":1'* || "$summary_response" != *'"paid":1'* || "$db_summary" != '2|0|1|1|0|99000|99000' ]]; then
+    echo "[test] finance initial consumer did not persist the expected projections"
     exit 1
   fi
 }
@@ -2109,6 +2166,7 @@ run_smoke() {
   export WORKFLOW_RUNTIME_HTTP_PORT="${WORKFLOW_RUNTIME_HTTP_PORT_SMOKE:-18085}"
   export ANALYTICS_HTTP_PORT="${ANALYTICS_HTTP_PORT_SMOKE:-18086}"
   export ENGAGEMENT_HTTP_PORT="${ENGAGEMENT_HTTP_PORT_SMOKE:-18088}"
+  export FINANCE_HTTP_PORT="${FINANCE_HTTP_PORT_SMOKE:-18092}"
   bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
   "${COMPOSE_CMD[@]}" ps
   run_platform_runtime_smoke
@@ -2118,6 +2176,7 @@ run_smoke() {
   run_workflow_runtime_smoke
   run_crm_runtime_smoke
   run_sales_runtime_smoke
+  run_finance_runtime_smoke
   run_engagement_runtime_smoke
   run_analytics_runtime_smoke
   run_identity_runtime_smoke

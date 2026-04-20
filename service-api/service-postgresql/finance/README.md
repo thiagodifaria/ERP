@@ -1,11 +1,14 @@
 # finance
 
-This domain will own receivables, payables, costs, commissions and financial closures.
+This domain owns the first financial projections derived from the commercial stack and will later absorb receivables, payables, costs, commissions and closures.
 
-Planned structure:
+Current structure:
 
 - migrations
-- seeds
-- views
-- functions
 - indexes
+
+Current scope:
+
+- `finance.receivable_projections`
+- idempotent linkage to `sales.outbox_events`
+- operational summary support for the initial finance API

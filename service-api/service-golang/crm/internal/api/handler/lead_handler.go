@@ -16,6 +16,7 @@ type LeadHandler struct {
 	getLeadSummary    query.GetLeadPipelineSummary
 	getLeadByPublicID query.GetLeadByPublicID
 	createLead        command.CreateLead
+	convertLead       command.ConvertLeadToCustomer
 	updateLeadProfile command.UpdateLeadProfile
 	updateLeadOwner   command.UpdateLeadOwner
 	updateLeadStatus  command.UpdateLeadStatus
@@ -26,6 +27,7 @@ func NewLeadHandler(
 	getLeadSummary query.GetLeadPipelineSummary,
 	getLeadByPublicID query.GetLeadByPublicID,
 	createLead command.CreateLead,
+	convertLead command.ConvertLeadToCustomer,
 	updateLeadProfile command.UpdateLeadProfile,
 	updateLeadOwner command.UpdateLeadOwner,
 	updateLeadStatus command.UpdateLeadStatus,
@@ -35,6 +37,7 @@ func NewLeadHandler(
 		getLeadSummary:    getLeadSummary,
 		getLeadByPublicID: getLeadByPublicID,
 		createLead:        createLead,
+		convertLead:       convertLead,
 		updateLeadProfile: updateLeadProfile,
 		updateLeadOwner:   updateLeadOwner,
 		updateLeadStatus:  updateLeadStatus,
@@ -134,6 +137,41 @@ func (handler LeadHandler) Create(writer http.ResponseWriter, request *http.Requ
 	default:
 		writer.WriteHeader(http.StatusCreated)
 		_ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
+	}
+}
+
+func (handler LeadHandler) Convert(writer http.ResponseWriter, request *http.Request) {
+	result := handler.convertLead.Execute(command.ConvertLeadToCustomerInput{
+		LeadPublicID: request.PathValue("publicId"),
+	})
+
+	writer.Header().Set("Content-Type", "application/json")
+
+	switch {
+	case result.BadRequest:
+		writer.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    result.ErrorCode,
+			Message: result.ErrorText,
+		})
+	case result.Conflict:
+		writer.WriteHeader(http.StatusConflict)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    result.ErrorCode,
+			Message: result.ErrorText,
+		})
+	case result.NotFound:
+		writer.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+			Code:    result.ErrorCode,
+			Message: result.ErrorText,
+		})
+	default:
+		writer.WriteHeader(http.StatusCreated)
+		_ = json.NewEncoder(writer).Encode(dto.ConvertLeadResponse{
+			Lead:     mapLead(*result.Lead),
+			Customer: mapCustomer(*result.Customer),
+		})
 	}
 }
 

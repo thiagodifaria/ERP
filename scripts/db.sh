@@ -133,6 +133,7 @@ Usage:
   ./scripts/db.sh migrate identity
   ./scripts/db.sh migrate crm
   ./scripts/db.sh migrate sales
+  ./scripts/db.sh migrate finance
   ./scripts/db.sh migrate engagement
   ./scripts/db.sh migrate webhook-hub
   ./scripts/db.sh migrate workflow-control
@@ -147,6 +148,7 @@ Usage:
   ./scripts/db.sh summary identity [tenant-slug]
   ./scripts/db.sh summary crm [tenant-slug]
   ./scripts/db.sh summary sales [tenant-slug]
+  ./scripts/db.sh summary finance [tenant-slug]
   ./scripts/db.sh summary engagement [tenant-slug]
   ./scripts/db.sh summary webhook-hub
   ./scripts/db.sh summary workflow-control [tenant-slug]
@@ -178,6 +180,9 @@ main() {
         sales)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/migrations"
           ;;
+        finance)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/finance/migrations"
+          ;;
         engagement)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/migrations"
           ;;
@@ -195,6 +200,7 @@ main() {
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/finance/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/webhook-hub/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/migrations"
@@ -217,6 +223,29 @@ main() {
           ;;
         sales)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/seeds"
+          ;;
+        finance)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id) AS projections,
+              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'forecast') AS forecast,
+              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'open') AS open,
+              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'paid') AS paid,
+              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'cancelled') AS cancelled,
+              (SELECT COALESCE(sum(projection.amount_cents), 0) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status IN ('forecast', 'open')) AS pipeline_amount_cents,
+              (SELECT COALESCE(sum(projection.amount_cents), 0) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'paid') AS paid_amount_cents
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
           ;;
         engagement)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/seeds"

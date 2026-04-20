@@ -16,10 +16,11 @@ func NewServer(
 	logger *telemetry.Logger,
 	leadRepository repository.LeadRepository,
 	leadNoteRepository repository.LeadNoteRepository,
+	customerRepository repository.CustomerRepository,
 ) *http.Server {
 	return &http.Server{
 		Addr:              cfg.HTTPAddress,
-		Handler:           NewRouterWithRuntime(logger, leadRepository, leadNoteRepository, cfg.RepositoryDriver),
+		Handler:           NewRouterWithRuntime(logger, leadRepository, leadNoteRepository, customerRepository, cfg.RepositoryDriver),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }

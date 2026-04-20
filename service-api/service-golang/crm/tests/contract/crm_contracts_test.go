@@ -390,6 +390,7 @@ func newContractRouter() http.Handler {
 		telemetry.New("crm-contract"),
 		persistence.NewInMemoryLeadRepository(),
 		persistence.NewInMemoryLeadNoteRepository(),
+		persistence.NewInMemoryCustomerRepository(),
 		"postgres",
 	)
 }

@@ -4,6 +4,7 @@ package persistence
 import (
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/thiagodifaria/erp/service-api/service-golang/sales/internal/domain/entity"
 )
@@ -15,6 +16,8 @@ const (
 	BootstrapProposalPublicID    = "0195e7a0-7a9c-7c1f-8a44-4a6e71000002"
 	BootstrapSalePublicID        = "0195e7a0-7a9c-7c1f-8a44-4a6e71000003"
 	BootstrapInvoicePublicID     = "0195e7a0-7a9c-7c1f-8a44-4a6e71000004"
+	BootstrapSalesEventPublicID  = "0195e7a0-7a9c-7c1f-8a44-4a6e71000005"
+	BootstrapOutboxEventPublicID = "0195e7a0-7a9c-7c1f-8a44-4a6e71000006"
 )
 
 type InMemoryOpportunityRepository struct {
@@ -35,6 +38,16 @@ type InMemorySaleRepository struct {
 type InMemoryInvoiceRepository struct {
 	sync.Mutex
 	invoices []entity.Invoice
+}
+
+type InMemoryCommercialEventRepository struct {
+	sync.Mutex
+	events []entity.CommercialEvent
+}
+
+type InMemoryOutboxEventRepository struct {
+	sync.Mutex
+	events []entity.OutboxEvent
 }
 
 func NewInMemoryOpportunityRepository() *InMemoryOpportunityRepository {
@@ -238,6 +251,39 @@ func NewInMemoryInvoiceRepository() *InMemoryInvoiceRepository {
 	}
 }
 
+func NewInMemoryCommercialEventRepository() *InMemoryCommercialEventRepository {
+	return &InMemoryCommercialEventRepository{
+		events: []entity.CommercialEvent{
+			entity.NewCommercialEvent(
+				BootstrapSalesEventPublicID,
+				"sale",
+				BootstrapSalePublicID,
+				"sale_bootstrapped",
+				"sales",
+				"Bootstrap sale loaded into the commercial ledger.",
+				mustParseTime("2026-03-31T11:00:00Z"),
+			),
+		},
+	}
+}
+
+func NewInMemoryOutboxEventRepository() *InMemoryOutboxEventRepository {
+	return &InMemoryOutboxEventRepository{
+		events: []entity.OutboxEvent{
+			entity.RestoreOutboxEvent(
+				BootstrapOutboxEventPublicID,
+				"sale",
+				BootstrapSalePublicID,
+				"sale.bootstrapped",
+				`{"salePublicId":"`+BootstrapSalePublicID+`","status":"active","amountCents":125000}`,
+				"processed",
+				"2026-03-31T11:00:00Z",
+				"2026-03-31T11:00:05Z",
+			),
+		},
+	}
+}
+
 func (repository *InMemoryInvoiceRepository) List() []entity.Invoice {
 	repository.Lock()
 	defer repository.Unlock()
@@ -259,6 +305,91 @@ func (repository *InMemoryInvoiceRepository) FindByPublicID(publicID string) *en
 	}
 
 	return nil
+}
+
+func (repository *InMemoryCommercialEventRepository) ListByAggregate(aggregateType string, aggregatePublicID string) []entity.CommercialEvent {
+	repository.Lock()
+	defer repository.Unlock()
+
+	response := make([]entity.CommercialEvent, 0)
+	for _, event := range repository.events {
+		if event.AggregateType == strings.TrimSpace(aggregateType) && event.AggregatePublicID == strings.TrimSpace(aggregatePublicID) {
+			response = append(response, event)
+		}
+	}
+
+	return response
+}
+
+func (repository *InMemoryCommercialEventRepository) Save(event entity.CommercialEvent) entity.CommercialEvent {
+	repository.Lock()
+	defer repository.Unlock()
+
+	repository.events = append(repository.events, event)
+	return event
+}
+
+func (repository *InMemoryOutboxEventRepository) ListPending(limit int) []entity.OutboxEvent {
+	repository.Lock()
+	defer repository.Unlock()
+
+	response := make([]entity.OutboxEvent, 0)
+	for _, event := range repository.events {
+		if event.Status == "pending" {
+			response = append(response, event)
+		}
+		if limit > 0 && len(response) >= limit {
+			break
+		}
+	}
+
+	return response
+}
+
+func (repository *InMemoryOutboxEventRepository) FindByPublicID(publicID string) *entity.OutboxEvent {
+	repository.Lock()
+	defer repository.Unlock()
+
+	for _, event := range repository.events {
+		if event.PublicID == strings.TrimSpace(publicID) {
+			copied := event
+			return &copied
+		}
+	}
+
+	return nil
+}
+
+func (repository *InMemoryOutboxEventRepository) Save(event entity.OutboxEvent) entity.OutboxEvent {
+	repository.Lock()
+	defer repository.Unlock()
+
+	repository.events = append(repository.events, event)
+	return event
+}
+
+func (repository *InMemoryOutboxEventRepository) Update(event entity.OutboxEvent) entity.OutboxEvent {
+	repository.Lock()
+	defer repository.Unlock()
+
+	for index, current := range repository.events {
+		if current.PublicID == event.PublicID {
+			repository.events[index] = event
+			return event
+		}
+	}
+
+	repository.events = append(repository.events, event)
+	return event
+}
+
+func mustParseTime(value string) time.Time {
+	parsed, err := time.Parse(time.RFC3339, value)
+	if err != nil {
+		return time.Unix(0, 0).UTC()
+	}
+
+	return parsed.UTC()
 }
 
 func (repository *InMemoryInvoiceRepository) FindBySalePublicID(salePublicID string) *entity.Invoice {

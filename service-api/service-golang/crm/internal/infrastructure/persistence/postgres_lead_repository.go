@@ -195,10 +195,5 @@ func scanLead(scanner leadScanner) (entity.Lead, error) {
 		return entity.Lead{}, err
 	}
 
-	lead, err := entity.NewLead(publicID, name, email, source, ownerUserID)
-	if err != nil {
-		return entity.Lead{}, err
-	}
-
-	return lead.TransitionTo(status)
+	return entity.RestoreLead(publicID, name, email, source, status, ownerUserID)
 }
