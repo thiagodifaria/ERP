@@ -83,6 +83,13 @@ public sealed class InMemoryUserRepository : IUserRepository
   {
     lock (_sync)
     {
+      if (_usersByTenantId.TryGetValue(user.TenantId, out var existingUsers)
+        && existingUsers.Any(existing =>
+          existing.Email.Equals(user.Email, StringComparison.OrdinalIgnoreCase)))
+      {
+        throw new InvalidOperationException("User email already exists for tenant.");
+      }
+
       if (!_usersByTenantId.TryGetValue(user.TenantId, out var users))
       {
         users = [];

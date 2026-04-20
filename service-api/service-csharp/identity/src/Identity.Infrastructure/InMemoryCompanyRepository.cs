@@ -70,6 +70,13 @@ public sealed class InMemoryCompanyRepository : ICompanyRepository
   {
     lock (_sync)
     {
+      if (_companiesByTenantId.TryGetValue(company.TenantId, out var existingCompanies)
+        && existingCompanies.Any(existing =>
+          existing.DisplayName.Equals(company.DisplayName, StringComparison.OrdinalIgnoreCase)))
+      {
+        throw new InvalidOperationException("Company display name already exists for tenant.");
+      }
+
       if (!_companiesByTenantId.TryGetValue(company.TenantId, out var companies))
       {
         companies = [];

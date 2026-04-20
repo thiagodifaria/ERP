@@ -61,6 +61,12 @@ public sealed class InMemoryUserRoleRepository : IUserRoleRepository
   {
     lock (_sync)
     {
+      if (_userRolesByUser.TryGetValue((userRole.TenantId, userRole.UserId), out var existingRoles)
+        && existingRoles.Any(existing => existing.RoleId == userRole.RoleId))
+      {
+        throw new InvalidOperationException("User role already assigned.");
+      }
+
       if (!_userRolesByUser.TryGetValue((userRole.TenantId, userRole.UserId), out var userRoles))
       {
         userRoles = [];

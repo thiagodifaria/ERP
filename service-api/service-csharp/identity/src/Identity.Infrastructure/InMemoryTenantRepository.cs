@@ -34,6 +34,11 @@ public sealed class InMemoryTenantRepository : ITenantRepository
   {
     lock (_sync)
     {
+      if (_tenants.Any(existing => existing.Slug.Equals(tenant.Slug, StringComparison.OrdinalIgnoreCase)))
+      {
+        throw new InvalidOperationException("Tenant slug already exists.");
+      }
+
       _tenants.Add(tenant);
       return tenant;
     }

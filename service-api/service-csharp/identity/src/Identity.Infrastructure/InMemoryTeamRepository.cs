@@ -70,6 +70,13 @@ public sealed class InMemoryTeamRepository : ITeamRepository
   {
     lock (_sync)
     {
+      if (_teamsByTenantId.TryGetValue(team.TenantId, out var existingTeams)
+        && existingTeams.Any(existing =>
+          existing.Name.Equals(team.Name, StringComparison.OrdinalIgnoreCase)))
+      {
+        throw new InvalidOperationException("Team name already exists for tenant.");
+      }
+
       if (!_teamsByTenantId.TryGetValue(team.TenantId, out var teams))
       {
         teams = [];

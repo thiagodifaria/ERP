@@ -61,6 +61,12 @@ public sealed class InMemoryTeamMembershipRepository : ITeamMembershipRepository
   {
     lock (_sync)
     {
+      if (_membershipsByTeam.TryGetValue((membership.TenantId, membership.TeamId), out var existing)
+        && existing.Any(item => item.UserId == membership.UserId))
+      {
+        throw new InvalidOperationException("User is already a member of this team.");
+      }
+
       if (!_membershipsByTeam.TryGetValue((membership.TenantId, membership.TeamId), out var memberships))
       {
         memberships = [];
