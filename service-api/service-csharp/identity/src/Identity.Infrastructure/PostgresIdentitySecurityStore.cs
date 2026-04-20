@@ -79,6 +79,23 @@ public sealed class PostgresIdentitySecurityStore : IIdentitySecurityStore
     return reader.Read() ? MapInvite(reader) : null;
   }
 
+  public Invite? FindInviteByPublicId(Guid invitePublicId)
+  {
+    const string sql = """
+      SELECT id, tenant_id, tenant_slug, user_id, public_id, invite_token, email::text, display_name, role_codes, team_public_ids, status, expires_at, accepted_at, created_at
+      FROM identity.invites
+      WHERE public_id = @public_id
+      LIMIT 1;
+      """;
+
+    using var connection = OpenConnection();
+    using var command = new NpgsqlCommand(sql, connection);
+    command.Parameters.AddWithValue("public_id", invitePublicId);
+    using var reader = command.ExecuteReader();
+
+    return reader.Read() ? MapInvite(reader) : null;
+  }
+
   public Invite? FindPendingInviteByTenantIdAndEmail(long tenantId, string email)
   {
     const string sql = """

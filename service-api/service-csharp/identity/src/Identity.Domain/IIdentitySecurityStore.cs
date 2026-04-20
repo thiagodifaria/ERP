@@ -10,6 +10,8 @@ public interface IIdentitySecurityStore
 
   Invite? FindInviteByToken(string inviteToken);
 
+  Invite? FindInviteByPublicId(Guid invitePublicId);
+
   Invite? FindPendingInviteByTenantIdAndEmail(long tenantId, string email);
 
   IReadOnlyCollection<Invite> ListInvitesByTenantId(long tenantId);

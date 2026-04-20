@@ -106,4 +106,42 @@ public sealed class Invite
       AcceptedAt,
       CreatedAt);
   }
+
+  public Invite Revoke()
+  {
+    return new Invite(
+      Id,
+      TenantId,
+      TenantSlug,
+      UserId,
+      PublicId,
+      InviteToken,
+      Email,
+      DisplayName,
+      RoleCodes,
+      TeamPublicIds,
+      "revoked",
+      ExpiresAt,
+      AcceptedAt,
+      CreatedAt);
+  }
+
+  public Invite Reissue(string inviteToken, DateTimeOffset expiresAt)
+  {
+    return new Invite(
+      Id,
+      TenantId,
+      TenantSlug,
+      UserId,
+      PublicId,
+      inviteToken,
+      Email,
+      DisplayName,
+      RoleCodes,
+      TeamPublicIds,
+      "pending",
+      expiresAt,
+      null,
+      CreatedAt);
+  }
 }

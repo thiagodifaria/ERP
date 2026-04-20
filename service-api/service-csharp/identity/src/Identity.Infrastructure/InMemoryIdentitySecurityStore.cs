@@ -7,6 +7,7 @@ public sealed class InMemoryIdentitySecurityStore : IIdentitySecurityStore
 {
   private readonly Dictionary<long, UserSecurityProfile> _profilesByUserId = [];
   private readonly Dictionary<string, Invite> _invitesByToken = new(StringComparer.OrdinalIgnoreCase);
+  private readonly Dictionary<Guid, Invite> _invitesByPublicId = [];
   private readonly Dictionary<long, Invite> _invitesById = [];
   private readonly Dictionary<string, Session> _sessionsByToken = new(StringComparer.Ordinal);
   private readonly Dictionary<string, Session> _sessionsByRefreshToken = new(StringComparer.Ordinal);
@@ -45,6 +46,13 @@ public sealed class InMemoryIdentitySecurityStore : IIdentitySecurityStore
       : null;
   }
 
+  public Invite? FindInviteByPublicId(Guid invitePublicId)
+  {
+    return _invitesByPublicId.TryGetValue(invitePublicId, out var invite)
+      ? invite
+      : null;
+  }
+
   public Invite? FindPendingInviteByTenantIdAndEmail(long tenantId, string email)
   {
     return _invitesById.Values
@@ -63,13 +71,20 @@ public sealed class InMemoryIdentitySecurityStore : IIdentitySecurityStore
   public Invite AddInvite(Invite invite)
   {
     _invitesById[invite.Id] = invite;
+    _invitesByPublicId[invite.PublicId] = invite;
     _invitesByToken[invite.InviteToken] = invite;
     return invite;
   }
 
   public Invite UpdateInvite(Invite invite)
   {
+    if (_invitesById.TryGetValue(invite.Id, out var currentInvite))
+    {
+      _invitesByToken.Remove(currentInvite.InviteToken);
+    }
+
     _invitesById[invite.Id] = invite;
+    _invitesByPublicId[invite.PublicId] = invite;
     _invitesByToken[invite.InviteToken] = invite;
     return invite;
   }

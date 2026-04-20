@@ -13,6 +13,7 @@ public static class DependencyInjection
     services.AddScoped<AddBootstrapTeamMember>();
     services.AddScoped<AssignBootstrapUserRole>();
     services.AddScoped<AcceptIdentityInvite>();
+    services.AddScoped<CancelIdentityInvite>();
     services.AddScoped<CompleteIdentityPasswordRecovery>();
     services.AddScoped<CreateIdentityInvite>();
     services.AddScoped<CreateBootstrapCompany>();
@@ -24,7 +25,9 @@ public static class DependencyInjection
     services.AddScoped<ListIdentityUserSessions>();
     services.AddScoped<ListIdentitySecurityAuditEvents>();
     services.AddScoped<LoginIdentitySession>();
+    services.AddScoped<LogoutIdentitySession>();
     services.AddScoped<RefreshIdentitySession>();
+    services.AddScoped<ResendIdentityInvite>();
     services.AddScoped<RemoveBootstrapTeamMember>();
     services.AddScoped<ResolveTenantAccess>();
     services.AddScoped<RevokeIdentitySession>();

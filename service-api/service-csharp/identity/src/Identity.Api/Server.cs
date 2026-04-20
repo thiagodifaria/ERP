@@ -293,6 +293,18 @@ public static class Server
         return ToResult(useCase.Execute(slug), TypedResults.Ok);
       });
     app.MapPost(
+      "/api/identity/tenants/{slug}/invites/{invitePublicId:guid}/cancel",
+      (string slug, Guid invitePublicId, CancelIdentityInvite useCase) =>
+      {
+        return ToResult(useCase.Execute(slug, invitePublicId), TypedResults.Ok);
+      });
+    app.MapPost(
+      "/api/identity/tenants/{slug}/invites/{invitePublicId:guid}/resend",
+      (string slug, Guid invitePublicId, ResendInviteRequest request, ResendIdentityInvite useCase) =>
+      {
+        return ToResult(useCase.Execute(slug, invitePublicId, request), TypedResults.Ok);
+      });
+    app.MapPost(
       "/api/identity/invites/{inviteToken}/accept",
       (string inviteToken, AcceptInviteRequest request, AcceptIdentityInvite useCase) =>
       {
@@ -309,6 +321,20 @@ public static class Server
       (RefreshSessionRequest request, RefreshIdentitySession useCase) =>
       {
         return ToResult(useCase.Execute(request), TypedResults.Ok);
+      });
+    app.MapPost(
+      "/api/identity/sessions/logout",
+      (HttpRequest request, LogoutIdentitySession useCase) =>
+      {
+        var sessionToken = ExtractBearerToken(request);
+        if (string.IsNullOrWhiteSpace(sessionToken))
+        {
+          return Results.Json(
+            new ErrorResponse("session_required", "Session token is required."),
+            statusCode: StatusCodes.Status401Unauthorized);
+        }
+
+        return ToResult(useCase.Execute(sessionToken), TypedResults.Ok);
       });
     app.MapPost(
       "/api/identity/password-recovery",
