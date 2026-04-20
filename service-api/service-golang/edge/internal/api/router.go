@@ -7,6 +7,7 @@ import (
 
 	"github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/api/handler"
 	"github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/api/middleware"
+	"github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/infrastructure/integration"
 	"github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/telemetry"
 )
 
@@ -18,16 +19,18 @@ func NewRouter(
 	automationOverviewHandler handler.AutomationOverviewHandler,
 	salesOverviewHandler handler.SalesOverviewHandler,
 	revenueOverviewHandler handler.RevenueOverviewHandler,
+	identityBaseURL string,
+	accessResolver integration.TenantAccessResolver,
 ) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health/live", healthHandler.Live)
 	mux.HandleFunc("/health/ready", healthHandler.Ready)
 	mux.HandleFunc("/health/details", healthHandler.Details)
 	mux.HandleFunc("/api/edge/ops/health", opsHandler.Health)
-	mux.HandleFunc("/api/edge/ops/tenant-overview", tenantOverviewHandler.Overview)
-	mux.HandleFunc("/api/edge/ops/automation-overview", automationOverviewHandler.Overview)
-	mux.HandleFunc("/api/edge/ops/sales-overview", salesOverviewHandler.Overview)
-	mux.HandleFunc("/api/edge/ops/revenue-overview", revenueOverviewHandler.Overview)
+	mux.Handle("/api/edge/ops/tenant-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(tenantOverviewHandler.Overview)))
+	mux.Handle("/api/edge/ops/automation-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(automationOverviewHandler.Overview)))
+	mux.Handle("/api/edge/ops/sales-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(salesOverviewHandler.Overview)))
+	mux.Handle("/api/edge/ops/revenue-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(revenueOverviewHandler.Overview)))
 
 	return middleware.WithCorrelation(logger, mux)
 }

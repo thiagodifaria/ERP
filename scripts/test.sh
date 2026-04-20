@@ -497,6 +497,59 @@ wait_for_prometheus_probe_success() {
   done
 }
 
+compute_totp() {
+  local secret="$1"
+
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - "$secret" <<'PY'
+import base64
+import hashlib
+import hmac
+import sys
+import time
+
+secret = sys.argv[1].strip().replace("=", "").upper()
+padding = "=" * ((8 - len(secret) % 8) % 8)
+key = base64.b32decode(secret + padding, casefold=True)
+counter = int(time.time()) // 30
+message = counter.to_bytes(8, "big")
+digest = hmac.new(key, message, hashlib.sha1).digest()
+offset = digest[-1] & 0x0F
+code = (
+  ((digest[offset] & 0x7F) << 24)
+  | (digest[offset + 1] << 16)
+  | (digest[offset + 2] << 8)
+  | digest[offset + 3]
+) % 1000000
+print(f"{code:06d}")
+PY
+    return
+  fi
+
+  docker run --rm python:3.12-alpine python - "$secret" <<'PY'
+import base64
+import hashlib
+import hmac
+import sys
+import time
+
+secret = sys.argv[1].strip().replace("=", "").upper()
+padding = "=" * ((8 - len(secret) % 8) % 8)
+key = base64.b32decode(secret + padding, casefold=True)
+counter = int(time.time()) // 30
+message = counter.to_bytes(8, "big")
+digest = hmac.new(key, message, hashlib.sha1).digest()
+offset = digest[-1] & 0x0F
+code = (
+  ((digest[offset] & 0x7F) << 24)
+  | (digest[offset + 1] << 16)
+  | (digest[offset + 2] << 8)
+  | digest[offset + 3]
+) % 1000000
+print(f"{code:06d}")
+PY
+}
+
 run_crm_runtime_smoke() {
   local base_url="http://localhost:${CRM_HTTP_PORT:-8083}"
   local bootstrap_lead_public_id
@@ -1367,6 +1420,23 @@ run_identity_runtime_smoke() {
   local user_roles_response
   local roles_response
   local snapshot_response
+  local create_invite_response
+  local invites_response
+  local invite_token
+  local accept_invite_response
+  local invited_user_public_id
+  local mfa_enroll_response
+  local mfa_secret
+  local mfa_code
+  local mfa_verify_response
+  local login_without_otp_response
+  local login_with_otp_response
+  local session_token
+  local refresh_token
+  local access_response
+  local refresh_session_response
+  local blocked_access_response
+  local audit_response
 
   "${COMPOSE_CMD[@]}" up -d --build identity
   wait_for_http_ready "$base_url/health/ready"
@@ -1382,7 +1452,7 @@ run_identity_runtime_smoke() {
     exit 1
   fi
 
-  if [[ "$details_response" != *'"name":"postgresql","status":"ready"'* ]]; then
+  if [[ "$details_response" != *'"name":"postgresql","status":"ready"'* || "$details_response" != *'"name":"keycloak","status":"ready"'* || "$details_response" != *'"name":"openfga","status":"ready"'* ]]; then
     echo "[test] identity health details did not report postgresql ready"
     exit 1
   fi
@@ -1597,12 +1667,171 @@ run_identity_runtime_smoke() {
     echo "[test] runtime identity snapshot did not reflect live updates"
     exit 1
   fi
+
+  create_invite_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"invite.flow@$tenant_slug.local\",\"displayName\":\"Invite Flow User\",\"roleCodes\":[\"viewer\"],\"teamPublicIds\":[\"$created_team_public_id\"],\"expiresInDays\":7}" \
+    "$base_url/api/identity/tenants/$tenant_slug/invites")"
+  echo "[test] identity api create invite => $create_invite_response"
+
+  invite_token="$(echo "$create_invite_response" | sed -n 's/.*"inviteToken":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$invite_token" || "$create_invite_response" != *'"status":"pending"'* || "$create_invite_response" != *'"roleCodes":["viewer"]'* ]]; then
+    echo "[test] runtime identity invite create did not persist"
+    exit 1
+  fi
+
+  invites_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/invites")"
+  echo "[test] identity api invites => $invites_response"
+
+  if [[ "$invites_response" != *"invite.flow@$tenant_slug.local"* ]]; then
+    echo "[test] runtime identity invite list did not return the created invite"
+    exit 1
+  fi
+
+  accept_invite_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"displayName":"Invite Flow User","givenName":"Invite","familyName":"Flow","password":"PhaseTwo123"}' \
+    "$base_url/api/identity/invites/$invite_token/accept")"
+  echo "[test] identity api accept invite => $accept_invite_response"
+
+  invited_user_public_id="$(echo "$accept_invite_response" | grep -o '"publicId":"[^"]*"' | tail -n 1 | cut -d'"' -f4)"
+  if [[ -z "$invited_user_public_id" || "$accept_invite_response" != *'"inviteStatus":"accepted"'* || "$accept_invite_response" != *"invite.flow@$tenant_slug.local"* ]]; then
+    echo "[test] runtime identity invite accept did not activate the invited user"
+    exit 1
+  fi
+
+  mfa_enroll_response="$(curl -fsS \
+    -X POST \
+    "$base_url/api/identity/tenants/$tenant_slug/users/$invited_user_public_id/mfa/enroll")"
+  echo "[test] identity api mfa enroll => $mfa_enroll_response"
+
+  mfa_secret="$(echo "$mfa_enroll_response" | sed -n 's/.*"secret":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$mfa_secret" || "$mfa_enroll_response" != *'"enabled":false'* ]]; then
+    echo "[test] runtime identity MFA enrollment did not return a secret"
+    exit 1
+  fi
+
+  mfa_code="$(compute_totp "$mfa_secret")"
+  if [[ -z "$mfa_code" ]]; then
+    echo "[test] runtime identity MFA helper did not generate an OTP"
+    exit 1
+  fi
+
+  mfa_verify_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"otpCode\":\"$mfa_code\"}" \
+    "$base_url/api/identity/tenants/$tenant_slug/users/$invited_user_public_id/mfa/verify")"
+  echo "[test] identity api mfa verify => $mfa_verify_response"
+
+  if [[ "$mfa_verify_response" != *'"enabled":true'* ]]; then
+    echo "[test] runtime identity MFA verification did not enable the factor"
+    exit 1
+  fi
+
+  login_without_otp_response="$(curl -sS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"$tenant_slug\",\"email\":\"invite.flow@$tenant_slug.local\",\"password\":\"PhaseTwo123\",\"otpCode\":null}" \
+    -w ' HTTP_STATUS:%{http_code}' \
+    "$base_url/api/identity/sessions/login")"
+  echo "[test] identity api login without otp => $login_without_otp_response"
+
+  if [[ "$login_without_otp_response" != *'"code":"mfa_required"'* || "$login_without_otp_response" != *'HTTP_STATUS:401'* ]]; then
+    echo "[test] runtime identity login should require MFA after enablement"
+    exit 1
+  fi
+
+  login_with_otp_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"$tenant_slug\",\"email\":\"invite.flow@$tenant_slug.local\",\"password\":\"PhaseTwo123\",\"otpCode\":\"$mfa_code\"}" \
+    "$base_url/api/identity/sessions/login")"
+  echo "[test] identity api login with otp => $login_with_otp_response"
+
+  session_token="$(echo "$login_with_otp_response" | sed -n 's/.*"sessionToken":"\([^"]*\)".*/\1/p')"
+  refresh_token="$(echo "$login_with_otp_response" | sed -n 's/.*"refreshToken":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$session_token" || -z "$refresh_token" || "$login_with_otp_response" != *'"mfaEnabled":true'* || "$login_with_otp_response" != *'"roleCodes":["viewer"]'* ]]; then
+    echo "[test] runtime identity login with MFA did not create a usable session"
+    exit 1
+  fi
+
+  access_response="$(curl -fsS \
+    -H "Authorization: Bearer $session_token" \
+    "$base_url/api/identity/tenants/$tenant_slug/access")"
+  echo "[test] identity api access resolve => $access_response"
+
+  if [[ "$access_response" != *'"authorized":true'* || "$access_response" != *'"status":"active"'* || "$access_response" != *'"roleCodes":["viewer"]'* ]]; then
+    echo "[test] runtime identity access resolution did not enforce the tenant scope"
+    exit 1
+  fi
+
+  refresh_session_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"refreshToken\":\"$refresh_token\"}" \
+    "$base_url/api/identity/sessions/refresh")"
+  echo "[test] identity api refresh session => $refresh_session_response"
+
+  if [[ "$refresh_session_response" != *'"refreshToken":"'* || "$refresh_session_response" == *"\"refreshToken\":\"$refresh_token\""* ]]; then
+    echo "[test] runtime identity refresh did not rotate the refresh token"
+    exit 1
+  fi
+
+  blocked_access_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d '{"status":"suspended"}' \
+    "$base_url/api/identity/tenants/$tenant_slug/users/$invited_user_public_id/access")"
+  echo "[test] identity api block user => $blocked_access_response"
+
+  if [[ "$blocked_access_response" != *'"status":"suspended"'* ]]; then
+    echo "[test] runtime identity access block did not persist"
+    exit 1
+  fi
+
+  login_without_otp_response="$(curl -sS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"$tenant_slug\",\"email\":\"invite.flow@$tenant_slug.local\",\"password\":\"PhaseTwo123\",\"otpCode\":\"$(compute_totp "$mfa_secret")\"}" \
+    -w ' HTTP_STATUS:%{http_code}' \
+    "$base_url/api/identity/sessions/login")"
+  echo "[test] identity api login after block => $login_without_otp_response"
+
+  if [[ "$login_without_otp_response" != *'"code":"access_blocked"'* || "$login_without_otp_response" != *'HTTP_STATUS:403'* ]]; then
+    echo "[test] runtime identity login should be blocked after suspension"
+    exit 1
+  fi
+
+  access_response="$(curl -sS \
+    -H "Authorization: Bearer $session_token" \
+    -w ' HTTP_STATUS:%{http_code}' \
+    "$base_url/api/identity/tenants/$tenant_slug/access")"
+  echo "[test] identity api access after block => $access_response"
+
+  if [[ "$access_response" != *'"code":"invalid_session"'* || "$access_response" != *'HTTP_STATUS:401'* ]]; then
+    echo "[test] runtime identity access should reject revoked sessions after suspension"
+    exit 1
+  fi
+
+  audit_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/security/audit")"
+  echo "[test] identity api security audit => $audit_response"
+
+  if [[ "$audit_response" != *'"eventCode":"invite_created"'* || "$audit_response" != *'"eventCode":"invite_accepted"'* || "$audit_response" != *'"eventCode":"mfa_enabled"'* || "$audit_response" != *'"eventCode":"access_blocked"'* ]]; then
+    echo "[test] runtime identity security audit did not capture the expected events"
+    exit 1
+  fi
 }
 
 run_edge_runtime_smoke() {
   local base_url="http://localhost:${EDGE_HTTP_PORT:-8080}"
   local details_response
   local ops_health_response
+  local session_response
+  local session_token
+  local tenant_overview_unauthorized_response
   local tenant_overview_response
   local automation_overview_response
   local sales_overview_response
@@ -1613,19 +1842,28 @@ run_edge_runtime_smoke() {
 
   details_response="$(curl -fsS "$base_url/health/details")"
   ops_health_response="$(curl -fsS "$base_url/api/edge/ops/health")"
-  tenant_overview_response="$(curl -fsS "$base_url/api/edge/ops/tenant-overview?tenantSlug=bootstrap-ops")"
-  automation_overview_response="$(curl -fsS "$base_url/api/edge/ops/automation-overview?tenantSlug=bootstrap-ops")"
-  sales_overview_response="$(curl -fsS "$base_url/api/edge/ops/sales-overview?tenantSlug=bootstrap-ops")"
-  revenue_overview_response="$(curl -fsS "$base_url/api/edge/ops/revenue-overview?tenantSlug=bootstrap-ops")"
+  session_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"bootstrap-ops\",\"email\":\"owner@bootstrap-ops.local\",\"password\":\"${IDENTITY_BOOTSTRAP_PASSWORD:-Change.Me123!}\",\"otpCode\":null}" \
+    "http://localhost:${IDENTITY_HTTP_PORT:-8081}/api/identity/sessions/login")"
+  session_token="$(echo "$session_response" | sed -n 's/.*"sessionToken":"\([^"]*\)".*/\1/p')"
+  tenant_overview_unauthorized_response="$(curl -sS -w ' HTTP_STATUS:%{http_code}' "$base_url/api/edge/ops/tenant-overview?tenantSlug=bootstrap-ops")"
+  tenant_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/tenant-overview?tenantSlug=bootstrap-ops")"
+  automation_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/automation-overview?tenantSlug=bootstrap-ops")"
+  sales_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/sales-overview?tenantSlug=bootstrap-ops")"
+  revenue_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/revenue-overview?tenantSlug=bootstrap-ops")"
 
   echo "[test] edge health details => $details_response"
   echo "[test] edge ops health => $ops_health_response"
+  echo "[test] edge bootstrap session => $session_response"
+  echo "[test] edge tenant overview unauthorized => $tenant_overview_unauthorized_response"
   echo "[test] edge tenant overview => $tenant_overview_response"
   echo "[test] edge automation overview => $automation_overview_response"
   echo "[test] edge sales overview => $sales_overview_response"
   echo "[test] edge revenue overview => $revenue_overview_response"
 
-  if [[ "$details_response" != *'"service":"edge"'* || "$details_response" != *'"status":"ready"'* || "$details_response" != *'"name":"identity","status":"ready"'* || "$details_response" != *'"name":"analytics","status":"ready"'* || "$details_response" != *'"name":"webhook-hub","status":"ready"'* || "$details_response" != *'"name":"sales","status":"ready"'* || "$ops_health_response" != *'"service":"edge"'* || "$ops_health_response" != *'"status":"ready"'* || "$ops_health_response" != *'"total":7'* || "$ops_health_response" != *'"ready":7'* || "$ops_health_response" != *'"degraded":0'* || "$ops_health_response" != *'"name":"workflow-runtime"'* || "$ops_health_response" != *'"name":"analytics"'* || "$ops_health_response" != *'"name":"sales"'* || "$tenant_overview_response" != *'"service":"edge"'* || "$tenant_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_overview_response" != *'"automationBoard"'* || "$tenant_overview_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$automation_overview_response" != *'"service":"edge"'* || "$automation_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_overview_response" != *'"status":"attention"'* || "$automation_overview_response" != *'"activeDefinitions":1'* || "$automation_overview_response" != *'"stableDefinitions":1'* || "$automation_overview_response" != *'"attentionDefinitions":1'* || "$automation_overview_response" != *'"criticalDefinitions":0'* || "$automation_overview_response" != *'"runningControlRuns":2'* || "$automation_overview_response" != *'"completedRuntimeExecutions":3'* || "$automation_overview_response" != *'"forwardedWebhookEvents":1'* || "$automation_overview_response" != *'"workflowDefinitionHealth"'* || "$sales_overview_response" != *'"service":"edge"'* || "$sales_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$sales_overview_response" != *'"status":"stable"'* || "$sales_overview_response" != *'"leadsCaptured":2'* || "$sales_overview_response" != *'"opportunities":2'* || "$sales_overview_response" != *'"proposals":2'* || "$sales_overview_response" != *'"salesWon":2'* || "$sales_overview_response" != *'"bookedRevenueCents":224000'* || "$sales_overview_response" != *'"completedAutomations":1'* || "$sales_overview_response" != *'"salesJourney"'* || "$revenue_overview_response" != *'"service":"edge"'* || "$revenue_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$revenue_overview_response" != *'"status":"stable"'* || "$revenue_overview_response" != *'"salesWon":2'* || "$revenue_overview_response" != *'"invoices":2'* || "$revenue_overview_response" != *'"paidInvoices":1'* || "$revenue_overview_response" != *'"openAmountCents":125000'* || "$revenue_overview_response" != *'"paidAmountCents":99000'* || "$revenue_overview_response" != *'"overdueInvoices":0'* || "$revenue_overview_response" != *'"collectionRateBps":4420'* || "$revenue_overview_response" != *'"revenueOperations"'* ]]; then
+  if [[ -z "$session_token" || "$details_response" != *'"service":"edge"'* || "$details_response" != *'"status":"ready"'* || "$details_response" != *'"name":"identity","status":"ready"'* || "$details_response" != *'"name":"analytics","status":"ready"'* || "$details_response" != *'"name":"webhook-hub","status":"ready"'* || "$details_response" != *'"name":"sales","status":"ready"'* || "$ops_health_response" != *'"service":"edge"'* || "$ops_health_response" != *'"status":"ready"'* || "$ops_health_response" != *'"total":7'* || "$ops_health_response" != *'"ready":7'* || "$ops_health_response" != *'"degraded":0'* || "$ops_health_response" != *'"name":"workflow-runtime"'* || "$ops_health_response" != *'"name":"analytics"'* || "$ops_health_response" != *'"name":"sales"'* || "$tenant_overview_unauthorized_response" != *'"code":"session_required"'* || "$tenant_overview_unauthorized_response" != *'HTTP_STATUS:401'* || "$tenant_overview_response" != *'"service":"edge"'* || "$tenant_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_overview_response" != *'"automationBoard"'* || "$tenant_overview_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$automation_overview_response" != *'"service":"edge"'* || "$automation_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_overview_response" != *'"status":"attention"'* || "$automation_overview_response" != *'"activeDefinitions":1'* || "$automation_overview_response" != *'"stableDefinitions":1'* || "$automation_overview_response" != *'"attentionDefinitions":1'* || "$automation_overview_response" != *'"criticalDefinitions":0'* || "$automation_overview_response" != *'"runningControlRuns":2'* || "$automation_overview_response" != *'"completedRuntimeExecutions":3'* || "$automation_overview_response" != *'"forwardedWebhookEvents":1'* || "$automation_overview_response" != *'"workflowDefinitionHealth"'* || "$sales_overview_response" != *'"service":"edge"'* || "$sales_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$sales_overview_response" != *'"status":"stable"'* || "$sales_overview_response" != *'"leadsCaptured":2'* || "$sales_overview_response" != *'"opportunities":2'* || "$sales_overview_response" != *'"proposals":2'* || "$sales_overview_response" != *'"salesWon":2'* || "$sales_overview_response" != *'"bookedRevenueCents":224000'* || "$sales_overview_response" != *'"completedAutomations":1'* || "$sales_overview_response" != *'"salesJourney"'* || "$revenue_overview_response" != *'"service":"edge"'* || "$revenue_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$revenue_overview_response" != *'"status":"stable"'* || "$revenue_overview_response" != *'"salesWon":2'* || "$revenue_overview_response" != *'"invoices":2'* || "$revenue_overview_response" != *'"paidInvoices":1'* || "$revenue_overview_response" != *'"openAmountCents":125000'* || "$revenue_overview_response" != *'"paidAmountCents":99000'* || "$revenue_overview_response" != *'"overdueInvoices":0'* || "$revenue_overview_response" != *'"collectionRateBps":4420'* || "$revenue_overview_response" != *'"revenueOperations"'* ]]; then
     echo "[test] edge automation cockpit did not aggregate the expected live payload"
     exit 1
   fi

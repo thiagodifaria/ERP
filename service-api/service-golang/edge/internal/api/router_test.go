@@ -37,6 +37,8 @@ func TestRouterShouldExposeHealthDetails(t *testing.T) {
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		"http://identity.local",
+		stubAccessResolver{},
 	)
 	request := httptest.NewRequest(http.MethodGet, "/health/details", nil)
 	recorder := httptest.NewRecorder()
@@ -81,6 +83,8 @@ func TestRouterShouldExposeOpsHealth(t *testing.T) {
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		"http://identity.local",
+		stubAccessResolver{},
 	)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/health", nil)
@@ -115,9 +119,12 @@ func TestRouterShouldExposeTenantOverview(t *testing.T) {
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		"http://identity.local",
+		stubAccessResolver{},
 	)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/tenant-overview?tenantSlug=bootstrap-ops", nil)
+	request.Header.Set("Authorization", "Bearer session-123")
 	recorder := httptest.NewRecorder()
 
 	router.ServeHTTP(recorder, request)
@@ -145,9 +152,12 @@ func TestRouterShouldExposeAutomationOverview(t *testing.T) {
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		"http://identity.local",
+		stubAccessResolver{},
 	)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/automation-overview?tenantSlug=bootstrap-ops", nil)
+	request.Header.Set("Authorization", "Bearer session-123")
 	recorder := httptest.NewRecorder()
 
 	router.ServeHTTP(recorder, request)
@@ -175,9 +185,12 @@ func TestRouterShouldExposeSalesOverview(t *testing.T) {
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		"http://identity.local",
+		stubAccessResolver{},
 	)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/sales-overview?tenantSlug=bootstrap-ops", nil)
+	request.Header.Set("Authorization", "Bearer session-123")
 	recorder := httptest.NewRecorder()
 
 	router.ServeHTTP(recorder, request)
@@ -205,9 +218,12 @@ func TestRouterShouldExposeRevenueOverview(t *testing.T) {
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		"http://identity.local",
+		stubAccessResolver{},
 	)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/revenue-overview?tenantSlug=bootstrap-ops", nil)
+	request.Header.Set("Authorization", "Bearer session-123")
 	recorder := httptest.NewRecorder()
 
 	router.ServeHTTP(recorder, request)
@@ -223,6 +239,29 @@ func TestRouterShouldExposeRevenueOverview(t *testing.T) {
 
 	if response.TenantSlug != "bootstrap-ops" {
 		t.Fatalf("expected tenant slug bootstrap-ops, got %s", response.TenantSlug)
+	}
+}
+
+func TestRouterShouldRequireSessionForProtectedTenantOverview(t *testing.T) {
+	router := NewRouter(
+		telemetry.New("edge-test"),
+		handler.NewHealthHandler("edge", stubHealthChecker{}, nil),
+		handler.NewOpsHandler("edge", stubHealthChecker{}, nil),
+		handler.NewTenantOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		"http://identity.local",
+		stubAccessResolver{},
+	)
+
+	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/tenant-overview?tenantSlug=bootstrap-ops", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Fatalf("expected status %d, got %d", http.StatusUnauthorized, recorder.Code)
 	}
 }
 
@@ -328,4 +367,16 @@ func (stubHealthChecker) GetJSON(_ context.Context, requestURL string, target an
 	}
 
 	return json.Unmarshal(bytes, target)
+}
+
+type stubAccessResolver struct{}
+
+func (stubAccessResolver) ResolveTenantAccess(_ context.Context, _ string, tenantSlug string, _ string) (integration.AccessResolution, error) {
+	return integration.AccessResolution{
+		TenantSlug:   tenantSlug,
+		UserPublicID: "01960d76-3c95-7c85-9f4e-b5b794f7a001",
+		RoleCodes:    []string{"owner"},
+		Authorized:   true,
+		Status:       "active",
+	}, nil
 }
