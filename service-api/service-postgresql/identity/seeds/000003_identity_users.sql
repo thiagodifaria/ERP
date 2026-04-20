@@ -8,8 +8,8 @@ SELECT
   gen_random_uuid(),
   concat('owner@', tenant.slug, '.local'),
   concat(tenant.display_name, ' Owner'),
-  NULL,
-  NULL,
+  tenant.display_name,
+  'Owner',
   'active'
 FROM identity.tenants AS tenant
 LEFT JOIN LATERAL (

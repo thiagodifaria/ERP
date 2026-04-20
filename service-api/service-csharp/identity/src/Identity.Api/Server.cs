@@ -278,6 +278,82 @@ public static class Server
 
         return TypedResults.Ok(result.UserRole!);
       });
+    app.MapPost(
+      "/api/identity/tenants/{slug}/invites",
+      (string slug, CreateInviteRequest request, CreateIdentityInvite useCase) =>
+      {
+        return ToResult(useCase.Execute(slug, request), invite => TypedResults.Created(
+          $"/api/identity/invites/{invite.InviteToken}",
+          invite));
+      });
+    app.MapGet(
+      "/api/identity/tenants/{slug}/invites",
+      (string slug, ListIdentityInvites useCase) =>
+      {
+        return ToResult(useCase.Execute(slug), TypedResults.Ok);
+      });
+    app.MapPost(
+      "/api/identity/invites/{inviteToken}/accept",
+      (string inviteToken, AcceptInviteRequest request, AcceptIdentityInvite useCase) =>
+      {
+        return ToResult(useCase.Execute(inviteToken, request), TypedResults.Ok);
+      });
+    app.MapPost(
+      "/api/identity/sessions/login",
+      (LoginSessionRequest request, LoginIdentitySession useCase) =>
+      {
+        return ToResult(useCase.Execute(request), TypedResults.Ok);
+      });
+    app.MapPost(
+      "/api/identity/sessions/refresh",
+      (RefreshSessionRequest request, RefreshIdentitySession useCase) =>
+      {
+        return ToResult(useCase.Execute(request), TypedResults.Ok);
+      });
+    app.MapGet(
+      "/api/identity/tenants/{slug}/access",
+      (string slug, HttpRequest request, ResolveTenantAccess useCase) =>
+      {
+        var sessionToken = ExtractBearerToken(request);
+        if (string.IsNullOrWhiteSpace(sessionToken))
+        {
+          return Results.Json(
+            new ErrorResponse("session_required", "Session token is required."),
+            statusCode: StatusCodes.Status401Unauthorized);
+        }
+
+        return ToResult(useCase.Execute(slug, sessionToken), TypedResults.Ok);
+      });
+    app.MapPatch(
+      "/api/identity/tenants/{slug}/users/{userPublicId:guid}/access",
+      (string slug, Guid userPublicId, UpdateUserAccessRequest request, UpdateIdentityUserAccess useCase) =>
+      {
+        return ToResult(useCase.Execute(slug, userPublicId, request), TypedResults.Ok);
+      });
+    app.MapPost(
+      "/api/identity/tenants/{slug}/users/{userPublicId:guid}/mfa/enroll",
+      (string slug, Guid userPublicId, StartIdentityUserMfaEnrollment useCase) =>
+      {
+        return ToResult(useCase.Execute(slug, userPublicId), TypedResults.Ok);
+      });
+    app.MapPost(
+      "/api/identity/tenants/{slug}/users/{userPublicId:guid}/mfa/verify",
+      (string slug, Guid userPublicId, VerifyMfaRequest request, VerifyIdentityUserMfa useCase) =>
+      {
+        return ToResult(useCase.Execute(slug, userPublicId, request), TypedResults.Ok);
+      });
+    app.MapDelete(
+      "/api/identity/tenants/{slug}/users/{userPublicId:guid}/mfa",
+      (string slug, Guid userPublicId, DisableIdentityUserMfa useCase) =>
+      {
+        return ToResult(useCase.Execute(slug, userPublicId), TypedResults.Ok);
+      });
+    app.MapGet(
+      "/api/identity/tenants/{slug}/security/audit",
+      (string slug, ListIdentitySecurityAuditEvents useCase) =>
+      {
+        return ToResult(useCase.Execute(slug), TypedResults.Ok);
+      });
     app.MapGet(
       "/api/identity/tenants",
       (ListBootstrapTenants useCase) => TypedResults.Ok(useCase.Execute()));
@@ -401,10 +477,17 @@ public static class Server
 
   private static ReadinessResponse BuildReadiness()
   {
-    var repositoryDriver = IdentityInfrastructureOptions.Load().RepositoryDriver;
+    var options = IdentityInfrastructureOptions.Load();
+    var repositoryDriver = options.RepositoryDriver;
     var postgresqlStatus = repositoryDriver.Equals("postgres", StringComparison.OrdinalIgnoreCase)
       ? "ready"
       : "pending-runtime-wiring";
+    var keycloakStatus = options.IdentityProviderDriver.Equals("keycloak", StringComparison.OrdinalIgnoreCase)
+      ? "ready"
+      : "simulated";
+    var openFgaStatus = options.AuthorizationDriver.Equals("openfga", StringComparison.OrdinalIgnoreCase)
+      ? "ready"
+      : "simulated";
 
     return new ReadinessResponse(
       "identity",
@@ -412,7 +495,54 @@ public static class Server
       [
         new DependencyHealthResponse("tenant-catalog", "ready"),
         new DependencyHealthResponse("bootstrap-api", "ready"),
-        new DependencyHealthResponse("postgresql", postgresqlStatus)
+        new DependencyHealthResponse("postgresql", postgresqlStatus),
+        new DependencyHealthResponse("keycloak", keycloakStatus),
+        new DependencyHealthResponse("openfga", openFgaStatus),
+        new DependencyHealthResponse("mfa", "ready")
       ]);
+  }
+
+  private static IResult ToResult<T>(OperationResult<T> result, Func<T, IResult> onSuccess)
+  {
+    if (result.IsBadRequest)
+    {
+      return TypedResults.BadRequest(result.Error!);
+    }
+
+    if (result.IsConflict)
+    {
+      return TypedResults.Conflict(result.Error!);
+    }
+
+    if (result.IsForbidden)
+    {
+      return Results.Json(result.Error!, statusCode: StatusCodes.Status403Forbidden);
+    }
+
+    if (result.IsNotFound)
+    {
+      return TypedResults.NotFound(result.Error!);
+    }
+
+    if (result.IsUnauthorized)
+    {
+      return Results.Json(result.Error!, statusCode: StatusCodes.Status401Unauthorized);
+    }
+
+    return onSuccess(result.Payload!);
+  }
+
+  private static string? ExtractBearerToken(HttpRequest request)
+  {
+    var authorizationHeader = request.Headers.Authorization.ToString();
+    if (string.IsNullOrWhiteSpace(authorizationHeader))
+    {
+      return null;
+    }
+
+    const string prefix = "Bearer ";
+    return authorizationHeader.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)
+      ? authorizationHeader[prefix.Length..].Trim()
+      : null;
   }
 }

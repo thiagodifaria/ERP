@@ -1,6 +1,8 @@
 // Estes testes validam o comportamento HTTP minimo da API de identidade.
 using System.Net;
 using System.Net.Http.Json;
+using System.Security.Cryptography;
+using System.Text;
 using Identity.Contracts;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Xunit;
@@ -1131,5 +1133,283 @@ public sealed class IdentityApiTests : IClassFixture<WebApplicationFactory<Progr
 
     Assert.NotNull(payload);
     Assert.Equal("invalid_role_code", payload.Code);
+  }
+
+  [Fact]
+  public async Task InviteAcceptLoginRefreshAndAccessResolveShouldWorkEndToEnd()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Identity Access Flow");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var inviteResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/invites",
+      new CreateInviteRequest(
+        $"invite.flow@{tenantPayload.Slug}.local",
+        "Invite Flow User",
+        ["viewer"],
+        null,
+        7));
+
+    Assert.Equal(HttpStatusCode.Created, inviteResponse.StatusCode);
+
+    var invitePayload = await inviteResponse.Content.ReadFromJsonAsync<InviteResponse>();
+
+    Assert.NotNull(invitePayload);
+    Assert.False(string.IsNullOrWhiteSpace(invitePayload!.InviteToken));
+    Assert.Contains("viewer", invitePayload.RoleCodes);
+
+    var acceptResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/invites/{invitePayload.InviteToken}/accept",
+      new AcceptInviteRequest("Invite Flow User", "Invite", "Flow", "PhaseTwo123"));
+
+    Assert.Equal(HttpStatusCode.OK, acceptResponse.StatusCode);
+
+    var acceptedPayload = await acceptResponse.Content.ReadFromJsonAsync<AcceptInviteResponse>();
+
+    Assert.NotNull(acceptedPayload);
+    Assert.Equal("accepted", acceptedPayload!.InviteStatus);
+    Assert.Equal($"invite.flow@{tenantPayload.Slug}.local", acceptedPayload.User.Email);
+
+    var loginResponse = await _client.PostAsJsonAsync(
+      "/api/identity/sessions/login",
+      new LoginSessionRequest(
+        tenantPayload.Slug,
+        $"invite.flow@{tenantPayload.Slug}.local",
+        "PhaseTwo123",
+        null));
+
+    Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+
+    var sessionPayload = await loginResponse.Content.ReadFromJsonAsync<SessionResponse>();
+
+    Assert.NotNull(sessionPayload);
+    Assert.False(string.IsNullOrWhiteSpace(sessionPayload!.SessionToken));
+    Assert.False(string.IsNullOrWhiteSpace(sessionPayload.RefreshToken));
+    Assert.Contains("viewer", sessionPayload.RoleCodes);
+
+    var accessRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/identity/tenants/{tenantPayload.Slug}/access");
+    accessRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", sessionPayload.SessionToken);
+    var accessResponse = await _client.SendAsync(accessRequest);
+
+    Assert.Equal(HttpStatusCode.OK, accessResponse.StatusCode);
+
+    var accessPayload = await accessResponse.Content.ReadFromJsonAsync<AccessResolutionResponse>();
+
+    Assert.NotNull(accessPayload);
+    Assert.True(accessPayload!.Authorized);
+    Assert.Equal(sessionPayload.UserPublicId, accessPayload.UserPublicId);
+    Assert.Contains("viewer", accessPayload.RoleCodes);
+
+    var refreshResponse = await _client.PostAsJsonAsync(
+      "/api/identity/sessions/refresh",
+      new RefreshSessionRequest(sessionPayload.RefreshToken));
+
+    Assert.Equal(HttpStatusCode.OK, refreshResponse.StatusCode);
+
+    var refreshedPayload = await refreshResponse.Content.ReadFromJsonAsync<SessionResponse>();
+
+    Assert.NotNull(refreshedPayload);
+    Assert.NotEqual(sessionPayload.RefreshToken, refreshedPayload!.RefreshToken);
+  }
+
+  [Fact]
+  public async Task MfaShouldRequireOtpAfterEnrollment()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Identity MFA Flow");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var inviteResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/invites",
+      new CreateInviteRequest(
+        $"mfa.flow@{tenantPayload.Slug}.local",
+        "MFA Flow User",
+        ["viewer"],
+        null,
+        7));
+
+    var invitePayload = await inviteResponse.Content.ReadFromJsonAsync<InviteResponse>();
+
+    Assert.NotNull(invitePayload);
+
+    var acceptResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/invites/{invitePayload!.InviteToken}/accept",
+      new AcceptInviteRequest("MFA Flow User", "MFA", "Flow", "PhaseTwo123"));
+    var acceptedPayload = await acceptResponse.Content.ReadFromJsonAsync<AcceptInviteResponse>();
+
+    Assert.NotNull(acceptedPayload);
+
+    var enrollResponse = await _client.PostAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{acceptedPayload!.User.PublicId}/mfa/enroll",
+      content: null);
+
+    Assert.Equal(HttpStatusCode.OK, enrollResponse.StatusCode);
+
+    var enrollmentPayload = await enrollResponse.Content.ReadFromJsonAsync<MfaEnrollmentResponse>();
+
+    Assert.NotNull(enrollmentPayload);
+    Assert.False(enrollmentPayload!.Enabled);
+
+    var otpCode = ComputeTotp(enrollmentPayload.Secret);
+    var verifyResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{acceptedPayload.User.PublicId}/mfa/verify",
+      new VerifyMfaRequest(otpCode));
+
+    Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
+
+    var loginWithoutOtpResponse = await _client.PostAsJsonAsync(
+      "/api/identity/sessions/login",
+      new LoginSessionRequest(
+        tenantPayload.Slug,
+        acceptedPayload.User.Email,
+        "PhaseTwo123",
+        null));
+
+    Assert.Equal(HttpStatusCode.Unauthorized, loginWithoutOtpResponse.StatusCode);
+
+    var loginWithoutOtpPayload = await loginWithoutOtpResponse.Content.ReadFromJsonAsync<ErrorResponse>();
+
+    Assert.NotNull(loginWithoutOtpPayload);
+    Assert.Equal("mfa_required", loginWithoutOtpPayload!.Code);
+
+    var loginWithOtpResponse = await _client.PostAsJsonAsync(
+      "/api/identity/sessions/login",
+      new LoginSessionRequest(
+        tenantPayload.Slug,
+        acceptedPayload.User.Email,
+        "PhaseTwo123",
+        ComputeTotp(enrollmentPayload.Secret)));
+
+    Assert.Equal(HttpStatusCode.OK, loginWithOtpResponse.StatusCode);
+  }
+
+  [Fact]
+  public async Task BlockedUserShouldLoseSessionAccess()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Identity Block Flow");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var inviteResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/invites",
+      new CreateInviteRequest(
+        $"blocked.flow@{tenantPayload.Slug}.local",
+        "Blocked Flow User",
+        ["viewer"],
+        null,
+        7));
+    var invitePayload = await inviteResponse.Content.ReadFromJsonAsync<InviteResponse>();
+
+    Assert.NotNull(invitePayload);
+
+    var acceptResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/invites/{invitePayload!.InviteToken}/accept",
+      new AcceptInviteRequest("Blocked Flow User", "Blocked", "Flow", "PhaseTwo123"));
+    var acceptedPayload = await acceptResponse.Content.ReadFromJsonAsync<AcceptInviteResponse>();
+
+    Assert.NotNull(acceptedPayload);
+
+    var loginResponse = await _client.PostAsJsonAsync(
+      "/api/identity/sessions/login",
+      new LoginSessionRequest(
+        tenantPayload.Slug,
+        acceptedPayload!.User.Email,
+        "PhaseTwo123",
+        null));
+    var sessionPayload = await loginResponse.Content.ReadFromJsonAsync<SessionResponse>();
+
+    Assert.NotNull(sessionPayload);
+
+    var blockResponse = await _client.PatchAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{acceptedPayload.User.PublicId}/access",
+      new UpdateUserAccessRequest("suspended"));
+
+    Assert.Equal(HttpStatusCode.OK, blockResponse.StatusCode);
+
+    var loginAfterBlockResponse = await _client.PostAsJsonAsync(
+      "/api/identity/sessions/login",
+      new LoginSessionRequest(
+        tenantPayload.Slug,
+        acceptedPayload.User.Email,
+        "PhaseTwo123",
+        null));
+
+    Assert.Equal(HttpStatusCode.Forbidden, loginAfterBlockResponse.StatusCode);
+
+    var accessRequest = new HttpRequestMessage(HttpMethod.Get, $"/api/identity/tenants/{tenantPayload.Slug}/access");
+    accessRequest.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", sessionPayload!.SessionToken);
+    var accessResponse = await _client.SendAsync(accessRequest);
+
+    Assert.Equal(HttpStatusCode.Unauthorized, accessResponse.StatusCode);
+
+    var auditResponse = await _client.GetAsync($"/api/identity/tenants/{tenantPayload.Slug}/security/audit");
+    var auditPayload = await auditResponse.Content.ReadFromJsonAsync<SecurityAuditEventResponse[]>();
+
+    Assert.NotNull(auditPayload);
+    Assert.Contains(auditPayload!, auditEvent => auditEvent.EventCode == "access_blocked");
+  }
+
+  private static string ComputeTotp(string secret)
+  {
+    var alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    var normalized = secret.Trim().Replace("=", string.Empty, StringComparison.Ordinal).ToUpperInvariant();
+    var buffer = 0;
+    var bitsLeft = 0;
+    var bytes = new List<byte>();
+
+    foreach (var character in normalized)
+    {
+      var index = alphabet.IndexOf(character);
+      if (index < 0)
+      {
+        continue;
+      }
+
+      buffer = (buffer << 5) | index;
+      bitsLeft += 5;
+
+      if (bitsLeft < 8)
+      {
+        continue;
+      }
+
+      bytes.Add((byte)((buffer >> (bitsLeft - 8)) & 0xff));
+      bitsLeft -= 8;
+    }
+
+    var counter = DateTimeOffset.UtcNow.ToUnixTimeSeconds() / 30;
+    Span<byte> counterBytes = stackalloc byte[8];
+    for (var index = 7; index >= 0; index--)
+    {
+      counterBytes[index] = (byte)(counter & 0xff);
+      counter >>= 8;
+    }
+
+    using var hmac = new HMACSHA1(bytes.ToArray());
+    var hash = hmac.ComputeHash(counterBytes.ToArray());
+    var offset = hash[^1] & 0x0f;
+    var binaryCode =
+      ((hash[offset] & 0x7f) << 24)
+      | (hash[offset + 1] << 16)
+      | (hash[offset + 2] << 8)
+      | hash[offset + 3];
+
+    return (binaryCode % 1_000_000).ToString("D6");
   }
 }

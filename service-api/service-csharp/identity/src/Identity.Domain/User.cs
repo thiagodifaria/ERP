@@ -61,4 +61,18 @@ public sealed class User
       familyName,
       Status);
   }
+
+  public User ReviseStatus(string status)
+  {
+    return new User(
+      Id,
+      TenantId,
+      CompanyId,
+      PublicId,
+      Email,
+      DisplayName,
+      GivenName,
+      FamilyName,
+      status);
+  }
 }

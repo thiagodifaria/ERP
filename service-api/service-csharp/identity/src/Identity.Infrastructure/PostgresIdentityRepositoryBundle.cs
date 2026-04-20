@@ -399,8 +399,8 @@ public sealed class PostgresIdentityRepositoryBundle :
         PublicIds.NewUuidV7(),
         ownerEmail,
         $"{tenant.DisplayName} Owner",
-        null,
-        null,
+        tenant.DisplayName,
+        "Owner",
         "active"));
     }
 

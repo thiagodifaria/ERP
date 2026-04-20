@@ -2,6 +2,7 @@
 // Dependencias externas nao devem vazar para dominio ou aplicacao.
 using Identity.Domain;
 using Microsoft.Extensions.DependencyInjection;
+using Identity.Application;
 
 namespace Identity.Infrastructure;
 
@@ -14,6 +15,7 @@ public static class DependencyInjection
     if (options.RepositoryDriver.Equals("postgres", StringComparison.OrdinalIgnoreCase))
     {
       services.AddSingleton(new PostgresIdentityRepositoryBundle(options.PostgresConnectionString));
+      services.AddSingleton(new PostgresIdentitySecurityStore(options.PostgresConnectionString));
       services.AddSingleton<ITenantCatalog>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
       services.AddSingleton<ITenantRepository>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
       services.AddSingleton<ICompanyCatalog>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
@@ -28,6 +30,9 @@ public static class DependencyInjection
       services.AddSingleton<IRoleRepository>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
       services.AddSingleton<IUserRoleCatalog>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
       services.AddSingleton<IUserRoleRepository>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentityRepositoryBundle>());
+      services.AddSingleton<IIdentitySecurityStore>(serviceProvider => serviceProvider.GetRequiredService<PostgresIdentitySecurityStore>());
+
+      RegisterExternalDrivers(services, options);
 
       return services;
     }
@@ -53,7 +58,34 @@ public static class DependencyInjection
     services.AddSingleton<IRoleRepository>(serviceProvider => serviceProvider.GetRequiredService<InMemoryRoleRepository>());
     services.AddSingleton<IUserRoleCatalog>(serviceProvider => serviceProvider.GetRequiredService<InMemoryUserRoleRepository>());
     services.AddSingleton<IUserRoleRepository>(serviceProvider => serviceProvider.GetRequiredService<InMemoryUserRoleRepository>());
+    services.AddSingleton<IIdentitySecurityStore, InMemoryIdentitySecurityStore>();
+    RegisterExternalDrivers(services, options);
 
     return services;
+  }
+
+  private static void RegisterExternalDrivers(IServiceCollection services, IdentityInfrastructureOptions options)
+  {
+    services.AddSingleton(options);
+    services.AddSingleton<IIdentityAccessSettings>(options);
+    services.AddSingleton<ITotpService, TotpService>();
+
+    if (options.IdentityProviderDriver.Equals("keycloak", StringComparison.OrdinalIgnoreCase))
+    {
+      services.AddSingleton<IExternalIdentityProvider, KeycloakIdentityProvider>();
+    }
+    else
+    {
+      services.AddSingleton<IExternalIdentityProvider, InMemoryExternalIdentityProvider>();
+    }
+
+    if (options.AuthorizationDriver.Equals("openfga", StringComparison.OrdinalIgnoreCase))
+    {
+      services.AddSingleton<IAuthorizationGraph, OpenFgaAuthorizationGraph>();
+    }
+    else
+    {
+      services.AddSingleton<IAuthorizationGraph, InMemoryAuthorizationGraph>();
+    }
   }
 }

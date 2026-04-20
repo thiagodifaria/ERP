@@ -356,4 +356,126 @@ public sealed class IdentityContractsTests : IClassFixture<WebApplicationFactory
     Assert.False(string.IsNullOrWhiteSpace(payload!.Code));
     Assert.False(string.IsNullOrWhiteSpace(payload.Message));
   }
+
+  [Fact]
+  public async Task InviteContractShouldExposeAssignmentsAndToken()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Contract Invite Flow");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var response = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/invites",
+      new CreateInviteRequest(
+        $"contract.invite@{tenantPayload.Slug}.local",
+        "Contract Invite User",
+        ["viewer"],
+        null,
+        7));
+
+    Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<InviteResponse>();
+
+    Assert.NotNull(payload);
+    Assert.NotEqual(Guid.Empty, payload!.PublicId);
+    Assert.NotEqual(Guid.Empty, payload.UserPublicId);
+    Assert.False(string.IsNullOrWhiteSpace(payload.Email));
+    Assert.False(string.IsNullOrWhiteSpace(payload.InviteToken));
+    Assert.Contains("viewer", payload.RoleCodes);
+    Assert.Equal("pending", payload.Status);
+  }
+
+  [Fact]
+  public async Task SessionLoginContractShouldExposeOpaqueTokensAndRoles()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Contract Session Flow");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var inviteResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/invites",
+      new CreateInviteRequest(
+        $"contract.session@{tenantPayload.Slug}.local",
+        "Contract Session User",
+        ["viewer"],
+        null,
+        7));
+    var invitePayload = await inviteResponse.Content.ReadFromJsonAsync<InviteResponse>();
+
+    Assert.NotNull(invitePayload);
+
+    await _client.PostAsJsonAsync(
+      $"/api/identity/invites/{invitePayload!.InviteToken}/accept",
+      new AcceptInviteRequest("Contract Session User", "Contract", "Session", "PhaseTwo123"));
+
+    var response = await _client.PostAsJsonAsync(
+      "/api/identity/sessions/login",
+      new LoginSessionRequest(
+        tenantPayload.Slug,
+        $"contract.session@{tenantPayload.Slug}.local",
+        "PhaseTwo123",
+        null));
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<SessionResponse>();
+
+    Assert.NotNull(payload);
+    Assert.NotEqual(Guid.Empty, payload!.PublicId);
+    Assert.NotEqual(Guid.Empty, payload.UserPublicId);
+    Assert.False(string.IsNullOrWhiteSpace(payload.SessionToken));
+    Assert.False(string.IsNullOrWhiteSpace(payload.RefreshToken));
+    Assert.True(payload.ExpiresAt > DateTimeOffset.UtcNow);
+    Assert.True(payload.RefreshExpiresAt > payload.ExpiresAt);
+    Assert.Contains("viewer", payload.RoleCodes);
+  }
+
+  [Fact]
+  public async Task SecurityAuditContractShouldExposePublicFields()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Contract Audit Flow");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/invites",
+      new CreateInviteRequest(
+        $"contract.audit@{tenantPayload.Slug}.local",
+        "Contract Audit User",
+        ["viewer"],
+        null,
+        7));
+
+    var response = await _client.GetAsync($"/api/identity/tenants/{tenantPayload.Slug}/security/audit");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<SecurityAuditEventResponse[]>();
+
+    Assert.NotNull(payload);
+    Assert.NotEmpty(payload);
+    Assert.All(payload, auditEvent =>
+    {
+      Assert.NotEqual(Guid.Empty, auditEvent.PublicId);
+      Assert.False(string.IsNullOrWhiteSpace(auditEvent.EventCode));
+      Assert.False(string.IsNullOrWhiteSpace(auditEvent.Severity));
+      Assert.False(string.IsNullOrWhiteSpace(auditEvent.Summary));
+    });
+  }
 }

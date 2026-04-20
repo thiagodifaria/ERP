@@ -8,14 +8,27 @@ public static class DependencyInjection
 {
   public static IServiceCollection AddIdentityApplication(this IServiceCollection services)
   {
+    services.AddScoped<SecurityAuditWriter>();
+    services.AddScoped<TenantAccessCoordinator>();
     services.AddScoped<AddBootstrapTeamMember>();
     services.AddScoped<AssignBootstrapUserRole>();
+    services.AddScoped<AcceptIdentityInvite>();
+    services.AddScoped<CreateIdentityInvite>();
     services.AddScoped<CreateBootstrapCompany>();
     services.AddScoped<CreateBootstrapTenant>();
     services.AddScoped<CreateBootstrapTeam>();
     services.AddScoped<CreateBootstrapUser>();
+    services.AddScoped<DisableIdentityUserMfa>();
+    services.AddScoped<ListIdentityInvites>();
+    services.AddScoped<ListIdentitySecurityAuditEvents>();
+    services.AddScoped<LoginIdentitySession>();
+    services.AddScoped<RefreshIdentitySession>();
     services.AddScoped<RemoveBootstrapTeamMember>();
+    services.AddScoped<ResolveTenantAccess>();
     services.AddScoped<RevokeBootstrapUserRole>();
+    services.AddScoped<StartIdentityUserMfaEnrollment>();
+    services.AddScoped<UpdateIdentityUserAccess>();
+    services.AddScoped<VerifyIdentityUserMfa>();
     services.AddScoped<GetBootstrapCompanyByPublicId>();
     services.AddScoped<GetBootstrapUserByPublicId>();
     services.AddScoped<UpdateBootstrapTeam>();
