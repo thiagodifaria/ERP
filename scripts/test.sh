@@ -469,7 +469,7 @@ wait_for_http_ready() {
   until curl -fsS "$url" >/dev/null 2>&1; do
     attempts=$((attempts + 1))
 
-    if [[ "$attempts" -ge 30 ]]; then
+    if [[ "$attempts" -ge 60 ]]; then
       echo "[test] http endpoint did not become ready: $url"
       exit 1
     fi
@@ -900,6 +900,7 @@ run_workflow_control_runtime_smoke() {
   local profile_response
   local detail_response
   local status_response
+  local bootstrap_detail_response
   local health_details_response
   local trigger_catalog_response
   local action_catalog_response
@@ -925,15 +926,17 @@ run_workflow_control_runtime_smoke() {
   fi
 
   list_response="$(curl -fsS "$base_url/api/workflow-control/definitions")"
+  bootstrap_detail_response="$(curl -fsS "$base_url/api/workflow-control/definitions/lead-follow-up")"
   runs_response="$(curl -fsS "$base_url/api/workflow-control/runs")"
   run_events_response="$(curl -fsS "$base_url/api/workflow-control/runs/00000000-0000-0000-0000-000000000301/events")"
   runs_summary_response="$(curl -fsS "$base_url/api/workflow-control/runs/summary")"
   echo "[test] workflow-control list => $list_response"
+  echo "[test] workflow-control bootstrap detail => $bootstrap_detail_response"
   echo "[test] workflow-control runs => $runs_response"
   echo "[test] workflow-control run events => $run_events_response"
   echo "[test] workflow-control runs summary => $runs_summary_response"
 
-  if [[ "$list_response" != *'"key":"lead-follow-up"'* || "$list_response" != *'"status":"active"'* ]]; then
+  if [[ "$list_response" != *'"key":"lead-follow-up"'* || "$list_response" != *'"status":"active"'* || "$bootstrap_detail_response" != *'"actionKey":"delay.wait"'* || "$bootstrap_detail_response" != *'"stepId":"cooldown"'* ]]; then
     echo "[test] workflow-control bootstrap catalog was not returned by the live API"
     exit 1
   fi
@@ -948,7 +951,7 @@ run_workflow_control_runtime_smoke() {
   echo "[test] workflow-control versions => $versions_response"
   echo "[test] workflow-control current version => $current_version_response"
 
-  if [[ "$versions_response" != *'"versionNumber":1'* || "$current_version_response" != *'"versionNumber":1'* ]]; then
+  if [[ "$versions_response" != *'"versionNumber":1'* || "$versions_response" != *'"snapshotActions"'* || "$current_version_response" != *'"versionNumber":1'* || "$current_version_response" != *'"snapshotActions"'* ]]; then
     echo "[test] workflow-control bootstrap version history was not returned by the live API"
     exit 1
   fi
@@ -956,11 +959,11 @@ run_workflow_control_runtime_smoke() {
   create_response="$(curl -fsS \
     -X POST \
     -H "Content-Type: application/json" \
-    -d '{"key":"runtime-flow","name":"Runtime Flow","description":"Fluxo criado no smoke HTTP do workflow-control.","trigger":"lead.created"}' \
+    -d '{"key":"runtime-flow","name":"Runtime Flow","description":"Fluxo criado no smoke HTTP do workflow-control.","trigger":"lead.created","actions":[{"stepId":"create-task","actionKey":"task.create","label":"Criar tarefa inicial","compensationActionKey":"task.create"},{"stepId":"cooldown","actionKey":"delay.wait","label":"Aguardar resposta inicial","delaySeconds":2},{"stepId":"notify-webhook","actionKey":"integration.webhook","label":"Emitir webhook operacional","compensationActionKey":"integration.webhook"}]}' \
     "$base_url/api/workflow-control/definitions")"
   echo "[test] workflow-control create => $create_response"
 
-  if [[ "$create_response" != *"\"key\":\"$created_key\""* || "$create_response" != *'"status":"draft"'* ]]; then
+  if [[ "$create_response" != *"\"key\":\"$created_key\""* || "$create_response" != *'"status":"draft"'* || "$create_response" != *'"actionKey":"delay.wait"'* ]]; then
     echo "[test] workflow-control create did not return the expected resource"
     exit 1
   fi
@@ -1103,7 +1106,7 @@ run_workflow_control_runtime_smoke() {
     "$base_url/api/workflow-control/definitions/$created_key/versions")"
   echo "[test] workflow-control publish => $publish_response"
 
-  if [[ "$publish_response" != *'"versionNumber":1'* || "$publish_response" != *'"snapshotName":"Runtime Flow"'* ]]; then
+  if [[ "$publish_response" != *'"versionNumber":1'* || "$publish_response" != *'"snapshotName":"Runtime Flow"'* || "$publish_response" != *'"snapshotActions"'* || "$publish_response" != *'"actionKey":"delay.wait"'* ]]; then
     echo "[test] workflow-control version publish did not persist"
     exit 1
   fi
@@ -1111,11 +1114,11 @@ run_workflow_control_runtime_smoke() {
   profile_response="$(curl -fsS \
     -X PATCH \
     -H "Content-Type: application/json" \
-    -d '{"name":"Runtime Flow Prime","description":"Fluxo atualizado no smoke do workflow-control.","trigger":"lead.qualified"}' \
+    -d '{"name":"Runtime Flow Prime","description":"Fluxo atualizado no smoke do workflow-control.","trigger":"lead.qualified","actions":[{"stepId":"notify-webhook","actionKey":"integration.webhook","label":"Emitir webhook refinado","compensationActionKey":"integration.webhook"}]}' \
     "$base_url/api/workflow-control/definitions/$created_key")"
   echo "[test] workflow-control profile => $profile_response"
 
-  if [[ "$profile_response" != *"\"key\":\"$created_key\""* || "$profile_response" != *'"name":"Runtime Flow Prime"'* || "$profile_response" != *'"trigger":"lead.qualified"'* ]]; then
+  if [[ "$profile_response" != *"\"key\":\"$created_key\""* || "$profile_response" != *'"name":"Runtime Flow Prime"'* || "$profile_response" != *'"trigger":"lead.qualified"'* || "$profile_response" != *'"actionKey":"integration.webhook"'* ]]; then
     echo "[test] workflow-control metadata update did not persist"
     exit 1
   fi
@@ -1123,7 +1126,7 @@ run_workflow_control_runtime_smoke() {
   detail_response="$(curl -fsS "$base_url/api/workflow-control/definitions/$created_key")"
   echo "[test] workflow-control detail => $detail_response"
 
-  if [[ "$detail_response" != *"\"key\":\"$created_key\""* || "$detail_response" != *'"name":"Runtime Flow Prime"'* || "$detail_response" != *'"trigger":"lead.qualified"'* ]]; then
+  if [[ "$detail_response" != *"\"key\":\"$created_key\""* || "$detail_response" != *'"name":"Runtime Flow Prime"'* || "$detail_response" != *'"trigger":"lead.qualified"'* || "$detail_response" != *'"actionKey":"integration.webhook"'* ]]; then
     echo "[test] workflow-control detail did not return the created resource"
     exit 1
   fi
@@ -1149,7 +1152,7 @@ run_workflow_control_runtime_smoke() {
   echo "[test] workflow-control current version runtime-flow => $current_version_response"
   echo "[test] workflow-control version detail runtime-flow => $version_detail_response"
 
-  if [[ "$publish_response_v2" != *'"versionNumber":2'* || "$current_version_response" != *'"versionNumber":2'* || "$version_detail_response" != *'"versionNumber":1'* || "$version_detail_response" != *'"snapshotTrigger":"lead.created"'* ]]; then
+  if [[ "$publish_response_v2" != *'"versionNumber":2'* || "$current_version_response" != *'"versionNumber":2'* || "$current_version_response" != *'"actionKey":"integration.webhook"'* || "$version_detail_response" != *'"versionNumber":1'* || "$version_detail_response" != *'"snapshotTrigger":"lead.created"'* || "$version_detail_response" != *'"actionKey":"delay.wait"'* ]]; then
     echo "[test] workflow-control version history did not reflect live publish operations"
     exit 1
   fi
@@ -1159,7 +1162,7 @@ run_workflow_control_runtime_smoke() {
     "$base_url/api/workflow-control/definitions/$created_key/versions/1/restore")"
   echo "[test] workflow-control restore => $restore_response"
 
-  if [[ "$restore_response" != *'"name":"Runtime Flow"'* || "$restore_response" != *'"status":"draft"'* || "$restore_response" != *'"trigger":"lead.created"'* ]]; then
+  if [[ "$restore_response" != *'"name":"Runtime Flow"'* || "$restore_response" != *'"status":"draft"'* || "$restore_response" != *'"trigger":"lead.created"'* || "$restore_response" != *'"actionKey":"delay.wait"'* ]]; then
     echo "[test] workflow-control restore did not bring the definition back to the published snapshot"
     exit 1
   fi
@@ -1174,8 +1177,13 @@ run_workflow_runtime_smoke() {
   local create_response
   local created_public_id
   local start_response
+  local advance_task_response
+  local waiting_response
+  local waiting_conflict_response
+  local release_response
   local complete_response
   local transitions_response
+  local actions_response
   local filtered_response
   local filtered_summary_response
   local cancel_create_response
@@ -1186,8 +1194,12 @@ run_workflow_runtime_smoke() {
   local fail_response
   local retry_response
   local retry_start_response
+  local retry_advance_response
+  local retry_waiting_response
+  local retry_release_response
   local retry_complete_response
   local retry_transitions_response
+  local retry_actions_response
   local grouped_summary_response
   local db_summary
 
@@ -1216,8 +1228,14 @@ run_workflow_runtime_smoke() {
   created_public_id="$(echo "$create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
 
   start_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/start")"
-  complete_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/complete")"
+  advance_task_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/advance")"
+  waiting_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/advance")"
+  waiting_conflict_response="$(curl -sS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/advance" -w ' HTTP_STATUS:%{http_code}')"
+  sleep 2
+  release_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/advance")"
+  complete_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/advance")"
   transitions_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/$created_public_id/transitions")"
+  actions_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/$created_public_id/actions")"
   filtered_response="$(curl -fsS "$base_url/api/workflow-runtime/executions?tenantSlug=bootstrap-ops&status=completed")"
   filtered_summary_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/summary?tenantSlug=bootstrap-ops&workflowDefinitionKey=lead-follow-up")"
 
@@ -1235,11 +1253,18 @@ run_workflow_runtime_smoke() {
     -d '{"workflowDefinitionKey":"lead-follow-up","subjectType":"sales.quote","subjectPublicId":"00000000-0000-0000-0000-000000008853","initiatedBy":"runtime-fail"}' \
     "$base_url/api/workflow-runtime/executions")"
   fail_public_id="$(echo "$fail_create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/start" >/dev/null
+  curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/advance" >/dev/null
   fail_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/fail")"
   retry_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/retry")"
   retry_start_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/start")"
-  retry_complete_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/complete")"
+  retry_advance_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/advance")"
+  retry_waiting_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/advance")"
+  sleep 2
+  retry_release_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/advance")"
+  retry_complete_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/advance")"
   retry_transitions_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/$fail_public_id/transitions")"
+  retry_actions_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/$fail_public_id/actions")"
   grouped_summary_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/summary/by-workflow?tenantSlug=bootstrap-ops")"
   summary_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/summary")"
   list_response="$(curl -fsS "$base_url/api/workflow-runtime/executions")"
@@ -1251,31 +1276,41 @@ run_workflow_runtime_smoke() {
         count(*) FILTER (WHERE status = 'failed') || '|' ||
         count(*) FILTER (WHERE status = 'cancelled') || '|' ||
         (SELECT count(*) FROM workflow_runtime.execution_transitions) || '|' ||
+        (SELECT count(*) FROM workflow_runtime.execution_actions) || '|' ||
         coalesce(sum(retry_count), 0)
       FROM workflow_runtime.executions;
     ")"
 
   echo "[test] workflow-runtime create => $create_response"
   echo "[test] workflow-runtime start => $start_response"
+  echo "[test] workflow-runtime first advance => $advance_task_response"
+  echo "[test] workflow-runtime waiting advance => $waiting_response"
+  echo "[test] workflow-runtime blocked advance => $waiting_conflict_response"
+  echo "[test] workflow-runtime release advance => $release_response"
   echo "[test] workflow-runtime complete => $complete_response"
   echo "[test] workflow-runtime transitions => $transitions_response"
+  echo "[test] workflow-runtime actions => $actions_response"
   echo "[test] workflow-runtime filtered list => $filtered_response"
   echo "[test] workflow-runtime filtered summary => $filtered_summary_response"
   echo "[test] workflow-runtime cancel => $cancel_response"
   echo "[test] workflow-runtime fail => $fail_response"
   echo "[test] workflow-runtime retry => $retry_response"
   echo "[test] workflow-runtime retry start => $retry_start_response"
+  echo "[test] workflow-runtime retry first advance => $retry_advance_response"
+  echo "[test] workflow-runtime retry waiting advance => $retry_waiting_response"
+  echo "[test] workflow-runtime retry release advance => $retry_release_response"
   echo "[test] workflow-runtime retry complete => $retry_complete_response"
   echo "[test] workflow-runtime retry transitions => $retry_transitions_response"
+  echo "[test] workflow-runtime retry actions => $retry_actions_response"
   echo "[test] workflow-runtime grouped summary => $grouped_summary_response"
   echo "[test] workflow-runtime summary after transitions => $summary_response"
   echo "[test] workflow-runtime list after transitions => $list_response"
   echo "[test] workflow-runtime db summary => $db_summary"
 
-  if [[ -z "$created_public_id" || -z "$cancel_public_id" || -z "$fail_public_id" || "$create_response" != *'"tenantSlug":"bootstrap-ops"'* || "$start_response" != *'"status":"running"'* || "$complete_response" != *'"status":"completed"'* || "$complete_response" != *'"completedAt":"'*
+  if [[ -z "$created_public_id" || -z "$cancel_public_id" || -z "$fail_public_id" || "$create_response" != *'"tenantSlug":"bootstrap-ops"'* || "$create_response" != *'"workflowDefinitionVersionNumber":1'* || "$start_response" != *'"status":"running"'* || "$advance_task_response" != *'"currentActionIndex":1'* || "$waiting_response" != *'"waitingUntil":"'* || "$waiting_conflict_response" != *'"code":"workflow_runtime_execution_waiting"'* || "$waiting_conflict_response" != *'HTTP_STATUS:409'* || "$release_response" != *'"currentActionIndex":2'* || "$release_response" != *'"waitingUntil":null'* || "$complete_response" != *'"status":"completed"'* || "$complete_response" != *'"completedAt":"'*
     || "$transitions_response" != *'"status":"pending"'* || "$transitions_response" != *'"status":"running"'* || "$transitions_response" != *'"status":"completed"'* || "$filtered_response" != *"\"publicId\":\"$created_public_id\""* || "$filtered_response" != *'"tenantSlug":"bootstrap-ops"'* || "$filtered_summary_response" != *'"total":1'* || "$filtered_summary_response" != *'"completed":1'* || "$filtered_summary_response" != *'"failed":0'* || "$cancel_response" != *'"status":"cancelled"'* || "$cancel_response" != *'"tenantSlug":"northwind-group"'* || "$cancel_response" != *'"cancelledAt":"'*
-    || "$fail_response" != *'"status":"failed"'* || "$fail_response" != *'"failedAt":"'* || "$retry_response" != *'"status":"pending"'* || "$retry_response" != *'"retryCount":1'* || "$retry_start_response" != *'"status":"running"'* || "$retry_complete_response" != *'"status":"completed"'* || "$retry_complete_response" != *'"retryCount":1'* || "$retry_transitions_response" != *'"status":"failed"'* || "$retry_transitions_response" != *'"status":"completed"'* || "$grouped_summary_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$grouped_summary_response" != *'"retriesTotal":1'*
-    || "$summary_response" != *'"total":3'* || "$summary_response" != *'"completed":2'* || "$summary_response" != *'"failed":0'* || "$summary_response" != *'"cancelled":1'* || "$list_response" != *"\"publicId\":\"$cancel_public_id\""* || "$list_response" != *"\"publicId\":\"$fail_public_id\""* || "$db_summary" != '3|2|0|1|10|1' ]]; then
+    || "$actions_response" != *'"actionKey":"task.create"'* || "$actions_response" != *'"status":"waiting"'* || "$actions_response" != *'"actionKey":"integration.webhook"'* || "$fail_response" != *'"status":"failed"'* || "$fail_response" != *'"failedAt":"'* || "$retry_response" != *'"status":"pending"'* || "$retry_response" != *'"retryCount":1'* || "$retry_start_response" != *'"status":"running"'* || "$retry_advance_response" != *'"currentActionIndex":1'* || "$retry_waiting_response" != *'"waitingUntil":"'* || "$retry_release_response" != *'"currentActionIndex":2'* || "$retry_complete_response" != *'"status":"completed"'* || "$retry_complete_response" != *'"retryCount":1'* || "$retry_transitions_response" != *'"status":"failed"'* || "$retry_transitions_response" != *'"status":"completed"'* || "$retry_actions_response" != *'"status":"compensated"'* || "$retry_actions_response" != *'"actionKey":"task.create"'* || "$grouped_summary_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$grouped_summary_response" != *'"retriesTotal":1'*
+    || "$summary_response" != *'"total":3'* || "$summary_response" != *'"completed":2'* || "$summary_response" != *'"failed":0'* || "$summary_response" != *'"cancelled":1'* || "$list_response" != *"\"publicId\":\"$cancel_public_id\""* || "$list_response" != *"\"publicId\":\"$fail_public_id\""* || "$db_summary" != '3|2|0|1|11|10|1' ]]; then
     echo "[test] workflow-runtime runtime lifecycle did not persist in postgresql as expected"
     exit 1
   fi
@@ -1403,7 +1438,7 @@ run_analytics_runtime_smoke() {
   echo "[test] analytics delivery reliability => $delivery_reliability_response"
   echo "[test] analytics revenue operations => $revenue_operations_response"
 
-  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"dataSource":"postgresql"'* || "$pipeline_summary_response" != *'"leadsCaptured":2'* || "$pipeline_summary_response" != *'"conversions":2'* || "$pipeline_summary_response" != *'"manual":1'* || "$pipeline_summary_response" != *'"instagram":1'* || "$pipeline_summary_response" != *'"runningAutomations":2'* || "$service_pulse_response" != *'"tenantSlug":"bootstrap-ops"'* || "$service_pulse_response" != *'"dataSource":"postgresql"'* || "$service_pulse_response" != *'"totalLeads":2'* || "$service_pulse_response" != *'"salesTotal":2'* || "$service_pulse_response" != *'"bookedRevenueCents":224000'* || "$service_pulse_response" != *'"activeDefinitions":1'* || "$service_pulse_response" != *'"runsRunning":2'* || "$service_pulse_response" != *'"runsCompleted":2'* || "$service_pulse_response" != *'"runsFailed":1'* || "$service_pulse_response" != *'"runsCancelled":1'* || "$service_pulse_response" != *'"totalExecutions":3'* || "$service_pulse_response" != *'"completed":3'* || "$service_pulse_response" != *'"failed":0'* || "$service_pulse_response" != *'"forwarded":1'* || "$sales_journey_response" != *'"tenantSlug":"bootstrap-ops"'* || "$sales_journey_response" != *'"dataSource":"postgresql"'* || "$sales_journey_response" != *'"leadsCaptured":2'* || "$sales_journey_response" != *'"leadsWithOpportunity":2'* || "$sales_journey_response" != *'"opportunitiesWithProposal":2'* || "$sales_journey_response" != *'"proposalsConverted":2'* || "$sales_journey_response" != *'"salesWon":2'* || "$sales_journey_response" != *'"leadToSaleConversionRate":1.0'* || "$sales_journey_response" != *'"totalAmountCents":224000'* || "$sales_journey_response" != *'"won":2'* || "$sales_journey_response" != *'"accepted":2'* || "$sales_journey_response" != *'"bookedRevenueCents":224000'* || "$sales_journey_response" != *'"active":1'* || "$sales_journey_response" != *'"invoiced":1'* || "$sales_journey_response" != *'"controlRuns":1'* || "$sales_journey_response" != *'"runtimeCompleted":1'* || "$tenant_360_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_360_response" != *'"dataSource":"postgresql"'* || "$tenant_360_response" != *'"companies":1'* || "$tenant_360_response" != *'"users":1'* || "$tenant_360_response" != *'"teams":1'* || "$tenant_360_response" != *'"roles":5'* || "$tenant_360_response" != *'"assignedLeads":2'* || "$tenant_360_response" != *'"leadNotes":2'* || "$tenant_360_response" != *'"opportunities":2'* || "$tenant_360_response" != *'"proposals":2'* || "$tenant_360_response" != *'"sales":2'* || "$tenant_360_response" != *'"bookedRevenueCents":224000'* || "$tenant_360_response" != *'"workflowRuns":6'* || "$tenant_360_response" != *'"workflowRunEvents":10'* || "$tenant_360_response" != *'"runtimeExecutions":3'* || "$tenant_360_response" != *'"runtimeCompleted":3'* || "$tenant_360_response" != *'"runtimeFailed":0'* || "$automation_board_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_board_response" != *'"dataSource":"postgresql"'* || "$automation_board_response" != *'"definitionsTotal":2'* || "$automation_board_response" != *'"definitionsActive":1'* || "$automation_board_response" != *'"definitionsDraft":1'* || "$automation_board_response" != *'"publishedVersions":3'* || "$automation_board_response" != *'"runsTotal":6'* || "$automation_board_response" != *'"runningRuns":2'* || "$automation_board_response" != *'"recordedEvents":10'* || "$automation_board_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$automation_board_response" != *'"executionsTotal":3'* || "$automation_board_response" != *'"completedExecutions":3'* || "$automation_board_response" != *'"failedExecutions":0'* || "$automation_board_response" != *'"retriesTotal":1'* || "$automation_board_response" != *'"recordedTransitions":11'* || "$automation_board_response" != *'"forwarded":1'* || "$workflow_definition_health_response" != *'"tenantSlug":"bootstrap-ops"'* || "$workflow_definition_health_response" != *'"dataSource":"postgresql"'* || "$workflow_definition_health_response" != *'"definitionsTotal":2'* || "$workflow_definition_health_response" != *'"stable":1'* || "$workflow_definition_health_response" != *'"attention":1'* || "$workflow_definition_health_response" != *'"critical":0'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$workflow_definition_health_response" != *'"health":"stable"'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"runtime-flow"'* || "$workflow_definition_health_response" != *'"health":"attention"'* || "$workflow_definition_health_response" != *'"definition-not-active"'* || "$delivery_reliability_response" != *'"provider":"stripe"'* || "$delivery_reliability_response" != *'"dataSource":"postgresql"'* || "$delivery_reliability_response" != *'"totalEvents":1'* || "$delivery_reliability_response" != *'"handledEvents":1'* || "$delivery_reliability_response" != *'"avgTransitionsPerEvent":5.0'* || "$delivery_reliability_response" != *'"received":1'* || "$delivery_reliability_response" != *'"validated":1'* || "$delivery_reliability_response" != *'"queued":1'* || "$delivery_reliability_response" != *'"processing":1'* || "$delivery_reliability_response" != *'"forwarded":1'* || "$revenue_operations_response" != *'"tenantSlug":"bootstrap-ops"'* || "$revenue_operations_response" != *'"dataSource":"postgresql"'* || "$revenue_operations_response" != *'"bookedRevenueCents":224000'* || "$revenue_operations_response" != *'"total":2'* || "$revenue_operations_response" != *'"openAmountCents":125000'* || "$revenue_operations_response" != *'"paidAmountCents":99000'* || "$revenue_operations_response" != *'"overdueAmountCents":0'* || "$revenue_operations_response" != *'"overdueCount":0'* || "$revenue_operations_response" != *'"invoiceCoverageRate":1.0'* || "$revenue_operations_response" != *'"collectionRate":0.442'* || "$revenue_operations_response" != *'"averageTicketCents":112000'* || "$revenue_operations_response" != *'"invoicesDueSoon":0'* ]]; then
+  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"dataSource":"postgresql"'* || "$pipeline_summary_response" != *'"leadsCaptured":2'* || "$pipeline_summary_response" != *'"conversions":2'* || "$pipeline_summary_response" != *'"manual":1'* || "$pipeline_summary_response" != *'"instagram":1'* || "$pipeline_summary_response" != *'"runningAutomations":2'* || "$service_pulse_response" != *'"tenantSlug":"bootstrap-ops"'* || "$service_pulse_response" != *'"dataSource":"postgresql"'* || "$service_pulse_response" != *'"totalLeads":2'* || "$service_pulse_response" != *'"salesTotal":2'* || "$service_pulse_response" != *'"bookedRevenueCents":224000'* || "$service_pulse_response" != *'"activeDefinitions":1'* || "$service_pulse_response" != *'"runsRunning":2'* || "$service_pulse_response" != *'"runsCompleted":2'* || "$service_pulse_response" != *'"runsFailed":1'* || "$service_pulse_response" != *'"runsCancelled":1'* || "$service_pulse_response" != *'"totalExecutions":3'* || "$service_pulse_response" != *'"completed":3'* || "$service_pulse_response" != *'"failed":0'* || "$service_pulse_response" != *'"forwarded":1'* || "$sales_journey_response" != *'"tenantSlug":"bootstrap-ops"'* || "$sales_journey_response" != *'"dataSource":"postgresql"'* || "$sales_journey_response" != *'"leadsCaptured":2'* || "$sales_journey_response" != *'"leadsWithOpportunity":2'* || "$sales_journey_response" != *'"opportunitiesWithProposal":2'* || "$sales_journey_response" != *'"proposalsConverted":2'* || "$sales_journey_response" != *'"salesWon":2'* || "$sales_journey_response" != *'"leadToSaleConversionRate":1.0'* || "$sales_journey_response" != *'"totalAmountCents":224000'* || "$sales_journey_response" != *'"won":2'* || "$sales_journey_response" != *'"accepted":2'* || "$sales_journey_response" != *'"bookedRevenueCents":224000'* || "$sales_journey_response" != *'"active":1'* || "$sales_journey_response" != *'"invoiced":1'* || "$sales_journey_response" != *'"controlRuns":1'* || "$sales_journey_response" != *'"runtimeCompleted":1'* || "$tenant_360_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_360_response" != *'"dataSource":"postgresql"'* || "$tenant_360_response" != *'"companies":1'* || "$tenant_360_response" != *'"users":1'* || "$tenant_360_response" != *'"teams":1'* || "$tenant_360_response" != *'"roles":5'* || "$tenant_360_response" != *'"assignedLeads":2'* || "$tenant_360_response" != *'"leadNotes":2'* || "$tenant_360_response" != *'"opportunities":2'* || "$tenant_360_response" != *'"proposals":2'* || "$tenant_360_response" != *'"sales":2'* || "$tenant_360_response" != *'"bookedRevenueCents":224000'* || "$tenant_360_response" != *'"workflowRuns":6'* || "$tenant_360_response" != *'"workflowRunEvents":10'* || "$tenant_360_response" != *'"runtimeExecutions":3'* || "$tenant_360_response" != *'"runtimeCompleted":3'* || "$tenant_360_response" != *'"runtimeFailed":0'* || "$automation_board_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_board_response" != *'"dataSource":"postgresql"'* || "$automation_board_response" != *'"definitionsTotal":2'* || "$automation_board_response" != *'"definitionsActive":1'* || "$automation_board_response" != *'"definitionsDraft":1'* || "$automation_board_response" != *'"publishedVersions":3'* || "$automation_board_response" != *'"runsTotal":6'* || "$automation_board_response" != *'"runningRuns":2'* || "$automation_board_response" != *'"recordedEvents":10'* || "$automation_board_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$automation_board_response" != *'"executionsTotal":3'* || "$automation_board_response" != *'"completedExecutions":3'* || "$automation_board_response" != *'"failedExecutions":0'* || "$automation_board_response" != *'"retriesTotal":1'* || "$automation_board_response" != *'"recordedTransitions":12'* || "$automation_board_response" != *'"forwarded":1'* || "$workflow_definition_health_response" != *'"tenantSlug":"bootstrap-ops"'* || "$workflow_definition_health_response" != *'"dataSource":"postgresql"'* || "$workflow_definition_health_response" != *'"definitionsTotal":2'* || "$workflow_definition_health_response" != *'"stable":1'* || "$workflow_definition_health_response" != *'"attention":1'* || "$workflow_definition_health_response" != *'"critical":0'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$workflow_definition_health_response" != *'"health":"stable"'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"runtime-flow"'* || "$workflow_definition_health_response" != *'"health":"attention"'* || "$workflow_definition_health_response" != *'"definition-not-active"'* || "$delivery_reliability_response" != *'"provider":"stripe"'* || "$delivery_reliability_response" != *'"dataSource":"postgresql"'* || "$delivery_reliability_response" != *'"totalEvents":1'* || "$delivery_reliability_response" != *'"handledEvents":1'* || "$delivery_reliability_response" != *'"avgTransitionsPerEvent":5.0'* || "$delivery_reliability_response" != *'"received":1'* || "$delivery_reliability_response" != *'"validated":1'* || "$delivery_reliability_response" != *'"queued":1'* || "$delivery_reliability_response" != *'"processing":1'* || "$delivery_reliability_response" != *'"forwarded":1'* || "$revenue_operations_response" != *'"tenantSlug":"bootstrap-ops"'* || "$revenue_operations_response" != *'"dataSource":"postgresql"'* || "$revenue_operations_response" != *'"bookedRevenueCents":224000'* || "$revenue_operations_response" != *'"total":2'* || "$revenue_operations_response" != *'"openAmountCents":125000'* || "$revenue_operations_response" != *'"paidAmountCents":99000'* || "$revenue_operations_response" != *'"overdueAmountCents":0'* || "$revenue_operations_response" != *'"overdueCount":0'* || "$revenue_operations_response" != *'"invoiceCoverageRate":1.0'* || "$revenue_operations_response" != *'"collectionRate":0.442'* || "$revenue_operations_response" != *'"averageTicketCents":112000'* || "$revenue_operations_response" != *'"invoicesDueSoon":0'* ]]; then
     echo "[test] analytics runtime bootstrap report did not return the expected payload"
     exit 1
   fi
@@ -1435,8 +1470,14 @@ run_identity_runtime_smoke() {
   local roles_response
   local snapshot_response
   local create_invite_response
+  local invite_public_id
   local invites_response
   local invite_token
+  local resent_invite_response
+  local resent_invite_token
+  local create_cancel_invite_response
+  local cancel_invite_public_id
+  local cancel_invite_response
   local accept_invite_response
   local invited_user_public_id
   local mfa_enroll_response
@@ -1454,6 +1495,8 @@ run_identity_runtime_smoke() {
   local password_recovery_token
   local password_reset_response
   local recovered_login_response
+  local recovered_logout_response
+  local second_recovered_login_response
   local recovered_session_public_id
   local recovered_session_token
   local revoke_session_response
@@ -1697,9 +1740,23 @@ run_identity_runtime_smoke() {
     "$base_url/api/identity/tenants/$tenant_slug/invites")"
   echo "[test] identity api create invite => $create_invite_response"
 
+  invite_public_id="$(echo "$create_invite_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
   invite_token="$(echo "$create_invite_response" | sed -n 's/.*"inviteToken":"\([^"]*\)".*/\1/p')"
-  if [[ -z "$invite_token" || "$create_invite_response" != *'"status":"pending"'* || "$create_invite_response" != *'"roleCodes":["viewer"]'* ]]; then
+  if [[ -z "$invite_public_id" || -z "$invite_token" || "$create_invite_response" != *'"status":"pending"'* || "$create_invite_response" != *'"roleCodes":["viewer"]'* ]]; then
     echo "[test] runtime identity invite create did not persist"
+    exit 1
+  fi
+
+  resent_invite_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"expiresInDays":14}' \
+    "$base_url/api/identity/tenants/$tenant_slug/invites/$invite_public_id/resend")"
+  echo "[test] identity api resend invite => $resent_invite_response"
+
+  resent_invite_token="$(echo "$resent_invite_response" | sed -n 's/.*"inviteToken":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$resent_invite_token" || "$resent_invite_token" == "$invite_token" || "$resent_invite_response" != *'"status":"pending"'* ]]; then
+    echo "[test] runtime identity invite resend did not rotate the invite token"
     exit 1
   fi
 
@@ -1711,11 +1768,34 @@ run_identity_runtime_smoke() {
     exit 1
   fi
 
+  create_cancel_invite_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"email\":\"invite.cancel@$tenant_slug.local\",\"displayName\":\"Invite Cancel User\",\"roleCodes\":[\"viewer\"],\"expiresInDays\":7}" \
+    "$base_url/api/identity/tenants/$tenant_slug/invites")"
+  echo "[test] identity api create cancel invite => $create_cancel_invite_response"
+
+  cancel_invite_public_id="$(echo "$create_cancel_invite_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$cancel_invite_public_id" ]]; then
+    echo "[test] runtime identity cancel invite public id was not returned"
+    exit 1
+  fi
+
+  cancel_invite_response="$(curl -fsS \
+    -X POST \
+    "$base_url/api/identity/tenants/$tenant_slug/invites/$cancel_invite_public_id/cancel")"
+  echo "[test] identity api cancel invite => $cancel_invite_response"
+
+  if [[ "$cancel_invite_response" != *'"status":"revoked"'* ]]; then
+    echo "[test] runtime identity invite cancel did not revoke the pending invite"
+    exit 1
+  fi
+
   accept_invite_response="$(curl -fsS \
     -X POST \
     -H "Content-Type: application/json" \
     -d '{"displayName":"Invite Flow User","givenName":"Invite","familyName":"Flow","password":"PhaseTwo123"}' \
-    "$base_url/api/identity/invites/$invite_token/accept")"
+    "$base_url/api/identity/invites/$resent_invite_token/accept")"
   echo "[test] identity api accept invite => $accept_invite_response"
 
   invited_user_public_id="$(echo "$accept_invite_response" | grep -o '"publicId":"[^"]*"' | tail -n 1 | cut -d'"' -f4)"
@@ -1874,13 +1954,14 @@ run_identity_runtime_smoke() {
     exit 1
   fi
 
-  revoke_session_response="$(curl -fsS \
-    -X DELETE \
-    "$base_url/api/identity/tenants/$tenant_slug/sessions/$recovered_session_public_id")"
-  echo "[test] identity api revoke session => $revoke_session_response"
+  recovered_logout_response="$(curl -fsS \
+    -X POST \
+    -H "Authorization: Bearer $recovered_session_token" \
+    "$base_url/api/identity/sessions/logout")"
+  echo "[test] identity api logout session => $recovered_logout_response"
 
-  if [[ "$revoke_session_response" != *"\"publicId\":\"$recovered_session_public_id\""* || "$revoke_session_response" != *'"status":"revoked"'* ]]; then
-    echo "[test] runtime identity session revoke did not persist"
+  if [[ "$recovered_logout_response" != *"\"publicId\":\"$recovered_session_public_id\""* || "$recovered_logout_response" != *'"status":"revoked"'* ]]; then
+    echo "[test] runtime identity logout did not revoke the live session"
     exit 1
   fi
 
@@ -1891,7 +1972,31 @@ run_identity_runtime_smoke() {
   echo "[test] identity api access after session revoke => $access_response"
 
   if [[ "$access_response" != *'"code":"invalid_session"'* || "$access_response" != *'HTTP_STATUS:401'* ]]; then
-    echo "[test] runtime identity revoked session should no longer resolve tenant access"
+    echo "[test] runtime identity logout should no longer resolve tenant access"
+    exit 1
+  fi
+
+  second_recovered_login_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"$tenant_slug\",\"email\":\"invite.flow@$tenant_slug.local\",\"password\":\"PhaseThree123\",\"otpCode\":\"$(compute_totp "$mfa_secret")\"}" \
+    "$base_url/api/identity/sessions/login")"
+  echo "[test] identity api second login with recovered password => $second_recovered_login_response"
+
+  recovered_session_public_id="$(echo "$second_recovered_login_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  recovered_session_token="$(echo "$second_recovered_login_response" | sed -n 's/.*"sessionToken":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$recovered_session_public_id" || -z "$recovered_session_token" ]]; then
+    echo "[test] runtime identity second recovered login did not create a usable session"
+    exit 1
+  fi
+
+  revoke_session_response="$(curl -fsS \
+    -X DELETE \
+    "$base_url/api/identity/tenants/$tenant_slug/sessions/$recovered_session_public_id")"
+  echo "[test] identity api revoke session => $revoke_session_response"
+
+  if [[ "$revoke_session_response" != *"\"publicId\":\"$recovered_session_public_id\""* || "$revoke_session_response" != *'"status":"revoked"'* ]]; then
+    echo "[test] runtime identity session revoke did not persist"
     exit 1
   fi
 
@@ -1934,7 +2039,7 @@ run_identity_runtime_smoke() {
   audit_response="$(curl -fsS "$base_url/api/identity/tenants/$tenant_slug/security/audit")"
   echo "[test] identity api security audit => $audit_response"
 
-  if [[ "$audit_response" != *'"eventCode":"invite_created"'* || "$audit_response" != *'"eventCode":"invite_accepted"'* || "$audit_response" != *'"eventCode":"mfa_enabled"'* || "$audit_response" != *'"eventCode":"password_reset_requested"'* || "$audit_response" != *'"eventCode":"password_reset_completed"'* || "$audit_response" != *'"eventCode":"session_revoked"'* || "$audit_response" != *'"eventCode":"access_blocked"'* ]]; then
+  if [[ "$audit_response" != *'"eventCode":"invite_created"'* || "$audit_response" != *'"eventCode":"invite_resent"'* || "$audit_response" != *'"eventCode":"invite_revoked"'* || "$audit_response" != *'"eventCode":"invite_accepted"'* || "$audit_response" != *'"eventCode":"mfa_enabled"'* || "$audit_response" != *'"eventCode":"password_reset_requested"'* || "$audit_response" != *'"eventCode":"password_reset_completed"'* || "$audit_response" != *'"eventCode":"logout_succeeded"'* || "$audit_response" != *'"eventCode":"session_revoked"'* || "$audit_response" != *'"eventCode":"access_blocked"'* ]]; then
     echo "[test] runtime identity security audit did not capture the expected events"
     exit 1
   fi

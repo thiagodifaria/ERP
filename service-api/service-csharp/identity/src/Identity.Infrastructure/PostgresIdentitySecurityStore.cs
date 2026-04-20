@@ -161,7 +161,8 @@ public sealed class PostgresIdentitySecurityStore : IIdentitySecurityStore
   {
     const string sql = """
       UPDATE identity.invites
-      SET display_name = @display_name,
+      SET invite_token = @invite_token,
+          display_name = @display_name,
           role_codes = @role_codes,
           team_public_ids = @team_public_ids,
           status = @status,

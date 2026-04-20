@@ -88,6 +88,16 @@ defmodule WorkflowRuntime.Api.Router do
     end
   end
 
+  get "/api/workflow-runtime/executions/:public_id/actions" do
+    case ExecutionStore.find(public_id) do
+      nil ->
+        json(conn, 404, %{code: "workflow_runtime_execution_not_found", message: "Execution was not found."})
+
+      _execution ->
+        json(conn, 200, ExecutionStore.actions(public_id))
+    end
+  end
+
   post "/api/workflow-runtime/executions/:public_id/start" do
     transition_execution(conn, public_id, "running", ["pending"])
   end
@@ -116,6 +126,34 @@ defmodule WorkflowRuntime.Api.Router do
         json(conn, 409, %{
           code: "workflow_runtime_execution_retry_invalid",
           message: "Execution cannot be retried from the current status."
+        })
+    end
+  end
+
+  post "/api/workflow-runtime/executions/:public_id/advance" do
+    case ExecutionStore.advance(public_id) do
+      {:ok, execution} ->
+        json(conn, 200, execution)
+
+      {:error, :not_found} ->
+        json(conn, 404, %{code: "workflow_runtime_execution_not_found", message: "Execution was not found."})
+
+      {:error, :waiting} ->
+        json(conn, 409, %{
+          code: "workflow_runtime_execution_waiting",
+          message: "Execution is waiting for the configured delay to elapse."
+        })
+
+      {:error, :invalid_transition} ->
+        json(conn, 409, %{
+          code: "workflow_runtime_execution_transition_invalid",
+          message: "Execution cannot transition from the current status."
+        })
+
+      {:error, :workflow_definition_version_not_found} ->
+        json(conn, 409, %{
+          code: "workflow_runtime_definition_version_not_found",
+          message: "Workflow definition has no published version available for runtime."
         })
     end
   end

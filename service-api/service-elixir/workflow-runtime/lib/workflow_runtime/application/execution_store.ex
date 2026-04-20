@@ -9,7 +9,7 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     if postgres_driver?() do
       :ignore
     else
-      Agent.start_link(fn -> %{executions: [], transitions: %{}} end, name: __MODULE__)
+      Agent.start_link(fn -> %{executions: [], transitions: %{}, actions: %{}, plans: %{}} end, name: __MODULE__)
     end
   end
 
@@ -37,6 +37,14 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     end
   end
 
+  def actions(public_id) do
+    if postgres_driver?() do
+      actions_postgres(public_id)
+    else
+      actions_memory(public_id)
+    end
+  end
+
   def create(attributes) do
     if postgres_driver?() do
       create_postgres(attributes)
@@ -61,9 +69,17 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     end
   end
 
+  def advance(public_id) do
+    if postgres_driver?() do
+      advance_postgres(public_id)
+    else
+      advance_memory(public_id)
+    end
+  end
+
   def reset do
     unless postgres_driver?() do
-      Agent.update(__MODULE__, fn _state -> %{executions: [], transitions: %{}} end)
+      Agent.update(__MODULE__, fn _state -> %{executions: [], transitions: %{}, actions: %{}, plans: %{}} end)
     end
   end
 
@@ -113,20 +129,31 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     end)
   end
 
+  defp actions_memory(public_id) do
+    Agent.get(__MODULE__, fn state ->
+      Map.get(state.actions, public_id, [])
+    end)
+  end
+
   defp create_memory(attributes) do
     initiated_by = String.trim(attributes["initiatedBy"] || "")
     workflow_definition_key = String.trim(attributes["workflowDefinitionKey"] || "")
 
-    case validate_catalog_memory(workflow_definition_key) do
-      :ok ->
+    case fetch_catalog_plan_memory(workflow_definition_key) do
+      {:ok, workflow_definition_version_number, plan} ->
+        public_id = generate_public_id()
+
         execution = %{
-          "publicId" => generate_public_id(),
+          "publicId" => public_id,
           "tenantSlug" => normalize_tenant_slug(attributes["tenantSlug"]),
           "workflowDefinitionKey" => workflow_definition_key,
+          "workflowDefinitionVersionNumber" => workflow_definition_version_number,
           "subjectType" => String.trim(attributes["subjectType"] || ""),
           "subjectPublicId" => String.trim(attributes["subjectPublicId"] || ""),
           "initiatedBy" => initiated_by,
           "status" => "pending",
+          "currentActionIndex" => 0,
+          "waitingUntil" => nil,
           "retryCount" => 0,
           "createdAt" => now(),
           "startedAt" => nil,
@@ -139,7 +166,9 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
           %{
             state
             | executions: [execution | state.executions],
-              transitions: Map.put(state.transitions, execution["publicId"], [build_transition("pending", initiated_by)])
+              transitions: Map.put(state.transitions, public_id, [build_transition("pending", initiated_by)]),
+              actions: Map.put(state.actions, public_id, []),
+              plans: Map.put(state.plans, public_id, plan)
           }
         end)
 
@@ -173,13 +202,24 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
                 end
               )
 
+            updated_actions =
+              if next_status in ["failed", "cancelled"] do
+                append_compensations_memory(
+                  Map.get(state.actions, public_id, []),
+                  execution["initiatedBy"]
+                )
+              else
+                Map.get(state.actions, public_id, [])
+              end
+
             updated_state = %{
               state
               | executions:
                   Enum.map(state.executions, fn current_execution ->
                     if current_execution["publicId"] == public_id, do: updated_execution, else: current_execution
                   end),
-                transitions: updated_transitions
+                transitions: updated_transitions,
+                actions: Map.put(state.actions, public_id, updated_actions)
             }
 
             {{:ok, updated_execution}, updated_state}
@@ -242,6 +282,97 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     end)
   end
 
+  defp advance_memory(public_id) do
+    Agent.get_and_update(__MODULE__, fn state ->
+      case Enum.find(state.executions, &(&1["publicId"] == public_id)) do
+        nil ->
+          {{:error, :not_found}, state}
+
+        execution ->
+          if execution["status"] != "running" do
+            {{:error, :invalid_transition}, state}
+          else
+            plan = Map.get(state.plans, public_id, [])
+            current_action_index = execution["currentActionIndex"]
+
+            if current_action_index >= length(plan) do
+              completed_execution =
+                execution
+                |> Map.put("status", "completed")
+                |> maybe_put_timestamp("completed")
+
+              updated_transitions =
+                Map.update(
+                  state.transitions,
+                  public_id,
+                  [build_transition("completed", execution["initiatedBy"])],
+                  fn existing ->
+                    existing ++ [build_transition("completed", execution["initiatedBy"])]
+                  end
+                )
+
+              updated_state = %{
+                state
+                | executions:
+                    Enum.map(state.executions, fn current_execution ->
+                      if current_execution["publicId"] == public_id, do: completed_execution, else: current_execution
+                    end),
+                  transitions: updated_transitions
+              }
+
+              {{:ok, completed_execution}, updated_state}
+            else
+              action = Enum.at(plan, current_action_index)
+
+              case advance_execution_action(execution, action, length(plan)) do
+                {:waiting, updated_execution, action_entry} ->
+                  updated_state = %{
+                    state
+                    | executions:
+                        Enum.map(state.executions, fn current_execution ->
+                          if current_execution["publicId"] == public_id, do: updated_execution, else: current_execution
+                        end),
+                      actions: Map.update(state.actions, public_id, [action_entry], fn existing -> existing ++ [action_entry] end)
+                  }
+
+                  {{:ok, updated_execution}, updated_state}
+
+                {:completed, updated_execution, action_entry, transition_status} ->
+                  updated_transitions =
+                    if transition_status == nil do
+                      state.transitions
+                    else
+                      Map.update(
+                        state.transitions,
+                        public_id,
+                        [build_transition(transition_status, execution["initiatedBy"])],
+                        fn existing ->
+                          existing ++ [build_transition(transition_status, execution["initiatedBy"])]
+                        end
+                      )
+                    end
+
+                  updated_state = %{
+                    state
+                    | executions:
+                        Enum.map(state.executions, fn current_execution ->
+                          if current_execution["publicId"] == public_id, do: updated_execution, else: current_execution
+                        end),
+                      transitions: updated_transitions,
+                      actions: Map.update(state.actions, public_id, [action_entry], fn existing -> existing ++ [action_entry] end)
+                  }
+
+                  {{:ok, updated_execution}, updated_state}
+
+                {:error, :waiting} ->
+                  {{:error, :waiting}, state}
+              end
+            end
+          end
+      end
+    end)
+  end
+
   defp summary_by_workflow_memory(filters) do
     filters
     |> list()
@@ -270,10 +401,13 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
       execution.public_id::text,
       tenant.slug,
       execution.workflow_definition_key,
+      execution.workflow_definition_version_number,
       execution.subject_type,
       execution.subject_public_id::text,
       execution.initiated_by,
       execution.status,
+      execution.current_action_index,
+      execution.waiting_until,
       execution.retry_count,
       execution.created_at,
       execution.started_at,
@@ -296,10 +430,13 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
       execution.public_id::text,
       tenant.slug,
       execution.workflow_definition_key,
+      execution.workflow_definition_version_number,
       execution.subject_type,
       execution.subject_public_id::text,
       execution.initiated_by,
       execution.status,
+      execution.current_action_index,
+      execution.waiting_until,
       execution.retry_count,
       execution.created_at,
       execution.started_at,
@@ -335,6 +472,27 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     |> Enum.map(&map_transition_row/1)
   end
 
+  defp actions_postgres(public_id) do
+    statement = """
+    SELECT
+      action.public_id::text,
+      action.step_id,
+      action.action_key,
+      action.label,
+      action.status,
+      action.delay_seconds,
+      action.compensation_action_key,
+      action.created_at
+    FROM workflow_runtime.execution_actions AS action
+    JOIN workflow_runtime.executions AS execution ON execution.id = action.execution_id
+    WHERE execution.public_id = $1::uuid
+    ORDER BY action.id ASC
+    """
+
+    Postgres.query!(statement, [uuid_bytes(public_id)]).rows
+    |> Enum.map(&map_action_row/1)
+  end
+
   defp create_postgres(attributes) do
     tenant_slug = normalize_tenant_slug(attributes["tenantSlug"])
     initiated_by = String.trim(attributes["initiatedBy"] || "")
@@ -345,8 +503,8 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
         {:error, :tenant_not_found}
 
       tenant_id ->
-        case validate_catalog_postgres(tenant_id, workflow_definition_key) do
-          :ok ->
+        case fetch_catalog_plan_postgres(tenant_id, workflow_definition_key) do
+          {:ok, workflow_definition_version_number, _plan} ->
             public_id = generate_public_id()
             transition_public_id = generate_public_id()
 
@@ -359,18 +517,21 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
                     tenant_id,
                     public_id,
                     workflow_definition_key,
+                    workflow_definition_version_number,
                     subject_type,
                     subject_public_id,
                     initiated_by,
                     status,
+                    current_action_index,
                     retry_count
                   )
-                  VALUES ($1, $2::uuid, $3, $4, $5::uuid, $6, 'pending', 0)
+                  VALUES ($1, $2::uuid, $3, $4, $5, $6::uuid, $7, 'pending', 0, 0)
                   """,
                   [
                     tenant_id,
                     uuid_bytes(public_id),
                     workflow_definition_key,
+                    workflow_definition_version_number,
                     String.trim(attributes["subjectType"] || ""),
                     uuid_bytes(String.trim(attributes["subjectPublicId"] || "")),
                     initiated_by
@@ -445,6 +606,40 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
                 [uuid_bytes(transition_public_id), uuid_bytes(public_id), next_status]
               )
 
+              if next_status in ["failed", "cancelled"] do
+                Postgrex.query!(
+                  connection,
+                  """
+                  INSERT INTO workflow_runtime.execution_actions (
+                    public_id,
+                    execution_id,
+                    step_id,
+                    action_key,
+                    label,
+                    status,
+                    delay_seconds,
+                    compensation_action_key
+                  )
+                  SELECT
+                    gen_random_uuid(),
+                    runtime_execution.id,
+                    completed_action.step_id || ':compensation',
+                    completed_action.compensation_action_key,
+                    'Compensate: ' || completed_action.label,
+                    'compensated',
+                    NULL,
+                    NULL
+                  FROM workflow_runtime.executions AS runtime_execution
+                  JOIN workflow_runtime.execution_actions AS completed_action ON completed_action.execution_id = runtime_execution.id
+                  WHERE runtime_execution.public_id = $1::uuid
+                    AND completed_action.status = 'completed'
+                    AND completed_action.compensation_action_key IS NOT NULL
+                  ORDER BY completed_action.id DESC
+                  """,
+                  [uuid_bytes(public_id)]
+                )
+              end
+
               :updated
             end)
 
@@ -501,6 +696,8 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
                 UPDATE workflow_runtime.executions
                 SET
                   status = 'pending',
+                  current_action_index = 0,
+                  waiting_until = NULL,
                   retry_count = retry_count + 1,
                   started_at = NULL,
                   completed_at = NULL,
@@ -534,6 +731,161 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
           {:ok, find_postgres(public_id)}
         else
           {:error, :invalid_transition}
+        end
+    end
+  end
+
+  defp advance_postgres(public_id) do
+    case find_postgres(public_id) do
+      nil ->
+        {:error, :not_found}
+
+      execution ->
+        if execution["status"] != "running" do
+          {:error, :invalid_transition}
+        else
+          case fetch_execution_plan_postgres(execution) do
+            {:error, reason} ->
+              {:error, reason}
+
+            {:ok, plan} ->
+              current_action_index = execution["currentActionIndex"]
+
+              if current_action_index >= length(plan) do
+                transition_postgres(public_id, "completed", ["running"])
+              else
+                action = Enum.at(plan, current_action_index)
+
+                case advance_execution_action(execution, action, length(plan)) do
+                  {:waiting, updated_execution, action_entry} ->
+                    {:ok, :updated} =
+                      Postgres.transaction(fn connection ->
+                        Postgrex.query!(
+                          connection,
+                          """
+                          UPDATE workflow_runtime.executions
+                          SET
+                            waiting_until = $2::timestamptz,
+                            updated_at = timezone('utc', now())
+                          WHERE public_id = $1::uuid
+                          """,
+                          [uuid_bytes(public_id), to_datetime_param(updated_execution["waitingUntil"])]
+                        )
+
+                        Postgrex.query!(
+                          connection,
+                          """
+                          INSERT INTO workflow_runtime.execution_actions (
+                            public_id,
+                            execution_id,
+                            step_id,
+                            action_key,
+                            label,
+                            status,
+                            delay_seconds,
+                            compensation_action_key
+                          )
+                          SELECT $1::uuid, runtime_execution.id, $3, $4, $5, $6, $7, $8
+                          FROM workflow_runtime.executions AS runtime_execution
+                          WHERE runtime_execution.public_id = $2::uuid
+                          """,
+                          [
+                            uuid_bytes(action_entry["publicId"]),
+                            uuid_bytes(public_id),
+                            action_entry["stepId"],
+                            action_entry["actionKey"],
+                            action_entry["label"],
+                            action_entry["status"],
+                            action_entry["delaySeconds"],
+                            action_entry["compensationActionKey"]
+                          ]
+                        )
+
+                        :updated
+                      end)
+
+                    {:ok, find_postgres(public_id)}
+
+                  {:completed, updated_execution, action_entry, transition_status} ->
+                    {:ok, :updated} =
+                      Postgres.transaction(fn connection ->
+                        Postgrex.query!(
+                          connection,
+                          """
+                          UPDATE workflow_runtime.executions
+                          SET
+                            current_action_index = $2,
+                            waiting_until = $3::timestamptz,
+                            status = $4::varchar,
+                            completed_at = CASE WHEN $4::varchar = 'completed' THEN timezone('utc', now()) ELSE completed_at END,
+                            updated_at = timezone('utc', now())
+                          WHERE public_id = $1::uuid
+                          """,
+                          [
+                            uuid_bytes(public_id),
+                            updated_execution["currentActionIndex"],
+                            to_datetime_param(updated_execution["waitingUntil"]),
+                            updated_execution["status"]
+                          ]
+                        )
+
+                        Postgrex.query!(
+                          connection,
+                          """
+                          INSERT INTO workflow_runtime.execution_actions (
+                            public_id,
+                            execution_id,
+                            step_id,
+                            action_key,
+                            label,
+                            status,
+                            delay_seconds,
+                            compensation_action_key
+                          )
+                          SELECT $1::uuid, runtime_execution.id, $3, $4, $5, $6, $7, $8
+                          FROM workflow_runtime.executions AS runtime_execution
+                          WHERE runtime_execution.public_id = $2::uuid
+                          """,
+                          [
+                            uuid_bytes(action_entry["publicId"]),
+                            uuid_bytes(public_id),
+                            action_entry["stepId"],
+                            action_entry["actionKey"],
+                            action_entry["label"],
+                            action_entry["status"],
+                            action_entry["delaySeconds"],
+                            action_entry["compensationActionKey"]
+                          ]
+                        )
+
+                        if transition_status != nil do
+                          Postgrex.query!(
+                            connection,
+                            """
+                            INSERT INTO workflow_runtime.execution_transitions (
+                              public_id,
+                              execution_id,
+                              status,
+                              changed_by
+                            )
+                            SELECT $1::uuid, runtime_execution.id, $3, runtime_execution.initiated_by
+                            FROM workflow_runtime.executions AS runtime_execution
+                            WHERE runtime_execution.public_id = $2::uuid
+                            """,
+                            [uuid_bytes(generate_public_id()), uuid_bytes(public_id), transition_status]
+                          )
+                        end
+
+                        :updated
+                      end)
+
+                    {:ok, find_postgres(public_id)}
+
+                  {:error, :waiting} ->
+                    {:error, :waiting}
+                end
+              end
+          end
         end
     end
   end
@@ -594,27 +946,50 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     end
   end
 
-  defp validate_catalog_memory(workflow_definition_key) do
-    if workflow_definition_key in ["lead-follow-up", "deal-follow-up", "quote-follow-up"] do
-      :ok
-    else
-      :workflow_definition_not_found
+  defp fetch_catalog_plan_memory(workflow_definition_key) do
+    catalog = %{
+      "lead-follow-up" => {1,
+        [
+          %{"stepId" => "create-task", "actionKey" => "task.create", "label" => "Criar tarefa comercial inicial", "delaySeconds" => nil, "compensationActionKey" => "task.create"},
+          %{"stepId" => "cooldown", "actionKey" => "delay.wait", "label" => "Aguardar janela curta de acompanhamento", "delaySeconds" => 1, "compensationActionKey" => nil},
+          %{"stepId" => "notify-webhook", "actionKey" => "integration.webhook", "label" => "Emitir webhook operacional", "delaySeconds" => nil, "compensationActionKey" => "integration.webhook"}
+        ]},
+      "deal-follow-up" => {1,
+        [
+          %{"stepId" => "advance-stage", "actionKey" => "sales.stage.advance", "label" => "Avancar etapa comercial", "delaySeconds" => nil, "compensationActionKey" => "sales.stage.advance"}
+        ]},
+      "quote-follow-up" => {1,
+        [
+          %{"stepId" => "wait-touchpoint", "actionKey" => "delay.wait", "label" => "Aguardar janela de retorno", "delaySeconds" => 1, "compensationActionKey" => nil},
+          %{"stepId" => "notify-quote", "actionKey" => "integration.webhook", "label" => "Notificar fluxo comercial", "delaySeconds" => nil, "compensationActionKey" => "integration.webhook"}
+        ]}
+    }
+
+    case Map.fetch(catalog, workflow_definition_key) do
+      {:ok, {workflow_definition_version_number, plan}} -> {:ok, workflow_definition_version_number, plan}
+      :error -> :workflow_definition_not_found
     end
   end
 
-  defp validate_catalog_postgres(tenant_id, workflow_definition_key) do
+  defp fetch_catalog_plan_postgres(tenant_id, workflow_definition_key) do
     case Postgres.query!(
            """
            SELECT
              definition.status,
-             (
-               SELECT version.snapshot_status
-               FROM workflow_control.workflow_definition_versions AS version
-               WHERE version.workflow_definition_id = definition.id
-               ORDER BY version.version_number DESC
-               LIMIT 1
-             ) AS latest_snapshot_status
+             version.version_number,
+             version.snapshot_status,
+             version.snapshot_actions
            FROM workflow_control.workflow_definitions AS definition
+           LEFT JOIN LATERAL (
+             SELECT
+               workflow_version.version_number,
+               workflow_version.snapshot_status,
+               workflow_version.snapshot_actions
+             FROM workflow_control.workflow_definition_versions AS workflow_version
+             WHERE workflow_version.workflow_definition_id = definition.id
+             ORDER BY workflow_version.version_number DESC
+             LIMIT 1
+           ) AS version ON true
            WHERE definition.tenant_id = $1
              AND definition.key = $2
            LIMIT 1
@@ -624,17 +999,17 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
       [] ->
         :workflow_definition_not_found
 
-      [[status, nil]] when status in ["draft", "active", "archived"] ->
+      [[status, nil, _latest_snapshot_status, _snapshot_actions]] when status in ["draft", "active", "archived"] ->
         :workflow_definition_version_not_found
 
-      [[status, _latest_snapshot_status]] when status != "active" ->
+      [[status, _version_number, _latest_snapshot_status, _snapshot_actions]] when status != "active" ->
         :workflow_definition_inactive
 
-      [[_status, latest_snapshot_status]] when latest_snapshot_status != "active" ->
+      [[_status, _version_number, latest_snapshot_status, _snapshot_actions]] when latest_snapshot_status != "active" ->
         :workflow_definition_inactive
 
-      [[_status, _latest_snapshot_status]] ->
-        :ok
+      [[_status, version_number, _latest_snapshot_status, snapshot_actions]] ->
+        {:ok, version_number, Enum.map(snapshot_actions || [], &normalize_action_map/1)}
     end
   end
 
@@ -671,16 +1046,19 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
       "publicId" => Enum.at(row, 0),
       "tenantSlug" => tenant_slug_override || Enum.at(row, 1),
       "workflowDefinitionKey" => Enum.at(row, 2),
-      "subjectType" => Enum.at(row, 3),
-      "subjectPublicId" => Enum.at(row, 4),
-      "initiatedBy" => Enum.at(row, 5),
-      "status" => Enum.at(row, 6),
-      "retryCount" => Enum.at(row, 7),
-      "createdAt" => encode_datetime(Enum.at(row, 8)),
-      "startedAt" => encode_datetime(Enum.at(row, 9)),
-      "completedAt" => encode_datetime(Enum.at(row, 10)),
-      "failedAt" => encode_datetime(Enum.at(row, 11)),
-      "cancelledAt" => encode_datetime(Enum.at(row, 12))
+      "workflowDefinitionVersionNumber" => Enum.at(row, 3),
+      "subjectType" => Enum.at(row, 4),
+      "subjectPublicId" => Enum.at(row, 5),
+      "initiatedBy" => Enum.at(row, 6),
+      "status" => Enum.at(row, 7),
+      "currentActionIndex" => Enum.at(row, 8),
+      "waitingUntil" => encode_datetime(Enum.at(row, 9)),
+      "retryCount" => Enum.at(row, 10),
+      "createdAt" => encode_datetime(Enum.at(row, 11)),
+      "startedAt" => encode_datetime(Enum.at(row, 12)),
+      "completedAt" => encode_datetime(Enum.at(row, 13)),
+      "failedAt" => encode_datetime(Enum.at(row, 14)),
+      "cancelledAt" => encode_datetime(Enum.at(row, 15))
     }
   end
 
@@ -703,6 +1081,19 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
       "failed" => Enum.at(row, 5),
       "cancelled" => Enum.at(row, 6),
       "retriesTotal" => Enum.at(row, 7)
+    }
+  end
+
+  defp map_action_row(row) do
+    %{
+      "publicId" => Enum.at(row, 0),
+      "stepId" => Enum.at(row, 1),
+      "actionKey" => Enum.at(row, 2),
+      "label" => Enum.at(row, 3),
+      "status" => Enum.at(row, 4),
+      "delaySeconds" => Enum.at(row, 5),
+      "compensationActionKey" => Enum.at(row, 6),
+      "createdAt" => encode_datetime(Enum.at(row, 7))
     }
   end
 
@@ -738,6 +1129,8 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
   defp reset_for_retry(execution) do
     execution
     |> Map.put("status", "pending")
+    |> Map.put("currentActionIndex", 0)
+    |> Map.put("waitingUntil", nil)
     |> Map.update!("retryCount", &(&1 + 1))
     |> Map.put("startedAt", nil)
     |> Map.put("completedAt", nil)
@@ -786,6 +1179,160 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
       "changedBy" => changed_by,
       "createdAt" => now()
     }
+  end
+
+  defp build_action_entry(action, status) do
+    %{
+      "publicId" => generate_public_id(),
+      "stepId" => action["stepId"],
+      "actionKey" => action["actionKey"],
+      "label" => action["label"],
+      "status" => status,
+      "delaySeconds" => action["delaySeconds"],
+      "compensationActionKey" => action["compensationActionKey"],
+      "createdAt" => now()
+    }
+  end
+
+  defp append_compensations_memory(action_entries, initiated_by) do
+    compensation_entries =
+      action_entries
+      |> Enum.filter(&(&1["status"] == "completed" && !is_nil(&1["compensationActionKey"])))
+      |> Enum.reverse()
+      |> Enum.map(fn action_entry ->
+        %{
+          "publicId" => generate_public_id(),
+          "stepId" => action_entry["stepId"] <> ":compensation",
+          "actionKey" => action_entry["compensationActionKey"],
+          "label" => "Compensate: " <> action_entry["label"],
+          "status" => "compensated",
+          "delaySeconds" => nil,
+          "compensationActionKey" => nil,
+          "createdAt" => now(),
+          "changedBy" => initiated_by
+        }
+      end)
+
+    action_entries ++ compensation_entries
+  end
+
+  defp advance_execution_action(execution, action, plan_length) do
+    case action["actionKey"] do
+      "delay.wait" ->
+        advance_delay_action(execution, action, plan_length)
+
+      _action_key ->
+        updated_execution =
+          execution
+          |> Map.put("currentActionIndex", execution["currentActionIndex"] + 1)
+          |> Map.put("waitingUntil", nil)
+
+        action_entry = build_action_entry(action, "completed")
+        transition_status = if updated_execution["currentActionIndex"] >= plan_length, do: "completed", else: nil
+
+        finalized_execution =
+          if transition_status == "completed" do
+            updated_execution
+            |> Map.put("status", "completed")
+            |> maybe_put_timestamp("completed")
+          else
+            updated_execution
+          end
+
+        {:completed, finalized_execution, action_entry, transition_status}
+    end
+  end
+
+  defp advance_delay_action(execution, action, plan_length) do
+    waiting_until = execution["waitingUntil"]
+
+    cond do
+      is_nil(waiting_until) ->
+        updated_execution =
+          execution
+          |> Map.put("waitingUntil", shift_seconds(action["delaySeconds"]))
+
+        {:waiting, updated_execution, build_action_entry(action, "waiting")}
+
+      wait_due?(waiting_until) ->
+        updated_execution =
+          execution
+          |> Map.put("currentActionIndex", execution["currentActionIndex"] + 1)
+          |> Map.put("waitingUntil", nil)
+
+        transition_status = if updated_execution["currentActionIndex"] >= plan_length, do: "completed", else: nil
+
+        finalized_execution =
+          if transition_status == "completed" do
+            updated_execution
+            |> Map.put("status", "completed")
+            |> maybe_put_timestamp("completed")
+          else
+            updated_execution
+          end
+
+        {:completed, finalized_execution, build_action_entry(action, "completed"), transition_status}
+
+      true ->
+        {:error, :waiting}
+    end
+  end
+
+  defp fetch_execution_plan_postgres(execution) do
+    case Postgres.query!(
+           """
+           SELECT version.snapshot_actions
+           FROM workflow_control.workflow_definition_versions AS version
+           JOIN workflow_control.workflow_definitions AS definition ON definition.id = version.workflow_definition_id
+           JOIN identity.tenants AS tenant ON tenant.id = definition.tenant_id
+           WHERE tenant.slug = $1
+             AND definition.key = $2
+             AND version.version_number = $3
+           LIMIT 1
+           """,
+           [
+             execution["tenantSlug"],
+             execution["workflowDefinitionKey"],
+             execution["workflowDefinitionVersionNumber"]
+           ]
+         ).rows do
+      [[snapshot_actions]] ->
+        {:ok, Enum.map(snapshot_actions || [], &normalize_action_map/1)}
+
+      _ ->
+        {:error, :workflow_definition_version_not_found}
+    end
+  end
+
+  defp normalize_action_map(action) do
+    %{
+      "stepId" => action["stepId"] || action[:stepId],
+      "actionKey" => action["actionKey"] || action[:actionKey],
+      "label" => action["label"] || action[:label],
+      "delaySeconds" => action["delaySeconds"] || action[:delaySeconds],
+      "compensationActionKey" => action["compensationActionKey"] || action[:compensationActionKey]
+    }
+  end
+
+  defp wait_due?(waiting_until) do
+    {:ok, waiting_at, _offset} = DateTime.from_iso8601(waiting_until)
+    DateTime.compare(DateTime.utc_now(), waiting_at) != :lt
+  end
+
+  defp to_datetime_param(nil), do: nil
+
+  defp to_datetime_param(value) when is_binary(value) do
+    {:ok, datetime, _offset} = DateTime.from_iso8601(value)
+    datetime
+  end
+
+  defp shift_seconds(nil), do: nil
+
+  defp shift_seconds(seconds) do
+    DateTime.utc_now()
+    |> DateTime.add(seconds, :second)
+    |> DateTime.truncate(:second)
+    |> DateTime.to_iso8601()
   end
 
   defp now do

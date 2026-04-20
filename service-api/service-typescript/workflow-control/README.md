@@ -20,6 +20,7 @@ Initial scope:
 - workflow trigger catalog bootstrap with public read-side
 - workflow action catalog bootstrap with public read-side
 - workflow definition trigger validation against the published catalog
+- workflow action-plan persistence on current definitions and published versions
 - room for workflow definitions and future control-plane APIs
 
 Public routes:
@@ -85,6 +86,7 @@ Current unit scope:
 - workflow definition metadata update
 - workflow trigger and action catalog read
 - workflow definition trigger validation against catalog dependencies
+- workflow definition action-plan validation and normalization
 - workflow definition version history read
 - workflow definition manual publication
 - workflow definition current-version read
@@ -122,4 +124,5 @@ Current contract scope:
 - trigger and action catalog payloads
 - version list, publish and current-version lifecycle
 - version detail and restore lifecycle
+- action-plan payload persistence across create, update, publish and restore
 - not found error contract

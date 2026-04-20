@@ -76,7 +76,9 @@ defmodule WorkflowRuntime.Api.RouterTest do
     assert create_conn.status == 201
     assert create_payload["tenantSlug"] == "bootstrap-ops"
     assert create_payload["workflowDefinitionKey"] == "lead-follow-up"
+    assert create_payload["workflowDefinitionVersionNumber"] == 1
     assert create_payload["status"] == "pending"
+    assert create_payload["currentActionIndex"] == 0
     assert create_payload["retryCount"] == 0
     assert detail_conn.status == 200
     assert detail_payload["publicId"] == public_id
@@ -174,6 +176,31 @@ defmodule WorkflowRuntime.Api.RouterTest do
     assert Enum.all?(transitions_payload, &(&1["changedBy"] == "unit-test"))
   end
 
+  test "execution actions route exposes the runtime action ledger" do
+    create_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "workflowDefinitionKey" => "lead-follow-up",
+        "subjectType" => "crm.lead",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001289",
+        "initiatedBy" => "action-user"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    public_id = Jason.decode!(create_conn.resp_body)["publicId"]
+
+    _start_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/start") |> Router.call([])
+    _advance_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/advance") |> Router.call([])
+
+    actions_conn = conn(:get, "/api/workflow-runtime/executions/#{public_id}/actions") |> Router.call([])
+    actions_payload = Jason.decode!(actions_conn.resp_body)
+
+    assert actions_conn.status == 200
+    assert length(actions_payload) == 1
+    assert hd(actions_payload)["actionKey"] == "task.create"
+    assert hd(actions_payload)["status"] == "completed"
+  end
+
   test "execution list filters by tenant and status" do
     first_create_conn =
       conn(:post, "/api/workflow-runtime/executions", %{
@@ -236,6 +263,56 @@ defmodule WorkflowRuntime.Api.RouterTest do
     assert cancel_payload["status"] == "cancelled"
     assert cancel_payload["cancelledAt"] != nil
     assert summary_payload["cancelled"] == 1
+  end
+
+  test "execution advance should wait on delay actions and finish after the delay" do
+    create_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "workflowDefinitionKey" => "quote-follow-up",
+        "subjectType" => "sales.quote",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001333",
+        "initiatedBy" => "delay-user"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    public_id = Jason.decode!(create_conn.resp_body)["publicId"]
+
+    _start_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/start") |> Router.call([])
+    waiting_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/advance") |> Router.call([])
+    waiting_payload = Jason.decode!(waiting_conn.resp_body)
+    blocked_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/advance") |> Router.call([])
+    blocked_payload = Jason.decode!(blocked_conn.resp_body)
+
+    Process.sleep(1_100)
+
+    release_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/advance") |> Router.call([])
+    complete_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/advance") |> Router.call([])
+    actions_conn = conn(:get, "/api/workflow-runtime/executions/#{public_id}/actions") |> Router.call([])
+
+    release_payload = Jason.decode!(release_conn.resp_body)
+    complete_payload = Jason.decode!(complete_conn.resp_body)
+    actions_payload = Jason.decode!(actions_conn.resp_body)
+
+    assert waiting_conn.status == 200
+    assert waiting_payload["waitingUntil"] != nil
+
+    assert blocked_conn.status == 409
+    assert blocked_payload["code"] == "workflow_runtime_execution_waiting"
+
+    assert release_conn.status == 200
+    assert release_payload["waitingUntil"] == nil
+    assert release_payload["currentActionIndex"] == 1
+
+    assert complete_conn.status == 200
+    assert complete_payload["status"] == "completed"
+    assert complete_payload["completedAt"] != nil
+
+    assert Enum.map(actions_payload, &{&1["actionKey"], &1["status"]}) == [
+             {"delay.wait", "waiting"},
+             {"delay.wait", "completed"},
+             {"integration.webhook", "completed"}
+           ]
   end
 
   test "execution summary filters by tenant and workflow definition" do
@@ -372,6 +449,33 @@ defmodule WorkflowRuntime.Api.RouterTest do
     assert complete_payload["retryCount"] == 1
 
     assert Enum.map(transitions_payload, & &1["status"]) == ["pending", "failed", "pending", "running", "completed"]
+  end
+
+  test "execution fail should append compensation ledger for completed actions" do
+    create_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "workflowDefinitionKey" => "lead-follow-up",
+        "subjectType" => "crm.lead",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000001334",
+        "initiatedBy" => "comp-user"
+      })
+      |> Plug.Conn.put_req_header("content-type", "application/json")
+      |> Router.call([])
+
+    public_id = Jason.decode!(create_conn.resp_body)["publicId"]
+
+    _start_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/start") |> Router.call([])
+    _advance_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/advance") |> Router.call([])
+    fail_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/fail") |> Router.call([])
+    actions_conn = conn(:get, "/api/workflow-runtime/executions/#{public_id}/actions") |> Router.call([])
+
+    fail_payload = Jason.decode!(fail_conn.resp_body)
+    actions_payload = Jason.decode!(actions_conn.resp_body)
+
+    assert fail_conn.status == 200
+    assert fail_payload["status"] == "failed"
+    assert Enum.map(actions_payload, & &1["status"]) == ["completed", "compensated"]
+    assert List.last(actions_payload)["actionKey"] == "task.create"
   end
 
   test "execution blocks retry when lifecycle has not failed or cancelled" do

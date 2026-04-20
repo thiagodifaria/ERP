@@ -121,8 +121,10 @@ export function normalizeWorkflowActions(actions?: WorkflowActionDefinition[]): 
       throw new Error("workflow_definition_action_label_required");
     }
 
-    if (actionKey === "delay.wait" && (!Number.isInteger(delaySeconds) || delaySeconds <= 0)) {
-      throw new Error("workflow_definition_action_delay_invalid");
+    if (actionKey === "delay.wait") {
+      if (delaySeconds === null || !Number.isInteger(delaySeconds) || delaySeconds <= 0) {
+        throw new Error("workflow_definition_action_delay_invalid");
+      }
     }
 
     return {
