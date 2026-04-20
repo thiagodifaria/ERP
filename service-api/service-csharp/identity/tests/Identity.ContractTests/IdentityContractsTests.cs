@@ -392,6 +392,43 @@ public sealed class IdentityContractsTests : IClassFixture<WebApplicationFactory
   }
 
   [Fact]
+  public async Task InviteDetailContractShouldExposeSingleInviteShape()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Contract Invite Detail");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var inviteResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/invites",
+      new CreateInviteRequest(
+        $"contract.invite.detail@{tenantPayload.Slug}.local",
+        "Contract Invite Detail User",
+        ["viewer"],
+        null,
+        7));
+    var invitePayload = await inviteResponse.Content.ReadFromJsonAsync<InviteResponse>();
+
+    Assert.NotNull(invitePayload);
+
+    var response = await _client.GetAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/invites/{invitePayload!.PublicId}");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<InviteResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal(invitePayload.PublicId, payload!.PublicId);
+    Assert.Equal(invitePayload.Email, payload.Email);
+    Assert.Equal("pending", payload.Status);
+  }
+
+  [Fact]
   public async Task SessionLoginContractShouldExposeOpaqueTokensAndRoles()
   {
     var tenantRequest = new CreateTenantRequest(
@@ -582,6 +619,41 @@ public sealed class IdentityContractsTests : IClassFixture<WebApplicationFactory
       Assert.True(session.ExpiresAt > DateTimeOffset.UtcNow);
       Assert.True(session.RefreshExpiresAt >= session.ExpiresAt);
     });
+  }
+
+  [Fact]
+  public async Task MfaStatusContractShouldExposeCurrentUserFlag()
+  {
+    var tenantRequest = new CreateTenantRequest(
+      $"tenant-{Guid.NewGuid():N}"[..15],
+      "Contract MFA Status");
+
+    var tenantResponse = await _client.PostAsJsonAsync("/api/identity/tenants", tenantRequest);
+    var tenantPayload = await tenantResponse.Content.ReadFromJsonAsync<TenantResponse>();
+
+    Assert.NotNull(tenantPayload);
+
+    var createUserResponse = await _client.PostAsJsonAsync(
+      $"/api/identity/tenants/{tenantPayload!.Slug}/users",
+      new CreateUserRequest(
+        $"contract.mfa@{tenantPayload.Slug}.local",
+        "Contract MFA",
+        "Contract",
+        "Status"));
+    var createdUser = await createUserResponse.Content.ReadFromJsonAsync<UserResponse>();
+
+    Assert.NotNull(createdUser);
+
+    var response = await _client.GetAsync(
+      $"/api/identity/tenants/{tenantPayload.Slug}/users/{createdUser!.PublicId}/mfa");
+
+    Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+    var payload = await response.Content.ReadFromJsonAsync<MfaStatusResponse>();
+
+    Assert.NotNull(payload);
+    Assert.Equal(createdUser.PublicId, payload!.UserPublicId);
+    Assert.False(payload.Enabled);
   }
 
   [Fact]

@@ -29,6 +29,7 @@ Public routes:
 - `GET /api/workflow-runtime/executions`
 - `GET /api/workflow-runtime/executions/{publicId}`
 - `GET /api/workflow-runtime/executions/{publicId}/actions`
+- `GET /api/workflow-runtime/executions/{publicId}/timeline`
 - `GET /api/workflow-runtime/executions/{publicId}/transitions`
 - `GET /api/workflow-runtime/executions/summary`
 - `GET /api/workflow-runtime/executions/summary?tenantSlug=...&workflowDefinitionKey=...`

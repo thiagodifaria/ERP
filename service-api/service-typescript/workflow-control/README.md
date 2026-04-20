@@ -30,6 +30,7 @@ Public routes:
 - `GET /health/details`
 - `GET /api/workflow-control/catalog/triggers`
 - `GET /api/workflow-control/catalog/actions`
+- `GET /api/workflow-control/editor`
 - `GET /api/workflow-control/definitions`
 - `POST /api/workflow-control/runs`
 - `GET /api/workflow-control/runs`

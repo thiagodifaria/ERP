@@ -73,6 +73,21 @@ test("workflow action catalog should expose runtime action foundations", async (
   assert.ok(payload.some((action) => action.supportsCompensation === true));
 });
 
+test("workflow editor payload should aggregate catalogs and editor capabilities", async () => {
+  const response = await request("/api/workflow-control/editor");
+  const payload = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.ok(Array.isArray(payload.triggers));
+  assert.ok(Array.isArray(payload.actions));
+  assert.equal(payload.capabilities.versioning, true);
+  assert.equal(payload.capabilities.publication, true);
+  assert.equal(payload.capabilities.restore, true);
+  assert.equal(payload.capabilities.runtimeAudit, true);
+  assert.equal(payload.capabilities.delayActions, true);
+  assert.equal(payload.capabilities.compensations, "basic");
+});
+
 test("workflow runs list should expose bootstrap execution ledger", async () => {
   const response = await request("/api/workflow-control/runs");
   const payload = await response.json();

@@ -201,6 +201,32 @@ defmodule WorkflowRuntime.Api.RouterTest do
     assert hd(actions_payload)["status"] == "completed"
   end
 
+  test "execution timeline route exposes a unified audit trail" do
+    create_conn =
+      conn(:post, "/api/workflow-runtime/executions", %{
+        "tenantSlug" => "bootstrap-ops",
+        "workflowDefinitionKey" => "lead-follow-up",
+        "subjectType" => "crm.lead",
+        "subjectPublicId" => "00000000-0000-0000-0000-000000009951",
+        "initiatedBy" => "timeline-user"
+      })
+      |> Router.call([])
+
+    create_payload = Jason.decode!(create_conn.resp_body)
+    public_id = create_payload["publicId"]
+
+    _start_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/start") |> Router.call([])
+    _advance_conn = conn(:post, "/api/workflow-runtime/executions/#{public_id}/advance") |> Router.call([])
+
+    timeline_conn = conn(:get, "/api/workflow-runtime/executions/#{public_id}/timeline") |> Router.call([])
+    timeline_payload = Jason.decode!(timeline_conn.resp_body)
+
+    assert timeline_conn.status == 200
+    assert Enum.any?(timeline_payload, &(&1["kind"] == "transition" and &1["status"] == "pending"))
+    assert Enum.any?(timeline_payload, &(&1["kind"] == "transition" and &1["status"] == "running"))
+    assert Enum.any?(timeline_payload, &(&1["kind"] == "action" and &1["actionKey"] == "task.create"))
+  end
+
   test "execution list filters by tenant and status" do
     first_create_conn =
       conn(:post, "/api/workflow-runtime/executions", %{

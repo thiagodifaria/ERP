@@ -98,6 +98,16 @@ defmodule WorkflowRuntime.Api.Router do
     end
   end
 
+  get "/api/workflow-runtime/executions/:public_id/timeline" do
+    case ExecutionStore.find(public_id) do
+      nil ->
+        json(conn, 404, %{code: "workflow_runtime_execution_not_found", message: "Execution was not found."})
+
+      _execution ->
+        json(conn, 200, ExecutionStore.timeline(public_id))
+    end
+  end
+
   post "/api/workflow-runtime/executions/:public_id/start" do
     transition_execution(conn, public_id, "running", ["pending"])
   end

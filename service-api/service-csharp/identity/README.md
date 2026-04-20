@@ -56,12 +56,14 @@ Public routes:
 - `GET /api/identity/tenants/{slug}/roles`
 - `POST /api/identity/tenants/{slug}/invites`
 - `GET /api/identity/tenants/{slug}/invites`
+- `GET /api/identity/tenants/{slug}/invites/{invitePublicId}`
 - `POST /api/identity/invites/{inviteToken}/accept`
 - `POST /api/identity/sessions/login`
 - `POST /api/identity/sessions/refresh`
 - `POST /api/identity/password-recovery`
 - `POST /api/identity/password-recovery/{resetToken}/complete`
 - `GET /api/identity/tenants/{slug}/access`
+- `GET /api/identity/tenants/{slug}/users/{userPublicId}/mfa`
 - `GET /api/identity/tenants/{slug}/users/{userPublicId}/sessions`
 - `DELETE /api/identity/tenants/{slug}/sessions/{sessionPublicId}`
 - `DELETE /api/identity/tenants/{slug}/users/{userPublicId}/sessions`

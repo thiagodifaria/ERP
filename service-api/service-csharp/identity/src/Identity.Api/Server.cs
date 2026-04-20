@@ -292,6 +292,12 @@ public static class Server
       {
         return ToResult(useCase.Execute(slug), TypedResults.Ok);
       });
+    app.MapGet(
+      "/api/identity/tenants/{slug}/invites/{invitePublicId:guid}",
+      (string slug, Guid invitePublicId, GetIdentityInviteByPublicId useCase) =>
+      {
+        return ToResult(useCase.Execute(slug, invitePublicId), TypedResults.Ok);
+      });
     app.MapPost(
       "/api/identity/tenants/{slug}/invites/{invitePublicId:guid}/cancel",
       (string slug, Guid invitePublicId, CancelIdentityInvite useCase) =>
@@ -371,6 +377,12 @@ public static class Server
     app.MapPost(
       "/api/identity/tenants/{slug}/users/{userPublicId:guid}/mfa/enroll",
       (string slug, Guid userPublicId, StartIdentityUserMfaEnrollment useCase) =>
+      {
+        return ToResult(useCase.Execute(slug, userPublicId), TypedResults.Ok);
+      });
+    app.MapGet(
+      "/api/identity/tenants/{slug}/users/{userPublicId:guid}/mfa",
+      (string slug, Guid userPublicId, GetIdentityUserMfaStatus useCase) =>
       {
         return ToResult(useCase.Execute(slug, userPublicId), TypedResults.Ok);
       });

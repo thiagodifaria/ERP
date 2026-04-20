@@ -86,6 +86,22 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     return;
   }
 
+  if (request.method === "GET" && request.url === "/api/workflow-control/editor") {
+    json(response, 200, {
+      triggers: await services.listWorkflowTriggerCatalog.execute(),
+      actions: await services.listWorkflowActionCatalog.execute(),
+      capabilities: {
+        versioning: true,
+        publication: true,
+        restore: true,
+        runtimeAudit: true,
+        delayActions: true,
+        compensations: "basic"
+      }
+    });
+    return;
+  }
+
   if (request.method === "GET" && request.url === "/api/workflow-control/definitions") {
     json(response, 200, await services.listWorkflowDefinitions.execute());
     return;

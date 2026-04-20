@@ -21,6 +21,8 @@ public static class DependencyInjection
     services.AddScoped<CreateBootstrapTeam>();
     services.AddScoped<CreateBootstrapUser>();
     services.AddScoped<DisableIdentityUserMfa>();
+    services.AddScoped<GetIdentityInviteByPublicId>();
+    services.AddScoped<GetIdentityUserMfaStatus>();
     services.AddScoped<ListIdentityInvites>();
     services.AddScoped<ListIdentityUserSessions>();
     services.AddScoped<ListIdentitySecurityAuditEvents>();

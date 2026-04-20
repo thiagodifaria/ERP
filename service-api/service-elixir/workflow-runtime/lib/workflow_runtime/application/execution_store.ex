@@ -45,6 +45,34 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
     end
   end
 
+  def timeline(public_id) do
+    transitions(public_id)
+    |> Enum.map(fn transition ->
+      %{
+        "kind" => "transition",
+        "createdAt" => transition["createdAt"],
+        "status" => transition["status"],
+        "changedBy" => transition["changedBy"]
+      }
+    end)
+    |> Kernel.++(
+      actions(public_id)
+      |> Enum.map(fn action ->
+        %{
+          "kind" => "action",
+          "createdAt" => action["createdAt"],
+          "status" => action["status"],
+          "stepId" => action["stepId"],
+          "actionKey" => action["actionKey"],
+          "label" => action["label"],
+          "delaySeconds" => action["delaySeconds"],
+          "compensationActionKey" => action["compensationActionKey"]
+        }
+      end)
+    )
+    |> Enum.sort_by(& &1["createdAt"])
+  end
+
   def create(attributes) do
     if postgres_driver?() do
       create_postgres(attributes)
