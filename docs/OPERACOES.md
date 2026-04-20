@@ -31,7 +31,7 @@ Cada servico critico deve documentar:
 - `./scripts/up.sh` sobe o ecossistema local definido em compose
 - `./scripts/down.sh` derruba os containers e remove orfaos
 - `./scripts/logs.sh <servico>` consulta logs do servico informado
-- o compose local agora tambem sobe `service-kafka`, `service-keycloak`, `service-prometheus`, `service-grafana` e `service-blackbox-exporter` como fundacao de plataforma
+- o compose local agora tambem sobe `service-kafka`, `service-keycloak`, `service-openfga`, `service-prometheus`, `service-grafana` e `service-blackbox-exporter` como fundacao de plataforma
 - quando o host ja estiver usando portas como `5432`, `6379` ou `808x`, os scripts container-first remapeiam automaticamente as exposicoes locais para manter o fluxo de runtime e smoke previsivel
 - `./scripts/db.sh migrate all` aplica a base `common`, `identity` e `crm`
 - `./scripts/db.sh migrate crm` aplica apenas o contexto relacional de CRM
@@ -46,21 +46,23 @@ Cada servico critico deve documentar:
 - `./scripts/test.sh unit` executa Go, TypeScript, .NET e Rust em modo container-first
 - `./scripts/test.sh integration` executa a suite HTTP do `identity`
 - `./scripts/test.sh contract` executa as suites publicas de contratos de `workflow-control`, `crm` e `identity`
-- `./scripts/test.sh platform` valida a plataforma local da Fase 1, checando Keycloak, Kafka, Prometheus e Grafana em container
+- `./scripts/test.sh platform` valida a plataforma local da Fase 1, checando Keycloak, OpenFGA, Kafka, Prometheus e Grafana em container
 - `./scripts/test.sh smoke` agora valida primeiro a plataforma local e depois reseta volume, aplica bootstrap relacional e exercita `workflow-control`, `crm`, `sales`, `engagement`, `analytics`, `identity`, `webhook-hub`, `workflow-runtime` e `edge` ao vivo por HTTP
 
 ## Enderecos locais da plataforma
 
 - Keycloak: `http://localhost:${KEYCLOAK_PORT}` com realm bootstrap em `http://localhost:${KEYCLOAK_PORT}/realms/erp-local`
+- OpenFGA HTTP API: `http://localhost:${OPENFGA_HTTP_PORT}`
+- OpenFGA Playground: `http://localhost:${OPENFGA_PLAYGROUND_PORT}/playground`
 - Prometheus: `http://localhost:${PROMETHEUS_PORT}`
 - Grafana: `http://localhost:${GRAFANA_PORT}`
 - Kafka: `localhost:${KAFKA_PORT}`
 
 ## Observabilidade local bootstrap
 
-- o Prometheus usa `blackbox_exporter` para sondar health HTTP e conectividade TCP do stack
+- o Prometheus usa `blackbox_exporter` para sondar health HTTP e conectividade TCP do stack, incluindo o plano local de autorizacao em OpenFGA
 - o Grafana sobe com datasource provisionado para o Prometheus e com o dashboard `ERP Platform Health`
-- o stack inicial ja permite enxergar saude de `edge`, `identity`, `webhook-hub`, Keycloak, Grafana, PostgreSQL, Redis e Kafka sem depender de instrumentacao pesada por servico
+- o stack inicial ja permite enxergar saude de `edge`, `identity`, `webhook-hub`, Keycloak, OpenFGA, Grafana, PostgreSQL, Redis e Kafka sem depender de instrumentacao pesada por servico
 
 ## Entrega incremental
 

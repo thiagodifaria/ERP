@@ -12,5 +12,6 @@ Planned responsibilities:
 Current local platform bootstrap:
 
 - Keycloak realm import for local identity integration
+- OpenFGA local authorization plane bootstrap for relationship-based access experiments
 - Kafka single-node local broker for event backbone bootstrap
 - Prometheus, Grafana and Blackbox Exporter for baseline observability

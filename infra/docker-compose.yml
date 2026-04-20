@@ -85,6 +85,41 @@ services:
       timeout: 10s
       retries: 10
 
+  service-openfga-migrate:
+    image: openfga/openfga:latest
+    container_name: erp-openfga-migrate
+    user: nonroot
+    command:
+      - migrate
+      - --datastore-engine
+      - sqlite
+      - --datastore-uri
+      - file:/home/nonroot/openfga.db
+    volumes:
+      - erp-openfga-data:/home/nonroot
+
+  service-openfga:
+    image: openfga/openfga:latest
+    container_name: erp-openfga
+    user: nonroot
+    command:
+      - run
+      - --datastore-engine
+      - sqlite
+      - --datastore-uri
+      - file:/home/nonroot/openfga.db
+      - --playground-enabled=true
+      - --playground-port=3000
+    depends_on:
+      service-openfga-migrate:
+        condition: service_completed_successfully
+    volumes:
+      - erp-openfga-data:/home/nonroot
+    ports:
+      - "${OPENFGA_HTTP_PORT}:8080"
+      - "${OPENFGA_GRPC_PORT}:8081"
+      - "${OPENFGA_PLAYGROUND_PORT}:3000"
+
   service-blackbox-exporter:
     image: prom/blackbox-exporter:v0.25.0
     container_name: erp-blackbox-exporter
@@ -326,3 +361,4 @@ services:
 volumes:
   erp-postgresql-data:
   erp-redis-data:
+  erp-openfga-data:

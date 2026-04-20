@@ -18,6 +18,7 @@ scrape_configs:
           - http://identity:8080/health/ready
           - http://webhook-hub:8082/health/ready
           - http://service-keycloak:8080/realms/erp-local
+          - http://service-openfga:8080/healthz
           - http://service-grafana:3000/api/health
     relabel_configs:
       - source_labels: [__address__]

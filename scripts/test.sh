@@ -82,6 +82,9 @@ prepare_runtime_ports() {
   remap_host_port_if_needed "PROMETHEUS_PORT" "prometheus"
   remap_host_port_if_needed "GRAFANA_PORT" "grafana"
   remap_host_port_if_needed "KEYCLOAK_PORT" "keycloak"
+  remap_host_port_if_needed "OPENFGA_HTTP_PORT" "openfga-http"
+  remap_host_port_if_needed "OPENFGA_GRPC_PORT" "openfga-grpc"
+  remap_host_port_if_needed "OPENFGA_PLAYGROUND_PORT" "openfga-playground"
   remap_host_port_if_needed "EDGE_HTTP_PORT" "edge"
   remap_host_port_if_needed "IDENTITY_HTTP_PORT" "identity"
   remap_host_port_if_needed "WEBHOOK_HUB_HTTP_PORT" "webhook-hub"
@@ -212,37 +215,46 @@ run_rust_unit() {
 
 run_platform_runtime_smoke() {
   local keycloak_url="http://localhost:${KEYCLOAK_PORT:-8089}"
+  local openfga_url="http://localhost:${OPENFGA_HTTP_PORT:-8090}"
   local prometheus_url="http://localhost:${PROMETHEUS_PORT:-9090}"
   local grafana_url="http://localhost:${GRAFANA_PORT:-3000}"
   local realm_response
+  local openfga_store_response
+  local openfga_list_response
   local prometheus_targets_response
   local prometheus_probe_response
   local grafana_response
   local kafka_list_response
 
-  "${COMPOSE_CMD[@]}" up -d service-postgresql service-redis service-kafka service-keycloak service-blackbox-exporter service-prometheus service-grafana
+  "${COMPOSE_CMD[@]}" up -d service-postgresql service-redis service-kafka service-keycloak service-openfga service-blackbox-exporter service-prometheus service-grafana
   wait_for_http_ready "$keycloak_url/realms/${KEYCLOAK_REALM:-erp-local}"
+  wait_for_http_ready "$openfga_url/healthz"
   wait_for_http_ready "$prometheus_url/-/ready"
   wait_for_http_ready "$grafana_url/api/health"
   wait_for_prometheus_probe_success "$prometheus_url" "blackbox-http" "http://service-keycloak:8080/realms/${KEYCLOAK_REALM:-erp-local}"
+  wait_for_prometheus_probe_success "$prometheus_url" "blackbox-http" "http://service-openfga:8080/healthz"
   wait_for_prometheus_probe_success "$prometheus_url" "blackbox-http" "http://service-grafana:3000/api/health"
   wait_for_prometheus_probe_success "$prometheus_url" "blackbox-tcp" "service-postgresql:5432"
   wait_for_prometheus_probe_success "$prometheus_url" "blackbox-tcp" "service-redis:6379"
   wait_for_prometheus_probe_success "$prometheus_url" "blackbox-tcp" "service-kafka:9092"
 
   realm_response="$(curl -fsS "$keycloak_url/realms/${KEYCLOAK_REALM:-erp-local}")"
+  openfga_store_response="$(curl -fsS -X POST "$openfga_url/stores" -H 'content-type: application/json' -d "{\"name\":\"${OPENFGA_STORE_NAME:-erp-local-store}\"}")"
+  openfga_list_response="$(curl -fsS "$openfga_url/stores")"
   prometheus_targets_response="$(curl -fsS "$prometheus_url/api/v1/targets")"
   prometheus_probe_response="$(curl -fsS --get --data-urlencode 'query=probe_success' "$prometheus_url/api/v1/query")"
   grafana_response="$(curl -fsS "$grafana_url/api/health")"
   kafka_list_response="$("${COMPOSE_CMD[@]}" exec -T service-kafka kafka-topics --bootstrap-server service-kafka:9092 --list || true)"
 
   echo "[test] platform keycloak realm => $realm_response"
+  echo "[test] platform openfga store create => $openfga_store_response"
+  echo "[test] platform openfga stores => $openfga_list_response"
   echo "[test] platform prometheus targets => $prometheus_targets_response"
   echo "[test] platform prometheus probes => $prometheus_probe_response"
   echo "[test] platform grafana health => $grafana_response"
   echo "[test] platform kafka topics => $kafka_list_response"
 
-  if [[ "$realm_response" != *"\"realm\":\"${KEYCLOAK_REALM:-erp-local}\""* || "$prometheus_targets_response" != *"service-keycloak:8080/realms/${KEYCLOAK_REALM:-erp-local}"* || "$prometheus_targets_response" != *'service-postgresql:5432'* || "$prometheus_targets_response" != *'service-kafka:9092'* || "$prometheus_probe_response" != *'"status":"success"'* || "$grafana_response" != *'"database"'* || "$grafana_response" != *'"ok"'* ]]; then
+  if [[ "$realm_response" != *"\"realm\":\"${KEYCLOAK_REALM:-erp-local}\""* || "$openfga_store_response" != *"\"name\":\"${OPENFGA_STORE_NAME:-erp-local-store}\""* || "$openfga_list_response" != *"\"name\":\"${OPENFGA_STORE_NAME:-erp-local-store}\""* || "$prometheus_targets_response" != *"service-keycloak:8080/realms/${KEYCLOAK_REALM:-erp-local}"* || "$prometheus_targets_response" != *'service-openfga:8080/healthz'* || "$prometheus_targets_response" != *'service-postgresql:5432'* || "$prometheus_targets_response" != *'service-kafka:9092'* || "$prometheus_probe_response" != *'"status":"success"'* || "$grafana_response" != *'"database"'* || "$grafana_response" != *'"ok"'* ]]; then
     echo "[test] platform runtime stack did not expose the expected local foundations"
     exit 1
   fi
@@ -1627,6 +1639,9 @@ run_smoke() {
   export PROMETHEUS_PORT="${PROMETHEUS_PORT_SMOKE:-19090}"
   export GRAFANA_PORT="${GRAFANA_PORT_SMOKE:-13000}"
   export KEYCLOAK_PORT="${KEYCLOAK_PORT_SMOKE:-18089}"
+  export OPENFGA_HTTP_PORT="${OPENFGA_HTTP_PORT_SMOKE:-18090}"
+  export OPENFGA_GRPC_PORT="${OPENFGA_GRPC_PORT_SMOKE:-18091}"
+  export OPENFGA_PLAYGROUND_PORT="${OPENFGA_PLAYGROUND_PORT_SMOKE:-13010}"
   export EDGE_HTTP_PORT="${EDGE_HTTP_PORT_SMOKE:-18080}"
   export CRM_HTTP_PORT="${CRM_HTTP_PORT_SMOKE:-18083}"
   export SALES_HTTP_PORT="${SALES_HTTP_PORT_SMOKE:-18087}"
@@ -1691,6 +1706,9 @@ main() {
       export PROMETHEUS_PORT="${PROMETHEUS_PORT_PLATFORM:-19090}"
       export GRAFANA_PORT="${GRAFANA_PORT_PLATFORM:-13000}"
       export KEYCLOAK_PORT="${KEYCLOAK_PORT_PLATFORM:-18089}"
+      export OPENFGA_HTTP_PORT="${OPENFGA_HTTP_PORT_PLATFORM:-18090}"
+      export OPENFGA_GRPC_PORT="${OPENFGA_GRPC_PORT_PLATFORM:-18091}"
+      export OPENFGA_PLAYGROUND_PORT="${OPENFGA_PLAYGROUND_PORT_PLATFORM:-13010}"
       bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
       run_platform_runtime_smoke
       ;;
