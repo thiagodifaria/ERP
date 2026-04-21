@@ -1,7 +1,6 @@
 .git
 .gitignore
-.TEMP
-PLANEJAMENTO.md
+.cache/
 **/bin
 **/obj
 **/node_modules
@@ -11,5 +10,4 @@ PLANEJAMENTO.md
 **/__pycache__
 **/coverage
 **/.coverage
-**/.idea
 **/.vscode

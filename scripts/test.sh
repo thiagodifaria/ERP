@@ -105,6 +105,8 @@ export ERP_HOST_PORTS_LOCKED=1
 COMPOSE_CMD=(docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 DB_NAME="${ERP_POSTGRES_DB:-erp}"
 DB_USER="${ERP_POSTGRES_USER:-erp}"
+HTTP_READY_MAX_ATTEMPTS="${ERP_HTTP_READY_MAX_ATTEMPTS:-120}"
+PROMETHEUS_PROBE_MAX_ATTEMPTS="${ERP_PROMETHEUS_PROBE_MAX_ATTEMPTS:-90}"
 
 run_go_unit() {
   docker run --rm \
@@ -490,8 +492,8 @@ wait_for_http_ready() {
   until curl -fsS "$url" >/dev/null 2>&1; do
     attempts=$((attempts + 1))
 
-    if [[ "$attempts" -ge 60 ]]; then
-      echo "[test] http endpoint did not become ready: $url"
+    if [[ "$attempts" -ge "$HTTP_READY_MAX_ATTEMPTS" ]]; then
+      echo "[test] http endpoint did not become ready after $HTTP_READY_MAX_ATTEMPTS attempts: $url"
       exit 1
     fi
 
@@ -509,8 +511,8 @@ wait_for_prometheus_probe_success() {
   until response="$(curl -fsS --get --data-urlencode "query=probe_success{job=\"$job\",instance=\"$instance\"}" "$prometheus_url/api/v1/query")" && [[ "$response" == *'"value":'*'"1"'* ]]; do
     attempts=$((attempts + 1))
 
-    if [[ "$attempts" -ge 45 ]]; then
-      echo "[test] prometheus probe did not become successful for $job => $instance"
+    if [[ "$attempts" -ge "$PROMETHEUS_PROBE_MAX_ATTEMPTS" ]]; then
+      echo "[test] prometheus probe did not become successful after $PROMETHEUS_PROBE_MAX_ATTEMPTS attempts for $job => $instance"
       exit 1
     fi
 

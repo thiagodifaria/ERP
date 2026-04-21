@@ -1,5 +1,4 @@
-PLANEJAMENTO.md
-.TEMP/
+.cache/
 **/bin/
 **/obj/
 **/target/
