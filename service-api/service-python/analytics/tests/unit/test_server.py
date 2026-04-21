@@ -22,7 +22,8 @@ def test_details_route_exposes_analytics_dependencies() -> None:
     assert response.status_code == 200
     assert payload["status"] == "ready"
     assert any(dependency["name"] == "report-engine" for dependency in payload["dependencies"])
-    assert any(dependency["name"] == "warehouse" for dependency in payload["dependencies"])
+    assert any(dependency["name"] == "forecast-model" for dependency in payload["dependencies"])
+    assert any(dependency["name"] == "simulation-catalog" for dependency in payload["dependencies"])
 
 
 def test_pipeline_summary_returns_operational_payload() -> None:
@@ -122,3 +123,25 @@ def test_revenue_operations_returns_financial_operational_payload() -> None:
     assert payload["invoices"]["paidAmountCents"] == 845000
     assert payload["collections"]["invoiceCoverageRate"] == 0.75
     assert payload["risk"]["overdueInvoices"] == 1
+
+
+def test_cost_estimator_returns_scenario_based_cost_payload() -> None:
+    response = client.get("/api/analytics/reports/cost-estimator?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["costs"]["estimatedMonthlyCostCents"] == 58820
+    assert payload["projection"]["risk"] == "attention"
+    assert payload["recommendations"]["needsTeamExpansion"] is True
+
+
+def test_load_benchmark_returns_recent_performance_payload() -> None:
+    response = client.get("/api/analytics/reports/load-benchmark?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["summary"]["totalRuns"] == 2
+    assert payload["latest"]["status"] == "attention"
+    assert payload["latest"]["p95LatencyMs"] == 332

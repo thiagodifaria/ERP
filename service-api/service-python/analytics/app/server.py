@@ -5,7 +5,9 @@ from fastapi import FastAPI
 from app.config.settings import settings
 from app.infrastructure.postgres import postgres_ready
 from app.reports.automation_board import build_automation_board
+from app.reports.cost_estimator import build_cost_estimator
 from app.reports.delivery_reliability import build_delivery_reliability
+from app.reports.load_benchmark import build_load_benchmark
 from app.reports.pipeline_summary import build_pipeline_summary
 from app.reports.revenue_operations import build_revenue_operations
 from app.reports.sales_journey import build_sales_journey
@@ -31,7 +33,8 @@ def ready() -> dict:
 def details() -> dict:
     dependencies = [
         {"name": "report-engine", "status": "ready"},
-        {"name": "forecast-model", "status": "pending-runtime-wiring"},
+        {"name": "forecast-model", "status": "ready"},
+        {"name": "simulation-catalog", "status": "ready"},
     ]
 
     if settings.repository_driver == "postgres":
@@ -87,3 +90,13 @@ def delivery_reliability(provider: str | None = None) -> dict:
 @app.get("/api/analytics/reports/revenue-operations")
 def revenue_operations(tenant_slug: str | None = None) -> dict:
     return build_revenue_operations(tenant_slug)
+
+
+@app.get("/api/analytics/reports/cost-estimator")
+def cost_estimator(tenant_slug: str | None = None) -> dict:
+    return build_cost_estimator(tenant_slug)
+
+
+@app.get("/api/analytics/reports/load-benchmark")
+def load_benchmark(tenant_slug: str | None = None) -> dict:
+    return build_load_benchmark(tenant_slug)

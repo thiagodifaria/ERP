@@ -7,8 +7,9 @@ Initial scope:
 - FastAPI service bootstrap
 - health and readiness routes
 - scenario catalog for workload modeling
+- operational-load scenario runs with PostgreSQL persistence
+- load benchmark runs with projected latency, throughput and capacity status
 - selectable repository driver between memory and PostgreSQL
-- persistence foundation for future scenario runs and load benchmarks
 
 Public routes:
 
@@ -16,6 +17,11 @@ Public routes:
 - `GET /health/ready`
 - `GET /health/details`
 - `GET /api/simulation/scenarios/catalog`
+- `POST /api/simulation/scenarios/operational-load`
+- `GET /api/simulation/scenarios/runs`
+- `GET /api/simulation/scenarios/runs/{publicId}`
+- `POST /api/simulation/benchmarks/load`
+- `GET /api/simulation/benchmarks/runs`
 
 Container-first validation:
 

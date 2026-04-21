@@ -1799,6 +1799,8 @@ run_analytics_runtime_smoke() {
   local workflow_definition_health_response
   local delivery_reliability_response
   local revenue_operations_response
+  local cost_estimator_response
+  local load_benchmark_response
 
   "${COMPOSE_CMD[@]}" up -d --build analytics
   wait_for_http_ready "$base_url/health/ready"
@@ -1812,6 +1814,8 @@ run_analytics_runtime_smoke() {
   workflow_definition_health_response="$(curl -fsS "$base_url/api/analytics/reports/workflow-definition-health?tenant_slug=bootstrap-ops")"
   delivery_reliability_response="$(curl -fsS "$base_url/api/analytics/reports/delivery-reliability?provider=stripe")"
   revenue_operations_response="$(curl -fsS "$base_url/api/analytics/reports/revenue-operations?tenant_slug=bootstrap-ops")"
+  cost_estimator_response="$(curl -fsS "$base_url/api/analytics/reports/cost-estimator?tenant_slug=bootstrap-ops")"
+  load_benchmark_response="$(curl -fsS "$base_url/api/analytics/reports/load-benchmark?tenant_slug=bootstrap-ops")"
   echo "[test] analytics health details => $health_details_response"
   echo "[test] analytics pipeline summary => $pipeline_summary_response"
   echo "[test] analytics service pulse => $service_pulse_response"
@@ -1821,8 +1825,10 @@ run_analytics_runtime_smoke() {
   echo "[test] analytics workflow definition health => $workflow_definition_health_response"
   echo "[test] analytics delivery reliability => $delivery_reliability_response"
   echo "[test] analytics revenue operations => $revenue_operations_response"
+  echo "[test] analytics cost estimator => $cost_estimator_response"
+  echo "[test] analytics load benchmark => $load_benchmark_response"
 
-  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"dataSource":"postgresql"'* || "$pipeline_summary_response" != *'"leadsCaptured":2'* || "$pipeline_summary_response" != *'"conversions":3'* || "$pipeline_summary_response" != *'"manual":1'* || "$pipeline_summary_response" != *'"instagram":1'* || "$pipeline_summary_response" != *'"runningAutomations":2'* || "$service_pulse_response" != *'"tenantSlug":"bootstrap-ops"'* || "$service_pulse_response" != *'"dataSource":"postgresql"'* || "$service_pulse_response" != *'"totalLeads":2'* || "$service_pulse_response" != *'"salesTotal":3'* || "$service_pulse_response" != *'"bookedRevenueCents":230000'* || "$service_pulse_response" != *'"activeDefinitions":1'* || "$service_pulse_response" != *'"runsRunning":2'* || "$service_pulse_response" != *'"runsCompleted":2'* || "$service_pulse_response" != *'"runsFailed":1'* || "$service_pulse_response" != *'"runsCancelled":1'* || "$service_pulse_response" != *'"totalExecutions":3'* || "$service_pulse_response" != *'"completed":3'* || "$service_pulse_response" != *'"failed":0'* || "$service_pulse_response" != *'"forwarded":1'* || "$sales_journey_response" != *'"tenantSlug":"bootstrap-ops"'* || "$sales_journey_response" != *'"dataSource":"postgresql"'* || "$sales_journey_response" != *'"leadsCaptured":2'* || "$sales_journey_response" != *'"leadsWithOpportunity":2'* || "$sales_journey_response" != *'"opportunitiesWithProposal":3'* || "$sales_journey_response" != *'"proposalsConverted":3'* || "$sales_journey_response" != *'"salesWon":3'* || "$sales_journey_response" != *'"leadToSaleConversionRate":1.5'* || "$sales_journey_response" != *'"totalAmountCents":308000'* || "$sales_journey_response" != *'"won":3'* || "$sales_journey_response" != *'"accepted":3'* || "$sales_journey_response" != *'"bookedRevenueCents":230000'* || "$sales_journey_response" != *'"active":1'* || "$sales_journey_response" != *'"invoiced":1'* || "$sales_journey_response" != *'"controlRuns":1'* || "$sales_journey_response" != *'"runtimeCompleted":1'* || "$tenant_360_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_360_response" != *'"dataSource":"postgresql"'* || "$tenant_360_response" != *'"companies":1'* || "$tenant_360_response" != *'"users":1'* || "$tenant_360_response" != *'"teams":1'* || "$tenant_360_response" != *'"roles":5'* || "$tenant_360_response" != *'"assignedLeads":2'* || "$tenant_360_response" != *'"leadNotes":2'* || "$tenant_360_response" != *'"opportunities":3'* || "$tenant_360_response" != *'"proposals":3'* || "$tenant_360_response" != *'"sales":3'* || "$tenant_360_response" != *'"bookedRevenueCents":230000'* || "$tenant_360_response" != *'"workflowRuns":6'* || "$tenant_360_response" != *'"workflowRunEvents":10'* || "$tenant_360_response" != *'"runtimeExecutions":3'* || "$tenant_360_response" != *'"runtimeCompleted":3'* || "$tenant_360_response" != *'"runtimeFailed":0'* || "$automation_board_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_board_response" != *'"dataSource":"postgresql"'* || "$automation_board_response" != *'"definitionsTotal":2'* || "$automation_board_response" != *'"definitionsActive":1'* || "$automation_board_response" != *'"definitionsDraft":1'* || "$automation_board_response" != *'"publishedVersions":3'* || "$automation_board_response" != *'"runsTotal":6'* || "$automation_board_response" != *'"runningRuns":2'* || "$automation_board_response" != *'"recordedEvents":10'* || "$automation_board_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$automation_board_response" != *'"executionsTotal":3'* || "$automation_board_response" != *'"completedExecutions":3'* || "$automation_board_response" != *'"failedExecutions":0'* || "$automation_board_response" != *'"retriesTotal":1'* || "$automation_board_response" != *'"recordedTransitions":12'* || "$automation_board_response" != *'"forwarded":1'* || "$workflow_definition_health_response" != *'"tenantSlug":"bootstrap-ops"'* || "$workflow_definition_health_response" != *'"dataSource":"postgresql"'* || "$workflow_definition_health_response" != *'"definitionsTotal":2'* || "$workflow_definition_health_response" != *'"stable":1'* || "$workflow_definition_health_response" != *'"attention":1'* || "$workflow_definition_health_response" != *'"critical":0'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$workflow_definition_health_response" != *'"health":"stable"'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"runtime-flow"'* || "$workflow_definition_health_response" != *'"health":"attention"'* || "$workflow_definition_health_response" != *'"definition-not-active"'* || "$delivery_reliability_response" != *'"provider":"stripe"'* || "$delivery_reliability_response" != *'"dataSource":"postgresql"'* || "$delivery_reliability_response" != *'"totalEvents":1'* || "$delivery_reliability_response" != *'"handledEvents":1'* || "$delivery_reliability_response" != *'"avgTransitionsPerEvent":5.0'* || "$delivery_reliability_response" != *'"received":0'* || "$delivery_reliability_response" != *'"validated":0'* || "$delivery_reliability_response" != *'"queued":0'* || "$delivery_reliability_response" != *'"processing":0'* || "$delivery_reliability_response" != *'"forwarded":1'* || "$revenue_operations_response" != *'"tenantSlug":"bootstrap-ops"'* || "$revenue_operations_response" != *'"dataSource":"postgresql"'* || "$revenue_operations_response" != *'"bookedRevenueCents":230000'* || "$revenue_operations_response" != *'"total":3'* || "$revenue_operations_response" != *'"openAmountCents":125000'* || "$revenue_operations_response" != *'"paidAmountCents":105000'* || "$revenue_operations_response" != *'"overdueAmountCents":0'* || "$revenue_operations_response" != *'"overdueCount":0'* || "$revenue_operations_response" != *'"invoiceCoverageRate":0.6667'* || "$revenue_operations_response" != *'"collectionRate":0.4565'* || "$revenue_operations_response" != *'"averageTicketCents":76666'* || "$revenue_operations_response" != *'"invoicesDueSoon":0'* ]]; then
+  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"forecast-model","status":"ready"'* || "$health_details_response" != *'"name":"simulation-catalog","status":"ready"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"dataSource":"postgresql"'* || "$pipeline_summary_response" != *'"leadsCaptured":2'* || "$pipeline_summary_response" != *'"conversions":3'* || "$pipeline_summary_response" != *'"manual":1'* || "$pipeline_summary_response" != *'"instagram":1'* || "$pipeline_summary_response" != *'"runningAutomations":2'* || "$service_pulse_response" != *'"tenantSlug":"bootstrap-ops"'* || "$service_pulse_response" != *'"dataSource":"postgresql"'* || "$service_pulse_response" != *'"totalLeads":2'* || "$service_pulse_response" != *'"salesTotal":3'* || "$service_pulse_response" != *'"bookedRevenueCents":230000'* || "$service_pulse_response" != *'"activeDefinitions":1'* || "$service_pulse_response" != *'"runsRunning":2'* || "$service_pulse_response" != *'"runsCompleted":2'* || "$service_pulse_response" != *'"runsFailed":1'* || "$service_pulse_response" != *'"runsCancelled":1'* || "$service_pulse_response" != *'"totalExecutions":3'* || "$service_pulse_response" != *'"completed":3'* || "$service_pulse_response" != *'"failed":0'* || "$service_pulse_response" != *'"forwarded":1'* || "$sales_journey_response" != *'"tenantSlug":"bootstrap-ops"'* || "$sales_journey_response" != *'"dataSource":"postgresql"'* || "$sales_journey_response" != *'"leadsCaptured":2'* || "$sales_journey_response" != *'"leadsWithOpportunity":2'* || "$sales_journey_response" != *'"opportunitiesWithProposal":3'* || "$sales_journey_response" != *'"proposalsConverted":3'* || "$sales_journey_response" != *'"salesWon":3'* || "$sales_journey_response" != *'"leadToSaleConversionRate":1.5'* || "$sales_journey_response" != *'"totalAmountCents":308000'* || "$sales_journey_response" != *'"won":3'* || "$sales_journey_response" != *'"accepted":3'* || "$sales_journey_response" != *'"bookedRevenueCents":230000'* || "$sales_journey_response" != *'"active":1'* || "$sales_journey_response" != *'"invoiced":1'* || "$sales_journey_response" != *'"controlRuns":1'* || "$sales_journey_response" != *'"runtimeCompleted":1'* || "$tenant_360_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_360_response" != *'"dataSource":"postgresql"'* || "$tenant_360_response" != *'"companies":1'* || "$tenant_360_response" != *'"users":1'* || "$tenant_360_response" != *'"teams":1'* || "$tenant_360_response" != *'"roles":5'* || "$tenant_360_response" != *'"assignedLeads":2'* || "$tenant_360_response" != *'"leadNotes":2'* || "$tenant_360_response" != *'"opportunities":3'* || "$tenant_360_response" != *'"proposals":3'* || "$tenant_360_response" != *'"sales":3'* || "$tenant_360_response" != *'"bookedRevenueCents":230000'* || "$tenant_360_response" != *'"workflowRuns":6'* || "$tenant_360_response" != *'"workflowRunEvents":10'* || "$tenant_360_response" != *'"runtimeExecutions":3'* || "$tenant_360_response" != *'"runtimeCompleted":3'* || "$tenant_360_response" != *'"runtimeFailed":0'* || "$automation_board_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_board_response" != *'"dataSource":"postgresql"'* || "$automation_board_response" != *'"definitionsTotal":2'* || "$automation_board_response" != *'"definitionsActive":1'* || "$automation_board_response" != *'"definitionsDraft":1'* || "$automation_board_response" != *'"publishedVersions":3'* || "$automation_board_response" != *'"runsTotal":6'* || "$automation_board_response" != *'"runningRuns":2'* || "$automation_board_response" != *'"recordedEvents":10'* || "$automation_board_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$automation_board_response" != *'"executionsTotal":3'* || "$automation_board_response" != *'"completedExecutions":3'* || "$automation_board_response" != *'"failedExecutions":0'* || "$automation_board_response" != *'"retriesTotal":1'* || "$automation_board_response" != *'"recordedTransitions":12'* || "$automation_board_response" != *'"forwarded":1'* || "$workflow_definition_health_response" != *'"tenantSlug":"bootstrap-ops"'* || "$workflow_definition_health_response" != *'"dataSource":"postgresql"'* || "$workflow_definition_health_response" != *'"definitionsTotal":2'* || "$workflow_definition_health_response" != *'"stable":1'* || "$workflow_definition_health_response" != *'"attention":1'* || "$workflow_definition_health_response" != *'"critical":0'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$workflow_definition_health_response" != *'"health":"stable"'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"runtime-flow"'* || "$workflow_definition_health_response" != *'"health":"attention"'* || "$workflow_definition_health_response" != *'"definition-not-active"'* || "$delivery_reliability_response" != *'"provider":"stripe"'* || "$delivery_reliability_response" != *'"dataSource":"postgresql"'* || "$delivery_reliability_response" != *'"totalEvents":1'* || "$delivery_reliability_response" != *'"handledEvents":1'* || "$delivery_reliability_response" != *'"avgTransitionsPerEvent":5.0'* || "$delivery_reliability_response" != *'"received":0'* || "$delivery_reliability_response" != *'"validated":0'* || "$delivery_reliability_response" != *'"queued":0'* || "$delivery_reliability_response" != *'"processing":0'* || "$delivery_reliability_response" != *'"forwarded":1'* || "$revenue_operations_response" != *'"tenantSlug":"bootstrap-ops"'* || "$revenue_operations_response" != *'"dataSource":"postgresql"'* || "$revenue_operations_response" != *'"bookedRevenueCents":230000'* || "$revenue_operations_response" != *'"total":3'* || "$revenue_operations_response" != *'"openAmountCents":125000'* || "$revenue_operations_response" != *'"paidAmountCents":105000'* || "$revenue_operations_response" != *'"overdueAmountCents":0'* || "$revenue_operations_response" != *'"overdueCount":0'* || "$revenue_operations_response" != *'"invoiceCoverageRate":0.6667'* || "$revenue_operations_response" != *'"collectionRate":0.4565'* || "$revenue_operations_response" != *'"averageTicketCents":76666'* || "$revenue_operations_response" != *'"invoicesDueSoon":0'* || "$cost_estimator_response" != *'"tenantSlug":"bootstrap-ops"'* || "$cost_estimator_response" != *'"dataSource":"postgresql"'* || "$cost_estimator_response" != *'"estimatedMonthlyCostCents":34896'* || "$cost_estimator_response" != *'"storageProjectedMb":2072'* || "$cost_estimator_response" != *'"risk":"attention"'* || "$cost_estimator_response" != *'"warm-object-storage"'* || "$load_benchmark_response" != *'"tenantSlug":"bootstrap-ops"'* || "$load_benchmark_response" != *'"dataSource":"postgresql"'* || "$load_benchmark_response" != *'"totalRuns":1'* || "$load_benchmark_response" != *'"stable":1'* || "$load_benchmark_response" != *'"avgLatencyMs":55'* || "$load_benchmark_response" != *'"p95LatencyMs":101'* || "$load_benchmark_response" != *'"throughputRps":62.22'* || "$load_benchmark_response" != *'"status":"stable"'* ]]; then
     echo "[test] analytics runtime bootstrap report did not return the expected payload"
     exit 1
   fi
@@ -1832,17 +1838,95 @@ run_simulation_runtime_smoke() {
   local base_url="http://localhost:${SIMULATION_HTTP_PORT:-8094}"
   local health_details_response
   local catalog_response
+  local create_scenario_response
+  local create_benchmark_response
+  local scenario_public_id
+  local scenario_list_response
+  local scenario_detail_response
+  local benchmark_list_response
+  local simulation_db_summary
 
   "${COMPOSE_CMD[@]}" up -d --build simulation
   wait_for_http_ready "$base_url/health/ready"
 
   health_details_response="$(curl -fsS "$base_url/health/details")"
   catalog_response="$(curl -fsS "$base_url/api/simulation/scenarios/catalog")"
+  create_scenario_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","leadMultiplier":2,"automationMultiplier":1.5,"webhookMultiplier":2,"teamSize":3,"planningHorizonDays":30,"storageGrowthGb":2}' \
+    "$base_url/api/simulation/scenarios/operational-load")"
+  scenario_public_id="$(echo "$create_scenario_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  scenario_list_response="$(curl -fsS "$base_url/api/simulation/scenarios/runs?tenant_slug=bootstrap-ops")"
+  scenario_detail_response="$(curl -fsS "$base_url/api/simulation/scenarios/runs/$scenario_public_id")"
+  create_benchmark_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","leadMultiplier":2,"automationMultiplier":1.5,"webhookMultiplier":2,"teamSize":3,"storageGrowthGb":2,"sampleSize":120}' \
+    "$base_url/api/simulation/benchmarks/load")"
+  benchmark_list_response="$(curl -fsS "$base_url/api/simulation/benchmarks/runs?tenant_slug=bootstrap-ops")"
+  simulation_db_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        (SELECT count(*) FROM simulation.scenario_runs AS scenario
+          JOIN identity.tenants AS tenant ON tenant.id = scenario.tenant_id
+         WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM simulation.load_benchmark_runs AS benchmark
+          JOIN identity.tenants AS tenant ON tenant.id = benchmark.tenant_id
+         WHERE tenant.slug = 'bootstrap-ops');
+    ")"
   echo "[test] simulation health details => $health_details_response"
   echo "[test] simulation scenario catalog => $catalog_response"
+  echo "[test] simulation create scenario => $create_scenario_response"
+  echo "[test] simulation scenario list => $scenario_list_response"
+  echo "[test] simulation scenario detail => $scenario_detail_response"
+  echo "[test] simulation create benchmark => $create_benchmark_response"
+  echo "[test] simulation benchmark list => $benchmark_list_response"
+  echo "[test] simulation db summary => $simulation_db_summary"
 
-  if [[ "$health_details_response" != *'"name":"scenario-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$catalog_response" != *'"service":"simulation"'* || "$catalog_response" != *'"key":"operational-load"'* || "$catalog_response" != *'"key":"cost-baseline"'* ]]; then
+  if [[ "$health_details_response" != *'"name":"scenario-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"cost-model","status":"ready"'* || "$catalog_response" != *'"service":"simulation"'* || "$catalog_response" != *'"key":"operational-load"'* || "$catalog_response" != *'"key":"load-benchmark"'* || -z "$scenario_public_id" || "$create_scenario_response" != *'"tenantSlug":"bootstrap-ops"'* || "$create_scenario_response" != *'"leadsProjected":4'* || "$create_scenario_response" != *'"workflowRunsProjected":14'* || "$create_scenario_response" != *'"storageProjectedMb":2072'* || "$create_scenario_response" != *'"estimatedMonthlyCostCents":34896'* || "$create_scenario_response" != *'"risk":"attention"'* || "$scenario_list_response" != *"\"publicId\":\"$scenario_public_id\""* || "$scenario_detail_response" != *"\"publicId\":\"$scenario_public_id\""* || "$create_benchmark_response" != *'"tenantSlug":"bootstrap-ops"'* || "$create_benchmark_response" != *'"sampleSize":120'* || "$create_benchmark_response" != *'"avgLatencyMs":55'* || "$create_benchmark_response" != *'"p95LatencyMs":101'* || "$create_benchmark_response" != *'"throughputRps":62.22'* || "$create_benchmark_response" != *'"status":"stable"'* || "$benchmark_list_response" != *'"publicId"'* || "$benchmark_list_response" != *'"status":"stable"'* || "$simulation_db_summary" != '1|1' ]]; then
     echo "[test] simulation runtime foundation did not return the expected payload"
+    exit 1
+  fi
+}
+
+run_performance_runtime_suite() {
+  local simulation_url="http://localhost:${SIMULATION_HTTP_PORT:-8094}"
+  local analytics_url="http://localhost:${ANALYTICS_HTTP_PORT:-8086}"
+  local performance_scenario_response
+  local performance_benchmark_response
+  local benchmark_report_response
+  local cost_estimator_response
+
+  bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
+  bash "$ROOT_DIR/scripts/db.sh" up
+  bash "$ROOT_DIR/scripts/db.sh" migrate all
+  bash "$ROOT_DIR/scripts/db.sh" seed all
+
+  "${COMPOSE_CMD[@]}" up -d --build simulation analytics
+  wait_for_http_ready "$simulation_url/health/ready"
+  wait_for_http_ready "$analytics_url/health/ready"
+
+  performance_scenario_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","leadMultiplier":3,"automationMultiplier":2.4,"webhookMultiplier":1.8,"teamSize":2,"planningHorizonDays":45,"storageGrowthGb":3}' \
+    "$simulation_url/api/simulation/scenarios/operational-load")"
+  performance_benchmark_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","leadMultiplier":3,"automationMultiplier":2.4,"webhookMultiplier":1.8,"teamSize":2,"storageGrowthGb":3,"sampleSize":180}' \
+    "$simulation_url/api/simulation/benchmarks/load")"
+  benchmark_report_response="$(curl -fsS "$analytics_url/api/analytics/reports/load-benchmark?tenant_slug=bootstrap-ops")"
+  cost_estimator_response="$(curl -fsS "$analytics_url/api/analytics/reports/cost-estimator?tenant_slug=bootstrap-ops")"
+
+  echo "[test] performance scenario => $performance_scenario_response"
+  echo "[test] performance benchmark => $performance_benchmark_response"
+  echo "[test] performance analytics load benchmark => $benchmark_report_response"
+  echo "[test] performance analytics cost estimator => $cost_estimator_response"
+
+  if [[ "$performance_scenario_response" != *'"tenantSlug":"bootstrap-ops"'* || "$performance_scenario_response" != *'"monthlyOperationsProjected"'* || "$performance_benchmark_response" != *'"sampleSize":180'* || "$performance_benchmark_response" != *'"throughputRps"'* || "$benchmark_report_response" != *'"totalRuns":'* || "$benchmark_report_response" != *'"latest"'* || "$cost_estimator_response" != *'"estimatedMonthlyCostCents":'* ]]; then
+    echo "[test] performance runtime suite did not expose the expected payload"
     exit 1
   fi
 }
@@ -2526,8 +2610,8 @@ run_smoke() {
   run_sales_runtime_smoke
   run_finance_runtime_smoke
   run_engagement_runtime_smoke
-  run_analytics_runtime_smoke
   run_simulation_runtime_smoke
+  run_analytics_runtime_smoke
   run_identity_runtime_smoke
   run_edge_runtime_smoke
 }
@@ -2583,7 +2667,8 @@ main() {
       run_smoke
       ;;
     performance)
-      run_simulation_runtime_smoke
+      trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
+      run_performance_runtime_suite
       ;;
     all)
       run_go_unit
