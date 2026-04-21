@@ -9,43 +9,24 @@ import (
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/application/command"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/application/query"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/entity"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/repository"
 )
 
 type LeadHandler struct {
-	listLeads         query.ListLeads
-	getLeadSummary    query.GetLeadPipelineSummary
-	getLeadByPublicID query.GetLeadByPublicID
-	createLead        command.CreateLead
-	convertLead       command.ConvertLeadToCustomer
-	updateLeadProfile command.UpdateLeadProfile
-	updateLeadOwner   command.UpdateLeadOwner
-	updateLeadStatus  command.UpdateLeadStatus
+	repositories repository.TenantRepositoryFactory
 }
 
-func NewLeadHandler(
-	listLeads query.ListLeads,
-	getLeadSummary query.GetLeadPipelineSummary,
-	getLeadByPublicID query.GetLeadByPublicID,
-	createLead command.CreateLead,
-	convertLead command.ConvertLeadToCustomer,
-	updateLeadProfile command.UpdateLeadProfile,
-	updateLeadOwner command.UpdateLeadOwner,
-	updateLeadStatus command.UpdateLeadStatus,
-) LeadHandler {
-	return LeadHandler{
-		listLeads:         listLeads,
-		getLeadSummary:    getLeadSummary,
-		getLeadByPublicID: getLeadByPublicID,
-		createLead:        createLead,
-		convertLead:       convertLead,
-		updateLeadProfile: updateLeadProfile,
-		updateLeadOwner:   updateLeadOwner,
-		updateLeadStatus:  updateLeadStatus,
-	}
+func NewLeadHandler(repositories repository.TenantRepositoryFactory) LeadHandler {
+	return LeadHandler{repositories: repositories}
 }
 
 func (handler LeadHandler) List(writer http.ResponseWriter, request *http.Request) {
-	leads := handler.listLeads.Execute(query.LeadFilters{
+	bundle, _ := handler.resolveRepositories(writer, request, "")
+	if bundle.LeadRepository == nil {
+		return
+	}
+
+	leads := query.NewListLeads(bundle.LeadRepository).Execute(query.LeadFilters{
 		Status:      request.URL.Query().Get("status"),
 		Source:      request.URL.Query().Get("source"),
 		OwnerUserID: request.URL.Query().Get("ownerUserId"),
@@ -64,7 +45,12 @@ func (handler LeadHandler) List(writer http.ResponseWriter, request *http.Reques
 }
 
 func (handler LeadHandler) Summary(writer http.ResponseWriter, request *http.Request) {
-	summary := handler.getLeadSummary.Execute(query.LeadFilters{
+	bundle, _ := handler.resolveRepositories(writer, request, "")
+	if bundle.LeadRepository == nil {
+		return
+	}
+
+	summary := query.NewGetLeadPipelineSummary(bundle.LeadRepository).Execute(query.LeadFilters{
 		Status:      request.URL.Query().Get("status"),
 		Source:      request.URL.Query().Get("source"),
 		OwnerUserID: request.URL.Query().Get("ownerUserId"),
@@ -84,14 +70,14 @@ func (handler LeadHandler) Summary(writer http.ResponseWriter, request *http.Req
 }
 
 func (handler LeadHandler) GetByPublicID(writer http.ResponseWriter, request *http.Request) {
-	lead := handler.getLeadByPublicID.Execute(request.PathValue("publicId"))
+	bundle, _ := handler.resolveRepositories(writer, request, "")
+	if bundle.LeadRepository == nil {
+		return
+	}
+
+	lead := query.NewGetLeadByPublicID(bundle.LeadRepository).Execute(request.PathValue("publicId"))
 	if lead == nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusNotFound)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    "lead_not_found",
-			Message: "Lead was not found.",
-		})
+		writeNotFound(writer, "lead_not_found", "Lead was not found.")
 		return
 	}
 
@@ -103,16 +89,16 @@ func (handler LeadHandler) GetByPublicID(writer http.ResponseWriter, request *ht
 func (handler LeadHandler) Create(writer http.ResponseWriter, request *http.Request) {
 	var payload dto.CreateLeadRequest
 	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    "invalid_json",
-			Message: "Request body is invalid.",
-		})
+		writeBadRequest(writer, "invalid_json", "Request body is invalid.")
 		return
 	}
 
-	result := handler.createLead.Execute(command.CreateLeadInput{
+	bundle, _ := handler.resolveRepositories(writer, request, payload.TenantSlug)
+	if bundle.LeadRepository == nil {
+		return
+	}
+
+	result := command.NewCreateLead(bundle.LeadRepository).Execute(command.CreateLeadInput{
 		Name:        payload.Name,
 		Email:       payload.Email,
 		Source:      payload.Source,
@@ -123,17 +109,9 @@ func (handler LeadHandler) Create(writer http.ResponseWriter, request *http.Requ
 
 	switch {
 	case result.BadRequest:
-		writer.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    result.ErrorCode,
-			Message: result.ErrorText,
-		})
+		writeErrorResponse(writer, http.StatusBadRequest, result.ErrorCode, result.ErrorText)
 	case result.Conflict:
-		writer.WriteHeader(http.StatusConflict)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    result.ErrorCode,
-			Message: result.ErrorText,
-		})
+		writeErrorResponse(writer, http.StatusConflict, result.ErrorCode, result.ErrorText)
 	default:
 		writer.WriteHeader(http.StatusCreated)
 		_ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
@@ -141,7 +119,12 @@ func (handler LeadHandler) Create(writer http.ResponseWriter, request *http.Requ
 }
 
 func (handler LeadHandler) Convert(writer http.ResponseWriter, request *http.Request) {
-	result := handler.convertLead.Execute(command.ConvertLeadToCustomerInput{
+	bundle, _ := handler.resolveRepositories(writer, request, "")
+	if bundle.LeadRepository == nil {
+		return
+	}
+
+	result := command.NewConvertLeadToCustomer(bundle.LeadRepository, bundle.CustomerRepository).Execute(command.ConvertLeadToCustomerInput{
 		LeadPublicID: request.PathValue("publicId"),
 	})
 
@@ -149,23 +132,11 @@ func (handler LeadHandler) Convert(writer http.ResponseWriter, request *http.Req
 
 	switch {
 	case result.BadRequest:
-		writer.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    result.ErrorCode,
-			Message: result.ErrorText,
-		})
+		writeErrorResponse(writer, http.StatusBadRequest, result.ErrorCode, result.ErrorText)
 	case result.Conflict:
-		writer.WriteHeader(http.StatusConflict)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    result.ErrorCode,
-			Message: result.ErrorText,
-		})
+		writeErrorResponse(writer, http.StatusConflict, result.ErrorCode, result.ErrorText)
 	case result.NotFound:
-		writer.WriteHeader(http.StatusNotFound)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    result.ErrorCode,
-			Message: result.ErrorText,
-		})
+		writeErrorResponse(writer, http.StatusNotFound, result.ErrorCode, result.ErrorText)
 	default:
 		writer.WriteHeader(http.StatusCreated)
 		_ = json.NewEncoder(writer).Encode(dto.ConvertLeadResponse{
@@ -178,16 +149,16 @@ func (handler LeadHandler) Convert(writer http.ResponseWriter, request *http.Req
 func (handler LeadHandler) UpdateProfile(writer http.ResponseWriter, request *http.Request) {
 	var payload dto.UpdateLeadProfileRequest
 	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    "invalid_json",
-			Message: "Request body is invalid.",
-		})
+		writeBadRequest(writer, "invalid_json", "Request body is invalid.")
 		return
 	}
 
-	result := handler.updateLeadProfile.Execute(command.UpdateLeadProfileInput{
+	bundle, _ := handler.resolveRepositories(writer, request, "")
+	if bundle.LeadRepository == nil {
+		return
+	}
+
+	result := command.NewUpdateLeadProfile(bundle.LeadRepository).Execute(command.UpdateLeadProfileInput{
 		PublicID: request.PathValue("publicId"),
 		Name:     payload.Name,
 		Email:    payload.Email,
@@ -198,23 +169,11 @@ func (handler LeadHandler) UpdateProfile(writer http.ResponseWriter, request *ht
 
 	switch {
 	case result.BadRequest:
-		writer.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    result.ErrorCode,
-			Message: result.ErrorText,
-		})
+		writeErrorResponse(writer, http.StatusBadRequest, result.ErrorCode, result.ErrorText)
 	case result.Conflict:
-		writer.WriteHeader(http.StatusConflict)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    result.ErrorCode,
-			Message: result.ErrorText,
-		})
+		writeErrorResponse(writer, http.StatusConflict, result.ErrorCode, result.ErrorText)
 	case result.NotFound:
-		writer.WriteHeader(http.StatusNotFound)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    result.ErrorCode,
-			Message: result.ErrorText,
-		})
+		writeErrorResponse(writer, http.StatusNotFound, result.ErrorCode, result.ErrorText)
 	default:
 		writer.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
@@ -224,16 +183,16 @@ func (handler LeadHandler) UpdateProfile(writer http.ResponseWriter, request *ht
 func (handler LeadHandler) UpdateOwner(writer http.ResponseWriter, request *http.Request) {
 	var payload dto.UpdateLeadOwnerRequest
 	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    "invalid_json",
-			Message: "Request body is invalid.",
-		})
+		writeBadRequest(writer, "invalid_json", "Request body is invalid.")
 		return
 	}
 
-	result := handler.updateLeadOwner.Execute(command.UpdateLeadOwnerInput{
+	bundle, _ := handler.resolveRepositories(writer, request, "")
+	if bundle.LeadRepository == nil {
+		return
+	}
+
+	result := command.NewUpdateLeadOwner(bundle.LeadRepository).Execute(command.UpdateLeadOwnerInput{
 		PublicID:    request.PathValue("publicId"),
 		OwnerUserID: payload.OwnerUserID,
 	})
@@ -242,17 +201,9 @@ func (handler LeadHandler) UpdateOwner(writer http.ResponseWriter, request *http
 
 	switch {
 	case result.BadRequest:
-		writer.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    result.ErrorCode,
-			Message: result.ErrorText,
-		})
+		writeErrorResponse(writer, http.StatusBadRequest, result.ErrorCode, result.ErrorText)
 	case result.NotFound:
-		writer.WriteHeader(http.StatusNotFound)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    result.ErrorCode,
-			Message: result.ErrorText,
-		})
+		writeErrorResponse(writer, http.StatusNotFound, result.ErrorCode, result.ErrorText)
 	default:
 		writer.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
@@ -262,16 +213,16 @@ func (handler LeadHandler) UpdateOwner(writer http.ResponseWriter, request *http
 func (handler LeadHandler) UpdateStatus(writer http.ResponseWriter, request *http.Request) {
 	var payload dto.UpdateLeadStatusRequest
 	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    "invalid_json",
-			Message: "Request body is invalid.",
-		})
+		writeBadRequest(writer, "invalid_json", "Request body is invalid.")
 		return
 	}
 
-	result := handler.updateLeadStatus.Execute(command.UpdateLeadStatusInput{
+	bundle, _ := handler.resolveRepositories(writer, request, "")
+	if bundle.LeadRepository == nil {
+		return
+	}
+
+	result := command.NewUpdateLeadStatus(bundle.LeadRepository).Execute(command.UpdateLeadStatusInput{
 		PublicID: request.PathValue("publicId"),
 		Status:   payload.Status,
 	})
@@ -280,17 +231,9 @@ func (handler LeadHandler) UpdateStatus(writer http.ResponseWriter, request *htt
 
 	switch {
 	case result.BadRequest:
-		writer.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    result.ErrorCode,
-			Message: result.ErrorText,
-		})
+		writeErrorResponse(writer, http.StatusBadRequest, result.ErrorCode, result.ErrorText)
 	case result.NotFound:
-		writer.WriteHeader(http.StatusNotFound)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    result.ErrorCode,
-			Message: result.ErrorText,
-		})
+		writeErrorResponse(writer, http.StatusNotFound, result.ErrorCode, result.ErrorText)
 	default:
 		writer.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))

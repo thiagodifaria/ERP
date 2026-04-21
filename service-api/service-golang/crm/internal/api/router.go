@@ -7,38 +7,18 @@ import (
 
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/api/handler"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/api/middleware"
-	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/application/command"
-	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/application/query"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/repository"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/telemetry"
 )
 
 func NewRouter(
 	logger *telemetry.Logger,
-	leadRepository repository.LeadRepository,
-	leadNoteRepository repository.LeadNoteRepository,
-	customerRepository repository.CustomerRepository,
+	repositories repository.TenantRepositoryFactory,
 ) http.Handler {
 	mux := http.NewServeMux()
-	leadHandler := handler.NewLeadHandler(
-		query.NewListLeads(leadRepository),
-		query.NewGetLeadPipelineSummary(leadRepository),
-		query.NewGetLeadByPublicID(leadRepository),
-		command.NewCreateLead(leadRepository),
-		command.NewConvertLeadToCustomer(leadRepository, customerRepository),
-		command.NewUpdateLeadProfile(leadRepository),
-		command.NewUpdateLeadOwner(leadRepository),
-		command.NewUpdateLeadStatus(leadRepository),
-	)
-	customerHandler := handler.NewCustomerHandler(
-		query.NewListCustomers(customerRepository),
-		query.NewGetCustomerByPublicID(customerRepository),
-	)
-	leadNoteHandler := handler.NewLeadNoteHandler(
-		query.NewGetLeadByPublicID(leadRepository),
-		query.NewListLeadNotes(leadNoteRepository),
-		command.NewCreateLeadNote(leadRepository, leadNoteRepository),
-	)
+	leadHandler := handler.NewLeadHandler(repositories)
+	customerHandler := handler.NewCustomerHandler(repositories)
+	leadNoteHandler := handler.NewLeadNoteHandler(repositories)
 
 	mux.HandleFunc("/health/live", handler.Live)
 	mux.HandleFunc("/health/ready", handler.Ready)
@@ -61,31 +41,13 @@ func NewRouter(
 
 func NewRouterWithRuntime(
 	logger *telemetry.Logger,
-	leadRepository repository.LeadRepository,
-	leadNoteRepository repository.LeadNoteRepository,
-	customerRepository repository.CustomerRepository,
+	repositories repository.TenantRepositoryFactory,
 	repositoryDriver string,
 ) http.Handler {
 	mux := http.NewServeMux()
-	leadHandler := handler.NewLeadHandler(
-		query.NewListLeads(leadRepository),
-		query.NewGetLeadPipelineSummary(leadRepository),
-		query.NewGetLeadByPublicID(leadRepository),
-		command.NewCreateLead(leadRepository),
-		command.NewConvertLeadToCustomer(leadRepository, customerRepository),
-		command.NewUpdateLeadProfile(leadRepository),
-		command.NewUpdateLeadOwner(leadRepository),
-		command.NewUpdateLeadStatus(leadRepository),
-	)
-	customerHandler := handler.NewCustomerHandler(
-		query.NewListCustomers(customerRepository),
-		query.NewGetCustomerByPublicID(customerRepository),
-	)
-	leadNoteHandler := handler.NewLeadNoteHandler(
-		query.NewGetLeadByPublicID(leadRepository),
-		query.NewListLeadNotes(leadNoteRepository),
-		command.NewCreateLeadNote(leadRepository, leadNoteRepository),
-	)
+	leadHandler := handler.NewLeadHandler(repositories)
+	customerHandler := handler.NewCustomerHandler(repositories)
+	leadNoteHandler := handler.NewLeadNoteHandler(repositories)
 
 	mux.HandleFunc("/health/live", handler.Live)
 	mux.HandleFunc("/health/ready", handler.Ready)

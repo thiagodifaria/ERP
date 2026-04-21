@@ -9,13 +9,13 @@ import (
 )
 
 var (
-	ErrCustomerPublicIDInvalid      = errors.New("customer public id is invalid")
-	ErrCustomerLeadPublicIDInvalid  = errors.New("customer lead public id is invalid")
-	ErrCustomerNameRequired         = errors.New("customer name is required")
-	ErrCustomerEmailInvalid         = errors.New("customer email is invalid")
-	ErrCustomerOwnerUserIDInvalid   = errors.New("customer owner user id is invalid")
-	ErrCustomerStatusInvalid        = errors.New("customer status is invalid")
-	ErrCustomerSourceRequired       = errors.New("customer source is required")
+	ErrCustomerPublicIDInvalid     = errors.New("customer public id is invalid")
+	ErrCustomerLeadPublicIDInvalid = errors.New("customer lead public id is invalid")
+	ErrCustomerNameRequired        = errors.New("customer name is required")
+	ErrCustomerEmailInvalid        = errors.New("customer email is invalid")
+	ErrCustomerOwnerUserIDInvalid  = errors.New("customer owner user id is invalid")
+	ErrCustomerStatusInvalid       = errors.New("customer status is invalid")
+	ErrCustomerSourceRequired      = errors.New("customer source is required")
 )
 
 type Customer struct {

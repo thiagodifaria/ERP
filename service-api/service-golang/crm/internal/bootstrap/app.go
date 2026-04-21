@@ -24,12 +24,12 @@ type App struct {
 func NewApp() (*App, error) {
 	cfg := config.Load()
 	logger := telemetry.New(cfg.ServiceName)
-	leadRepository, leadNoteRepository, customerRepository, database, err := buildRepositories(cfg)
+	repositories, database, err := buildRepositories(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	server := api.NewServer(cfg, logger, leadRepository, leadNoteRepository, customerRepository)
+	server := api.NewServer(cfg, logger, repositories)
 
 	return &App{
 		Config:   cfg,
@@ -44,38 +44,20 @@ func (app *App) Run() error {
 	return app.Server.ListenAndServe()
 }
 
-func buildRepositories(cfg config.Config) (repository.LeadRepository, repository.LeadNoteRepository, repository.CustomerRepository, *sql.DB, error) {
+func buildRepositories(cfg config.Config) (repository.TenantRepositoryFactory, *sql.DB, error) {
 	if cfg.RepositoryDriver != "postgres" {
-		return persistence.NewInMemoryLeadRepository(), persistence.NewInMemoryLeadNoteRepository(), persistence.NewInMemoryCustomerRepository(), nil, nil
+		return persistence.NewInMemoryTenantRepositoryFactory(cfg.BootstrapTenantSlug), nil, nil
 	}
 
 	database, err := sql.Open("pgx", cfg.PostgresDSN())
 	if err != nil {
-		return nil, nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	if err := database.Ping(); err != nil {
 		_ = database.Close()
-		return nil, nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	leadRepository, err := persistence.NewPostgresLeadRepository(database, cfg.BootstrapTenantSlug)
-	if err != nil {
-		_ = database.Close()
-		return nil, nil, nil, nil, err
-	}
-
-	leadNoteRepository, err := persistence.NewPostgresLeadNoteRepository(database, cfg.BootstrapTenantSlug)
-	if err != nil {
-		_ = database.Close()
-		return nil, nil, nil, nil, err
-	}
-
-	customerRepository, err := persistence.NewPostgresCustomerRepository(database, cfg.BootstrapTenantSlug)
-	if err != nil {
-		_ = database.Close()
-		return nil, nil, nil, nil, err
-	}
-
-	return leadRepository, leadNoteRepository, customerRepository, database, nil
+	return persistence.NewPostgresTenantRepositoryFactory(database, cfg.BootstrapTenantSlug), database, nil
 }

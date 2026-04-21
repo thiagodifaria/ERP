@@ -16,7 +16,7 @@ type InMemoryLeadNoteRepository struct {
 	notesByLeadPublicID map[string][]entity.LeadNote
 }
 
-func NewInMemoryLeadNoteRepository() *InMemoryLeadNoteRepository {
+func NewInMemoryLeadNoteRepository(_ ...string) *InMemoryLeadNoteRepository {
 	repository := &InMemoryLeadNoteRepository{
 		notesByLeadPublicID: map[string][]entity.LeadNote{},
 	}

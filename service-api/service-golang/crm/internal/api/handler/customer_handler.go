@@ -7,25 +7,24 @@ import (
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/api/dto"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/application/query"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/entity"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/repository"
 )
 
 type CustomerHandler struct {
-	listCustomers        query.ListCustomers
-	getCustomerByPublicID query.GetCustomerByPublicID
+	repositories repository.TenantRepositoryFactory
 }
 
-func NewCustomerHandler(
-	listCustomers query.ListCustomers,
-	getCustomerByPublicID query.GetCustomerByPublicID,
-) CustomerHandler {
-	return CustomerHandler{
-		listCustomers:        listCustomers,
-		getCustomerByPublicID: getCustomerByPublicID,
+func NewCustomerHandler(repositories repository.TenantRepositoryFactory) CustomerHandler {
+	return CustomerHandler{repositories: repositories}
+}
+
+func (handler CustomerHandler) List(writer http.ResponseWriter, request *http.Request) {
+	bundle, _ := handler.resolveRepositories(writer, request)
+	if bundle.CustomerRepository == nil {
+		return
 	}
-}
 
-func (handler CustomerHandler) List(writer http.ResponseWriter, _ *http.Request) {
-	customers := handler.listCustomers.Execute()
+	customers := query.NewListCustomers(bundle.CustomerRepository).Execute()
 	response := make([]dto.CustomerResponse, 0, len(customers))
 	for _, customer := range customers {
 		response = append(response, mapCustomer(customer))
@@ -37,14 +36,14 @@ func (handler CustomerHandler) List(writer http.ResponseWriter, _ *http.Request)
 }
 
 func (handler CustomerHandler) GetByPublicID(writer http.ResponseWriter, request *http.Request) {
-	customer := handler.getCustomerByPublicID.Execute(request.PathValue("publicId"))
+	bundle, _ := handler.resolveRepositories(writer, request)
+	if bundle.CustomerRepository == nil {
+		return
+	}
+
+	customer := query.NewGetCustomerByPublicID(bundle.CustomerRepository).Execute(request.PathValue("publicId"))
 	if customer == nil {
-		writer.Header().Set("Content-Type", "application/json")
-		writer.WriteHeader(http.StatusNotFound)
-		_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
-			Code:    "customer_not_found",
-			Message: "Customer was not found.",
-		})
+		writeNotFound(writer, "customer_not_found", "Customer was not found.")
 		return
 	}
 

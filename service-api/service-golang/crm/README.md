@@ -13,6 +13,7 @@ Initial scope:
 - owner assignment endpoint for taking or clearing lead responsibility
 - lead public ids and owner references aligned with UUID public ids from identity
 - selectable repository driver with PostgreSQL-backed lead persistence for a bootstrap tenant
+- tenant-aware repository resolution by request, allowing `tenantSlug` to switch live CRM context without restarting the service
 - runtime smoke now exercises the live HTTP API against PostgreSQL
 - runtime health details reflect the active repository dependency state
 - lead lookup by public id and controlled status transitions
@@ -27,6 +28,7 @@ Initial scope:
 - customer conversion flow from qualified lead into active customer
 - customer list and detail endpoints backed by memory and PostgreSQL
 - bootstrap customer seed aligned with the first converted commercial account
+- multi-tenant runtime validation now covers isolated list/create flows for `bootstrap-ops` and `northwind-group`
 
 Public routes:
 
@@ -45,3 +47,9 @@ Public routes:
 - `POST /api/crm/leads/{publicId}/notes`
 - `GET /api/crm/customers`
 - `GET /api/crm/customers/{publicId}`
+
+Query conventions:
+
+- `tenantSlug` can be provided in list/detail routes through the query string
+- `POST /api/crm/leads` also accepts `tenantSlug` in the payload for explicit tenant creation
+- when `tenantSlug` is omitted, the service falls back to the configured bootstrap tenant

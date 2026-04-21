@@ -8,3 +8,14 @@ type CustomerRepository interface {
 	FindByEmail(email string) *entity.Customer
 	Save(customer entity.Customer) entity.Customer
 }
+
+type TenantRepositorySet struct {
+	LeadRepository     LeadRepository
+	LeadNoteRepository LeadNoteRepository
+	CustomerRepository CustomerRepository
+}
+
+type TenantRepositoryFactory interface {
+	BootstrapTenantSlug() string
+	ForTenant(tenantSlug string) (TenantRepositorySet, error)
+}

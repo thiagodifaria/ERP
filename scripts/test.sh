@@ -95,6 +95,7 @@ prepare_runtime_ports() {
   remap_host_port_if_needed "SALES_HTTP_PORT" "sales"
   remap_host_port_if_needed "ENGAGEMENT_HTTP_PORT" "engagement"
   remap_host_port_if_needed "FINANCE_HTTP_PORT" "finance"
+  remap_host_port_if_needed "DOCUMENTS_HTTP_PORT" "documents"
 }
 
 prepare_runtime_ports
@@ -119,6 +120,12 @@ run_go_unit() {
 
   docker run --rm \
     -v "$ROOT_DIR/service-api/service-golang/sales:/workspace" \
+    -w /workspace \
+    golang:1.24-alpine \
+    go test ./...
+
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-golang/documents:/workspace" \
     -w /workspace \
     golang:1.24-alpine \
     go test ./...
@@ -557,14 +564,86 @@ print(f"{code:06d}")
 PY
 }
 
+run_documents_runtime_smoke() {
+  local base_url="http://localhost:${DOCUMENTS_HTTP_PORT:-8093}"
+  local bootstrap_lead_public_id
+  local details_response
+  local create_response
+  local list_response
+  local northwind_create_response
+  local northwind_list_response
+  local db_summary
+
+  "${COMPOSE_CMD[@]}" up -d --build documents
+  wait_for_http_ready "$base_url/health/ready"
+
+  bootstrap_lead_public_id="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT lead.public_id::text
+      FROM crm.leads AS lead
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = lead.tenant_id
+      WHERE tenant.slug = 'bootstrap-ops'
+        AND lead.email = 'lead@bootstrap-ops.local'
+      LIMIT 1;
+    ")"
+
+  details_response="$(curl -fsS "$base_url/health/details")"
+  create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"bootstrap-ops\",\"ownerType\":\"crm.lead\",\"ownerPublicId\":\"$bootstrap_lead_public_id\",\"fileName\":\"bootstrap-proposal.pdf\",\"contentType\":\"application/pdf\",\"storageKey\":\"crm/bootstrap-proposal.pdf\",\"storageDriver\":\"manual\",\"source\":\"crm\",\"uploadedBy\":\"documents-smoke\"}" \
+    "$base_url/api/documents/attachments")"
+  list_response="$(curl -fsS "$base_url/api/documents/attachments?tenantSlug=bootstrap-ops&ownerType=crm.lead&ownerPublicId=$bootstrap_lead_public_id")"
+  northwind_create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"northwind-group","ownerType":"crm.lead","ownerPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e70000341","fileName":"northwind-proof.pdf","contentType":"application/pdf","storageKey":"crm/northwind-proof.pdf","storageDriver":"manual","source":"documents","uploadedBy":"documents-smoke"}' \
+    "$base_url/api/documents/attachments")"
+  northwind_list_response="$(curl -fsS "$base_url/api/documents/attachments?tenantSlug=northwind-group")"
+  db_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        tenant.slug,
+        (SELECT count(*) FROM documents.attachments AS attachment WHERE attachment.tenant_id = tenant.id) AS attachments,
+        (SELECT count(*) FROM documents.attachments AS attachment WHERE attachment.tenant_id = tenant.id AND attachment.owner_type = 'crm.lead') AS lead_attachments,
+        (SELECT count(*) FROM documents.attachments AS attachment WHERE attachment.tenant_id = tenant.id AND attachment.owner_type = 'crm.customer') AS customer_attachments,
+        (SELECT count(*) FROM documents.attachments AS attachment WHERE attachment.tenant_id = tenant.id AND attachment.storage_driver = 'manual') AS manual_storage,
+        (SELECT count(*) FROM documents.attachments AS attachment WHERE attachment.tenant_id = tenant.id AND attachment.storage_driver <> 'manual') AS external_storage
+      FROM identity.tenants AS tenant
+      WHERE tenant.slug = 'bootstrap-ops'
+      LIMIT 1;
+    ")"
+
+  echo "[test] documents health details => $details_response"
+  echo "[test] documents create => $create_response"
+  echo "[test] documents list => $list_response"
+  echo "[test] documents northwind create => $northwind_create_response"
+  echo "[test] documents northwind list => $northwind_list_response"
+  echo "[test] documents db summary => $db_summary"
+
+  if [[ "$details_response" != *'"name":"postgres","status":"ready"'* && "$details_response" != *'"name":"postgresql","status":"ready"'* ]]; then
+    echo "[test] documents health details did not report postgresql ready"
+    exit 1
+  fi
+
+  if [[ "$create_response" != *'"tenantSlug":"bootstrap-ops"'* || "$create_response" != *'"ownerType":"crm.lead"'* || "$list_response" != *'"fileName":"bootstrap-proposal.pdf"'* || "$northwind_create_response" != *'"tenantSlug":"northwind-group"'* || "$northwind_list_response" != *'"fileName":"northwind-proof.pdf"'* || "$db_summary" != 'bootstrap-ops|1|1|0|1|0' ]]; then
+    echo "[test] documents runtime state did not persist the expected attachment contracts"
+    exit 1
+  fi
+}
+
 run_crm_runtime_smoke() {
   local base_url="http://localhost:${CRM_HTTP_PORT:-8083}"
   local bootstrap_lead_public_id
   local owner_public_id
   local lead_list
+  local northwind_lead_list
   local bootstrap_notes_response
   local create_response
   local created_public_id
+  local secondary_create_response
+  local secondary_public_id
   local created_note_response
   local notes_response
   local profile_response
@@ -591,9 +670,11 @@ run_crm_runtime_smoke() {
       LIMIT 1;
     ")"
   lead_list="$(curl -fsS "$base_url/api/crm/leads")"
+  northwind_lead_list="$(curl -fsS "$base_url/api/crm/leads?tenantSlug=northwind-group")"
   details_response="$(curl -fsS "$base_url/health/details")"
-  bootstrap_notes_response="$(curl -fsS "$base_url/api/crm/leads/$bootstrap_lead_public_id/notes")"
+  bootstrap_notes_response="$(curl -fsS "$base_url/api/crm/leads/$bootstrap_lead_public_id/notes?tenantSlug=bootstrap-ops")"
   echo "[test] crm api list => $lead_list"
+  echo "[test] crm northwind list => $northwind_lead_list"
   echo "[test] crm health details => $details_response"
   echo "[test] crm bootstrap notes => $bootstrap_notes_response"
 
@@ -604,6 +685,11 @@ run_crm_runtime_smoke() {
 
   if [[ "$details_response" != *'"name":"postgresql","status":"ready"'* ]]; then
     echo "[test] crm health details did not report postgresql ready"
+    exit 1
+  fi
+
+  if [[ "$northwind_lead_list" != *'"email":"lead@northwind-group.local"'* || "$northwind_lead_list" == *'"email":"lead@bootstrap-ops.local"'* ]]; then
+    echo "[test] crm tenant filtering did not isolate northwind data"
     exit 1
   fi
 
@@ -630,7 +716,7 @@ run_crm_runtime_smoke() {
   create_response="$(curl -fsS \
     -X POST \
     -H "Content-Type: application/json" \
-    -d '{"name":"Runtime Lead","email":"runtime.lead@example.com","source":"whatsapp"}' \
+    -d '{"tenantSlug":"bootstrap-ops","name":"Runtime Lead","email":"runtime.lead@example.com","source":"whatsapp"}' \
     "$base_url/api/crm/leads")"
   echo "[test] crm api create => $create_response"
 
@@ -640,11 +726,24 @@ run_crm_runtime_smoke() {
     exit 1
   fi
 
+  secondary_create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"northwind-group","name":"Northwind Runtime Lead","email":"northwind.runtime@example.com","source":"manual"}' \
+    "$base_url/api/crm/leads")"
+  echo "[test] crm secondary tenant create => $secondary_create_response"
+
+  secondary_public_id="$(echo "$secondary_create_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  if [[ -z "$secondary_public_id" ]]; then
+    echo "[test] northwind runtime lead public id was not returned by create response"
+    exit 1
+  fi
+
   created_note_response="$(curl -fsS \
     -X POST \
     -H "Content-Type: application/json" \
     -d '{"body":"Cliente pediu comparativo com onboarding premium.","category":"follow-up"}' \
-    "$base_url/api/crm/leads/$created_public_id/notes")"
+    "$base_url/api/crm/leads/$created_public_id/notes?tenantSlug=bootstrap-ops")"
   echo "[test] crm api create note => $created_note_response"
 
   if [[ "$created_note_response" != *'"category":"follow-up"'* ]]; then
@@ -652,7 +751,7 @@ run_crm_runtime_smoke() {
     exit 1
   fi
 
-  notes_response="$(curl -fsS "$base_url/api/crm/leads/$created_public_id/notes")"
+  notes_response="$(curl -fsS "$base_url/api/crm/leads/$created_public_id/notes?tenantSlug=bootstrap-ops")"
   echo "[test] crm api list notes => $notes_response"
 
   if [[ "$notes_response" != *'"body":"Cliente pediu comparativo com onboarding premium."'* ]]; then
@@ -664,7 +763,7 @@ run_crm_runtime_smoke() {
     -X PATCH \
     -H "Content-Type: application/json" \
     -d '{"name":"Runtime Lead Prime","email":"runtime.lead.prime@example.com","source":"instagram"}' \
-    "$base_url/api/crm/leads/$created_public_id")"
+    "$base_url/api/crm/leads/$created_public_id?tenantSlug=bootstrap-ops")"
   echo "[test] crm api profile => $profile_response"
 
   if [[ "$profile_response" != *'"name":"Runtime Lead Prime"'* || "$profile_response" != *'"email":"runtime.lead.prime@example.com"'* || "$profile_response" != *'"source":"instagram"'* ]]; then
@@ -676,7 +775,7 @@ run_crm_runtime_smoke() {
     -X PATCH \
     -H "Content-Type: application/json" \
     -d "{\"ownerUserId\":\"$owner_public_id\"}" \
-    "$base_url/api/crm/leads/$created_public_id/owner")"
+    "$base_url/api/crm/leads/$created_public_id/owner?tenantSlug=bootstrap-ops")"
   echo "[test] crm api owner => $owner_response"
 
   if [[ "$owner_response" != *"\"ownerUserId\":\"$owner_public_id\""* ]]; then
@@ -688,7 +787,7 @@ run_crm_runtime_smoke() {
     -X PATCH \
     -H "Content-Type: application/json" \
     -d '{"status":"contacted"}' \
-    "$base_url/api/crm/leads/$created_public_id/status")"
+    "$base_url/api/crm/leads/$created_public_id/status?tenantSlug=bootstrap-ops")"
   echo "[test] crm api status => $status_response"
 
   if [[ "$status_response" != *'"status":"contacted"'* ]]; then
@@ -698,7 +797,7 @@ run_crm_runtime_smoke() {
 
   convert_response="$(curl -fsS \
     -X POST \
-    "$base_url/api/crm/leads/$created_public_id/convert")"
+    "$base_url/api/crm/leads/$created_public_id/convert?tenantSlug=bootstrap-ops")"
   echo "[test] crm api convert => $convert_response"
 
   created_customer_public_id="$(echo "$convert_response" | sed -n 's/.*"customer":{"publicId":"\([^"]*\)".*/\1/p')"
@@ -707,8 +806,8 @@ run_crm_runtime_smoke() {
     exit 1
   fi
 
-  customer_list_response="$(curl -fsS "$base_url/api/crm/customers")"
-  customer_detail_response="$(curl -fsS "$base_url/api/crm/customers/$created_customer_public_id")"
+  customer_list_response="$(curl -fsS "$base_url/api/crm/customers?tenantSlug=bootstrap-ops")"
+  customer_detail_response="$(curl -fsS "$base_url/api/crm/customers/$created_customer_public_id?tenantSlug=bootstrap-ops")"
   echo "[test] crm api customers => $customer_list_response"
   echo "[test] crm api customer detail => $customer_detail_response"
 
@@ -717,7 +816,7 @@ run_crm_runtime_smoke() {
     exit 1
   fi
 
-  summary_response="$(curl -fsS "$base_url/api/crm/leads/summary")"
+  summary_response="$(curl -fsS "$base_url/api/crm/leads/summary?tenantSlug=bootstrap-ops")"
   echo "[test] crm api summary => $summary_response"
 
   if [[ "$summary_response" != *'"total":2'* || "$summary_response" != *'"assigned":2'* || "$summary_response" != *'"qualified":1'* || "$summary_response" != *'"instagram":1'* ]]; then
@@ -2309,6 +2408,7 @@ run_smoke() {
   export ANALYTICS_HTTP_PORT="${ANALYTICS_HTTP_PORT_SMOKE:-18086}"
   export ENGAGEMENT_HTTP_PORT="${ENGAGEMENT_HTTP_PORT_SMOKE:-18088}"
   export FINANCE_HTTP_PORT="${FINANCE_HTTP_PORT_SMOKE:-18092}"
+  export DOCUMENTS_HTTP_PORT="${DOCUMENTS_HTTP_PORT_SMOKE:-18093}"
   bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
   "${COMPOSE_CMD[@]}" ps
   run_platform_runtime_smoke
@@ -2316,6 +2416,7 @@ run_smoke() {
   run_webhook_hub_runtime_smoke
   run_workflow_control_runtime_smoke
   run_workflow_runtime_smoke
+  run_documents_runtime_smoke
   run_crm_runtime_smoke
   run_sales_runtime_smoke
   run_finance_runtime_smoke

@@ -3,6 +3,7 @@
 package persistence
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 
@@ -19,13 +20,15 @@ const (
 	BootstrapOwnerUserPublicID = "0195e7a0-7a9c-7c1f-8a44-4a6e70000011"
 )
 
-func NewInMemoryLeadRepository() *InMemoryLeadRepository {
+func NewInMemoryLeadRepository(tenantSlug ...string) *InMemoryLeadRepository {
 	repository := &InMemoryLeadRepository{}
+	normalizedTenantSlug := normalizeCrmTenantSlug(firstTenantSlug(tenantSlug...))
+	displayName := strings.ReplaceAll(normalizedTenantSlug, "-", " ")
 
 	lead, _ := entity.NewLead(
 		BootstrapLeadPublicID,
-		"Bootstrap Ops Lead",
-		"lead@bootstrap-ops.local",
+		fmt.Sprintf("%s Lead", displayName),
+		fmt.Sprintf("lead@%s.local", normalizedTenantSlug),
 		"manual",
 		BootstrapOwnerUserPublicID,
 	)
@@ -80,6 +83,23 @@ func (repository *InMemoryLeadRepository) Save(lead entity.Lead) entity.Lead {
 
 	repository.leads = append(repository.leads, lead)
 	return lead
+}
+
+func normalizeCrmTenantSlug(tenantSlug string) string {
+	normalized := strings.ToLower(strings.TrimSpace(tenantSlug))
+	if normalized == "" {
+		return "bootstrap-ops"
+	}
+
+	return normalized
+}
+
+func firstTenantSlug(tenantSlug ...string) string {
+	if len(tenantSlug) == 0 {
+		return ""
+	}
+
+	return tenantSlug[0]
 }
 
 func (repository *InMemoryLeadRepository) Update(lead entity.Lead) entity.Lead {

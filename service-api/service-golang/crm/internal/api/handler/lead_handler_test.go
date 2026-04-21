@@ -9,7 +9,7 @@ import (
 
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/api/dto"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/application/command"
-	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/application/query"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/repository"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/infrastructure/persistence"
 )
 
@@ -414,16 +414,25 @@ func TestUpdateOwnerShouldRejectInvalidUUID(t *testing.T) {
 	}
 }
 
-func newLeadHandlerForTest(repository *persistence.InMemoryLeadRepository) LeadHandler {
+func newLeadHandlerForTest(leadRepository *persistence.InMemoryLeadRepository) LeadHandler {
 	customerRepository := persistence.NewInMemoryCustomerRepository()
-	return NewLeadHandler(
-		query.NewListLeads(repository),
-		query.NewGetLeadPipelineSummary(repository),
-		query.NewGetLeadByPublicID(repository),
-		command.NewCreateLead(repository),
-		command.NewConvertLeadToCustomer(repository, customerRepository),
-		command.NewUpdateLeadProfile(repository),
-		command.NewUpdateLeadOwner(repository),
-		command.NewUpdateLeadStatus(repository),
-	)
+	return NewLeadHandler(staticTenantRepositoryFactory{
+		bundle: repository.TenantRepositorySet{
+			LeadRepository:     leadRepository,
+			LeadNoteRepository: persistence.NewInMemoryLeadNoteRepository(),
+			CustomerRepository: customerRepository,
+		},
+	})
+}
+
+type staticTenantRepositoryFactory struct {
+	bundle repository.TenantRepositorySet
+}
+
+func (factory staticTenantRepositoryFactory) BootstrapTenantSlug() string {
+	return "bootstrap-ops"
+}
+
+func (factory staticTenantRepositoryFactory) ForTenant(string) (repository.TenantRepositorySet, error) {
+	return factory.bundle, nil
 }

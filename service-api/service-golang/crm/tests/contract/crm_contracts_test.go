@@ -388,9 +388,7 @@ func performRequest(
 func newContractRouter() http.Handler {
 	return api.NewRouterWithRuntime(
 		telemetry.New("crm-contract"),
-		persistence.NewInMemoryLeadRepository(),
-		persistence.NewInMemoryLeadNoteRepository(),
-		persistence.NewInMemoryCustomerRepository(),
+		persistence.NewInMemoryTenantRepositoryFactory("bootstrap-ops"),
 		"postgres",
 	)
 }

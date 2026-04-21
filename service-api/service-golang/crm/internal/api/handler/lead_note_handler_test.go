@@ -8,19 +8,13 @@ import (
 	"testing"
 
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/api/dto"
-	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/application/command"
-	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/application/query"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/repository"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/infrastructure/persistence"
 )
 
 func TestLeadNoteListShouldReturnBootstrapNote(t *testing.T) {
 	leadRepository := persistence.NewInMemoryLeadRepository()
-	leadNoteRepository := persistence.NewInMemoryLeadNoteRepository()
-	handler := NewLeadNoteHandler(
-		query.NewGetLeadByPublicID(leadRepository),
-		query.NewListLeadNotes(leadNoteRepository),
-		command.NewCreateLeadNote(leadRepository, leadNoteRepository),
-	)
+	handler := NewLeadNoteHandler(newLeadFactoryForNoteTest(leadRepository))
 	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/notes", nil)
 	request.SetPathValue("publicId", persistence.BootstrapLeadPublicID)
 	recorder := httptest.NewRecorder()
@@ -47,12 +41,7 @@ func TestLeadNoteListShouldReturnBootstrapNote(t *testing.T) {
 
 func TestLeadNoteListShouldReturnNotFoundForUnknownLead(t *testing.T) {
 	leadRepository := persistence.NewInMemoryLeadRepository()
-	leadNoteRepository := persistence.NewInMemoryLeadNoteRepository()
-	handler := NewLeadNoteHandler(
-		query.NewGetLeadByPublicID(leadRepository),
-		query.NewListLeadNotes(leadNoteRepository),
-		command.NewCreateLeadNote(leadRepository, leadNoteRepository),
-	)
+	handler := NewLeadNoteHandler(newLeadFactoryForNoteTest(leadRepository))
 	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/missing/notes", nil)
 	request.SetPathValue("publicId", "0195e7a0-7a9c-7c1f-8a44-4a6e70009999")
 	recorder := httptest.NewRecorder()
@@ -66,12 +55,7 @@ func TestLeadNoteListShouldReturnNotFoundForUnknownLead(t *testing.T) {
 
 func TestLeadNoteCreateShouldReturnCreatedNote(t *testing.T) {
 	leadRepository := persistence.NewInMemoryLeadRepository()
-	leadNoteRepository := persistence.NewInMemoryLeadNoteRepository()
-	handler := NewLeadNoteHandler(
-		query.NewGetLeadByPublicID(leadRepository),
-		query.NewListLeadNotes(leadNoteRepository),
-		command.NewCreateLeadNote(leadRepository, leadNoteRepository),
-	)
+	handler := NewLeadNoteHandler(newLeadFactoryForNoteTest(leadRepository))
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/notes",
@@ -98,12 +82,7 @@ func TestLeadNoteCreateShouldReturnCreatedNote(t *testing.T) {
 
 func TestLeadNoteCreateShouldRejectBlankBody(t *testing.T) {
 	leadRepository := persistence.NewInMemoryLeadRepository()
-	leadNoteRepository := persistence.NewInMemoryLeadNoteRepository()
-	handler := NewLeadNoteHandler(
-		query.NewGetLeadByPublicID(leadRepository),
-		query.NewListLeadNotes(leadNoteRepository),
-		command.NewCreateLeadNote(leadRepository, leadNoteRepository),
-	)
+	handler := NewLeadNoteHandler(newLeadFactoryForNoteTest(leadRepository))
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/notes",
@@ -116,5 +95,15 @@ func TestLeadNoteCreateShouldRejectBlankBody(t *testing.T) {
 
 	if recorder.Code != http.StatusBadRequest {
 		t.Fatalf("expected status %d, got %d", http.StatusBadRequest, recorder.Code)
+	}
+}
+
+func newLeadFactoryForNoteTest(leadRepository *persistence.InMemoryLeadRepository) staticTenantRepositoryFactory {
+	return staticTenantRepositoryFactory{
+		bundle: repository.TenantRepositorySet{
+			LeadRepository:     leadRepository,
+			LeadNoteRepository: persistence.NewInMemoryLeadNoteRepository(),
+			CustomerRepository: persistence.NewInMemoryCustomerRepository(),
+		},
 	}
 }

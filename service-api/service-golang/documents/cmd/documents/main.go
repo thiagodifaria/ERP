@@ -1,0 +1,24 @@
+package main
+
+import (
+	"log"
+	"net/http"
+
+	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/bootstrap"
+)
+
+func main() {
+	app, err := bootstrap.NewApp()
+	if err != nil {
+		log.Fatalf("documents bootstrap error: %v", err)
+	}
+	defer func() {
+		if app.Database != nil {
+			_ = app.Database.Close()
+		}
+	}()
+
+	if err := app.Run(); err != nil && err != http.ErrServerClosed {
+		app.Logger.Printf("documents runtime stopped with error: %v", err)
+	}
+}

@@ -134,6 +134,7 @@ Usage:
   ./scripts/db.sh migrate crm
   ./scripts/db.sh migrate sales
   ./scripts/db.sh migrate finance
+  ./scripts/db.sh migrate documents
   ./scripts/db.sh migrate engagement
   ./scripts/db.sh migrate webhook-hub
   ./scripts/db.sh migrate workflow-control
@@ -149,6 +150,7 @@ Usage:
   ./scripts/db.sh summary crm [tenant-slug]
   ./scripts/db.sh summary sales [tenant-slug]
   ./scripts/db.sh summary finance [tenant-slug]
+  ./scripts/db.sh summary documents [tenant-slug]
   ./scripts/db.sh summary engagement [tenant-slug]
   ./scripts/db.sh summary webhook-hub
   ./scripts/db.sh summary workflow-control [tenant-slug]
@@ -183,6 +185,9 @@ main() {
         finance)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/finance/migrations"
           ;;
+        documents)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/documents/migrations"
+          ;;
         engagement)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/migrations"
           ;;
@@ -201,6 +206,7 @@ main() {
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/finance/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/documents/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/webhook-hub/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/migrations"
@@ -360,6 +366,27 @@ main() {
               (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.status = 'responded') AS responded_touchpoints,
               (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.status = 'converted') AS converted_touchpoints,
               (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.last_workflow_run_public_id IS NOT NULL) AS workflow_dispatched
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
+          ;;
+        documents)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM documents.attachments AS attachment WHERE attachment.tenant_id = tenant.id) AS attachments,
+              (SELECT count(*) FROM documents.attachments AS attachment WHERE attachment.tenant_id = tenant.id AND attachment.owner_type = 'crm.lead') AS lead_attachments,
+              (SELECT count(*) FROM documents.attachments AS attachment WHERE attachment.tenant_id = tenant.id AND attachment.owner_type = 'crm.customer') AS customer_attachments,
+              (SELECT count(*) FROM documents.attachments AS attachment WHERE attachment.tenant_id = tenant.id AND attachment.storage_driver = 'manual') AS manual_storage,
+              (SELECT count(*) FROM documents.attachments AS attachment WHERE attachment.tenant_id = tenant.id AND attachment.storage_driver <> 'manual') AS external_storage
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;

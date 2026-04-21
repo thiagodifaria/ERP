@@ -242,6 +242,26 @@ services:
     ports:
       - "${FINANCE_HTTP_PORT}:8089"
 
+  documents:
+    build:
+      context: ../service-api/service-golang/documents
+    container_name: erp-documents
+    environment:
+      DOCUMENTS_HTTP_ADDRESS: ":8086"
+      DOCUMENTS_REPOSITORY_DRIVER: "postgres"
+      DOCUMENTS_BOOTSTRAP_TENANT_SLUG: "${DOCUMENTS_BOOTSTRAP_TENANT_SLUG}"
+      DOCUMENTS_POSTGRES_HOST: "service-postgresql"
+      DOCUMENTS_POSTGRES_PORT: "5432"
+      DOCUMENTS_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      DOCUMENTS_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      DOCUMENTS_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      DOCUMENTS_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+    ports:
+      - "${DOCUMENTS_HTTP_PORT}:8086"
+
   workflow-control:
     build:
       context: ../service-api/service-typescript/workflow-control

@@ -1,6 +1,7 @@
 package persistence
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 
@@ -14,11 +15,13 @@ type InMemoryCustomerRepository struct {
 	customers []entity.Customer
 }
 
-func NewInMemoryCustomerRepository() *InMemoryCustomerRepository {
+func NewInMemoryCustomerRepository(tenantSlug ...string) *InMemoryCustomerRepository {
+	normalizedTenantSlug := normalizeCrmTenantSlug(firstTenantSlug(tenantSlug...))
+	displayName := strings.ReplaceAll(normalizedTenantSlug, "-", " ")
 	lead, _ := entity.RestoreLead(
 		BootstrapLeadPublicID,
-		"Bootstrap Lead",
-		"lead@bootstrap-ops.local",
+		fmt.Sprintf("%s Lead", displayName),
+		fmt.Sprintf("lead@%s.local", normalizedTenantSlug),
 		"manual",
 		"qualified",
 		BootstrapOwnerUserPublicID,
