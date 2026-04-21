@@ -654,8 +654,16 @@ run_crm_runtime_smoke() {
   local customer_detail_response
   local created_customer_public_id
   local summary_response
+  local history_response
+  local customer_history_response
+  local outbox_response
+  local lead_attachment_create_response
+  local lead_attachments_response
+  local customer_attachment_create_response
+  local customer_attachments_response
+  local db_summary
 
-  "${COMPOSE_CMD[@]}" up -d --build crm
+  "${COMPOSE_CMD[@]}" up -d --build documents crm
   wait_for_http_ready "$base_url/health/ready"
 
   local details_response
@@ -759,6 +767,14 @@ run_crm_runtime_smoke() {
     exit 1
   fi
 
+  history_response="$(curl -fsS "$base_url/api/crm/leads/$created_public_id/history?tenantSlug=bootstrap-ops")"
+  echo "[test] crm api history => $history_response"
+
+  if [[ "$history_response" != *'"eventCode":"lead_created"'* || "$history_response" != *'"eventCode":"lead_interaction_recorded"'* ]]; then
+    echo "[test] runtime lead history did not reflect create and interaction events"
+    exit 1
+  fi
+
   profile_response="$(curl -fsS \
     -X PATCH \
     -H "Content-Type: application/json" \
@@ -816,11 +832,74 @@ run_crm_runtime_smoke() {
     exit 1
   fi
 
+  customer_history_response="$(curl -fsS "$base_url/api/crm/customers/$created_customer_public_id/history?tenantSlug=bootstrap-ops")"
+  echo "[test] crm api customer history => $customer_history_response"
+
+  if [[ "$customer_history_response" != *'"eventCode":"customer_created"'* ]]; then
+    echo "[test] runtime customer history did not expose conversion history"
+    exit 1
+  fi
+
+  lead_attachment_create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"fileName":"lead-brief.pdf","contentType":"application/pdf","storageKey":"crm/lead-brief.pdf","storageDriver":"manual","source":"crm","uploadedBy":"crm-smoke"}' \
+    "$base_url/api/crm/leads/$created_public_id/attachments?tenantSlug=bootstrap-ops")"
+  lead_attachments_response="$(curl -fsS "$base_url/api/crm/leads/$created_public_id/attachments?tenantSlug=bootstrap-ops")"
+  echo "[test] crm api lead attachment create => $lead_attachment_create_response"
+  echo "[test] crm api lead attachments => $lead_attachments_response"
+
+  if [[ "$lead_attachment_create_response" != *'"ownerType":"crm.lead"'* || "$lead_attachments_response" != *'"fileName":"lead-brief.pdf"'* ]]; then
+    echo "[test] runtime lead attachments did not persist through documents"
+    exit 1
+  fi
+
+  customer_attachment_create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"fileName":"customer-proof.pdf","contentType":"application/pdf","storageKey":"crm/customer-proof.pdf","storageDriver":"manual","source":"crm","uploadedBy":"crm-smoke"}' \
+    "$base_url/api/crm/customers/$created_customer_public_id/attachments?tenantSlug=bootstrap-ops")"
+  customer_attachments_response="$(curl -fsS "$base_url/api/crm/customers/$created_customer_public_id/attachments?tenantSlug=bootstrap-ops")"
+  echo "[test] crm api customer attachment create => $customer_attachment_create_response"
+  echo "[test] crm api customer attachments => $customer_attachments_response"
+
+  if [[ "$customer_attachment_create_response" != *'"ownerType":"crm.customer"'* || "$customer_attachments_response" != *'"fileName":"customer-proof.pdf"'* ]]; then
+    echo "[test] runtime customer attachments did not persist through documents"
+    exit 1
+  fi
+
+  outbox_response="$(curl -fsS "$base_url/api/crm/outbox/pending?tenantSlug=bootstrap-ops")"
+  echo "[test] crm api outbox => $outbox_response"
+
+  if [[ "$outbox_response" != *'"eventType":"crm.lead.created"'* || "$outbox_response" != *'"eventType":"crm.customer.created"'* ]]; then
+    echo "[test] runtime CRM outbox did not expose the expected integration events"
+    exit 1
+  fi
+
   summary_response="$(curl -fsS "$base_url/api/crm/leads/summary?tenantSlug=bootstrap-ops")"
   echo "[test] crm api summary => $summary_response"
 
   if [[ "$summary_response" != *'"total":2'* || "$summary_response" != *'"assigned":2'* || "$summary_response" != *'"qualified":1'* || "$summary_response" != *'"instagram":1'* ]]; then
     echo "[test] runtime CRM summary did not reflect live updates"
+    exit 1
+  fi
+
+  db_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        tenant.slug,
+        (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id) AS leads,
+        (SELECT count(*) FROM crm.customers AS customer WHERE customer.tenant_id = tenant.id) AS customers,
+        (SELECT count(*) FROM crm.lead_notes AS note WHERE note.tenant_id = tenant.id) AS notes,
+        (SELECT count(*) FROM crm.relationship_events AS event WHERE event.tenant_id = tenant.id) AS history_events,
+        (SELECT count(*) FROM crm.outbox_events AS event WHERE event.tenant_id = tenant.id AND event.status = 'pending') AS pending_outbox
+      FROM identity.tenants AS tenant
+      WHERE tenant.slug = 'bootstrap-ops';
+    ")"
+  echo "[test] crm db summary => $db_summary"
+
+  if [[ "$db_summary" != 'bootstrap-ops|2|2|2|8|8' ]]; then
+    echo "[test] CRM summary query did not reflect leads/customers/notes and activity state"
     exit 1
   fi
 

@@ -11,6 +11,8 @@ import (
 type CreateLeadNote struct {
 	leadRepository     repository.LeadRepository
 	leadNoteRepository repository.LeadNoteRepository
+	eventRepository    repository.RelationshipEventRepository
+	outboxRepository   repository.OutboxEventRepository
 }
 
 type CreateLeadNoteInput struct {
@@ -30,10 +32,14 @@ type CreateLeadNoteResult struct {
 func NewCreateLeadNote(
 	leadRepository repository.LeadRepository,
 	leadNoteRepository repository.LeadNoteRepository,
+	eventRepository repository.RelationshipEventRepository,
+	outboxRepository repository.OutboxEventRepository,
 ) CreateLeadNote {
 	return CreateLeadNote{
 		leadRepository:     leadRepository,
 		leadNoteRepository: leadNoteRepository,
+		eventRepository:    eventRepository,
+		outboxRepository:   outboxRepository,
 	}
 }
 
@@ -72,5 +78,12 @@ func (useCase CreateLeadNote) Execute(input CreateLeadNoteInput) CreateLeadNoteR
 	}
 
 	createdNote := useCase.leadNoteRepository.Save(note)
+	recordRelationshipEvent(useCase.eventRepository, "lead", lead.PublicID, "lead_interaction_recorded", "crm", "Lead interaction recorded in CRM.")
+	appendOutboxEvent(useCase.outboxRepository, "lead", lead.PublicID, "crm.lead.interaction_recorded", map[string]any{
+		"publicId":  lead.PublicID,
+		"noteId":    createdNote.PublicID,
+		"category":  createdNote.Category,
+		"createdAt": createdNote.CreatedAt.UTC().Format(time.RFC3339),
+	})
 	return CreateLeadNoteResult{Note: &createdNote}
 }

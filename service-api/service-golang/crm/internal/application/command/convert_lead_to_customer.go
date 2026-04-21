@@ -9,6 +9,8 @@ import (
 type ConvertLeadToCustomer struct {
 	leadRepository     repository.LeadRepository
 	customerRepository repository.CustomerRepository
+	eventRepository    repository.RelationshipEventRepository
+	outboxRepository   repository.OutboxEventRepository
 }
 
 type ConvertLeadToCustomerInput struct {
@@ -28,10 +30,14 @@ type ConvertLeadToCustomerResult struct {
 func NewConvertLeadToCustomer(
 	leadRepository repository.LeadRepository,
 	customerRepository repository.CustomerRepository,
+	eventRepository repository.RelationshipEventRepository,
+	outboxRepository repository.OutboxEventRepository,
 ) ConvertLeadToCustomer {
 	return ConvertLeadToCustomer{
 		leadRepository:     leadRepository,
 		customerRepository: customerRepository,
+		eventRepository:    eventRepository,
+		outboxRepository:   outboxRepository,
 	}
 }
 
@@ -73,6 +79,11 @@ func (useCase ConvertLeadToCustomer) Execute(input ConvertLeadToCustomerInput) C
 		}
 
 		qualifiedLead = useCase.leadRepository.Update(updatedLead)
+		recordRelationshipEvent(useCase.eventRepository, "lead", qualifiedLead.PublicID, "lead_status_changed", "crm", "Lead status transitioned to qualified during customer conversion.")
+		appendOutboxEvent(useCase.outboxRepository, "lead", qualifiedLead.PublicID, "crm.lead.status_changed", map[string]any{
+			"publicId": qualifiedLead.PublicID,
+			"status":   qualifiedLead.Status,
+		})
 	}
 
 	customer, err := entity.NewCustomerFromLead(uuid.NewString(), qualifiedLead)
@@ -85,6 +96,18 @@ func (useCase ConvertLeadToCustomer) Execute(input ConvertLeadToCustomerInput) C
 	}
 
 	createdCustomer := useCase.customerRepository.Save(customer)
+	recordRelationshipEvent(useCase.eventRepository, "lead", qualifiedLead.PublicID, "lead_converted", "crm", "Lead converted to customer.")
+	recordRelationshipEvent(useCase.eventRepository, "customer", createdCustomer.PublicID, "customer_created", "crm", "Customer created from lead conversion.")
+	appendOutboxEvent(useCase.outboxRepository, "lead", qualifiedLead.PublicID, "crm.lead.converted", map[string]any{
+		"leadPublicId":     qualifiedLead.PublicID,
+		"customerPublicId": createdCustomer.PublicID,
+	})
+	appendOutboxEvent(useCase.outboxRepository, "customer", createdCustomer.PublicID, "crm.customer.created", map[string]any{
+		"publicId":     createdCustomer.PublicID,
+		"leadPublicId": createdCustomer.LeadPublicID,
+		"email":        createdCustomer.Email,
+		"status":       createdCustomer.Status,
+	})
 	return ConvertLeadToCustomerResult{
 		Lead:     &qualifiedLead,
 		Customer: &createdCustomer,

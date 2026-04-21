@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/api/dto"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/infrastructure/integration"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/infrastructure/persistence"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/telemetry"
 )
@@ -16,6 +17,7 @@ func TestRouterShouldExposeHealthDetails(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryTenantRepositoryFactory("bootstrap-ops"),
+		integration.NewInMemoryDocumentsGateway(),
 	)
 	request := httptest.NewRequest(http.MethodGet, "/health/details", nil)
 	recorder := httptest.NewRecorder()
@@ -48,6 +50,7 @@ func TestRouterShouldExposeLeadList(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryTenantRepositoryFactory("bootstrap-ops"),
+		integration.NewInMemoryDocumentsGateway(),
 	)
 	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads", nil)
 	recorder := httptest.NewRecorder()
@@ -72,6 +75,7 @@ func TestRouterShouldExposeLeadSummary(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryTenantRepositoryFactory("bootstrap-ops"),
+		integration.NewInMemoryDocumentsGateway(),
 	)
 	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/summary", nil)
 	recorder := httptest.NewRecorder()
@@ -96,6 +100,7 @@ func TestRouterShouldExposeLeadByPublicID(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryTenantRepositoryFactory("bootstrap-ops"),
+		integration.NewInMemoryDocumentsGateway(),
 	)
 	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/"+persistence.BootstrapLeadPublicID, nil)
 	recorder := httptest.NewRecorder()
@@ -120,6 +125,7 @@ func TestRouterShouldUpdateLeadOwner(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryTenantRepositoryFactory("bootstrap-ops"),
+		integration.NewInMemoryDocumentsGateway(),
 	)
 	request := httptest.NewRequest(
 		http.MethodPatch,
@@ -148,6 +154,7 @@ func TestRouterShouldUpdateLeadProfile(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryTenantRepositoryFactory("bootstrap-ops"),
+		integration.NewInMemoryDocumentsGateway(),
 	)
 	request := httptest.NewRequest(
 		http.MethodPatch,
@@ -176,6 +183,7 @@ func TestRouterShouldExposeLeadNotes(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryTenantRepositoryFactory("bootstrap-ops"),
+		integration.NewInMemoryDocumentsGateway(),
 	)
 	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/notes", nil)
 	recorder := httptest.NewRecorder()
@@ -200,6 +208,7 @@ func TestRouterShouldCreateLeadNote(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("crm-test"),
 		persistence.NewInMemoryTenantRepositoryFactory("bootstrap-ops"),
+		integration.NewInMemoryDocumentsGateway(),
 	)
 	request := httptest.NewRequest(
 		http.MethodPost,
@@ -221,5 +230,91 @@ func TestRouterShouldCreateLeadNote(t *testing.T) {
 
 	if response.Body != "Cliente pediu proposta revisada." {
 		t.Fatalf("expected body to be persisted, got %s", response.Body)
+	}
+}
+
+func TestRouterShouldExposeLeadHistory(t *testing.T) {
+	router := NewRouter(
+		telemetry.New("crm-test"),
+		persistence.NewInMemoryTenantRepositoryFactory("bootstrap-ops"),
+		integration.NewInMemoryDocumentsGateway(),
+	)
+	request := httptest.NewRequest(http.MethodGet, "/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/history", nil)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response []dto.RelationshipEventResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if len(response) == 0 {
+		t.Fatalf("expected bootstrap history events")
+	}
+}
+
+func TestRouterShouldExposePendingOutbox(t *testing.T) {
+	router := NewRouter(
+		telemetry.New("crm-test"),
+		persistence.NewInMemoryTenantRepositoryFactory("bootstrap-ops"),
+		integration.NewInMemoryDocumentsGateway(),
+	)
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/crm/leads",
+		bytes.NewBufferString(`{"name":"Outbox Lead","email":"outbox@example.com","source":"organic"}`),
+	)
+	recorder := httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	request = httptest.NewRequest(http.MethodGet, "/api/crm/outbox/pending", nil)
+	recorder = httptest.NewRecorder()
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response []dto.OutboxEventResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if len(response) == 0 {
+		t.Fatalf("expected pending outbox events")
+	}
+}
+
+func TestRouterShouldCreateLeadAttachment(t *testing.T) {
+	router := NewRouter(
+		telemetry.New("crm-test"),
+		persistence.NewInMemoryTenantRepositoryFactory("bootstrap-ops"),
+		integration.NewInMemoryDocumentsGateway(),
+	)
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/attachments",
+		bytes.NewBufferString(`{"fileName":"proposal.pdf","contentType":"application/pdf","storageKey":"crm/proposal.pdf","storageDriver":"manual","source":"crm","uploadedBy":"router-test"}`),
+	)
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, recorder.Code)
+	}
+
+	var response dto.AttachmentResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.OwnerType != "crm.lead" {
+		t.Fatalf("expected owner type crm.lead, got %s", response.OwnerType)
 	}
 }

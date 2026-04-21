@@ -101,9 +101,11 @@ func TestLeadNoteCreateShouldRejectBlankBody(t *testing.T) {
 func newLeadFactoryForNoteTest(leadRepository *persistence.InMemoryLeadRepository) staticTenantRepositoryFactory {
 	return staticTenantRepositoryFactory{
 		bundle: repository.TenantRepositorySet{
-			LeadRepository:     leadRepository,
-			LeadNoteRepository: persistence.NewInMemoryLeadNoteRepository(),
-			CustomerRepository: persistence.NewInMemoryCustomerRepository(),
+			LeadRepository:              leadRepository,
+			LeadNoteRepository:          persistence.NewInMemoryLeadNoteRepository(),
+			CustomerRepository:          persistence.NewInMemoryCustomerRepository(),
+			RelationshipEventRepository: persistence.NewInMemoryRelationshipEventRepository(),
+			OutboxEventRepository:       persistence.NewInMemoryOutboxEventRepository(),
 		},
 	}
 }

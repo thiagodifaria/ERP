@@ -9,7 +9,9 @@ import (
 )
 
 type UpdateLeadStatus struct {
-	leadRepository repository.LeadRepository
+	leadRepository   repository.LeadRepository
+	eventRepository  repository.RelationshipEventRepository
+	outboxRepository repository.OutboxEventRepository
 }
 
 type UpdateLeadStatusInput struct {
@@ -25,8 +27,16 @@ type UpdateLeadStatusResult struct {
 	NotFound   bool
 }
 
-func NewUpdateLeadStatus(leadRepository repository.LeadRepository) UpdateLeadStatus {
-	return UpdateLeadStatus{leadRepository: leadRepository}
+func NewUpdateLeadStatus(
+	leadRepository repository.LeadRepository,
+	eventRepository repository.RelationshipEventRepository,
+	outboxRepository repository.OutboxEventRepository,
+) UpdateLeadStatus {
+	return UpdateLeadStatus{
+		leadRepository:   leadRepository,
+		eventRepository:  eventRepository,
+		outboxRepository: outboxRepository,
+	}
 }
 
 func (useCase UpdateLeadStatus) Execute(input UpdateLeadStatusInput) UpdateLeadStatusResult {
@@ -65,6 +75,11 @@ func (useCase UpdateLeadStatus) Execute(input UpdateLeadStatusInput) UpdateLeadS
 	}
 
 	updatedLead := useCase.leadRepository.Update(transitionedLead)
+	recordRelationshipEvent(useCase.eventRepository, "lead", updatedLead.PublicID, "lead_status_changed", "crm", "Lead status transitioned to "+updatedLead.Status+".")
+	appendOutboxEvent(useCase.outboxRepository, "lead", updatedLead.PublicID, "crm.lead.status_changed", map[string]any{
+		"publicId": updatedLead.PublicID,
+		"status":   updatedLead.Status,
+	})
 
 	return UpdateLeadStatusResult{Lead: &updatedLead}
 }

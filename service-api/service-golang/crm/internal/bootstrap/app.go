@@ -10,6 +10,7 @@ import (
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/api"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/config"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/repository"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/infrastructure/integration"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/infrastructure/persistence"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/telemetry"
 )
@@ -28,8 +29,9 @@ func NewApp() (*App, error) {
 	if err != nil {
 		return nil, err
 	}
+	attachmentGateway := buildAttachmentGateway(cfg)
 
-	server := api.NewServer(cfg, logger, repositories)
+	server := api.NewServer(cfg, logger, repositories, attachmentGateway)
 
 	return &App{
 		Config:   cfg,
@@ -60,4 +62,12 @@ func buildRepositories(cfg config.Config) (repository.TenantRepositoryFactory, *
 	}
 
 	return persistence.NewPostgresTenantRepositoryFactory(database, cfg.BootstrapTenantSlug), database, nil
+}
+
+func buildAttachmentGateway(cfg config.Config) repository.AttachmentGateway {
+	if cfg.RepositoryDriver != "postgres" {
+		return integration.NewInMemoryDocumentsGateway()
+	}
+
+	return integration.NewHTTPDocumentsGateway(cfg.DocumentsBaseURL)
 }

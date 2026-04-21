@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/api"
+	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/infrastructure/integration"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/infrastructure/persistence"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/telemetry"
 )
@@ -40,6 +41,29 @@ type leadNoteResponse struct {
 	LeadPublicID string `json:"leadPublicId"`
 	Body         string `json:"body"`
 	Category     string `json:"category"`
+}
+
+type relationshipEventResponse struct {
+	PublicID          string `json:"publicId"`
+	AggregateType     string `json:"aggregateType"`
+	AggregatePublicID string `json:"aggregatePublicId"`
+	EventCode         string `json:"eventCode"`
+	Actor             string `json:"actor"`
+	Summary           string `json:"summary"`
+}
+
+type attachmentResponse struct {
+	PublicID      string `json:"publicId"`
+	OwnerType     string `json:"ownerType"`
+	OwnerPublicID string `json:"ownerPublicId"`
+	FileName      string `json:"fileName"`
+}
+
+type outboxEventResponse struct {
+	PublicID          string `json:"publicId"`
+	AggregateType     string `json:"aggregateType"`
+	AggregatePublicID string `json:"aggregatePublicId"`
+	EventType         string `json:"eventType"`
 }
 
 type dependencyResponse struct {
@@ -296,6 +320,95 @@ func TestCreateLeadNoteContractShouldReturnCreatedResource(t *testing.T) {
 	}
 }
 
+func TestLeadHistoryContractShouldExposeRelationshipEvents(t *testing.T) {
+	response := performRequest(
+		t,
+		newContractRouter(),
+		http.MethodGet,
+		"/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/history",
+		nil,
+	)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, response.Code)
+	}
+
+	var payload []relationshipEventResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if len(payload) == 0 {
+		t.Fatalf("expected at least one relationship event")
+	}
+}
+
+func TestLeadAttachmentContractShouldReturnCreatedResource(t *testing.T) {
+	router := newContractRouter()
+
+	response := performRequest(
+		t,
+		router,
+		http.MethodPost,
+		"/api/crm/leads/"+persistence.BootstrapLeadPublicID+"/attachments",
+		bytes.NewBufferString(`{"fileName":"crm-brief.pdf","contentType":"application/pdf","storageKey":"crm/crm-brief.pdf","storageDriver":"manual","source":"crm","uploadedBy":"contract-test"}`),
+	)
+
+	if response.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, response.Code)
+	}
+
+	var payload attachmentResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if payload.OwnerType != "crm.lead" {
+		t.Fatalf("expected owner type crm.lead, got %s", payload.OwnerType)
+	}
+}
+
+func TestPendingOutboxContractShouldExposePublicShape(t *testing.T) {
+	router := newContractRouter()
+
+	createLeadResponse := performRequest(
+		t,
+		router,
+		http.MethodPost,
+		"/api/crm/leads",
+		bytes.NewBufferString(`{"name":"Contract Outbox","email":"contract.outbox@example.com","source":"manual"}`),
+	)
+
+	if createLeadResponse.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, createLeadResponse.Code)
+	}
+
+	response := performRequest(
+		t,
+		router,
+		http.MethodGet,
+		"/api/crm/outbox/pending",
+		nil,
+	)
+
+	if response.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, response.Code)
+	}
+
+	var payload []outboxEventResponse
+	if err := json.Unmarshal(response.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if len(payload) == 0 {
+		t.Fatalf("expected at least one outbox event")
+	}
+
+	if strings.TrimSpace(payload[0].EventType) == "" {
+		t.Fatalf("expected event type")
+	}
+}
+
 func TestHealthDetailsContractShouldExposeDependencyShape(t *testing.T) {
 	response := performRequest(
 		t,
@@ -389,6 +502,7 @@ func newContractRouter() http.Handler {
 	return api.NewRouterWithRuntime(
 		telemetry.New("crm-contract"),
 		persistence.NewInMemoryTenantRepositoryFactory("bootstrap-ops"),
+		integration.NewInMemoryDocumentsGateway(),
 		"postgres",
 	)
 }

@@ -39,9 +39,11 @@ func (factory *InMemoryTenantRepositoryFactory) ForTenant(tenantSlug string) (re
 	}
 
 	bundle := repository.TenantRepositorySet{
-		LeadRepository:     NewInMemoryLeadRepository(slug),
-		LeadNoteRepository: NewInMemoryLeadNoteRepository(slug),
-		CustomerRepository: NewInMemoryCustomerRepository(slug),
+		LeadRepository:              NewInMemoryLeadRepository(slug),
+		LeadNoteRepository:          NewInMemoryLeadNoteRepository(slug),
+		CustomerRepository:          NewInMemoryCustomerRepository(slug),
+		RelationshipEventRepository: NewInMemoryRelationshipEventRepository(slug),
+		OutboxEventRepository:       NewInMemoryOutboxEventRepository(slug),
 	}
 	factory.bundles[slug] = bundle
 	return bundle, nil
@@ -84,9 +86,21 @@ func (factory *PostgresTenantRepositoryFactory) ForTenant(tenantSlug string) (re
 		return repository.TenantRepositorySet{}, err
 	}
 
+	eventRepository, err := NewPostgresRelationshipEventRepository(factory.database, slug)
+	if err != nil {
+		return repository.TenantRepositorySet{}, err
+	}
+
+	outboxRepository, err := NewPostgresOutboxEventRepository(factory.database, slug)
+	if err != nil {
+		return repository.TenantRepositorySet{}, err
+	}
+
 	return repository.TenantRepositorySet{
-		LeadRepository:     leadRepository,
-		LeadNoteRepository: leadNoteRepository,
-		CustomerRepository: customerRepository,
+		LeadRepository:              leadRepository,
+		LeadNoteRepository:          leadNoteRepository,
+		CustomerRepository:          customerRepository,
+		RelationshipEventRepository: eventRepository,
+		OutboxEventRepository:       outboxRepository,
 	}, nil
 }

@@ -98,7 +98,11 @@ func (handler LeadHandler) Create(writer http.ResponseWriter, request *http.Requ
 		return
 	}
 
-	result := command.NewCreateLead(bundle.LeadRepository).Execute(command.CreateLeadInput{
+	result := command.NewCreateLead(
+		bundle.LeadRepository,
+		bundle.RelationshipEventRepository,
+		bundle.OutboxEventRepository,
+	).Execute(command.CreateLeadInput{
 		Name:        payload.Name,
 		Email:       payload.Email,
 		Source:      payload.Source,
@@ -124,7 +128,12 @@ func (handler LeadHandler) Convert(writer http.ResponseWriter, request *http.Req
 		return
 	}
 
-	result := command.NewConvertLeadToCustomer(bundle.LeadRepository, bundle.CustomerRepository).Execute(command.ConvertLeadToCustomerInput{
+	result := command.NewConvertLeadToCustomer(
+		bundle.LeadRepository,
+		bundle.CustomerRepository,
+		bundle.RelationshipEventRepository,
+		bundle.OutboxEventRepository,
+	).Execute(command.ConvertLeadToCustomerInput{
 		LeadPublicID: request.PathValue("publicId"),
 	})
 
@@ -158,7 +167,11 @@ func (handler LeadHandler) UpdateProfile(writer http.ResponseWriter, request *ht
 		return
 	}
 
-	result := command.NewUpdateLeadProfile(bundle.LeadRepository).Execute(command.UpdateLeadProfileInput{
+	result := command.NewUpdateLeadProfile(
+		bundle.LeadRepository,
+		bundle.RelationshipEventRepository,
+		bundle.OutboxEventRepository,
+	).Execute(command.UpdateLeadProfileInput{
 		PublicID: request.PathValue("publicId"),
 		Name:     payload.Name,
 		Email:    payload.Email,
@@ -192,7 +205,11 @@ func (handler LeadHandler) UpdateOwner(writer http.ResponseWriter, request *http
 		return
 	}
 
-	result := command.NewUpdateLeadOwner(bundle.LeadRepository).Execute(command.UpdateLeadOwnerInput{
+	result := command.NewUpdateLeadOwner(
+		bundle.LeadRepository,
+		bundle.RelationshipEventRepository,
+		bundle.OutboxEventRepository,
+	).Execute(command.UpdateLeadOwnerInput{
 		PublicID:    request.PathValue("publicId"),
 		OwnerUserID: payload.OwnerUserID,
 	})
@@ -222,7 +239,11 @@ func (handler LeadHandler) UpdateStatus(writer http.ResponseWriter, request *htt
 		return
 	}
 
-	result := command.NewUpdateLeadStatus(bundle.LeadRepository).Execute(command.UpdateLeadStatusInput{
+	result := command.NewUpdateLeadStatus(
+		bundle.LeadRepository,
+		bundle.RelationshipEventRepository,
+		bundle.OutboxEventRepository,
+	).Execute(command.UpdateLeadStatusInput{
 		PublicID: request.PathValue("publicId"),
 		Status:   payload.Status,
 	})

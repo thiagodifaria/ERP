@@ -9,7 +9,9 @@ import (
 )
 
 type UpdateLeadProfile struct {
-	leadRepository repository.LeadRepository
+	leadRepository   repository.LeadRepository
+	eventRepository  repository.RelationshipEventRepository
+	outboxRepository repository.OutboxEventRepository
 }
 
 type UpdateLeadProfileInput struct {
@@ -28,8 +30,16 @@ type UpdateLeadProfileResult struct {
 	NotFound   bool
 }
 
-func NewUpdateLeadProfile(leadRepository repository.LeadRepository) UpdateLeadProfile {
-	return UpdateLeadProfile{leadRepository: leadRepository}
+func NewUpdateLeadProfile(
+	leadRepository repository.LeadRepository,
+	eventRepository repository.RelationshipEventRepository,
+	outboxRepository repository.OutboxEventRepository,
+) UpdateLeadProfile {
+	return UpdateLeadProfile{
+		leadRepository:   leadRepository,
+		eventRepository:  eventRepository,
+		outboxRepository: outboxRepository,
+	}
 }
 
 func (useCase UpdateLeadProfile) Execute(input UpdateLeadProfileInput) UpdateLeadProfileResult {
@@ -92,6 +102,15 @@ func (useCase UpdateLeadProfile) Execute(input UpdateLeadProfileInput) UpdateLea
 	}
 
 	updatedLead := useCase.leadRepository.Update(revisedLead)
+	recordRelationshipEvent(useCase.eventRepository, "lead", updatedLead.PublicID, "lead_profile_updated", "crm", "Lead profile updated.")
+	appendOutboxEvent(useCase.outboxRepository, "lead", updatedLead.PublicID, "crm.lead.updated", map[string]any{
+		"publicId":    updatedLead.PublicID,
+		"name":        updatedLead.Name,
+		"email":       updatedLead.Email,
+		"source":      updatedLead.Source,
+		"ownerUserId": updatedLead.OwnerUserID,
+		"status":      updatedLead.Status,
+	})
 
 	return UpdateLeadProfileResult{Lead: &updatedLead}
 }

@@ -15,10 +15,11 @@ func NewServer(
 	cfg config.Config,
 	logger *telemetry.Logger,
 	repositories repository.TenantRepositoryFactory,
+	attachmentGateway repository.AttachmentGateway,
 ) *http.Server {
 	return &http.Server{
 		Addr:              cfg.HTTPAddress,
-		Handler:           NewRouterWithRuntime(logger, repositories, cfg.RepositoryDriver),
+		Handler:           NewRouterWithRuntime(logger, repositories, attachmentGateway, cfg.RepositoryDriver),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }

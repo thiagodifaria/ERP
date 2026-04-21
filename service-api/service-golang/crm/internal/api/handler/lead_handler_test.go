@@ -46,8 +46,8 @@ func TestListShouldReturnBootstrapLead(t *testing.T) {
 
 func TestListShouldFilterByStatusSearchAndAssignment(t *testing.T) {
 	repository := persistence.NewInMemoryLeadRepository()
-	createLead := command.NewCreateLead(repository)
-	updateLeadStatus := command.NewUpdateLeadStatus(repository)
+	createLead := command.NewCreateLead(repository, nil, nil)
+	updateLeadStatus := command.NewUpdateLeadStatus(repository, nil, nil)
 	handler := newLeadHandlerForTest(repository)
 
 	createdLead := createLead.Execute(command.CreateLeadInput{
@@ -97,7 +97,7 @@ func TestListShouldFilterByStatusSearchAndAssignment(t *testing.T) {
 
 func TestListShouldFilterUnassignedLeads(t *testing.T) {
 	repository := persistence.NewInMemoryLeadRepository()
-	createLead := command.NewCreateLead(repository)
+	createLead := command.NewCreateLead(repository, nil, nil)
 	handler := newLeadHandlerForTest(repository)
 
 	createdLead := createLead.Execute(command.CreateLeadInput{
@@ -134,8 +134,8 @@ func TestListShouldFilterUnassignedLeads(t *testing.T) {
 
 func TestSummaryShouldReturnPipelineSnapshot(t *testing.T) {
 	repository := persistence.NewInMemoryLeadRepository()
-	createLead := command.NewCreateLead(repository)
-	updateLeadStatus := command.NewUpdateLeadStatus(repository)
+	createLead := command.NewCreateLead(repository, nil, nil)
+	updateLeadStatus := command.NewUpdateLeadStatus(repository, nil, nil)
 	handler := newLeadHandlerForTest(repository)
 
 	ana := createLead.Execute(command.CreateLeadInput{
@@ -308,7 +308,7 @@ func TestUpdateProfileShouldReturnUpdatedLead(t *testing.T) {
 
 func TestUpdateProfileShouldRejectDuplicateEmail(t *testing.T) {
 	repository := persistence.NewInMemoryLeadRepository()
-	createLead := command.NewCreateLead(repository)
+	createLead := command.NewCreateLead(repository, nil, nil)
 	handler := newLeadHandlerForTest(repository)
 
 	createdLead := createLead.Execute(command.CreateLeadInput{
@@ -334,7 +334,7 @@ func TestUpdateProfileShouldRejectDuplicateEmail(t *testing.T) {
 
 func TestUpdateOwnerShouldReturnUpdatedLead(t *testing.T) {
 	repository := persistence.NewInMemoryLeadRepository()
-	createLead := command.NewCreateLead(repository)
+	createLead := command.NewCreateLead(repository, nil, nil)
 	handler := newLeadHandlerForTest(repository)
 
 	createdLead := createLead.Execute(command.CreateLeadInput{
@@ -418,9 +418,11 @@ func newLeadHandlerForTest(leadRepository *persistence.InMemoryLeadRepository) L
 	customerRepository := persistence.NewInMemoryCustomerRepository()
 	return NewLeadHandler(staticTenantRepositoryFactory{
 		bundle: repository.TenantRepositorySet{
-			LeadRepository:     leadRepository,
-			LeadNoteRepository: persistence.NewInMemoryLeadNoteRepository(),
-			CustomerRepository: customerRepository,
+			LeadRepository:              leadRepository,
+			LeadNoteRepository:          persistence.NewInMemoryLeadNoteRepository(),
+			CustomerRepository:          customerRepository,
+			RelationshipEventRepository: persistence.NewInMemoryRelationshipEventRepository(),
+			OutboxEventRepository:       persistence.NewInMemoryOutboxEventRepository(),
 		},
 	})
 }

@@ -1,17 +1,16 @@
-// CreateLead concentra a criacao inicial de leads no bootstrap do CRM.
 package command
 
 import (
-	"crypto/rand"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/entity"
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/repository"
 )
 
 type CreateLead struct {
-	leadRepository repository.LeadRepository
+	leadRepository   repository.LeadRepository
+	eventRepository  repository.RelationshipEventRepository
+	outboxRepository repository.OutboxEventRepository
 }
 
 type CreateLeadInput struct {
@@ -29,8 +28,16 @@ type CreateLeadResult struct {
 	Conflict   bool
 }
 
-func NewCreateLead(leadRepository repository.LeadRepository) CreateLead {
-	return CreateLead{leadRepository: leadRepository}
+func NewCreateLead(
+	leadRepository repository.LeadRepository,
+	eventRepository repository.RelationshipEventRepository,
+	outboxRepository repository.OutboxEventRepository,
+) CreateLead {
+	return CreateLead{
+		leadRepository:   leadRepository,
+		eventRepository:  eventRepository,
+		outboxRepository: outboxRepository,
+	}
 }
 
 func (useCase CreateLead) Execute(input CreateLeadInput) CreateLeadResult {
@@ -81,18 +88,14 @@ func (useCase CreateLead) Execute(input CreateLeadInput) CreateLeadResult {
 	}
 
 	createdLead := useCase.leadRepository.Save(lead)
+	recordRelationshipEvent(useCase.eventRepository, "lead", createdLead.PublicID, "lead_created", "crm", "Lead created in CRM.")
+	appendOutboxEvent(useCase.outboxRepository, "lead", createdLead.PublicID, "crm.lead.created", map[string]any{
+		"publicId":    createdLead.PublicID,
+		"email":       createdLead.Email,
+		"source":      createdLead.Source,
+		"status":      createdLead.Status,
+		"ownerUserId": createdLead.OwnerUserID,
+	})
 
 	return CreateLeadResult{Lead: &createdLead}
-}
-
-func newPublicID() string {
-	raw := make([]byte, 16)
-	if _, err := rand.Read(raw); err != nil {
-		return uuid.Nil.String()
-	}
-
-	raw[6] = (raw[6] & 0x0f) | 0x40
-	raw[8] = (raw[8] & 0x3f) | 0x80
-
-	return uuid.UUID(raw).String()
 }

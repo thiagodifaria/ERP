@@ -12,6 +12,7 @@ type Config struct {
 	HTTPAddress         string
 	RepositoryDriver    string
 	BootstrapTenantSlug string
+	DocumentsBaseURL    string
 	PostgresHost        string
 	PostgresPort        string
 	PostgresDatabase    string
@@ -26,6 +27,7 @@ func Load() Config {
 		HTTPAddress:         envOrDefault("CRM_HTTP_ADDRESS", ":8083"),
 		RepositoryDriver:    envOrDefault("CRM_REPOSITORY_DRIVER", "memory"),
 		BootstrapTenantSlug: envOrDefault("CRM_BOOTSTRAP_TENANT_SLUG", "bootstrap-ops"),
+		DocumentsBaseURL:    envOrDefault("CRM_DOCUMENTS_BASE_URL", ""),
 		PostgresHost:        envOrDefault("CRM_POSTGRES_HOST", "localhost"),
 		PostgresPort:        envOrDefault("CRM_POSTGRES_PORT", "5432"),
 		PostgresDatabase:    envOrDefault("CRM_POSTGRES_DB", envOrDefault("ERP_POSTGRES_DB", "erp")),

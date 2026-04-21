@@ -55,7 +55,12 @@ func (handler LeadNoteHandler) Create(writer http.ResponseWriter, request *http.
 		return
 	}
 
-	result := command.NewCreateLeadNote(bundle.LeadRepository, bundle.LeadNoteRepository).Execute(command.CreateLeadNoteInput{
+	result := command.NewCreateLeadNote(
+		bundle.LeadRepository,
+		bundle.LeadNoteRepository,
+		bundle.RelationshipEventRepository,
+		bundle.OutboxEventRepository,
+	).Execute(command.CreateLeadNoteInput{
 		LeadPublicID: request.PathValue("publicId"),
 		Body:         payload.Body,
 		Category:     payload.Category,

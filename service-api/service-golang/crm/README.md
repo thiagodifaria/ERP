@@ -29,6 +29,10 @@ Initial scope:
 - customer list and detail endpoints backed by memory and PostgreSQL
 - bootstrap customer seed aligned with the first converted commercial account
 - multi-tenant runtime validation now covers isolated list/create flows for `bootstrap-ops` and `northwind-group`
+- relationship history and outbox event ledgers persisted for leads and customers
+- every relevant mutation now appends traceable history and prepares pending integration events
+- initial attachments now flow through the `documents` service for leads and customers
+- smoke coverage now validates history, outbox and attachment contracts in live PostgreSQL runtime
 
 Public routes:
 
@@ -40,16 +44,25 @@ Public routes:
 - `POST /api/crm/leads`
 - `GET /api/crm/leads/{publicId}`
 - `POST /api/crm/leads/{publicId}/convert`
+- `GET /api/crm/leads/{publicId}/history`
 - `PATCH /api/crm/leads/{publicId}`
 - `PATCH /api/crm/leads/{publicId}/owner`
 - `PATCH /api/crm/leads/{publicId}/status`
 - `GET /api/crm/leads/{publicId}/notes`
 - `POST /api/crm/leads/{publicId}/notes`
+- `GET /api/crm/leads/{publicId}/attachments`
+- `POST /api/crm/leads/{publicId}/attachments`
 - `GET /api/crm/customers`
 - `GET /api/crm/customers/{publicId}`
+- `GET /api/crm/customers/{publicId}/history`
+- `GET /api/crm/customers/{publicId}/attachments`
+- `POST /api/crm/customers/{publicId}/attachments`
+- `GET /api/crm/outbox/pending`
 
 Query conventions:
 
 - `tenantSlug` can be provided in list/detail routes through the query string
 - `POST /api/crm/leads` also accepts `tenantSlug` in the payload for explicit tenant creation
 - when `tenantSlug` is omitted, the service falls back to the configured bootstrap tenant
+- history and outbox routes stay tenant-scoped the same way as the read/write CRM routes
+- attachments are proxied to `documents`, preserving tenant and aggregate ownership contracts

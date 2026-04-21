@@ -9,6 +9,12 @@ import (
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/repository"
 )
 
+func writeJSON(writer http.ResponseWriter, status int, payload any) {
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(status)
+	_ = json.NewEncoder(writer).Encode(payload)
+}
+
 func (handler LeadHandler) resolveRepositories(writer http.ResponseWriter, request *http.Request, bodyTenantSlug string) (repository.TenantRepositorySet, string) {
 	return resolveTenantRepositories(writer, request, bodyTenantSlug, handler.repositories)
 }
@@ -53,9 +59,7 @@ func writeNotFound(writer http.ResponseWriter, code string, message string) {
 }
 
 func writeErrorResponse(writer http.ResponseWriter, status int, code string, message string) {
-	writer.Header().Set("Content-Type", "application/json")
-	writer.WriteHeader(status)
-	_ = json.NewEncoder(writer).Encode(dto.ErrorResponse{
+	writeJSON(writer, status, dto.ErrorResponse{
 		Code:    code,
 		Message: message,
 	})

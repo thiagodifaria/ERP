@@ -9,7 +9,9 @@ import (
 )
 
 type UpdateLeadOwner struct {
-	leadRepository repository.LeadRepository
+	leadRepository   repository.LeadRepository
+	eventRepository  repository.RelationshipEventRepository
+	outboxRepository repository.OutboxEventRepository
 }
 
 type UpdateLeadOwnerInput struct {
@@ -25,8 +27,16 @@ type UpdateLeadOwnerResult struct {
 	NotFound   bool
 }
 
-func NewUpdateLeadOwner(leadRepository repository.LeadRepository) UpdateLeadOwner {
-	return UpdateLeadOwner{leadRepository: leadRepository}
+func NewUpdateLeadOwner(
+	leadRepository repository.LeadRepository,
+	eventRepository repository.RelationshipEventRepository,
+	outboxRepository repository.OutboxEventRepository,
+) UpdateLeadOwner {
+	return UpdateLeadOwner{
+		leadRepository:   leadRepository,
+		eventRepository:  eventRepository,
+		outboxRepository: outboxRepository,
+	}
 }
 
 func (useCase UpdateLeadOwner) Execute(input UpdateLeadOwnerInput) UpdateLeadOwnerResult {
@@ -50,6 +60,15 @@ func (useCase UpdateLeadOwner) Execute(input UpdateLeadOwnerInput) UpdateLeadOwn
 	}
 
 	updatedLead := useCase.leadRepository.Update(assignedLead)
+	summary := "Lead ownership cleared."
+	if updatedLead.OwnerUserID != "" {
+		summary = "Lead ownership assigned."
+	}
+	recordRelationshipEvent(useCase.eventRepository, "lead", updatedLead.PublicID, "lead_ownership_changed", "crm", summary)
+	appendOutboxEvent(useCase.outboxRepository, "lead", updatedLead.PublicID, "crm.lead.owner_changed", map[string]any{
+		"publicId":    updatedLead.PublicID,
+		"ownerUserId": updatedLead.OwnerUserID,
+	})
 
 	return UpdateLeadOwnerResult{Lead: &updatedLead}
 }

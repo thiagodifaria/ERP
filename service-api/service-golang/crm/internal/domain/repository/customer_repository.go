@@ -10,9 +10,11 @@ type CustomerRepository interface {
 }
 
 type TenantRepositorySet struct {
-	LeadRepository     LeadRepository
-	LeadNoteRepository LeadNoteRepository
-	CustomerRepository CustomerRepository
+	LeadRepository              LeadRepository
+	LeadNoteRepository          LeadNoteRepository
+	CustomerRepository          CustomerRepository
+	RelationshipEventRepository RelationshipEventRepository
+	OutboxEventRepository       OutboxEventRepository
 }
 
 type TenantRepositoryFactory interface {

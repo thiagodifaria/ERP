@@ -309,6 +309,10 @@ main() {
             SELECT
               tenant.slug,
               (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id) AS leads,
+              (SELECT count(*) FROM crm.customers AS customer WHERE customer.tenant_id = tenant.id) AS customers,
+              (SELECT count(*) FROM crm.lead_notes AS note WHERE note.tenant_id = tenant.id) AS notes,
+              (SELECT count(*) FROM crm.relationship_events AS event WHERE event.tenant_id = tenant.id) AS history_events,
+              (SELECT count(*) FROM crm.outbox_events AS event WHERE event.tenant_id = tenant.id AND event.status = 'pending') AS pending_outbox,
               (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.status = 'captured') AS captured,
               (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.status = 'contacted') AS contacted,
               (SELECT count(*) FROM crm.leads AS lead WHERE lead.tenant_id = tenant.id AND lead.status = 'qualified') AS qualified,
