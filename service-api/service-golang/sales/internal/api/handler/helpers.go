@@ -23,12 +23,14 @@ func writeError(writer http.ResponseWriter, statusCode int, code string, message
 
 func mapOpportunity(opportunity entity.Opportunity) dto.OpportunityResponse {
 	return dto.OpportunityResponse{
-		PublicID:     opportunity.PublicID,
-		LeadPublicID: opportunity.LeadPublicID,
-		Title:        opportunity.Title,
-		Stage:        opportunity.Stage,
-		OwnerUserID:  opportunity.OwnerUserID,
-		AmountCents:  opportunity.AmountCents,
+		PublicID:         opportunity.PublicID,
+		LeadPublicID:     opportunity.LeadPublicID,
+		CustomerPublicID: opportunity.CustomerPublicID,
+		Title:            opportunity.Title,
+		Stage:            opportunity.Stage,
+		SaleType:         opportunity.SaleType,
+		OwnerUserID:      opportunity.OwnerUserID,
+		AmountCents:      opportunity.AmountCents,
 	}
 }
 
@@ -47,6 +49,9 @@ func mapSale(sale entity.Sale) dto.SaleResponse {
 		PublicID:            sale.PublicID,
 		OpportunityPublicID: sale.OpportunityPublicID,
 		ProposalPublicID:    sale.ProposalPublicID,
+		CustomerPublicID:    sale.CustomerPublicID,
+		OwnerUserID:         sale.OwnerUserID,
+		SaleType:            sale.SaleType,
 		Status:              sale.Status,
 		AmountCents:         sale.AmountCents,
 	}
@@ -61,5 +66,51 @@ func mapInvoice(invoice entity.Invoice) dto.InvoiceResponse {
 		AmountCents:  invoice.AmountCents,
 		DueDate:      invoice.DueDate,
 		PaidAt:       invoice.PaidAt,
+	}
+}
+
+func mapInstallment(installment entity.Installment) dto.InstallmentResponse {
+	return dto.InstallmentResponse{
+		PublicID:       installment.PublicID,
+		SalePublicID:   installment.SalePublicID,
+		SequenceNumber: installment.SequenceNumber,
+		AmountCents:    installment.AmountCents,
+		DueDate:        installment.DueDate,
+		Status:         installment.Status,
+	}
+}
+
+func mapCommission(commission entity.Commission) dto.CommissionResponse {
+	return dto.CommissionResponse{
+		PublicID:        commission.PublicID,
+		SalePublicID:    commission.SalePublicID,
+		RecipientUserID: commission.RecipientUserID,
+		RoleCode:        commission.RoleCode,
+		RateBps:         commission.RateBps,
+		AmountCents:     commission.AmountCents,
+		Status:          commission.Status,
+	}
+}
+
+func mapPendingItem(item entity.PendingItem) dto.PendingItemResponse {
+	return dto.PendingItemResponse{
+		PublicID:     item.PublicID,
+		SalePublicID: item.SalePublicID,
+		Code:         item.Code,
+		Summary:      item.Summary,
+		Status:       item.Status,
+		ResolvedAt:   item.ResolvedAt,
+	}
+}
+
+func mapRenegotiation(renegotiation entity.Renegotiation) dto.RenegotiationResponse {
+	return dto.RenegotiationResponse{
+		PublicID:            renegotiation.PublicID,
+		SalePublicID:        renegotiation.SalePublicID,
+		Reason:              renegotiation.Reason,
+		PreviousAmountCents: renegotiation.PreviousAmountCents,
+		NewAmountCents:      renegotiation.NewAmountCents,
+		Status:              renegotiation.Status,
+		AppliedAt:           renegotiation.AppliedAt,
 	}
 }

@@ -24,12 +24,12 @@ type App struct {
 func NewApp() (*App, error) {
 	cfg := config.Load()
 	logger := telemetry.New(cfg.ServiceName)
-	opportunityRepository, proposalRepository, saleRepository, invoiceRepository, eventRepository, outboxRepository, database, err := buildRepositories(cfg)
+	opportunityRepository, proposalRepository, saleRepository, invoiceRepository, installmentRepository, commissionRepository, pendingItemRepository, renegotiationRepository, eventRepository, outboxRepository, database, err := buildRepositories(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	server := api.NewServer(cfg, logger, opportunityRepository, proposalRepository, saleRepository, invoiceRepository, eventRepository, outboxRepository)
+	server := api.NewServer(cfg, logger, opportunityRepository, proposalRepository, saleRepository, invoiceRepository, installmentRepository, commissionRepository, pendingItemRepository, renegotiationRepository, eventRepository, outboxRepository)
 
 	return &App{
 		Config:   cfg,
@@ -44,55 +44,75 @@ func (app *App) Run() error {
 	return app.Server.ListenAndServe()
 }
 
-func buildRepositories(cfg config.Config) (repository.OpportunityRepository, repository.ProposalRepository, repository.SaleRepository, repository.InvoiceRepository, repository.CommercialEventRepository, repository.OutboxEventRepository, *sql.DB, error) {
+func buildRepositories(cfg config.Config) (repository.OpportunityRepository, repository.ProposalRepository, repository.SaleRepository, repository.InvoiceRepository, repository.InstallmentRepository, repository.CommissionRepository, repository.PendingItemRepository, repository.RenegotiationRepository, repository.CommercialEventRepository, repository.OutboxEventRepository, *sql.DB, error) {
 	if cfg.RepositoryDriver != "postgres" {
-		return persistence.NewInMemoryOpportunityRepository(), persistence.NewInMemoryProposalRepository(), persistence.NewInMemorySaleRepository(), persistence.NewInMemoryInvoiceRepository(), persistence.NewInMemoryCommercialEventRepository(), persistence.NewInMemoryOutboxEventRepository(), nil, nil
+		return persistence.NewInMemoryOpportunityRepository(), persistence.NewInMemoryProposalRepository(), persistence.NewInMemorySaleRepository(), persistence.NewInMemoryInvoiceRepository(), persistence.NewInMemoryInstallmentRepository(), persistence.NewInMemoryCommissionRepository(), persistence.NewInMemoryPendingItemRepository(), persistence.NewInMemoryRenegotiationRepository(), persistence.NewInMemoryCommercialEventRepository(), persistence.NewInMemoryOutboxEventRepository(), nil, nil
 	}
 
 	database, err := sql.Open("pgx", cfg.PostgresDSN())
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 
 	if err := database.Ping(); err != nil {
 		_ = database.Close()
-		return nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 
 	opportunityRepository, err := persistence.NewPostgresOpportunityRepository(database, cfg.BootstrapTenantSlug)
 	if err != nil {
 		_ = database.Close()
-		return nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 
 	proposalRepository, err := persistence.NewPostgresProposalRepository(database, cfg.BootstrapTenantSlug)
 	if err != nil {
 		_ = database.Close()
-		return nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 
 	saleRepository, err := persistence.NewPostgresSaleRepository(database, cfg.BootstrapTenantSlug)
 	if err != nil {
 		_ = database.Close()
-		return nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 
 	invoiceRepository, err := persistence.NewPostgresInvoiceRepository(database, cfg.BootstrapTenantSlug)
 	if err != nil {
 		_ = database.Close()
-		return nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+	}
+	installmentRepository, err := persistence.NewPostgresInstallmentRepository(database, cfg.BootstrapTenantSlug)
+	if err != nil {
+		_ = database.Close()
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+	}
+	commissionRepository, err := persistence.NewPostgresCommissionRepository(database, cfg.BootstrapTenantSlug)
+	if err != nil {
+		_ = database.Close()
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+	}
+	pendingItemRepository, err := persistence.NewPostgresPendingItemRepository(database, cfg.BootstrapTenantSlug)
+	if err != nil {
+		_ = database.Close()
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
+	}
+	renegotiationRepository, err := persistence.NewPostgresRenegotiationRepository(database, cfg.BootstrapTenantSlug)
+	if err != nil {
+		_ = database.Close()
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 	eventRepository, err := persistence.NewPostgresCommercialEventRepository(database, cfg.BootstrapTenantSlug)
 	if err != nil {
 		_ = database.Close()
-		return nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 
 	outboxRepository, err := persistence.NewPostgresOutboxEventRepository(database, cfg.BootstrapTenantSlug)
 	if err != nil {
 		_ = database.Close()
-		return nil, nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
 
-	return opportunityRepository, proposalRepository, saleRepository, invoiceRepository, eventRepository, outboxRepository, database, nil
+	return opportunityRepository, proposalRepository, saleRepository, invoiceRepository, installmentRepository, commissionRepository, pendingItemRepository, renegotiationRepository, eventRepository, outboxRepository, database, nil
 }

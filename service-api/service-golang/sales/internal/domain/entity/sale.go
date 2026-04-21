@@ -13,7 +13,10 @@ var (
 	ErrSalePublicIDInvalid         = errors.New("sale public id is invalid")
 	ErrSaleOpportunityIDInvalid    = errors.New("sale opportunity public id is invalid")
 	ErrSaleProposalIDInvalid       = errors.New("sale proposal public id is invalid")
+	ErrSaleCustomerPublicIDInvalid = errors.New("sale customer public id is invalid")
+	ErrSaleOwnerUserIDInvalid      = errors.New("sale owner user id is invalid")
 	ErrSaleAmountCentsInvalid      = errors.New("sale amount cents is invalid")
+	ErrSaleTypeInvalid             = errors.New("sale type is invalid")
 	ErrSaleStatusInvalid           = errors.New("sale status is invalid")
 	ErrSaleStatusTransitionInvalid = errors.New("sale status transition is invalid")
 )
@@ -22,16 +25,23 @@ type Sale struct {
 	PublicID            string
 	OpportunityPublicID string
 	ProposalPublicID    string
+	CustomerPublicID    string
+	OwnerUserID         string
+	SaleType            string
 	Status              string
 	AmountCents         int64
 }
 
-func NewSale(publicID string, opportunityPublicID string, proposalPublicID string, amountCents int64) (Sale, error) {
-	return restoreSale(publicID, opportunityPublicID, proposalPublicID, amountCents, "active")
+func NewSale(publicID string, opportunityPublicID string, proposalPublicID string, customerPublicID string, ownerUserID string, saleType string, amountCents int64) (Sale, error) {
+	return restoreSale(publicID, opportunityPublicID, proposalPublicID, customerPublicID, ownerUserID, saleType, amountCents, "active")
 }
 
-func RestoreSale(publicID string, opportunityPublicID string, proposalPublicID string, amountCents int64, status string) (Sale, error) {
-	return restoreSale(publicID, opportunityPublicID, proposalPublicID, amountCents, status)
+func RestoreSale(publicID string, opportunityPublicID string, proposalPublicID string, customerPublicID string, ownerUserID string, saleType string, amountCents int64, status string) (Sale, error) {
+	return restoreSale(publicID, opportunityPublicID, proposalPublicID, customerPublicID, ownerUserID, saleType, amountCents, status)
+}
+
+func (sale Sale) ReviseAmount(amountCents int64) (Sale, error) {
+	return restoreSale(sale.PublicID, sale.OpportunityPublicID, sale.ProposalPublicID, sale.CustomerPublicID, sale.OwnerUserID, sale.SaleType, amountCents, sale.Status)
 }
 
 func (sale Sale) TransitionTo(status string) (Sale, error) {
@@ -53,10 +63,13 @@ func (sale Sale) TransitionTo(status string) (Sale, error) {
 	return sale, nil
 }
 
-func restoreSale(publicID string, opportunityPublicID string, proposalPublicID string, amountCents int64, status string) (Sale, error) {
+func restoreSale(publicID string, opportunityPublicID string, proposalPublicID string, customerPublicID string, ownerUserID string, saleType string, amountCents int64, status string) (Sale, error) {
 	normalizedPublicID := strings.TrimSpace(publicID)
 	normalizedOpportunityPublicID := strings.TrimSpace(opportunityPublicID)
 	normalizedProposalPublicID := strings.TrimSpace(proposalPublicID)
+	normalizedCustomerPublicID := strings.TrimSpace(customerPublicID)
+	normalizedOwnerUserID := strings.TrimSpace(ownerUserID)
+	normalizedSaleType := normalizeSaleType(saleType)
 	normalizedStatus := normalizeSaleStatus(status)
 
 	if _, err := uuid.Parse(normalizedPublicID); err != nil {
@@ -71,8 +84,22 @@ func restoreSale(publicID string, opportunityPublicID string, proposalPublicID s
 		return Sale{}, ErrSaleProposalIDInvalid
 	}
 
+	if _, err := uuid.Parse(normalizedCustomerPublicID); err != nil {
+		return Sale{}, ErrSaleCustomerPublicIDInvalid
+	}
+
+	if normalizedOwnerUserID != "" {
+		if _, err := uuid.Parse(normalizedOwnerUserID); err != nil {
+			return Sale{}, ErrSaleOwnerUserIDInvalid
+		}
+	}
+
 	if amountCents <= 0 {
 		return Sale{}, ErrSaleAmountCentsInvalid
+	}
+
+	if !isValidSaleType(normalizedSaleType) {
+		return Sale{}, ErrSaleTypeInvalid
 	}
 
 	if !isValidSaleStatus(normalizedStatus) {
@@ -83,6 +110,9 @@ func restoreSale(publicID string, opportunityPublicID string, proposalPublicID s
 		PublicID:            normalizedPublicID,
 		OpportunityPublicID: normalizedOpportunityPublicID,
 		ProposalPublicID:    normalizedProposalPublicID,
+		CustomerPublicID:    normalizedCustomerPublicID,
+		OwnerUserID:         normalizedOwnerUserID,
+		SaleType:            normalizedSaleType,
 		Status:              normalizedStatus,
 		AmountCents:         amountCents,
 	}, nil

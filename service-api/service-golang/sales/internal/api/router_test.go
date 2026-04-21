@@ -19,6 +19,10 @@ func newTestRouter() http.Handler {
 		persistence.NewInMemoryProposalRepository(),
 		persistence.NewInMemorySaleRepository(),
 		persistence.NewInMemoryInvoiceRepository(),
+		persistence.NewInMemoryInstallmentRepository(),
+		persistence.NewInMemoryCommissionRepository(),
+		persistence.NewInMemoryPendingItemRepository(),
+		persistence.NewInMemoryRenegotiationRepository(),
 		persistence.NewInMemoryCommercialEventRepository(),
 		persistence.NewInMemoryOutboxEventRepository(),
 	)
@@ -74,7 +78,7 @@ func TestRouterShouldCreateOpportunityAndConvertProposal(t *testing.T) {
 	createOpportunityRequest := httptest.NewRequest(
 		http.MethodPost,
 		"/api/sales/opportunities",
-		bytes.NewBufferString(`{"leadPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000001","title":"Runtime Expansion","ownerUserId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000002","amountCents":99000}`),
+		bytes.NewBufferString(`{"leadPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000001","customerPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000003","title":"Runtime Expansion","saleType":"upsell","ownerUserId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000002","amountCents":99000}`),
 	)
 	createOpportunityResponse := httptest.NewRecorder()
 	router.ServeHTTP(createOpportunityResponse, createOpportunityRequest)
@@ -86,6 +90,10 @@ func TestRouterShouldCreateOpportunityAndConvertProposal(t *testing.T) {
 	var createdOpportunity dto.OpportunityResponse
 	if err := json.Unmarshal(createOpportunityResponse.Body.Bytes(), &createdOpportunity); err != nil {
 		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if createdOpportunity.CustomerPublicID != "0195e7a0-7a9c-7c1f-8a44-4a6e73000003" || createdOpportunity.SaleType != "upsell" {
+		t.Fatalf("expected customer and sale type to be persisted in opportunity payload")
 	}
 
 	createProposalRequest := httptest.NewRequest(
@@ -132,6 +140,10 @@ func TestRouterShouldCreateOpportunityAndConvertProposal(t *testing.T) {
 
 	if createdSale.Status != "active" {
 		t.Fatalf("expected sale status active, got %s", createdSale.Status)
+	}
+
+	if createdSale.CustomerPublicID != createdOpportunity.CustomerPublicID || createdSale.SaleType != "upsell" {
+		t.Fatalf("expected sale to inherit customer and sale type from opportunity")
 	}
 
 	createInvoiceRequest := httptest.NewRequest(

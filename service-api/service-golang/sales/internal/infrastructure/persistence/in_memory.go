@@ -11,6 +11,7 @@ import (
 
 const (
 	BootstrapLeadPublicID        = "0195e7a0-7a9c-7c1f-8a44-4a6e70000001"
+	BootstrapCustomerPublicID    = "0195e7a0-7a9c-7c1f-8a44-4a6e70000081"
 	BootstrapOwnerUserPublicID   = "0195e7a0-7a9c-7c1f-8a44-4a6e70000011"
 	BootstrapOpportunityPublicID = "0195e7a0-7a9c-7c1f-8a44-4a6e71000001"
 	BootstrapProposalPublicID    = "0195e7a0-7a9c-7c1f-8a44-4a6e71000002"
@@ -54,7 +55,9 @@ func NewInMemoryOpportunityRepository() *InMemoryOpportunityRepository {
 	opportunity, _ := entity.RestoreOpportunity(
 		BootstrapOpportunityPublicID,
 		BootstrapLeadPublicID,
+		BootstrapCustomerPublicID,
 		"Bootstrap Ops Annual Plan",
+		"new",
 		BootstrapOwnerUserPublicID,
 		125000,
 		"won",
@@ -181,6 +184,9 @@ func NewInMemorySaleRepository() *InMemorySaleRepository {
 		BootstrapSalePublicID,
 		BootstrapOpportunityPublicID,
 		BootstrapProposalPublicID,
+		BootstrapCustomerPublicID,
+		BootstrapOwnerUserPublicID,
+		"new",
 		125000,
 		"active",
 	)

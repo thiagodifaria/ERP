@@ -12,32 +12,36 @@ import (
 var (
 	ErrOpportunityPublicIDInvalid        = errors.New("opportunity public id is invalid")
 	ErrOpportunityLeadPublicIDInvalid    = errors.New("opportunity lead public id is invalid")
+	ErrOpportunityCustomerPublicIDInvalid = errors.New("opportunity customer public id is invalid")
 	ErrOpportunityTitleRequired          = errors.New("opportunity title is required")
 	ErrOpportunityOwnerUserIDInvalid     = errors.New("opportunity owner user id is invalid")
 	ErrOpportunityAmountCentsInvalid     = errors.New("opportunity amount cents is invalid")
+	ErrOpportunitySaleTypeInvalid        = errors.New("opportunity sale type is invalid")
 	ErrOpportunityStageInvalid           = errors.New("opportunity stage is invalid")
 	ErrOpportunityStageTransitionInvalid = errors.New("opportunity stage transition is invalid")
 )
 
 type Opportunity struct {
-	PublicID     string
-	LeadPublicID string
-	Title        string
-	Stage        string
-	OwnerUserID  string
-	AmountCents  int64
+	PublicID         string
+	LeadPublicID     string
+	CustomerPublicID string
+	Title            string
+	Stage            string
+	SaleType         string
+	OwnerUserID      string
+	AmountCents      int64
 }
 
-func NewOpportunity(publicID string, leadPublicID string, title string, ownerUserID string, amountCents int64) (Opportunity, error) {
-	return restoreOpportunity(publicID, leadPublicID, title, ownerUserID, amountCents, "qualified")
+func NewOpportunity(publicID string, leadPublicID string, customerPublicID string, title string, saleType string, ownerUserID string, amountCents int64) (Opportunity, error) {
+	return restoreOpportunity(publicID, leadPublicID, customerPublicID, title, saleType, ownerUserID, amountCents, "qualified")
 }
 
-func RestoreOpportunity(publicID string, leadPublicID string, title string, ownerUserID string, amountCents int64, stage string) (Opportunity, error) {
-	return restoreOpportunity(publicID, leadPublicID, title, ownerUserID, amountCents, stage)
+func RestoreOpportunity(publicID string, leadPublicID string, customerPublicID string, title string, saleType string, ownerUserID string, amountCents int64, stage string) (Opportunity, error) {
+	return restoreOpportunity(publicID, leadPublicID, customerPublicID, title, saleType, ownerUserID, amountCents, stage)
 }
 
-func (opportunity Opportunity) Revise(title string, ownerUserID string, amountCents int64) (Opportunity, error) {
-	return restoreOpportunity(opportunity.PublicID, opportunity.LeadPublicID, title, ownerUserID, amountCents, opportunity.Stage)
+func (opportunity Opportunity) Revise(customerPublicID string, title string, saleType string, ownerUserID string, amountCents int64) (Opportunity, error) {
+	return restoreOpportunity(opportunity.PublicID, opportunity.LeadPublicID, customerPublicID, title, saleType, ownerUserID, amountCents, opportunity.Stage)
 }
 
 func (opportunity Opportunity) TransitionTo(stage string) (Opportunity, error) {
@@ -59,10 +63,12 @@ func (opportunity Opportunity) TransitionTo(stage string) (Opportunity, error) {
 	return opportunity, nil
 }
 
-func restoreOpportunity(publicID string, leadPublicID string, title string, ownerUserID string, amountCents int64, stage string) (Opportunity, error) {
+func restoreOpportunity(publicID string, leadPublicID string, customerPublicID string, title string, saleType string, ownerUserID string, amountCents int64, stage string) (Opportunity, error) {
 	normalizedPublicID := strings.TrimSpace(publicID)
 	normalizedLeadPublicID := strings.TrimSpace(leadPublicID)
+	normalizedCustomerPublicID := strings.TrimSpace(customerPublicID)
 	normalizedTitle := strings.TrimSpace(title)
+	normalizedSaleType := normalizeSaleType(saleType)
 	normalizedOwnerUserID := strings.TrimSpace(ownerUserID)
 	normalizedStage := normalizeOpportunityStage(stage)
 
@@ -72,6 +78,10 @@ func restoreOpportunity(publicID string, leadPublicID string, title string, owne
 
 	if _, err := uuid.Parse(normalizedLeadPublicID); err != nil {
 		return Opportunity{}, ErrOpportunityLeadPublicIDInvalid
+	}
+
+	if _, err := uuid.Parse(normalizedCustomerPublicID); err != nil {
+		return Opportunity{}, ErrOpportunityCustomerPublicIDInvalid
 	}
 
 	if normalizedTitle == "" {
@@ -88,17 +98,23 @@ func restoreOpportunity(publicID string, leadPublicID string, title string, owne
 		return Opportunity{}, ErrOpportunityAmountCentsInvalid
 	}
 
+	if !isValidSaleType(normalizedSaleType) {
+		return Opportunity{}, ErrOpportunitySaleTypeInvalid
+	}
+
 	if !isValidOpportunityStage(normalizedStage) {
 		return Opportunity{}, ErrOpportunityStageInvalid
 	}
 
 	return Opportunity{
-		PublicID:     normalizedPublicID,
-		LeadPublicID: normalizedLeadPublicID,
-		Title:        normalizedTitle,
-		Stage:        normalizedStage,
-		OwnerUserID:  normalizedOwnerUserID,
-		AmountCents:  amountCents,
+		PublicID:         normalizedPublicID,
+		LeadPublicID:     normalizedLeadPublicID,
+		CustomerPublicID: normalizedCustomerPublicID,
+		Title:            normalizedTitle,
+		Stage:            normalizedStage,
+		SaleType:         normalizedSaleType,
+		OwnerUserID:      normalizedOwnerUserID,
+		AmountCents:      amountCents,
 	}, nil
 }
 
@@ -123,6 +139,19 @@ func canTransitionOpportunityStage(currentStage string, targetStage string) bool
 		return targetStage == "negotiation" || targetStage == "won" || targetStage == "lost"
 	case "negotiation":
 		return targetStage == "won" || targetStage == "lost"
+	default:
+		return false
+	}
+}
+
+func normalizeSaleType(saleType string) string {
+	return strings.ToLower(strings.TrimSpace(saleType))
+}
+
+func isValidSaleType(saleType string) bool {
+	switch saleType {
+	case "new", "upsell", "renewal", "cross_sell":
+		return true
 	default:
 		return false
 	}

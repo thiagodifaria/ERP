@@ -14,10 +14,12 @@ type CreateOpportunity struct {
 }
 
 type CreateOpportunityInput struct {
-	LeadPublicID string
-	Title        string
-	OwnerUserID  string
-	AmountCents  int64
+	LeadPublicID     string
+	CustomerPublicID string
+	Title            string
+	SaleType         string
+	OwnerUserID      string
+	AmountCents      int64
 }
 
 type CreateOpportunityResult struct {
@@ -35,7 +37,7 @@ func NewCreateOpportunity(opportunityRepository repository.OpportunityRepository
 }
 
 func (useCase CreateOpportunity) Execute(input CreateOpportunityInput) CreateOpportunityResult {
-	opportunity, err := entity.NewOpportunity(newPublicID(), input.LeadPublicID, input.Title, input.OwnerUserID, input.AmountCents)
+	opportunity, err := entity.NewOpportunity(newPublicID(), input.LeadPublicID, input.CustomerPublicID, input.Title, input.SaleType, input.OwnerUserID, input.AmountCents)
 	if err != nil {
 		return mapOpportunityValidationError(err)
 	}
@@ -51,10 +53,12 @@ type UpdateOpportunityProfile struct {
 }
 
 type UpdateOpportunityProfileInput struct {
-	PublicID    string
-	Title       string
-	OwnerUserID string
-	AmountCents int64
+	PublicID         string
+	CustomerPublicID string
+	Title            string
+	SaleType         string
+	OwnerUserID      string
+	AmountCents      int64
 }
 
 type UpdateOpportunityProfileResult struct {
@@ -82,7 +86,7 @@ func (useCase UpdateOpportunityProfile) Execute(input UpdateOpportunityProfileIn
 		}
 	}
 
-	revised, err := opportunity.Revise(input.Title, input.OwnerUserID, input.AmountCents)
+	revised, err := opportunity.Revise(input.CustomerPublicID, input.Title, input.SaleType, input.OwnerUserID, input.AmountCents)
 	if err != nil {
 		validation := mapOpportunityValidationError(err)
 		return UpdateOpportunityProfileResult{
@@ -163,6 +167,12 @@ func mapOpportunityValidationError(err error) CreateOpportunityResult {
 			ErrorText:  "Lead public id is invalid.",
 			BadRequest: true,
 		}
+	case errors.Is(err, entity.ErrOpportunityCustomerPublicIDInvalid):
+		return CreateOpportunityResult{
+			ErrorCode:  "invalid_customer_public_id",
+			ErrorText:  "Customer public id is invalid.",
+			BadRequest: true,
+		}
 	case errors.Is(err, entity.ErrOpportunityTitleRequired):
 		return CreateOpportunityResult{
 			ErrorCode:  "invalid_opportunity_title",
@@ -179,6 +189,12 @@ func mapOpportunityValidationError(err error) CreateOpportunityResult {
 		return CreateOpportunityResult{
 			ErrorCode:  "invalid_opportunity_amount",
 			ErrorText:  "Opportunity amount cents must be greater than zero.",
+			BadRequest: true,
+		}
+	case errors.Is(err, entity.ErrOpportunitySaleTypeInvalid):
+		return CreateOpportunityResult{
+			ErrorCode:  "invalid_sale_type",
+			ErrorText:  "Sale type is invalid.",
 			BadRequest: true,
 		}
 	default:

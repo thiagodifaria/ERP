@@ -24,12 +24,14 @@ type ErrorResponse struct {
 }
 
 type OpportunityResponse struct {
-	PublicID     string `json:"publicId"`
-	LeadPublicID string `json:"leadPublicId"`
-	Title        string `json:"title"`
-	Stage        string `json:"stage"`
-	OwnerUserID  string `json:"ownerUserId"`
-	AmountCents  int64  `json:"amountCents"`
+	PublicID         string `json:"publicId"`
+	LeadPublicID     string `json:"leadPublicId"`
+	CustomerPublicID string `json:"customerPublicId"`
+	Title            string `json:"title"`
+	Stage            string `json:"stage"`
+	SaleType         string `json:"saleType"`
+	OwnerUserID      string `json:"ownerUserId"`
+	AmountCents      int64  `json:"amountCents"`
 }
 
 type OpportunitySummaryResponse struct {
@@ -39,16 +41,20 @@ type OpportunitySummaryResponse struct {
 }
 
 type CreateOpportunityRequest struct {
-	LeadPublicID string `json:"leadPublicId"`
-	Title        string `json:"title"`
-	OwnerUserID  string `json:"ownerUserId"`
-	AmountCents  int64  `json:"amountCents"`
+	LeadPublicID     string `json:"leadPublicId"`
+	CustomerPublicID string `json:"customerPublicId"`
+	Title            string `json:"title"`
+	SaleType         string `json:"saleType"`
+	OwnerUserID      string `json:"ownerUserId"`
+	AmountCents      int64  `json:"amountCents"`
 }
 
 type UpdateOpportunityRequest struct {
-	Title       string `json:"title"`
-	OwnerUserID string `json:"ownerUserId"`
-	AmountCents int64  `json:"amountCents"`
+	CustomerPublicID string `json:"customerPublicId"`
+	Title            string `json:"title"`
+	SaleType         string `json:"saleType"`
+	OwnerUserID      string `json:"ownerUserId"`
+	AmountCents      int64  `json:"amountCents"`
 }
 
 type UpdateOpportunityStageRequest struct {
@@ -76,6 +82,9 @@ type SaleResponse struct {
 	PublicID            string `json:"publicId"`
 	OpportunityPublicID string `json:"opportunityPublicId"`
 	ProposalPublicID    string `json:"proposalPublicId"`
+	CustomerPublicID    string `json:"customerPublicId"`
+	OwnerUserID         string `json:"ownerUserId"`
+	SaleType            string `json:"saleType"`
 	Status              string `json:"status"`
 	AmountCents         int64  `json:"amountCents"`
 }

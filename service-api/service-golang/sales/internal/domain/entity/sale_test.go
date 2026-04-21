@@ -7,6 +7,9 @@ func TestNewSaleShouldDefaultToActive(t *testing.T) {
 		"0195e7a0-7a9c-7c1f-8a44-4a6e72000041",
 		"0195e7a0-7a9c-7c1f-8a44-4a6e72000042",
 		"0195e7a0-7a9c-7c1f-8a44-4a6e72000043",
+		"0195e7a0-7a9c-7c1f-8a44-4a6e72000044",
+		"0195e7a0-7a9c-7c1f-8a44-4a6e72000045",
+		"renewal",
 		120000,
 	)
 	if err != nil {
@@ -16,6 +19,10 @@ func TestNewSaleShouldDefaultToActive(t *testing.T) {
 	if sale.Status != "active" {
 		t.Fatalf("expected status active, got %s", sale.Status)
 	}
+
+	if sale.SaleType != "renewal" {
+		t.Fatalf("expected sale type renewal, got %s", sale.SaleType)
+	}
 }
 
 func TestSaleShouldAllowInvoicingOnlyOnce(t *testing.T) {
@@ -23,6 +30,9 @@ func TestSaleShouldAllowInvoicingOnlyOnce(t *testing.T) {
 		"0195e7a0-7a9c-7c1f-8a44-4a6e72000051",
 		"0195e7a0-7a9c-7c1f-8a44-4a6e72000052",
 		"0195e7a0-7a9c-7c1f-8a44-4a6e72000053",
+		"0195e7a0-7a9c-7c1f-8a44-4a6e72000054",
+		"0195e7a0-7a9c-7c1f-8a44-4a6e72000055",
+		"new",
 		120000,
 		"active",
 	)

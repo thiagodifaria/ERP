@@ -118,7 +118,7 @@ func (useCase ConvertProposalToSale) Execute(input ConvertProposalToSaleInput) C
 
 	useCase.opportunityRepository.Update(targetOpportunity)
 
-	sale, err := entity.NewSale(newPublicID(), targetOpportunity.PublicID, proposal.PublicID, proposal.AmountCents)
+	sale, err := entity.NewSale(newPublicID(), targetOpportunity.PublicID, proposal.PublicID, targetOpportunity.CustomerPublicID, targetOpportunity.OwnerUserID, targetOpportunity.SaleType, proposal.AmountCents)
 	if err != nil {
 		return ConvertProposalToSaleResult{
 			ErrorCode:  "invalid_sale",
@@ -133,6 +133,9 @@ func (useCase ConvertProposalToSale) Execute(input ConvertProposalToSaleInput) C
 		"salePublicId":        created.PublicID,
 		"opportunityPublicId": created.OpportunityPublicID,
 		"proposalPublicId":    created.ProposalPublicID,
+		"customerPublicId":    created.CustomerPublicID,
+		"ownerUserId":         created.OwnerUserID,
+		"saleType":            created.SaleType,
 		"status":              created.Status,
 		"amountCents":         created.AmountCents,
 	})

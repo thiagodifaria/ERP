@@ -190,6 +190,13 @@ public static class Server
         outboxEvent,
         outboxEvent.AggregatePublicId,
         NormalizeProjectionStatus(root.GetProperty("status").GetString())),
+      "sale.renegotiated" => await UpdateSaleProjectionAmount(
+        connection,
+        transaction,
+        tenantId,
+        outboxEvent,
+        root.GetProperty("salePublicId").GetString() ?? outboxEvent.AggregatePublicId,
+        root.GetProperty("amountCents").GetInt64()),
       "sale.status_changed" => await UpdateSaleProjectionStatus(
         connection,
         transaction,
@@ -326,6 +333,36 @@ public static class Server
     return new ProjectionMutation(0, updated > 0 ? 1 : 0, markProcessed.Processed);
   }
 
+  private static async Task<ProjectionMutation> UpdateSaleProjectionAmount(
+    NpgsqlConnection connection,
+    NpgsqlTransaction transaction,
+    long tenantId,
+    SalesOutboxEvent outboxEvent,
+    string salePublicId,
+    long amountCents)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      UPDATE finance.receivable_projections
+      SET
+        amount_cents = $3,
+        snapshot_payload = $4::jsonb
+      WHERE tenant_id = $1
+        AND sale_public_id = $2::uuid
+        AND projection_kind = 'sale-booking'
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(tenantId);
+    command.Parameters.AddWithValue(salePublicId);
+    command.Parameters.AddWithValue(amountCents);
+    command.Parameters.AddWithValue(outboxEvent.Payload);
+
+    var updated = await command.ExecuteNonQueryAsync();
+    var markProcessed = await MarkOutboxProcessed(connection, transaction, tenantId, outboxEvent.PublicId);
+    return new ProjectionMutation(0, updated > 0 ? 1 : 0, markProcessed.Processed);
+  }
+
   private static async Task<ProjectionMutation> MarkOutboxProcessed(NpgsqlConnection connection, NpgsqlTransaction transaction, long tenantId, string outboxPublicId)
   {
     await using var command = new NpgsqlCommand(
@@ -398,12 +435,12 @@ public static class Server
       """
       SELECT
         COUNT(*) AS total,
-        COALESCE(SUM(amount_cents) FILTER (WHERE status IN ('forecast', 'open')), 0) AS pipeline_amount_cents,
-        COALESCE(SUM(amount_cents) FILTER (WHERE status = 'paid'), 0) AS paid_amount_cents,
-        COUNT(*) FILTER (WHERE status = 'forecast') AS forecast_count,
-        COUNT(*) FILTER (WHERE status = 'open') AS open_count,
-        COUNT(*) FILTER (WHERE status = 'paid') AS paid_count,
-        COUNT(*) FILTER (WHERE status = 'cancelled') AS cancelled_count
+        COALESCE(SUM(projection.amount_cents) FILTER (WHERE projection.status IN ('forecast', 'open')), 0) AS pipeline_amount_cents,
+        COALESCE(SUM(projection.amount_cents) FILTER (WHERE projection.status = 'paid'), 0) AS paid_amount_cents,
+        COUNT(*) FILTER (WHERE projection.status = 'forecast') AS forecast_count,
+        COUNT(*) FILTER (WHERE projection.status = 'open') AS open_count,
+        COUNT(*) FILTER (WHERE projection.status = 'paid') AS paid_count,
+        COUNT(*) FILTER (WHERE projection.status = 'cancelled') AS cancelled_count
       FROM finance.receivable_projections AS projection
       INNER JOIN identity.tenants AS tenant
         ON tenant.id = projection.tenant_id

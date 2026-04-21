@@ -27,12 +27,14 @@ type dependencyResponse struct {
 }
 
 type opportunityResponse struct {
-	PublicID     string `json:"publicId"`
-	LeadPublicID string `json:"leadPublicId"`
-	Title        string `json:"title"`
-	Stage        string `json:"stage"`
-	OwnerUserID  string `json:"ownerUserId"`
-	AmountCents  int64  `json:"amountCents"`
+	PublicID         string `json:"publicId"`
+	LeadPublicID     string `json:"leadPublicId"`
+	CustomerPublicID string `json:"customerPublicId"`
+	Title            string `json:"title"`
+	Stage            string `json:"stage"`
+	SaleType         string `json:"saleType"`
+	OwnerUserID      string `json:"ownerUserId"`
+	AmountCents      int64  `json:"amountCents"`
 }
 
 type proposalResponse struct {
@@ -47,6 +49,9 @@ type saleResponse struct {
 	PublicID            string `json:"publicId"`
 	OpportunityPublicID string `json:"opportunityPublicId"`
 	ProposalPublicID    string `json:"proposalPublicId"`
+	CustomerPublicID    string `json:"customerPublicId"`
+	OwnerUserID         string `json:"ownerUserId"`
+	SaleType            string `json:"saleType"`
 	Status              string `json:"status"`
 	AmountCents         int64  `json:"amountCents"`
 }
@@ -88,7 +93,7 @@ func TestCreateOpportunityContractShouldReturnCreatedResource(t *testing.T) {
 		newContractRouter(),
 		http.MethodPost,
 		"/api/sales/opportunities",
-		bytes.NewBufferString(`{"leadPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000011","title":"Contract Expansion","ownerUserId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000012","amountCents":88000}`),
+		bytes.NewBufferString(`{"leadPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000011","customerPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000013","title":"Contract Expansion","saleType":"new","ownerUserId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000012","amountCents":88000}`),
 	)
 	if response.Code != http.StatusCreated {
 		t.Fatalf("expected status %d, got %d", http.StatusCreated, response.Code)
@@ -102,6 +107,10 @@ func TestCreateOpportunityContractShouldReturnCreatedResource(t *testing.T) {
 	if payload.Stage != "qualified" {
 		t.Fatalf("expected stage qualified, got %s", payload.Stage)
 	}
+
+	if payload.CustomerPublicID == "" || payload.SaleType != "new" {
+		t.Fatalf("expected customer and sale type to be exposed in opportunity contract")
+	}
 }
 
 func TestProposalConversionContractShouldReturnSale(t *testing.T) {
@@ -112,7 +121,7 @@ func TestProposalConversionContractShouldReturnSale(t *testing.T) {
 		router,
 		http.MethodPost,
 		"/api/sales/opportunities",
-		bytes.NewBufferString(`{"leadPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000021","title":"Contract Expansion","ownerUserId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000022","amountCents":91000}`),
+		bytes.NewBufferString(`{"leadPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000021","customerPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000023","title":"Contract Expansion","saleType":"upsell","ownerUserId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000022","amountCents":91000}`),
 	)
 	if createOpportunity.Code != http.StatusCreated {
 		t.Fatalf("expected status %d, got %d", http.StatusCreated, createOpportunity.Code)
@@ -159,6 +168,10 @@ func TestProposalConversionContractShouldReturnSale(t *testing.T) {
 	if sale.Status != "active" {
 		t.Fatalf("expected status active, got %s", sale.Status)
 	}
+
+	if sale.CustomerPublicID == "" || sale.SaleType != "upsell" {
+		t.Fatalf("expected sale contract to expose customer and sale type")
+	}
 }
 
 func TestInvoiceLifecycleContractShouldExposeBillableSaleShape(t *testing.T) {
@@ -180,7 +193,7 @@ func TestInvoiceLifecycleContractShouldExposeBillableSaleShape(t *testing.T) {
 		router,
 		http.MethodPost,
 		"/api/sales/opportunities",
-		bytes.NewBufferString(`{"leadPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000031","title":"Contract Billing","ownerUserId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000032","amountCents":121000}`),
+		bytes.NewBufferString(`{"leadPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000031","customerPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000033","title":"Contract Billing","saleType":"renewal","ownerUserId":"0195e7a0-7a9c-7c1f-8a44-4a6e73000032","amountCents":121000}`),
 	)
 	if createOpportunity.Code != http.StatusCreated {
 		t.Fatalf("expected opportunity create success, got %d", createOpportunity.Code)
@@ -328,6 +341,10 @@ func newContractRouter() http.Handler {
 		persistence.NewInMemoryProposalRepository(),
 		persistence.NewInMemorySaleRepository(),
 		persistence.NewInMemoryInvoiceRepository(),
+		persistence.NewInMemoryInstallmentRepository(),
+		persistence.NewInMemoryCommissionRepository(),
+		persistence.NewInMemoryPendingItemRepository(),
+		persistence.NewInMemoryRenegotiationRepository(),
 		persistence.NewInMemoryCommercialEventRepository(),
 		persistence.NewInMemoryOutboxEventRepository(),
 		"postgres",

@@ -19,10 +19,14 @@ func NewRouter(
 	proposalRepository repository.ProposalRepository,
 	saleRepository repository.SaleRepository,
 	invoiceRepository repository.InvoiceRepository,
+	installmentRepository repository.InstallmentRepository,
+	commissionRepository repository.CommissionRepository,
+	pendingItemRepository repository.PendingItemRepository,
+	renegotiationRepository repository.RenegotiationRepository,
 	eventRepository repository.CommercialEventRepository,
 	outboxRepository repository.OutboxEventRepository,
 ) http.Handler {
-	return NewRouterWithRuntime(logger, opportunityRepository, proposalRepository, saleRepository, invoiceRepository, eventRepository, outboxRepository, "memory")
+	return NewRouterWithRuntime(logger, opportunityRepository, proposalRepository, saleRepository, invoiceRepository, installmentRepository, commissionRepository, pendingItemRepository, renegotiationRepository, eventRepository, outboxRepository, "memory")
 }
 
 func NewRouterWithRuntime(
@@ -31,6 +35,10 @@ func NewRouterWithRuntime(
 	proposalRepository repository.ProposalRepository,
 	saleRepository repository.SaleRepository,
 	invoiceRepository repository.InvoiceRepository,
+	installmentRepository repository.InstallmentRepository,
+	commissionRepository repository.CommissionRepository,
+	pendingItemRepository repository.PendingItemRepository,
+	renegotiationRepository repository.RenegotiationRepository,
 	eventRepository repository.CommercialEventRepository,
 	outboxRepository repository.OutboxEventRepository,
 	repositoryDriver string,
@@ -64,6 +72,19 @@ func NewRouterWithRuntime(
 		command.NewCreateInvoice(saleRepository, invoiceRepository, eventRepository, outboxRepository),
 		command.NewUpdateInvoiceStatus(invoiceRepository, eventRepository, outboxRepository),
 	)
+	operationsHandler := handler.NewOperationsHandler(
+		query.NewListInstallmentsBySale(installmentRepository),
+		command.NewCreateInstallmentSchedule(saleRepository, installmentRepository, eventRepository, outboxRepository),
+		query.NewListCommissionsBySale(commissionRepository),
+		command.NewCreateCommission(saleRepository, commissionRepository, eventRepository),
+		command.NewUpdateCommissionStatus(commissionRepository, eventRepository),
+		query.NewListPendingItemsBySale(pendingItemRepository),
+		command.NewCreatePendingItem(saleRepository, pendingItemRepository, eventRepository),
+		command.NewResolvePendingItem(pendingItemRepository, eventRepository),
+		query.NewListRenegotiationsBySale(renegotiationRepository),
+		command.NewApplyRenegotiation(saleRepository, invoiceRepository, installmentRepository, commissionRepository, renegotiationRepository, eventRepository, outboxRepository),
+		command.NewCancelSale(saleRepository, invoiceRepository, installmentRepository, commissionRepository, pendingItemRepository, eventRepository, outboxRepository),
+	)
 	activityHandler := handler.NewActivityHandler(
 		query.NewListCommercialEventsByAggregate(eventRepository),
 		query.NewListPendingOutboxEvents(outboxRepository),
@@ -90,6 +111,18 @@ func NewRouterWithRuntime(
 	mux.HandleFunc("GET /api/sales/sales/{publicId}", saleHandler.GetByPublicID)
 	mux.HandleFunc("GET /api/sales/sales/{publicId}/history", activityHandler.ListSaleHistory)
 	mux.HandleFunc("PATCH /api/sales/sales/{publicId}/status", saleHandler.UpdateStatus)
+	mux.HandleFunc("POST /api/sales/sales/{publicId}/cancel", operationsHandler.CancelSale)
+	mux.HandleFunc("GET /api/sales/sales/{publicId}/installments", operationsHandler.ListInstallments)
+	mux.HandleFunc("POST /api/sales/sales/{publicId}/installments", operationsHandler.CreateInstallments)
+	mux.HandleFunc("GET /api/sales/sales/{publicId}/commissions", operationsHandler.ListCommissions)
+	mux.HandleFunc("POST /api/sales/sales/{publicId}/commissions", operationsHandler.CreateCommission)
+	mux.HandleFunc("POST /api/sales/sales/{publicId}/commissions/{commissionPublicId}/block", operationsHandler.BlockCommission)
+	mux.HandleFunc("POST /api/sales/sales/{publicId}/commissions/{commissionPublicId}/release", operationsHandler.ReleaseCommission)
+	mux.HandleFunc("GET /api/sales/sales/{publicId}/pending-items", operationsHandler.ListPendingItems)
+	mux.HandleFunc("POST /api/sales/sales/{publicId}/pending-items", operationsHandler.CreatePendingItem)
+	mux.HandleFunc("POST /api/sales/sales/{publicId}/pending-items/{pendingItemPublicId}/resolve", operationsHandler.ResolvePendingItem)
+	mux.HandleFunc("GET /api/sales/sales/{publicId}/renegotiations", operationsHandler.ListRenegotiations)
+	mux.HandleFunc("POST /api/sales/sales/{publicId}/renegotiations", operationsHandler.ApplyRenegotiation)
 	mux.HandleFunc("POST /api/sales/sales/{publicId}/invoice", invoiceHandler.Create)
 	mux.HandleFunc("GET /api/sales/invoices", invoiceHandler.List)
 	mux.HandleFunc("GET /api/sales/invoices/summary", invoiceHandler.Summary)

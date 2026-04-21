@@ -47,7 +47,7 @@ func NewPostgresOpportunityRepository(database *sql.DB, tenantSlug string) (*Pos
 func (repository *PostgresOpportunityRepository) List() []entity.Opportunity {
 	rows, err := repository.database.Query(
 		`
-      SELECT public_id::text, lead_public_id::text, title, stage, COALESCE(owner_user_public_id::text, ''), amount_cents
+      SELECT public_id::text, lead_public_id::text, customer_public_id::text, title, stage, sale_type, COALESCE(owner_user_public_id::text, ''), amount_cents
       FROM sales.opportunities
       WHERE tenant_id = $1
       ORDER BY created_at, id
@@ -78,7 +78,7 @@ func (repository *PostgresOpportunityRepository) FindByPublicID(publicID string)
 
 	row := repository.database.QueryRow(
 		`
-      SELECT public_id::text, lead_public_id::text, title, stage, COALESCE(owner_user_public_id::text, ''), amount_cents
+      SELECT public_id::text, lead_public_id::text, customer_public_id::text, title, stage, sale_type, COALESCE(owner_user_public_id::text, ''), amount_cents
       FROM sales.opportunities
       WHERE tenant_id = $1
         AND public_id = $2
@@ -98,6 +98,7 @@ func (repository *PostgresOpportunityRepository) FindByPublicID(publicID string)
 func (repository *PostgresOpportunityRepository) Save(opportunity entity.Opportunity) entity.Opportunity {
 	publicID := uuid.MustParse(opportunity.PublicID)
 	leadPublicID := uuid.MustParse(opportunity.LeadPublicID)
+	customerPublicID := uuid.MustParse(opportunity.CustomerPublicID)
 	var ownerUserID *uuid.UUID
 	if strings.TrimSpace(opportunity.OwnerUserID) != "" {
 		parsed := uuid.MustParse(opportunity.OwnerUserID)
@@ -106,16 +107,18 @@ func (repository *PostgresOpportunityRepository) Save(opportunity entity.Opportu
 
 	row := repository.database.QueryRow(
 		`
-      INSERT INTO sales.opportunities (tenant_id, public_id, lead_public_id, owner_user_public_id, title, stage, amount_cents)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-      RETURNING public_id::text, lead_public_id::text, title, stage, COALESCE(owner_user_public_id::text, ''), amount_cents
+      INSERT INTO sales.opportunities (tenant_id, public_id, lead_public_id, customer_public_id, owner_user_public_id, title, stage, sale_type, amount_cents)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      RETURNING public_id::text, lead_public_id::text, customer_public_id::text, title, stage, sale_type, COALESCE(owner_user_public_id::text, ''), amount_cents
     `,
 		repository.tenantID,
 		publicID,
 		leadPublicID,
+		customerPublicID,
 		ownerUserID,
 		opportunity.Title,
 		opportunity.Stage,
+		opportunity.SaleType,
 		opportunity.AmountCents,
 	)
 
@@ -139,18 +142,22 @@ func (repository *PostgresOpportunityRepository) Update(opportunity entity.Oppor
 		`
       UPDATE sales.opportunities
       SET
-        title = $3,
-        stage = $4,
-        owner_user_public_id = $5,
-        amount_cents = $6
+        customer_public_id = $3,
+        title = $4,
+        stage = $5,
+        sale_type = $6,
+        owner_user_public_id = $7,
+        amount_cents = $8
       WHERE tenant_id = $1
         AND public_id = $2
-      RETURNING public_id::text, lead_public_id::text, title, stage, COALESCE(owner_user_public_id::text, ''), amount_cents
+      RETURNING public_id::text, lead_public_id::text, customer_public_id::text, title, stage, sale_type, COALESCE(owner_user_public_id::text, ''), amount_cents
     `,
 		repository.tenantID,
 		publicID,
+		uuid.MustParse(opportunity.CustomerPublicID),
 		opportunity.Title,
 		opportunity.Stage,
+		opportunity.SaleType,
 		ownerUserID,
 		opportunity.AmountCents,
 	)
@@ -329,7 +336,7 @@ func NewPostgresInvoiceRepository(database *sql.DB, tenantSlug string) (*Postgre
 func (repository *PostgresSaleRepository) List() []entity.Sale {
 	rows, err := repository.database.Query(
 		`
-      SELECT sale.public_id::text, opportunity.public_id::text, proposal.public_id::text, sale.status, sale.amount_cents
+      SELECT sale.public_id::text, opportunity.public_id::text, proposal.public_id::text, sale.customer_public_id::text, COALESCE(sale.owner_user_public_id::text, ''), sale.sale_type, sale.status, sale.amount_cents
       FROM sales.sales AS sale
       INNER JOIN sales.opportunities AS opportunity
         ON opportunity.id = sale.opportunity_id
@@ -364,7 +371,7 @@ func (repository *PostgresSaleRepository) FindByPublicID(publicID string) *entit
 
 	row := repository.database.QueryRow(
 		`
-      SELECT sale.public_id::text, opportunity.public_id::text, proposal.public_id::text, sale.status, sale.amount_cents
+      SELECT sale.public_id::text, opportunity.public_id::text, proposal.public_id::text, sale.customer_public_id::text, COALESCE(sale.owner_user_public_id::text, ''), sale.sale_type, sale.status, sale.amount_cents
       FROM sales.sales AS sale
       INNER JOIN sales.opportunities AS opportunity
         ON opportunity.id = sale.opportunity_id
@@ -393,7 +400,7 @@ func (repository *PostgresSaleRepository) FindByProposalPublicID(proposalPublicI
 
 	row := repository.database.QueryRow(
 		`
-      SELECT sale.public_id::text, opportunity.public_id::text, proposal.public_id::text, sale.status, sale.amount_cents
+      SELECT sale.public_id::text, opportunity.public_id::text, proposal.public_id::text, sale.customer_public_id::text, COALESCE(sale.owner_user_public_id::text, ''), sale.sale_type, sale.status, sale.amount_cents
       FROM sales.sales AS sale
       INNER JOIN sales.opportunities AS opportunity
         ON opportunity.id = sale.opportunity_id
@@ -420,26 +427,32 @@ func (repository *PostgresSaleRepository) Save(sale entity.Sale) entity.Sale {
 
 	row := repository.database.QueryRow(
 		`
-      INSERT INTO sales.sales (tenant_id, opportunity_id, proposal_id, public_id, status, amount_cents)
+      INSERT INTO sales.sales (tenant_id, opportunity_id, proposal_id, public_id, customer_public_id, owner_user_public_id, sale_type, status, amount_cents)
       SELECT
         $1,
         opportunity.id,
         proposal.id,
         $4,
         $5,
-        $6
+        NULLIF($6, '')::uuid,
+        $7,
+        $8,
+        $9
       FROM sales.opportunities AS opportunity
       INNER JOIN sales.proposals AS proposal
         ON proposal.opportunity_id = opportunity.id
       WHERE opportunity.tenant_id = $1
         AND opportunity.public_id = $2
         AND proposal.public_id = $3
-      RETURNING $4::text, $2::text, $3::text, status, amount_cents
+      RETURNING $4::text, $2::text, $3::text, customer_public_id::text, COALESCE(owner_user_public_id::text, ''), sale_type, status, amount_cents
     `,
 		repository.tenantID,
 		opportunityPublicID,
 		proposalPublicID,
 		uuid.MustParse(sale.PublicID),
+		uuid.MustParse(sale.CustomerPublicID),
+		sale.OwnerUserID,
+		sale.SaleType,
 		sale.Status,
 		sale.AmountCents,
 	)
@@ -459,18 +472,24 @@ func (repository *PostgresSaleRepository) Update(sale entity.Sale) entity.Sale {
 		`
       UPDATE sales.sales AS sale
       SET
-        status = $3,
-        amount_cents = $4
+        customer_public_id = $3,
+        owner_user_public_id = NULLIF($4, '')::uuid,
+        sale_type = $5,
+        status = $6,
+        amount_cents = $7
       FROM sales.opportunities AS opportunity,
            sales.proposals AS proposal
       WHERE sale.tenant_id = $1
         AND sale.public_id = $2
         AND opportunity.id = sale.opportunity_id
         AND proposal.id = sale.proposal_id
-      RETURNING sale.public_id::text, opportunity.public_id::text, proposal.public_id::text, sale.status, sale.amount_cents
+      RETURNING sale.public_id::text, opportunity.public_id::text, proposal.public_id::text, sale.customer_public_id::text, COALESCE(sale.owner_user_public_id::text, ''), sale.sale_type, sale.status, sale.amount_cents
     `,
 		repository.tenantID,
 		publicID,
+		uuid.MustParse(sale.CustomerPublicID),
+		sale.OwnerUserID,
+		sale.SaleType,
 		sale.Status,
 		sale.AmountCents,
 	)
@@ -672,12 +691,14 @@ type scanner interface {
 func scanOpportunity(scanner scanner) (entity.Opportunity, error) {
 	var publicID string
 	var leadPublicID string
+	var customerPublicID string
 	var title string
 	var stage string
+	var saleType string
 	var ownerUserID string
 	var amountCents int64
 
-	if err := scanner.Scan(&publicID, &leadPublicID, &title, &stage, &ownerUserID, &amountCents); err != nil {
+	if err := scanner.Scan(&publicID, &leadPublicID, &customerPublicID, &title, &stage, &saleType, &ownerUserID, &amountCents); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return entity.Opportunity{}, err
 		}
@@ -685,7 +706,7 @@ func scanOpportunity(scanner scanner) (entity.Opportunity, error) {
 		return entity.Opportunity{}, err
 	}
 
-	return entity.RestoreOpportunity(publicID, leadPublicID, title, ownerUserID, amountCents, stage)
+	return entity.RestoreOpportunity(publicID, leadPublicID, customerPublicID, title, saleType, ownerUserID, amountCents, stage)
 }
 
 func scanProposal(scanner scanner) (entity.Proposal, error) {
@@ -710,10 +731,13 @@ func scanSale(scanner scanner) (entity.Sale, error) {
 	var publicID string
 	var opportunityPublicID string
 	var proposalPublicID string
+	var customerPublicID string
+	var ownerUserID string
+	var saleType string
 	var status string
 	var amountCents int64
 
-	if err := scanner.Scan(&publicID, &opportunityPublicID, &proposalPublicID, &status, &amountCents); err != nil {
+	if err := scanner.Scan(&publicID, &opportunityPublicID, &proposalPublicID, &customerPublicID, &ownerUserID, &saleType, &status, &amountCents); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return entity.Sale{}, err
 		}
@@ -721,7 +745,7 @@ func scanSale(scanner scanner) (entity.Sale, error) {
 		return entity.Sale{}, err
 	}
 
-	return entity.RestoreSale(publicID, opportunityPublicID, proposalPublicID, amountCents, status)
+	return entity.RestoreSale(publicID, opportunityPublicID, proposalPublicID, customerPublicID, ownerUserID, saleType, amountCents, status)
 }
 
 func scanInvoice(scanner scanner) (entity.Invoice, error) {

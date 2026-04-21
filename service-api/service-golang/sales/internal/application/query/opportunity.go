@@ -9,10 +9,12 @@ import (
 )
 
 type OpportunityFilters struct {
-	Stage        string
-	LeadPublicID string
-	OwnerUserID  string
-	Search       string
+	Stage            string
+	LeadPublicID     string
+	CustomerPublicID string
+	SaleType         string
+	OwnerUserID      string
+	Search           string
 }
 
 type OpportunitySummary struct {
@@ -72,6 +74,8 @@ func applyOpportunityFilters(opportunities []entity.Opportunity, filters Opportu
 	response := make([]entity.Opportunity, 0)
 	stage := strings.ToLower(strings.TrimSpace(filters.Stage))
 	leadPublicID := strings.TrimSpace(filters.LeadPublicID)
+	customerPublicID := strings.TrimSpace(filters.CustomerPublicID)
+	saleType := strings.ToLower(strings.TrimSpace(filters.SaleType))
 	ownerUserID := strings.TrimSpace(filters.OwnerUserID)
 	search := strings.ToLower(strings.TrimSpace(filters.Search))
 
@@ -84,12 +88,20 @@ func applyOpportunityFilters(opportunities []entity.Opportunity, filters Opportu
 			continue
 		}
 
+		if customerPublicID != "" && opportunity.CustomerPublicID != customerPublicID {
+			continue
+		}
+
+		if saleType != "" && opportunity.SaleType != saleType {
+			continue
+		}
+
 		if ownerUserID != "" && opportunity.OwnerUserID != ownerUserID {
 			continue
 		}
 
 		if search != "" {
-			searchable := strings.ToLower(opportunity.Title + " " + opportunity.LeadPublicID)
+			searchable := strings.ToLower(opportunity.Title + " " + opportunity.LeadPublicID + " " + opportunity.CustomerPublicID + " " + opportunity.SaleType)
 			if !strings.Contains(searchable, search) {
 				continue
 			}

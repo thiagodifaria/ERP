@@ -3,14 +3,18 @@ INSERT INTO crm.customers (tenant_id, lead_id, public_id, owner_user_public_id, 
 SELECT
   lead.tenant_id,
   lead.id,
-  '0195e7a0-7a9c-7c1f-8a44-4a6e70000081'::uuid,
+  gen_random_uuid(),
   lead.owner_user_public_id,
   lead.name,
   lead.email,
   lead.source,
   'active'
 FROM crm.leads AS lead
-WHERE lead.email = 'lead@bootstrap-ops.local'
+WHERE lead.email = concat('lead@', (
+  SELECT tenant.slug
+  FROM identity.tenants AS tenant
+  WHERE tenant.id = lead.tenant_id
+), '.local')
   AND NOT EXISTS (
     SELECT 1
     FROM crm.customers AS customer

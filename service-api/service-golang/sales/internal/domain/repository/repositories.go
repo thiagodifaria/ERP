@@ -34,6 +34,31 @@ type InvoiceRepository interface {
 	Update(invoice entity.Invoice) entity.Invoice
 }
 
+type InstallmentRepository interface {
+	ListBySalePublicID(salePublicID string) []entity.Installment
+	Save(installment entity.Installment) entity.Installment
+	Update(installment entity.Installment) entity.Installment
+}
+
+type CommissionRepository interface {
+	ListBySalePublicID(salePublicID string) []entity.Commission
+	FindByPublicID(publicID string) *entity.Commission
+	Save(commission entity.Commission) entity.Commission
+	Update(commission entity.Commission) entity.Commission
+}
+
+type PendingItemRepository interface {
+	ListBySalePublicID(salePublicID string) []entity.PendingItem
+	FindByPublicID(publicID string) *entity.PendingItem
+	Save(item entity.PendingItem) entity.PendingItem
+	Update(item entity.PendingItem) entity.PendingItem
+}
+
+type RenegotiationRepository interface {
+	ListBySalePublicID(salePublicID string) []entity.Renegotiation
+	Save(renegotiation entity.Renegotiation) entity.Renegotiation
+}
+
 type CommercialEventRepository interface {
 	ListByAggregate(aggregateType string, aggregatePublicID string) []entity.CommercialEvent
 	Save(event entity.CommercialEvent) entity.CommercialEvent

@@ -39,10 +39,12 @@ func NewOpportunityHandler(
 
 func (handler OpportunityHandler) List(writer http.ResponseWriter, request *http.Request) {
 	opportunities := handler.listOpportunities.Execute(query.OpportunityFilters{
-		Stage:        request.URL.Query().Get("stage"),
-		LeadPublicID: request.URL.Query().Get("leadPublicId"),
-		OwnerUserID:  request.URL.Query().Get("ownerUserId"),
-		Search:       request.URL.Query().Get("q"),
+		Stage:            request.URL.Query().Get("stage"),
+		LeadPublicID:     request.URL.Query().Get("leadPublicId"),
+		CustomerPublicID: request.URL.Query().Get("customerPublicId"),
+		SaleType:         request.URL.Query().Get("saleType"),
+		OwnerUserID:      request.URL.Query().Get("ownerUserId"),
+		Search:           request.URL.Query().Get("q"),
 	})
 	response := make([]dto.OpportunityResponse, 0, len(opportunities))
 
@@ -55,10 +57,12 @@ func (handler OpportunityHandler) List(writer http.ResponseWriter, request *http
 
 func (handler OpportunityHandler) Summary(writer http.ResponseWriter, request *http.Request) {
 	summary := handler.getOpportunitySummary.Execute(query.OpportunityFilters{
-		Stage:        request.URL.Query().Get("stage"),
-		LeadPublicID: request.URL.Query().Get("leadPublicId"),
-		OwnerUserID:  request.URL.Query().Get("ownerUserId"),
-		Search:       request.URL.Query().Get("q"),
+		Stage:            request.URL.Query().Get("stage"),
+		LeadPublicID:     request.URL.Query().Get("leadPublicId"),
+		CustomerPublicID: request.URL.Query().Get("customerPublicId"),
+		SaleType:         request.URL.Query().Get("saleType"),
+		OwnerUserID:      request.URL.Query().Get("ownerUserId"),
+		Search:           request.URL.Query().Get("q"),
 	})
 
 	writeJSON(writer, http.StatusOK, dto.OpportunitySummaryResponse{
@@ -86,10 +90,12 @@ func (handler OpportunityHandler) Create(writer http.ResponseWriter, request *ht
 	}
 
 	result := handler.createOpportunity.Execute(command.CreateOpportunityInput{
-		LeadPublicID: payload.LeadPublicID,
-		Title:        payload.Title,
-		OwnerUserID:  payload.OwnerUserID,
-		AmountCents:  payload.AmountCents,
+		LeadPublicID:     payload.LeadPublicID,
+		CustomerPublicID: payload.CustomerPublicID,
+		Title:            payload.Title,
+		SaleType:         payload.SaleType,
+		OwnerUserID:      payload.OwnerUserID,
+		AmountCents:      payload.AmountCents,
 	})
 
 	if result.BadRequest {
@@ -108,10 +114,12 @@ func (handler OpportunityHandler) Update(writer http.ResponseWriter, request *ht
 	}
 
 	result := handler.updateOpportunity.Execute(command.UpdateOpportunityProfileInput{
-		PublicID:    request.PathValue("publicId"),
-		Title:       payload.Title,
-		OwnerUserID: payload.OwnerUserID,
-		AmountCents: payload.AmountCents,
+		PublicID:         request.PathValue("publicId"),
+		CustomerPublicID: payload.CustomerPublicID,
+		Title:            payload.Title,
+		SaleType:         payload.SaleType,
+		OwnerUserID:      payload.OwnerUserID,
+		AmountCents:      payload.AmountCents,
 	})
 
 	switch {
