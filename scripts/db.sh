@@ -135,6 +135,8 @@ Usage:
   ./scripts/db.sh migrate sales
   ./scripts/db.sh migrate finance
   ./scripts/db.sh migrate documents
+  ./scripts/db.sh migrate analytics
+  ./scripts/db.sh migrate simulation
   ./scripts/db.sh migrate engagement
   ./scripts/db.sh migrate webhook-hub
   ./scripts/db.sh migrate workflow-control
@@ -151,6 +153,8 @@ Usage:
   ./scripts/db.sh summary sales [tenant-slug]
   ./scripts/db.sh summary finance [tenant-slug]
   ./scripts/db.sh summary documents [tenant-slug]
+  ./scripts/db.sh summary analytics [tenant-slug]
+  ./scripts/db.sh summary simulation [tenant-slug]
   ./scripts/db.sh summary engagement [tenant-slug]
   ./scripts/db.sh summary webhook-hub
   ./scripts/db.sh summary workflow-control [tenant-slug]
@@ -188,6 +192,12 @@ main() {
         documents)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/documents/migrations"
           ;;
+        analytics)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/analytics/migrations"
+          ;;
+        simulation)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/simulation/migrations"
+          ;;
         engagement)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/migrations"
           ;;
@@ -207,6 +217,8 @@ main() {
           apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/finance/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/documents/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/analytics/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/simulation/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/webhook-hub/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/migrations"
@@ -391,6 +403,42 @@ main() {
               (SELECT count(*) FROM documents.attachments AS attachment WHERE attachment.tenant_id = tenant.id AND attachment.owner_type = 'crm.customer') AS customer_attachments,
               (SELECT count(*) FROM documents.attachments AS attachment WHERE attachment.tenant_id = tenant.id AND attachment.storage_driver = 'manual') AS manual_storage,
               (SELECT count(*) FROM documents.attachments AS attachment WHERE attachment.tenant_id = tenant.id AND attachment.storage_driver <> 'manual') AS external_storage
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
+          ;;
+        analytics)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM simulation.load_benchmark_runs AS benchmark WHERE benchmark.tenant_id = tenant.id) AS benchmarks,
+              (SELECT count(*) FROM simulation.scenario_runs AS scenario WHERE scenario.tenant_id = tenant.id) AS scenarios
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
+          ;;
+        simulation)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM simulation.scenario_runs AS scenario WHERE scenario.tenant_id = tenant.id) AS scenarios,
+              (SELECT count(*) FROM simulation.load_benchmark_runs AS benchmark WHERE benchmark.tenant_id = tenant.id) AS load_benchmarks
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;

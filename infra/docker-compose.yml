@@ -356,6 +356,28 @@ services:
     ports:
       - "${ANALYTICS_HTTP_PORT}:8086"
 
+  simulation:
+    build:
+      context: ../service-api/service-python/simulation
+    container_name: erp-simulation
+    environment:
+      SIMULATION_HTTP_HOST: "0.0.0.0"
+      SIMULATION_HTTP_PORT: "8094"
+      SIMULATION_REPOSITORY_DRIVER: "postgres"
+      SIMULATION_POSTGRES_HOST: "service-postgresql"
+      SIMULATION_POSTGRES_PORT: "5432"
+      SIMULATION_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      SIMULATION_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      SIMULATION_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      SIMULATION_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+      service-redis:
+        condition: service_healthy
+    ports:
+      - "${SIMULATION_HTTP_PORT}:8094"
+
   identity:
     build:
       context: ../service-api/service-csharp/identity

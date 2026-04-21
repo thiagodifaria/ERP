@@ -10,6 +10,7 @@ Planned services:
 Already started:
 
 - `analytics`
+- `simulation`
 
 Standard layout:
 

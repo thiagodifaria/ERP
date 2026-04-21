@@ -47,7 +47,7 @@ Cada servico critico deve documentar:
 - `./scripts/test.sh integration` executa a suite HTTP do `identity`
 - `./scripts/test.sh contract` executa as suites publicas de contratos de `workflow-control`, `crm` e `identity`
 - `./scripts/test.sh platform` valida a plataforma local da Fase 1, checando Keycloak, OpenFGA, Kafka, Prometheus e Grafana em container
-- `./scripts/test.sh smoke` agora valida primeiro a plataforma local e depois reseta volume, aplica bootstrap relacional e exercita `workflow-control`, `crm`, `sales`, `engagement`, `analytics`, `identity`, `webhook-hub`, `workflow-runtime` e `edge` ao vivo por HTTP
+- `./scripts/test.sh smoke` agora valida primeiro a plataforma local e depois reseta volume, aplica bootstrap relacional e exercita `workflow-control`, `crm`, `sales`, `engagement`, `analytics`, `simulation`, `identity`, `webhook-hub`, `workflow-runtime` e `edge` ao vivo por HTTP
 
 ## Enderecos locais da plataforma
 
@@ -74,7 +74,7 @@ Cada servico critico deve documentar:
 ## Automacao no GitHub
 
 - `.github/workflows/quality.yml` roda `unit`, `integration` e `contract` em `push` e `pull_request`, e executa `smoke` em `main` ou por `workflow_dispatch`
-- `.github/workflows/containers.yml` publica as imagens de `edge`, `crm`, `sales`, `identity`, `workflow-control`, `workflow-runtime`, `analytics` e `webhook-hub` no `ghcr.io`
+- `.github/workflows/containers.yml` publica as imagens de `edge`, `crm`, `sales`, `identity`, `workflow-control`, `workflow-runtime`, `analytics`, `simulation` e `webhook-hub` no `ghcr.io`
 - o registro publica `latest` na branch principal, `sha-*` por commit e tags por release quando o push vier de `v*`
 - as imagens passam a aparecer na aba `Packages` do repositório depois da primeira execucao bem-sucedida do workflow de containers
 
@@ -87,4 +87,5 @@ Cada servico critico deve documentar:
 - `ghcr.io/thiagodifaria/erp-workflow-control`
 - `ghcr.io/thiagodifaria/erp-workflow-runtime`
 - `ghcr.io/thiagodifaria/erp-analytics`
+- `ghcr.io/thiagodifaria/erp-simulation`
 - `ghcr.io/thiagodifaria/erp-webhook-hub`

@@ -38,6 +38,8 @@ jobs:
             context: service-api/service-elixir/workflow-runtime
           - image: analytics
             context: service-api/service-python/analytics
+          - image: simulation
+            context: service-api/service-python/simulation
           - image: webhook-hub
             context: service-api/service-rust/webhook-hub
     steps:

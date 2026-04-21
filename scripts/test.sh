@@ -92,6 +92,7 @@ prepare_runtime_ports() {
   remap_host_port_if_needed "WORKFLOW_CONTROL_HTTP_PORT" "workflow-control"
   remap_host_port_if_needed "WORKFLOW_RUNTIME_HTTP_PORT" "workflow-runtime"
   remap_host_port_if_needed "ANALYTICS_HTTP_PORT" "analytics"
+  remap_host_port_if_needed "SIMULATION_HTTP_PORT" "simulation"
   remap_host_port_if_needed "SALES_HTTP_PORT" "sales"
   remap_host_port_if_needed "ENGAGEMENT_HTTP_PORT" "engagement"
   remap_host_port_if_needed "FINANCE_HTTP_PORT" "finance"
@@ -173,6 +174,12 @@ run_python_unit() {
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache analytics.egg-info"
+
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-python/simulation:/workspace" \
+    -w /workspace \
+    python:3.12-slim \
+    sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache simulation.egg-info"
 }
 
 run_dotnet_build() {
@@ -1821,6 +1828,25 @@ run_analytics_runtime_smoke() {
   fi
 }
 
+run_simulation_runtime_smoke() {
+  local base_url="http://localhost:${SIMULATION_HTTP_PORT:-8094}"
+  local health_details_response
+  local catalog_response
+
+  "${COMPOSE_CMD[@]}" up -d --build simulation
+  wait_for_http_ready "$base_url/health/ready"
+
+  health_details_response="$(curl -fsS "$base_url/health/details")"
+  catalog_response="$(curl -fsS "$base_url/api/simulation/scenarios/catalog")"
+  echo "[test] simulation health details => $health_details_response"
+  echo "[test] simulation scenario catalog => $catalog_response"
+
+  if [[ "$health_details_response" != *'"name":"scenario-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$catalog_response" != *'"service":"simulation"'* || "$catalog_response" != *'"key":"operational-load"'* || "$catalog_response" != *'"key":"cost-baseline"'* ]]; then
+    echo "[test] simulation runtime foundation did not return the expected payload"
+    exit 1
+  fi
+}
+
 run_identity_runtime_smoke() {
   local base_url="http://localhost:${IDENTITY_HTTP_PORT:-8081}"
   local tenant_slug="runtime-identity-lab"
@@ -2501,6 +2527,7 @@ run_smoke() {
   run_finance_runtime_smoke
   run_engagement_runtime_smoke
   run_analytics_runtime_smoke
+  run_simulation_runtime_smoke
   run_identity_runtime_smoke
   run_edge_runtime_smoke
 }
@@ -2513,6 +2540,7 @@ Usage:
   ./scripts/test.sh contract
   ./scripts/test.sh platform
   ./scripts/test.sh smoke
+  ./scripts/test.sh performance
   ./scripts/test.sh all
 EOF
 }
@@ -2553,6 +2581,9 @@ main() {
       ;;
     smoke)
       run_smoke
+      ;;
+    performance)
+      run_simulation_runtime_smoke
       ;;
     all)
       run_go_unit
