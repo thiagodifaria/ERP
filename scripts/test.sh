@@ -2616,6 +2616,113 @@ run_smoke() {
   run_edge_runtime_smoke
 }
 
+run_backup_restore_suite() {
+  local backup_file
+  local before_summary
+  local wiped_summary
+  local restored_summary
+
+  trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
+  export POSTGRES_PORT="${POSTGRES_PORT_BACKUP_RESTORE:-16434}"
+  bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
+  bash "$ROOT_DIR/scripts/db.sh" up
+  bash "$ROOT_DIR/scripts/db.sh" migrate all
+  bash "$ROOT_DIR/scripts/db.sh" seed all
+
+  "${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" -c "
+      WITH tenant AS (
+        SELECT id
+        FROM identity.tenants
+        WHERE slug = 'bootstrap-ops'
+      )
+      INSERT INTO simulation.scenario_runs (tenant_id, public_id, scenario_key, input_payload, output_payload)
+      SELECT
+        tenant.id,
+        '11111111-1111-1111-1111-111111111111'::uuid,
+        'operational-load',
+        '{\"tenantSlug\":\"bootstrap-ops\",\"leadMultiplier\":2}'::jsonb,
+        '{\"estimatedMonthlyCostCents\":34896,\"risk\":\"attention\"}'::jsonb
+      FROM tenant;
+
+      WITH tenant AS (
+        SELECT id
+        FROM identity.tenants
+        WHERE slug = 'bootstrap-ops'
+      )
+      INSERT INTO simulation.load_benchmark_runs (tenant_id, public_id, benchmark_key, input_payload, output_payload)
+      SELECT
+        tenant.id,
+        '22222222-2222-2222-2222-222222222222'::uuid,
+        'operational-load',
+        '{\"tenantSlug\":\"bootstrap-ops\",\"sampleSize\":120}'::jsonb,
+        '{\"status\":\"stable\",\"p95LatencyMs\":101}'::jsonb
+      FROM tenant;
+    " >/dev/null
+
+  before_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        count(*) FILTER (WHERE public_id = '11111111-1111-1111-1111-111111111111'::uuid) || '|' ||
+        count(*) FILTER (WHERE public_id = '22222222-2222-2222-2222-222222222222'::uuid)
+      FROM (
+        SELECT public_id FROM simulation.scenario_runs
+        UNION ALL
+        SELECT public_id FROM simulation.load_benchmark_runs
+      ) AS records;
+    ")"
+
+  backup_file="$(mktemp "${TMPDIR:-/tmp}/erp-backup-restore-XXXXXX.sql")"
+  bash "$ROOT_DIR/scripts/db.sh" backup "$backup_file"
+
+  "${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" -c "
+      DELETE FROM simulation.load_benchmark_runs
+      WHERE public_id = '22222222-2222-2222-2222-222222222222'::uuid;
+
+      DELETE FROM simulation.scenario_runs
+      WHERE public_id = '11111111-1111-1111-1111-111111111111'::uuid;
+    " >/dev/null
+
+  wiped_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        count(*) FILTER (WHERE public_id = '11111111-1111-1111-1111-111111111111'::uuid) || '|' ||
+        count(*) FILTER (WHERE public_id = '22222222-2222-2222-2222-222222222222'::uuid)
+      FROM (
+        SELECT public_id FROM simulation.scenario_runs
+        UNION ALL
+        SELECT public_id FROM simulation.load_benchmark_runs
+      ) AS records;
+    ")"
+
+  bash "$ROOT_DIR/scripts/db.sh" restore "$backup_file"
+
+  restored_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        count(*) FILTER (WHERE public_id = '11111111-1111-1111-1111-111111111111'::uuid) || '|' ||
+        count(*) FILTER (WHERE public_id = '22222222-2222-2222-2222-222222222222'::uuid)
+      FROM (
+        SELECT public_id FROM simulation.scenario_runs
+        UNION ALL
+        SELECT public_id FROM simulation.load_benchmark_runs
+      ) AS records;
+    ")"
+
+  echo "[test] backup-restore before summary => $before_summary"
+  echo "[test] backup-restore wiped summary => $wiped_summary"
+  echo "[test] backup-restore restored summary => $restored_summary"
+
+  if [[ ! -s "$backup_file" || "$before_summary" != '1|1' || "$wiped_summary" != '0|0' || "$restored_summary" != '1|1' ]]; then
+    echo "[test] backup and restore cycle did not preserve the expected persisted workload records"
+    rm -f "$backup_file"
+    exit 1
+  fi
+
+  rm -f "$backup_file"
+}
+
 usage() {
   cat <<'EOF'
 Usage:
@@ -2625,6 +2732,7 @@ Usage:
   ./scripts/test.sh platform
   ./scripts/test.sh smoke
   ./scripts/test.sh performance
+  ./scripts/test.sh backup-restore
   ./scripts/test.sh all
 EOF
 }
@@ -2669,6 +2777,9 @@ main() {
     performance)
       trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
       run_performance_runtime_suite
+      ;;
+    backup-restore)
+      run_backup_restore_suite
       ;;
     all)
       run_go_unit

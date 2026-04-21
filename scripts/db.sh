@@ -96,6 +96,30 @@ run_psql_query() {
     psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" -c "$query"
 }
 
+backup_database() {
+  local output_path="$1"
+  local output_directory
+
+  output_directory="$(dirname "$output_path")"
+  mkdir -p "$output_directory"
+  echo "[db] backing up database to $output_path"
+  "${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    pg_dump --clean --if-exists --no-owner --no-privileges -U "$DB_USER" -d "$DB_NAME" > "$output_path"
+}
+
+restore_database() {
+  local input_path="$1"
+
+  if [[ ! -f "$input_path" ]]; then
+    echo "[db] backup file not found: $input_path"
+    exit 1
+  fi
+
+  echo "[db] restoring database from $input_path"
+  "${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" < "$input_path"
+}
+
 apply_directory() {
   local directory_path="$1"
 
@@ -148,6 +172,8 @@ Usage:
   ./scripts/db.sh seed engagement
   ./scripts/db.sh seed workflow-control
   ./scripts/db.sh seed all
+  ./scripts/db.sh backup /tmp/erp-backup.sql
+  ./scripts/db.sh restore /tmp/erp-backup.sql
   ./scripts/db.sh summary identity [tenant-slug]
   ./scripts/db.sh summary crm [tenant-slug]
   ./scripts/db.sh summary sales [tenant-slug]
@@ -283,6 +309,22 @@ main() {
           exit 1
           ;;
       esac
+      ;;
+    backup)
+      ensure_postgres
+      local output_path="${2:-$ROOT_DIR/.cache/backups/erp-local-backup.sql}"
+      backup_database "$output_path"
+      ;;
+    restore)
+      ensure_postgres
+      local input_path="${2:-}"
+
+      if [[ -z "$input_path" ]]; then
+        usage
+        exit 1
+      fi
+
+      restore_database "$input_path"
       ;;
     summary)
       ensure_postgres

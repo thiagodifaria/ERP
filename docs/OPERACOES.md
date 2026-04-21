@@ -39,6 +39,8 @@ Cada servico critico deve documentar:
 - `./scripts/db.sh seed identity` aplica o bootstrap relacional do contexto `identity`
 - `./scripts/db.sh seed crm` aplica o bootstrap relacional do contexto `crm`
 - `./scripts/db.sh seed workflow-control` aplica o bootstrap relacional do contexto `workflow-control`
+- `./scripts/db.sh backup /tmp/erp-backup.sql` gera um dump completo do PostgreSQL local para restauracao controlada
+- `./scripts/db.sh restore /tmp/erp-backup.sql` reaplica um dump completo no banco local ativo
 - `./scripts/db.sh summary identity <tenant-slug>` resume companies, users, teams, roles e bindings do tenant
 - `./scripts/db.sh summary crm <tenant-slug>` resume total de leads, distribuicao por status e ownership por tenant
 - `./scripts/db.sh summary workflow-control <tenant-slug>` resume total de definicoes, versoes publicadas, runs, eventos, distribuicao por status e a ultima versao publicada por tenant
@@ -48,6 +50,7 @@ Cada servico critico deve documentar:
 - `./scripts/test.sh contract` executa as suites publicas de contratos de `workflow-control`, `crm` e `identity`
 - `./scripts/test.sh platform` valida a plataforma local da Fase 1, checando Keycloak, OpenFGA, Kafka, Prometheus e Grafana em container
 - `./scripts/test.sh smoke` agora valida primeiro a plataforma local e depois reseta volume, aplica bootstrap relacional e exercita `workflow-control`, `crm`, `sales`, `engagement`, `analytics`, `simulation`, `identity`, `webhook-hub`, `workflow-runtime` e `edge` ao vivo por HTTP
+- `./scripts/test.sh backup-restore` valida um ciclo destrutivo controlado de dump e restauracao do PostgreSQL, preservando registros de workload em `simulation`
 
 ## Enderecos locais da plataforma
 
