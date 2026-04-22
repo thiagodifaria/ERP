@@ -196,6 +196,12 @@ run_dotnet_build() {
     -w /workspace \
     mcr.microsoft.com/dotnet/sdk:8.0 \
     dotnet build src/Finance.Api/Finance.Api.csproj -c Release
+
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-csharp/billing:/workspace" \
+    -w /workspace \
+    mcr.microsoft.com/dotnet/sdk:8.0 \
+    dotnet build src/Billing.Api/Billing.Api.csproj -c Release
 }
 
 run_dotnet_integration() {
@@ -1811,6 +1817,138 @@ run_workflow_runtime_smoke() {
   fi
 }
 
+run_billing_runtime_smoke() {
+  local base_url="http://localhost:${BILLING_HTTP_PORT:-8095}"
+  local health_details_response
+  local create_plan_response
+  local plans_response
+  local created_plan_public_id
+  local create_subscription_response
+  local created_subscription_public_id
+  local subscription_detail_response
+  local create_invoice_response
+  local created_invoice_public_id
+  local invoices_response
+  local first_attempt_response
+  local second_attempt_response
+  local attempts_response
+  local grace_subscription_response
+  local suspend_response
+  local webhook_create_response
+  local webhook_event_public_id
+  local webhook_process_response
+  local webhook_process_repeat_response
+  local reactivated_subscription_response
+  local subscription_events_response
+  local operations_report_response
+  local db_summary
+
+  "${COMPOSE_CMD[@]}" up -d --build billing
+  wait_for_http_ready "$base_url/health/ready"
+
+  health_details_response="$(curl -fsS "$base_url/health/details")"
+  create_plan_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"code":"runtime-basic","name":"Runtime Basic","description":"Plano recorrente criado no smoke de billing.","amountCents":4900,"intervalUnit":"monthly","intervalCount":1,"gracePeriodDays":5,"maxRetries":2}' \
+    "$base_url/api/billing/plans")"
+  created_plan_public_id="$(echo "$create_plan_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  plans_response="$(curl -fsS "$base_url/api/billing/plans?active=true")"
+  create_subscription_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"bootstrap-ops\",\"planPublicId\":\"$created_plan_public_id\",\"externalReference\":\"tenant-bootstrap\",\"startedOn\":\"2026-04-22\"}" \
+    "$base_url/api/billing/subscriptions")"
+  created_subscription_public_id="$(echo "$create_subscription_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  subscription_detail_response="$(curl -fsS "$base_url/api/billing/subscriptions/$created_subscription_public_id?tenantSlug=bootstrap-ops")"
+  create_invoice_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","dueDate":"2026-04-29"}' \
+    "$base_url/api/billing/subscriptions/$created_subscription_public_id/invoices")"
+  created_invoice_public_id="$(echo "$create_invoice_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  invoices_response="$(curl -fsS "$base_url/api/billing/invoices?tenantSlug=bootstrap-ops")"
+  first_attempt_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","provider":"stripe","status":"failed","idempotencyKey":"bill-attempt-001","externalReference":"pay_attempt_001","failureReason":"Cartao recusado.","attemptedAt":"2026-04-22T13:10:00Z"}' \
+    "$base_url/api/billing/invoices/$created_invoice_public_id/attempts")"
+  second_attempt_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","provider":"stripe","status":"failed","idempotencyKey":"bill-attempt-002","externalReference":"pay_attempt_002","failureReason":"Saldo insuficiente.","attemptedAt":"2026-04-22T13:15:00Z"}' \
+    "$base_url/api/billing/invoices/$created_invoice_public_id/attempts")"
+  attempts_response="$(curl -fsS "$base_url/api/billing/invoices/$created_invoice_public_id/attempts?tenantSlug=bootstrap-ops")"
+  grace_subscription_response="$(curl -fsS "$base_url/api/billing/subscriptions/$created_subscription_public_id?tenantSlug=bootstrap-ops")"
+  suspend_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","reason":"Suspensao operacional controlada no smoke.","effectiveAt":"2026-04-22T13:16:00Z"}' \
+    "$base_url/api/billing/subscriptions/$created_subscription_public_id/suspend")"
+  webhook_create_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"provider\":\"stripe\",\"event_type\":\"billing.invoice.paid\",\"external_id\":\"$created_invoice_public_id\",\"payload_summary\":\"Pagamento confirmado para invoice de billing.\"}" \
+    "http://localhost:${WEBHOOK_HUB_HTTP_PORT:-8082}/api/webhook-hub/events")"
+  webhook_event_public_id="$(echo "$webhook_create_response" | sed -n 's/.*"public_id":"\([^"]*\)".*/\1/p')"
+  webhook_process_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"bootstrap-ops\",\"webhookEventPublicId\":\"$webhook_event_public_id\"}" \
+    "$base_url/api/billing/webhook-events/process")"
+  webhook_process_repeat_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"bootstrap-ops\",\"webhookEventPublicId\":\"$webhook_event_public_id\"}" \
+    "$base_url/api/billing/webhook-events/process")"
+  reactivated_subscription_response="$(curl -fsS "$base_url/api/billing/subscriptions/$created_subscription_public_id?tenantSlug=bootstrap-ops")"
+  subscription_events_response="$(curl -fsS "$base_url/api/billing/subscriptions/$created_subscription_public_id/events?tenantSlug=bootstrap-ops")"
+  operations_report_response="$(curl -fsS "$base_url/api/billing/reports/operations?tenantSlug=bootstrap-ops")"
+  db_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
+    psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        (SELECT count(*) FROM billing.plans) || '|' ||
+        (SELECT count(*) FROM billing.plans WHERE active) || '|' ||
+        (SELECT count(*) FROM billing.subscriptions AS subscription INNER JOIN identity.tenants AS tenant ON tenant.id = subscription.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM billing.subscriptions AS subscription INNER JOIN identity.tenants AS tenant ON tenant.id = subscription.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND subscription.status = 'active') || '|' ||
+        (SELECT count(*) FROM billing.subscriptions AS subscription INNER JOIN identity.tenants AS tenant ON tenant.id = subscription.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND subscription.status = 'grace_period') || '|' ||
+        (SELECT count(*) FROM billing.subscriptions AS subscription INNER JOIN identity.tenants AS tenant ON tenant.id = subscription.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND subscription.status = 'suspended') || '|' ||
+        (SELECT count(*) FROM billing.subscription_invoices AS invoice INNER JOIN identity.tenants AS tenant ON tenant.id = invoice.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM billing.subscription_invoices AS invoice INNER JOIN identity.tenants AS tenant ON tenant.id = invoice.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND invoice.status = 'paid') || '|' ||
+        (SELECT count(*) FROM billing.subscription_invoices AS invoice INNER JOIN identity.tenants AS tenant ON tenant.id = invoice.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND invoice.status = 'failed') || '|' ||
+        (SELECT count(*) FROM billing.subscription_invoices AS invoice INNER JOIN identity.tenants AS tenant ON tenant.id = invoice.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND invoice.status = 'open') || '|' ||
+        (SELECT count(*) FROM billing.payment_attempts AS attempt INNER JOIN identity.tenants AS tenant ON tenant.id = attempt.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM billing.payment_attempts AS attempt INNER JOIN identity.tenants AS tenant ON tenant.id = attempt.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND attempt.status = 'succeeded') || '|' ||
+        (SELECT count(*) FROM billing.payment_attempts AS attempt INNER JOIN identity.tenants AS tenant ON tenant.id = attempt.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND attempt.status = 'failed') || '|' ||
+        (SELECT count(*) FROM billing.subscription_events AS event INNER JOIN identity.tenants AS tenant ON tenant.id = event.tenant_id WHERE tenant.slug = 'bootstrap-ops')
+    ")"
+
+  echo "[test] billing health details => $health_details_response"
+  echo "[test] billing create plan => $create_plan_response"
+  echo "[test] billing plans => $plans_response"
+  echo "[test] billing create subscription => $create_subscription_response"
+  echo "[test] billing subscription detail => $subscription_detail_response"
+  echo "[test] billing create invoice => $create_invoice_response"
+  echo "[test] billing invoices => $invoices_response"
+  echo "[test] billing first failed attempt => $first_attempt_response"
+  echo "[test] billing second failed attempt => $second_attempt_response"
+  echo "[test] billing attempts => $attempts_response"
+  echo "[test] billing grace subscription => $grace_subscription_response"
+  echo "[test] billing suspend subscription => $suspend_response"
+  echo "[test] billing webhook create => $webhook_create_response"
+  echo "[test] billing webhook process => $webhook_process_response"
+  echo "[test] billing webhook process repeat => $webhook_process_repeat_response"
+  echo "[test] billing reactivated subscription => $reactivated_subscription_response"
+  echo "[test] billing subscription events => $subscription_events_response"
+  echo "[test] billing operations report => $operations_report_response"
+  echo "[test] billing db summary => $db_summary"
+
+  if [[ -z "$created_plan_public_id" || -z "$created_subscription_public_id" || -z "$created_invoice_public_id" || -z "$webhook_event_public_id" || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"webhook-hub","status":"ready"'* || "$create_plan_response" != *'"code":"runtime-basic"'* || "$create_plan_response" != *'"gracePeriodDays":5'* || "$plans_response" != *'"code":"runtime-basic"'* || "$create_subscription_response" != *'"status":"active"'* || "$create_subscription_response" != *'"planCode":"runtime-basic"'* || "$subscription_detail_response" != *'"externalReference":"tenant-bootstrap"'* || "$create_invoice_response" != *'"status":"open"'* || "$create_invoice_response" != *'"amountCents":4900'* || "$invoices_response" != *'"status":"open"'* || "$first_attempt_response" != *'"status":"failed"'* || "$first_attempt_response" != *'"idempotent":false'* || "$second_attempt_response" != *'"status":"failed"'* || "$grace_subscription_response" != *'"status":"grace_period"'* || "$grace_subscription_response" != *'"graceEndsAt":"2026-04-27T13:15:00Z"'* || "$attempts_response" != *'"attemptNumber":1'* || "$attempts_response" != *'"attemptNumber":2'* || "$suspend_response" != *'"status":"suspended"'* || "$webhook_create_response" != *'"event_type":"billing.invoice.paid"'* || "$webhook_process_response" != *'"outcomeStatus":"succeeded"'* || "$webhook_process_response" != *'"idempotent":false'* || "$webhook_process_response" != *'"status":"paid"'* || "$webhook_process_repeat_response" != *'"idempotent":true'* || "$reactivated_subscription_response" != *'"status":"active"'* || "$subscription_events_response" != *'"eventCode":"subscription_created"'* || "$subscription_events_response" != *'"eventCode":"invoice_created"'* || "$subscription_events_response" != *'"eventCode":"subscription_grace_period_started"'* || "$subscription_events_response" != *'"eventCode":"subscription_suspended"'* || "$subscription_events_response" != *'"eventCode":"invoice_paid"'* || "$operations_report_response" != *'"tenantSlug":"bootstrap-ops"'* || "$operations_report_response" != *'"total":1'* || "$operations_report_response" != *'"paid":1'* || "$operations_report_response" != *'"failed":2'* || "$operations_report_response" != *'"succeeded":1'* || "$db_summary" != '1|1|1|1|0|0|1|1|0|0|3|1|2|7' ]]; then
+    echo "[test] billing operational cycle did not expose the expected data"
+    exit 1
+  fi
+}
+
 run_engagement_runtime_smoke() {
   local base_url="http://localhost:${ENGAGEMENT_HTTP_PORT:-8088}"
   local health_details_response
@@ -1939,7 +2077,7 @@ run_analytics_runtime_smoke() {
   echo "[test] analytics cost estimator => $cost_estimator_response"
   echo "[test] analytics load benchmark => $load_benchmark_response"
 
-  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"forecast-model","status":"ready"'* || "$health_details_response" != *'"name":"simulation-catalog","status":"ready"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"dataSource":"postgresql"'* || "$pipeline_summary_response" != *'"leadsCaptured":2'* || "$pipeline_summary_response" != *'"conversions":3'* || "$pipeline_summary_response" != *'"manual":1'* || "$pipeline_summary_response" != *'"instagram":1'* || "$pipeline_summary_response" != *'"runningAutomations":2'* || "$service_pulse_response" != *'"tenantSlug":"bootstrap-ops"'* || "$service_pulse_response" != *'"dataSource":"postgresql"'* || "$service_pulse_response" != *'"totalLeads":2'* || "$service_pulse_response" != *'"salesTotal":3'* || "$service_pulse_response" != *'"bookedRevenueCents":230000'* || "$service_pulse_response" != *'"activeDefinitions":1'* || "$service_pulse_response" != *'"runsRunning":2'* || "$service_pulse_response" != *'"runsCompleted":2'* || "$service_pulse_response" != *'"runsFailed":1'* || "$service_pulse_response" != *'"runsCancelled":1'* || "$service_pulse_response" != *'"totalExecutions":3'* || "$service_pulse_response" != *'"completed":3'* || "$service_pulse_response" != *'"failed":0'* || "$service_pulse_response" != *'"forwarded":1'* || "$sales_journey_response" != *'"tenantSlug":"bootstrap-ops"'* || "$sales_journey_response" != *'"dataSource":"postgresql"'* || "$sales_journey_response" != *'"leadsCaptured":2'* || "$sales_journey_response" != *'"leadsWithOpportunity":2'* || "$sales_journey_response" != *'"opportunitiesWithProposal":3'* || "$sales_journey_response" != *'"proposalsConverted":3'* || "$sales_journey_response" != *'"salesWon":3'* || "$sales_journey_response" != *'"leadToSaleConversionRate":1.5'* || "$sales_journey_response" != *'"totalAmountCents":308000'* || "$sales_journey_response" != *'"won":3'* || "$sales_journey_response" != *'"accepted":3'* || "$sales_journey_response" != *'"bookedRevenueCents":230000'* || "$sales_journey_response" != *'"active":1'* || "$sales_journey_response" != *'"invoiced":1'* || "$sales_journey_response" != *'"controlRuns":1'* || "$sales_journey_response" != *'"runtimeCompleted":1'* || "$tenant_360_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_360_response" != *'"dataSource":"postgresql"'* || "$tenant_360_response" != *'"companies":1'* || "$tenant_360_response" != *'"users":1'* || "$tenant_360_response" != *'"teams":1'* || "$tenant_360_response" != *'"roles":5'* || "$tenant_360_response" != *'"assignedLeads":2'* || "$tenant_360_response" != *'"leadNotes":2'* || "$tenant_360_response" != *'"opportunities":3'* || "$tenant_360_response" != *'"proposals":3'* || "$tenant_360_response" != *'"sales":3'* || "$tenant_360_response" != *'"bookedRevenueCents":230000'* || "$tenant_360_response" != *'"workflowRuns":6'* || "$tenant_360_response" != *'"workflowRunEvents":10'* || "$tenant_360_response" != *'"runtimeExecutions":3'* || "$tenant_360_response" != *'"runtimeCompleted":3'* || "$tenant_360_response" != *'"runtimeFailed":0'* || "$automation_board_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_board_response" != *'"dataSource":"postgresql"'* || "$automation_board_response" != *'"definitionsTotal":2'* || "$automation_board_response" != *'"definitionsActive":1'* || "$automation_board_response" != *'"definitionsDraft":1'* || "$automation_board_response" != *'"publishedVersions":3'* || "$automation_board_response" != *'"runsTotal":6'* || "$automation_board_response" != *'"runningRuns":2'* || "$automation_board_response" != *'"recordedEvents":10'* || "$automation_board_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$automation_board_response" != *'"executionsTotal":3'* || "$automation_board_response" != *'"completedExecutions":3'* || "$automation_board_response" != *'"failedExecutions":0'* || "$automation_board_response" != *'"retriesTotal":1'* || "$automation_board_response" != *'"recordedTransitions":12'* || "$automation_board_response" != *'"forwarded":1'* || "$workflow_definition_health_response" != *'"tenantSlug":"bootstrap-ops"'* || "$workflow_definition_health_response" != *'"dataSource":"postgresql"'* || "$workflow_definition_health_response" != *'"definitionsTotal":2'* || "$workflow_definition_health_response" != *'"stable":1'* || "$workflow_definition_health_response" != *'"attention":1'* || "$workflow_definition_health_response" != *'"critical":0'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$workflow_definition_health_response" != *'"health":"stable"'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"runtime-flow"'* || "$workflow_definition_health_response" != *'"health":"attention"'* || "$workflow_definition_health_response" != *'"definition-not-active"'* || "$delivery_reliability_response" != *'"provider":"stripe"'* || "$delivery_reliability_response" != *'"dataSource":"postgresql"'* || "$delivery_reliability_response" != *'"totalEvents":1'* || "$delivery_reliability_response" != *'"handledEvents":1'* || "$delivery_reliability_response" != *'"avgTransitionsPerEvent":5.0'* || "$delivery_reliability_response" != *'"received":0'* || "$delivery_reliability_response" != *'"validated":0'* || "$delivery_reliability_response" != *'"queued":0'* || "$delivery_reliability_response" != *'"processing":0'* || "$delivery_reliability_response" != *'"forwarded":1'* || "$revenue_operations_response" != *'"tenantSlug":"bootstrap-ops"'* || "$revenue_operations_response" != *'"dataSource":"postgresql"'* || "$revenue_operations_response" != *'"bookedRevenueCents":230000'* || "$revenue_operations_response" != *'"total":3'* || "$revenue_operations_response" != *'"openAmountCents":125000'* || "$revenue_operations_response" != *'"paidAmountCents":105000'* || "$revenue_operations_response" != *'"overdueAmountCents":0'* || "$revenue_operations_response" != *'"overdueCount":0'* || "$revenue_operations_response" != *'"invoiceCoverageRate":0.6667'* || "$revenue_operations_response" != *'"collectionRate":0.4565'* || "$revenue_operations_response" != *'"averageTicketCents":76666'* || "$revenue_operations_response" != *'"invoicesDueSoon":0'* || "$cost_estimator_response" != *'"tenantSlug":"bootstrap-ops"'* || "$cost_estimator_response" != *'"dataSource":"postgresql"'* || "$cost_estimator_response" != *'"estimatedMonthlyCostCents":34896'* || "$cost_estimator_response" != *'"storageProjectedMb":2072'* || "$cost_estimator_response" != *'"risk":"attention"'* || "$cost_estimator_response" != *'"warm-object-storage"'* || "$load_benchmark_response" != *'"tenantSlug":"bootstrap-ops"'* || "$load_benchmark_response" != *'"dataSource":"postgresql"'* || "$load_benchmark_response" != *'"totalRuns":1'* || "$load_benchmark_response" != *'"stable":1'* || "$load_benchmark_response" != *'"avgLatencyMs":55'* || "$load_benchmark_response" != *'"p95LatencyMs":101'* || "$load_benchmark_response" != *'"throughputRps":62.22'* || "$load_benchmark_response" != *'"status":"stable"'* ]]; then
+  if [[ "$health_details_response" != *'"name":"report-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"forecast-model","status":"ready"'* || "$health_details_response" != *'"name":"simulation-catalog","status":"ready"'* || "$pipeline_summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$pipeline_summary_response" != *'"dataSource":"postgresql"'* || "$pipeline_summary_response" != *'"leadsCaptured":2'* || "$pipeline_summary_response" != *'"conversions":3'* || "$pipeline_summary_response" != *'"manual":1'* || "$pipeline_summary_response" != *'"instagram":1'* || "$pipeline_summary_response" != *'"runningAutomations":2'* || "$service_pulse_response" != *'"tenantSlug":"bootstrap-ops"'* || "$service_pulse_response" != *'"dataSource":"postgresql"'* || "$service_pulse_response" != *'"totalLeads":2'* || "$service_pulse_response" != *'"salesTotal":3'* || "$service_pulse_response" != *'"bookedRevenueCents":230000'* || "$service_pulse_response" != *'"activeDefinitions":1'* || "$service_pulse_response" != *'"runsRunning":2'* || "$service_pulse_response" != *'"runsCompleted":2'* || "$service_pulse_response" != *'"runsFailed":1'* || "$service_pulse_response" != *'"runsCancelled":1'* || "$service_pulse_response" != *'"totalExecutions":3'* || "$service_pulse_response" != *'"completed":3'* || "$service_pulse_response" != *'"failed":0'* || "$service_pulse_response" != *'"forwarded":1'* || "$sales_journey_response" != *'"tenantSlug":"bootstrap-ops"'* || "$sales_journey_response" != *'"dataSource":"postgresql"'* || "$sales_journey_response" != *'"leadsCaptured":2'* || "$sales_journey_response" != *'"leadsWithOpportunity":2'* || "$sales_journey_response" != *'"opportunitiesWithProposal":3'* || "$sales_journey_response" != *'"proposalsConverted":3'* || "$sales_journey_response" != *'"salesWon":3'* || "$sales_journey_response" != *'"leadToSaleConversionRate":1.5'* || "$sales_journey_response" != *'"totalAmountCents":308000'* || "$sales_journey_response" != *'"won":3'* || "$sales_journey_response" != *'"accepted":3'* || "$sales_journey_response" != *'"bookedRevenueCents":230000'* || "$sales_journey_response" != *'"active":1'* || "$sales_journey_response" != *'"invoiced":1'* || "$sales_journey_response" != *'"controlRuns":1'* || "$sales_journey_response" != *'"runtimeCompleted":1'* || "$tenant_360_response" != *'"tenantSlug":"bootstrap-ops"'* || "$tenant_360_response" != *'"dataSource":"postgresql"'* || "$tenant_360_response" != *'"companies":1'* || "$tenant_360_response" != *'"users":1'* || "$tenant_360_response" != *'"teams":1'* || "$tenant_360_response" != *'"roles":5'* || "$tenant_360_response" != *'"assignedLeads":2'* || "$tenant_360_response" != *'"leadNotes":2'* || "$tenant_360_response" != *'"opportunities":3'* || "$tenant_360_response" != *'"proposals":3'* || "$tenant_360_response" != *'"sales":3'* || "$tenant_360_response" != *'"bookedRevenueCents":230000'* || "$tenant_360_response" != *'"workflowRuns":6'* || "$tenant_360_response" != *'"workflowRunEvents":10'* || "$tenant_360_response" != *'"runtimeExecutions":3'* || "$tenant_360_response" != *'"runtimeCompleted":3'* || "$tenant_360_response" != *'"runtimeFailed":0'* || "$automation_board_response" != *'"tenantSlug":"bootstrap-ops"'* || "$automation_board_response" != *'"dataSource":"postgresql"'* || "$automation_board_response" != *'"definitionsTotal":2'* || "$automation_board_response" != *'"definitionsActive":1'* || "$automation_board_response" != *'"definitionsDraft":1'* || "$automation_board_response" != *'"publishedVersions":3'* || "$automation_board_response" != *'"runsTotal":6'* || "$automation_board_response" != *'"runningRuns":2'* || "$automation_board_response" != *'"recordedEvents":10'* || "$automation_board_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$automation_board_response" != *'"executionsTotal":3'* || "$automation_board_response" != *'"completedExecutions":3'* || "$automation_board_response" != *'"failedExecutions":0'* || "$automation_board_response" != *'"retriesTotal":1'* || "$automation_board_response" != *'"recordedTransitions":12'* || "$automation_board_response" != *'"forwarded":1'* || "$workflow_definition_health_response" != *'"tenantSlug":"bootstrap-ops"'* || "$workflow_definition_health_response" != *'"dataSource":"postgresql"'* || "$workflow_definition_health_response" != *'"definitionsTotal":2'* || "$workflow_definition_health_response" != *'"stable":1'* || "$workflow_definition_health_response" != *'"attention":1'* || "$workflow_definition_health_response" != *'"critical":0'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"lead-follow-up"'* || "$workflow_definition_health_response" != *'"health":"stable"'* || "$workflow_definition_health_response" != *'"workflowDefinitionKey":"runtime-flow"'* || "$workflow_definition_health_response" != *'"health":"attention"'* || "$workflow_definition_health_response" != *'"definition-not-active"'* || "$delivery_reliability_response" != *'"provider":"stripe"'* || "$delivery_reliability_response" != *'"dataSource":"postgresql"'* || "$delivery_reliability_response" != *'"totalEvents":2'* || "$delivery_reliability_response" != *'"handledEvents":1'* || "$delivery_reliability_response" != *'"avgTransitionsPerEvent":3.0'* || "$delivery_reliability_response" != *'"received":1'* || "$delivery_reliability_response" != *'"validated":0'* || "$delivery_reliability_response" != *'"queued":0'* || "$delivery_reliability_response" != *'"processing":0'* || "$delivery_reliability_response" != *'"forwarded":1'* || "$revenue_operations_response" != *'"tenantSlug":"bootstrap-ops"'* || "$revenue_operations_response" != *'"dataSource":"postgresql"'* || "$revenue_operations_response" != *'"bookedRevenueCents":230000'* || "$revenue_operations_response" != *'"total":3'* || "$revenue_operations_response" != *'"openAmountCents":125000'* || "$revenue_operations_response" != *'"paidAmountCents":105000'* || "$revenue_operations_response" != *'"overdueAmountCents":0'* || "$revenue_operations_response" != *'"overdueCount":0'* || "$revenue_operations_response" != *'"invoiceCoverageRate":0.6667'* || "$revenue_operations_response" != *'"collectionRate":0.4565'* || "$revenue_operations_response" != *'"averageTicketCents":76666'* || "$revenue_operations_response" != *'"invoicesDueSoon":0'* || "$cost_estimator_response" != *'"tenantSlug":"bootstrap-ops"'* || "$cost_estimator_response" != *'"dataSource":"postgresql"'* || "$cost_estimator_response" != *'"estimatedMonthlyCostCents":34908'* || "$cost_estimator_response" != *'"storageProjectedMb":2072'* || "$cost_estimator_response" != *'"risk":"attention"'* || "$cost_estimator_response" != *'"warm-object-storage"'* || "$load_benchmark_response" != *'"tenantSlug":"bootstrap-ops"'* || "$load_benchmark_response" != *'"dataSource":"postgresql"'* || "$load_benchmark_response" != *'"totalRuns":1'* || "$load_benchmark_response" != *'"stable":1'* || "$load_benchmark_response" != *'"avgLatencyMs":55'* || "$load_benchmark_response" != *'"p95LatencyMs":101'* || "$load_benchmark_response" != *'"throughputRps":62.22'* || "$load_benchmark_response" != *'"status":"stable"'* ]]; then
     echo "[test] analytics runtime bootstrap report did not return the expected payload"
     exit 1
   fi
@@ -1995,7 +2133,7 @@ run_simulation_runtime_smoke() {
   echo "[test] simulation benchmark list => $benchmark_list_response"
   echo "[test] simulation db summary => $simulation_db_summary"
 
-  if [[ "$health_details_response" != *'"name":"scenario-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"cost-model","status":"ready"'* || "$catalog_response" != *'"service":"simulation"'* || "$catalog_response" != *'"key":"operational-load"'* || "$catalog_response" != *'"key":"load-benchmark"'* || -z "$scenario_public_id" || "$create_scenario_response" != *'"tenantSlug":"bootstrap-ops"'* || "$create_scenario_response" != *'"leadsProjected":4'* || "$create_scenario_response" != *'"workflowRunsProjected":14'* || "$create_scenario_response" != *'"storageProjectedMb":2072'* || "$create_scenario_response" != *'"estimatedMonthlyCostCents":34896'* || "$create_scenario_response" != *'"risk":"attention"'* || "$scenario_list_response" != *"\"publicId\":\"$scenario_public_id\""* || "$scenario_detail_response" != *"\"publicId\":\"$scenario_public_id\""* || "$create_benchmark_response" != *'"tenantSlug":"bootstrap-ops"'* || "$create_benchmark_response" != *'"sampleSize":120'* || "$create_benchmark_response" != *'"avgLatencyMs":55'* || "$create_benchmark_response" != *'"p95LatencyMs":101'* || "$create_benchmark_response" != *'"throughputRps":62.22'* || "$create_benchmark_response" != *'"status":"stable"'* || "$benchmark_list_response" != *'"publicId"'* || "$benchmark_list_response" != *'"status":"stable"'* || "$simulation_db_summary" != '1|1' ]]; then
+  if [[ "$health_details_response" != *'"name":"scenario-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"cost-model","status":"ready"'* || "$catalog_response" != *'"service":"simulation"'* || "$catalog_response" != *'"key":"operational-load"'* || "$catalog_response" != *'"key":"load-benchmark"'* || -z "$scenario_public_id" || "$create_scenario_response" != *'"tenantSlug":"bootstrap-ops"'* || "$create_scenario_response" != *'"leadsProjected":4'* || "$create_scenario_response" != *'"workflowRunsProjected":14'* || "$create_scenario_response" != *'"storageProjectedMb":2072'* || "$create_scenario_response" != *'"estimatedMonthlyCostCents":34908'* || "$create_scenario_response" != *'"risk":"attention"'* || "$scenario_list_response" != *"\"publicId\":\"$scenario_public_id\""* || "$scenario_detail_response" != *"\"publicId\":\"$scenario_public_id\""* || "$create_benchmark_response" != *'"tenantSlug":"bootstrap-ops"'* || "$create_benchmark_response" != *'"sampleSize":120'* || "$create_benchmark_response" != *'"avgLatencyMs":55'* || "$create_benchmark_response" != *'"p95LatencyMs":101'* || "$create_benchmark_response" != *'"throughputRps":62.22'* || "$create_benchmark_response" != *'"status":"stable"'* || "$benchmark_list_response" != *'"publicId"'* || "$benchmark_list_response" != *'"status":"stable"'* || "$simulation_db_summary" != '1|1' ]]; then
     echo "[test] simulation runtime foundation did not return the expected payload"
     exit 1
   fi
@@ -2707,6 +2845,7 @@ run_smoke() {
   export WORKFLOW_RUNTIME_HTTP_PORT="${WORKFLOW_RUNTIME_HTTP_PORT_SMOKE:-18085}"
   export ANALYTICS_HTTP_PORT="${ANALYTICS_HTTP_PORT_SMOKE:-18086}"
   export ENGAGEMENT_HTTP_PORT="${ENGAGEMENT_HTTP_PORT_SMOKE:-18088}"
+  export BILLING_HTTP_PORT="${BILLING_HTTP_PORT_SMOKE:-18095}"
   export FINANCE_HTTP_PORT="${FINANCE_HTTP_PORT_SMOKE:-18092}"
   export DOCUMENTS_HTTP_PORT="${DOCUMENTS_HTTP_PORT_SMOKE:-18093}"
   bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
@@ -2720,6 +2859,7 @@ run_smoke() {
   run_crm_runtime_smoke
   run_sales_runtime_smoke
   run_finance_runtime_smoke
+  run_billing_runtime_smoke
   run_engagement_runtime_smoke
   run_simulation_runtime_smoke
   run_analytics_runtime_smoke
@@ -2753,7 +2893,7 @@ run_backup_restore_suite() {
         '11111111-1111-1111-1111-111111111111'::uuid,
         'operational-load',
         '{\"tenantSlug\":\"bootstrap-ops\",\"leadMultiplier\":2}'::jsonb,
-        '{\"estimatedMonthlyCostCents\":34896,\"risk\":\"attention\"}'::jsonb
+        '{\"estimatedMonthlyCostCents\":34908,\"risk\":\"attention\"}'::jsonb
       FROM tenant;
 
       WITH tenant AS (

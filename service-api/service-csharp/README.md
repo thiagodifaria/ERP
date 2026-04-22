@@ -6,6 +6,7 @@ Implemented or active services:
 
 - identity
 - finance
+- billing
 
 Reserved next services:
 

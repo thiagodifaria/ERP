@@ -158,6 +158,7 @@ Usage:
   ./scripts/db.sh migrate crm
   ./scripts/db.sh migrate sales
   ./scripts/db.sh migrate finance
+  ./scripts/db.sh migrate billing
   ./scripts/db.sh migrate documents
   ./scripts/db.sh migrate analytics
   ./scripts/db.sh migrate simulation
@@ -178,6 +179,7 @@ Usage:
   ./scripts/db.sh summary crm [tenant-slug]
   ./scripts/db.sh summary sales [tenant-slug]
   ./scripts/db.sh summary finance [tenant-slug]
+  ./scripts/db.sh summary billing [tenant-slug]
   ./scripts/db.sh summary documents [tenant-slug]
   ./scripts/db.sh summary analytics [tenant-slug]
   ./scripts/db.sh summary simulation [tenant-slug]
@@ -215,6 +217,9 @@ main() {
         finance)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/finance/migrations"
           ;;
+        billing)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/billing/migrations"
+          ;;
         documents)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/documents/migrations"
           ;;
@@ -242,6 +247,7 @@ main() {
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/finance/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/billing/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/documents/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/analytics/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/simulation/migrations"
@@ -443,6 +449,37 @@ main() {
               (SELECT count(*) FROM finance.cost_entries AS cost WHERE cost.tenant_id = tenant.id) AS costs,
               (SELECT COALESCE(sum(cost.amount_cents), 0) FROM finance.cost_entries AS cost WHERE cost.tenant_id = tenant.id) AS cost_amount_cents,
               (SELECT count(*) FROM finance.period_closures AS closure WHERE closure.tenant_id = tenant.id) AS closures
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
+          ;;
+        billing)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM billing.plans AS plan) AS plans,
+              (SELECT count(*) FROM billing.plans AS plan WHERE plan.active) AS active_plans,
+              (SELECT count(*) FROM billing.subscriptions AS subscription WHERE subscription.tenant_id = tenant.id) AS subscriptions,
+              (SELECT count(*) FROM billing.subscriptions AS subscription WHERE subscription.tenant_id = tenant.id AND subscription.status = 'active') AS active_subscriptions,
+              (SELECT count(*) FROM billing.subscriptions AS subscription WHERE subscription.tenant_id = tenant.id AND subscription.status = 'grace_period') AS grace_period_subscriptions,
+              (SELECT count(*) FROM billing.subscriptions AS subscription WHERE subscription.tenant_id = tenant.id AND subscription.status = 'suspended') AS suspended_subscriptions,
+              (SELECT count(*) FROM billing.subscriptions AS subscription WHERE subscription.tenant_id = tenant.id AND subscription.status = 'cancelled') AS cancelled_subscriptions,
+              (SELECT count(*) FROM billing.subscription_invoices AS invoice WHERE invoice.tenant_id = tenant.id) AS invoices,
+              (SELECT count(*) FROM billing.subscription_invoices AS invoice WHERE invoice.tenant_id = tenant.id AND invoice.status = 'open') AS open_invoices,
+              (SELECT count(*) FROM billing.subscription_invoices AS invoice WHERE invoice.tenant_id = tenant.id AND invoice.status = 'paid') AS paid_invoices,
+              (SELECT count(*) FROM billing.subscription_invoices AS invoice WHERE invoice.tenant_id = tenant.id AND invoice.status = 'failed') AS failed_invoices,
+              (SELECT count(*) FROM billing.payment_attempts AS attempt WHERE attempt.tenant_id = tenant.id) AS payment_attempts,
+              (SELECT count(*) FROM billing.payment_attempts AS attempt WHERE attempt.tenant_id = tenant.id AND attempt.status = 'succeeded') AS succeeded_attempts,
+              (SELECT count(*) FROM billing.payment_attempts AS attempt WHERE attempt.tenant_id = tenant.id AND attempt.status = 'failed') AS failed_attempts,
+              (SELECT count(*) FROM billing.subscription_events AS event WHERE event.tenant_id = tenant.id) AS events
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;
