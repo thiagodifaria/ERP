@@ -1207,8 +1207,28 @@ run_finance_runtime_smoke() {
   local health_details_response
   local ingest_response
   local projections_response
-  local paid_projections_response
+  local paid_projection_response
   local summary_response
+  local sync_response
+  local receivables_response
+  local open_receivables_response
+  local paid_receivables_response
+  local created_open_receivable_public_id
+  local settlement_response
+  local settlement_repeat_response
+  local commissions_response
+  local commission_summary_response
+  local create_cost_response
+  local costs_response
+  local create_payable_response
+  local created_payable_public_id
+  local payable_status_response
+  local payables_response
+  local closure_period
+  local period_closure_response
+  local period_closure_repeat_response
+  local period_closure_detail_response
+  local operations_report_response
   local db_summary
 
   "${COMPOSE_CMD[@]}" up -d --build finance
@@ -1221,8 +1241,60 @@ run_finance_runtime_smoke() {
     -d '{"tenantSlug":"bootstrap-ops","limit":20}' \
     "$base_url/api/finance/projections/ingest")"
   projections_response="$(curl -fsS "$base_url/api/finance/projections?tenantSlug=bootstrap-ops")"
-  paid_projections_response="$(curl -fsS "$base_url/api/finance/projections?tenantSlug=bootstrap-ops&status=paid")"
+  paid_projection_response="$(curl -fsS "$base_url/api/finance/projections?tenantSlug=bootstrap-ops&status=paid")"
   summary_response="$(curl -fsS "$base_url/api/finance/projections/summary?tenantSlug=bootstrap-ops")"
+  sync_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops"}' \
+    "$base_url/api/finance/operations/sync")"
+  receivables_response="$(curl -fsS "$base_url/api/finance/receivables?tenantSlug=bootstrap-ops")"
+  open_receivables_response="$(curl -fsS "$base_url/api/finance/receivables?tenantSlug=bootstrap-ops&status=open")"
+  created_open_receivable_public_id="$(echo "$open_receivables_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  settlement_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","settlementReference":"FIN-SETTLE-0001"}' \
+    "$base_url/api/finance/receivables/$created_open_receivable_public_id/settlements")"
+  settlement_repeat_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","settlementReference":"FIN-SETTLE-0001"}' \
+    "$base_url/api/finance/receivables/$created_open_receivable_public_id/settlements")"
+  paid_receivables_response="$(curl -fsS "$base_url/api/finance/receivables?tenantSlug=bootstrap-ops&status=paid")"
+  commissions_response="$(curl -fsS "$base_url/api/finance/commissions?tenantSlug=bootstrap-ops")"
+  commission_summary_response="$(curl -fsS "$base_url/api/finance/commissions/summary?tenantSlug=bootstrap-ops")"
+  create_cost_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","category":"hosting","summary":"Infraestrutura principal do cluster local.","amountCents":23000,"incurredOn":"2026-04-22"}' \
+    "$base_url/api/finance/costs")"
+  costs_response="$(curl -fsS "$base_url/api/finance/costs?tenantSlug=bootstrap-ops")"
+  create_payable_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","category":"vendor","vendorName":"Cloud Provider Local","description":"Fatura mensal da infraestrutura compartilhada.","amountCents":19000,"dueDate":"2026-04-30"}' \
+    "$base_url/api/finance/payables")"
+  created_payable_public_id="$(echo "$create_payable_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  payable_status_response="$(curl -fsS \
+    -X PATCH \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","status":"paid","paymentReference":"FIN-PAYABLE-0001"}' \
+    "$base_url/api/finance/payables/$created_payable_public_id/status")"
+  payables_response="$(curl -fsS "$base_url/api/finance/payables?tenantSlug=bootstrap-ops")"
+  closure_period="$(date -u +%Y-%m)"
+  period_closure_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"bootstrap-ops\",\"periodKey\":\"$closure_period\"}" \
+    "$base_url/api/finance/period-closures")"
+  period_closure_repeat_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"bootstrap-ops\",\"periodKey\":\"$closure_period\"}" \
+    "$base_url/api/finance/period-closures")"
+  period_closure_detail_response="$(curl -fsS "$base_url/api/finance/period-closures/$closure_period?tenantSlug=bootstrap-ops")"
+  operations_report_response="$(curl -fsS "$base_url/api/finance/reports/operations?tenantSlug=bootstrap-ops")"
   db_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
     psql -U "$DB_USER" -d "$DB_NAME" -At -c "
       SELECT
@@ -1232,7 +1304,26 @@ run_finance_runtime_smoke() {
         count(*) FILTER (WHERE projection.status = 'paid') || '|' ||
         count(*) FILTER (WHERE projection.status = 'cancelled') || '|' ||
         COALESCE(sum(projection.amount_cents) FILTER (WHERE projection.status IN ('forecast', 'open')), 0) || '|' ||
-        COALESCE(sum(projection.amount_cents) FILTER (WHERE projection.status = 'paid'), 0)
+        COALESCE(sum(projection.amount_cents) FILTER (WHERE projection.status = 'paid'), 0) || '|' ||
+        (SELECT count(*) FROM finance.receivable_entries AS receivable INNER JOIN identity.tenants AS tenant ON tenant.id = receivable.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM finance.receivable_entries AS receivable INNER JOIN identity.tenants AS tenant ON tenant.id = receivable.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND receivable.status = 'open') || '|' ||
+        (SELECT count(*) FROM finance.receivable_entries AS receivable INNER JOIN identity.tenants AS tenant ON tenant.id = receivable.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND receivable.status = 'paid') || '|' ||
+        (SELECT count(*) FROM finance.receivable_entries AS receivable INNER JOIN identity.tenants AS tenant ON tenant.id = receivable.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND receivable.status = 'cancelled') || '|' ||
+        (SELECT count(*) FROM finance.receivable_entries AS receivable INNER JOIN identity.tenants AS tenant ON tenant.id = receivable.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND receivable.status = 'open' AND receivable.due_date < timezone('utc', now())::date) || '|' ||
+        (SELECT COALESCE(sum(receivable.amount_cents), 0) FROM finance.receivable_entries AS receivable INNER JOIN identity.tenants AS tenant ON tenant.id = receivable.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND receivable.status = 'paid') || '|' ||
+        (SELECT count(*) FROM finance.commission_entries AS commission INNER JOIN identity.tenants AS tenant ON tenant.id = commission.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM finance.commission_entries AS commission INNER JOIN identity.tenants AS tenant ON tenant.id = commission.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND commission.status = 'pending') || '|' ||
+        (SELECT count(*) FROM finance.commission_entries AS commission INNER JOIN identity.tenants AS tenant ON tenant.id = commission.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND commission.status = 'blocked') || '|' ||
+        (SELECT count(*) FROM finance.commission_entries AS commission INNER JOIN identity.tenants AS tenant ON tenant.id = commission.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND commission.status = 'released') || '|' ||
+        (SELECT COALESCE(sum(commission.amount_cents), 0) FROM finance.commission_entries AS commission INNER JOIN identity.tenants AS tenant ON tenant.id = commission.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND commission.status = 'released') || '|' ||
+        (SELECT count(*) FROM finance.payables AS payable INNER JOIN identity.tenants AS tenant ON tenant.id = payable.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM finance.payables AS payable INNER JOIN identity.tenants AS tenant ON tenant.id = payable.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND payable.status = 'open') || '|' ||
+        (SELECT count(*) FROM finance.payables AS payable INNER JOIN identity.tenants AS tenant ON tenant.id = payable.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND payable.status = 'paid') || '|' ||
+        (SELECT count(*) FROM finance.payables AS payable INNER JOIN identity.tenants AS tenant ON tenant.id = payable.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND payable.status = 'cancelled') || '|' ||
+        (SELECT COALESCE(sum(payable.amount_cents), 0) FROM finance.payables AS payable INNER JOIN identity.tenants AS tenant ON tenant.id = payable.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND payable.status = 'paid') || '|' ||
+        (SELECT count(*) FROM finance.cost_entries AS cost INNER JOIN identity.tenants AS tenant ON tenant.id = cost.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT COALESCE(sum(cost.amount_cents), 0) FROM finance.cost_entries AS cost INNER JOIN identity.tenants AS tenant ON tenant.id = cost.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM finance.period_closures AS closure INNER JOIN identity.tenants AS tenant ON tenant.id = closure.tenant_id WHERE tenant.slug = 'bootstrap-ops')
       FROM finance.receivable_projections AS projection
       INNER JOIN identity.tenants AS tenant
         ON tenant.id = projection.tenant_id
@@ -1242,12 +1333,30 @@ run_finance_runtime_smoke() {
   echo "[test] finance health details => $health_details_response"
   echo "[test] finance ingest => $ingest_response"
   echo "[test] finance projections => $projections_response"
-  echo "[test] finance paid projections => $paid_projections_response"
+  echo "[test] finance paid projections => $paid_projection_response"
   echo "[test] finance summary => $summary_response"
+  echo "[test] finance operations sync => $sync_response"
+  echo "[test] finance receivables => $receivables_response"
+  echo "[test] finance open receivables => $open_receivables_response"
+  echo "[test] finance settlement => $settlement_response"
+  echo "[test] finance settlement repeat => $settlement_repeat_response"
+  echo "[test] finance paid receivables => $paid_receivables_response"
+  echo "[test] finance commissions => $commissions_response"
+  echo "[test] finance commission summary => $commission_summary_response"
+  echo "[test] finance create cost => $create_cost_response"
+  echo "[test] finance costs => $costs_response"
+  echo "[test] finance create payable => $create_payable_response"
+  echo "[test] finance payable status => $payable_status_response"
+  echo "[test] finance payables => $payables_response"
+  echo "[test] finance period closure => $period_closure_response"
+  echo "[test] finance period closure repeat => $period_closure_repeat_response"
+  echo "[test] finance period closure detail => $period_closure_detail_response"
+  echo "[test] finance operations report => $operations_report_response"
   echo "[test] finance db summary => $db_summary"
 
-  if [[ "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$ingest_response" != *'"tenantSlug":"bootstrap-ops"'* || "$ingest_response" != *'"processedEvents":7'* || "$ingest_response" != *'"createdProjections":3'* || "$ingest_response" != *'"updatedProjections":3'* || "$projections_response" != *'"projectionKind":"sale-booking"'* || "$projections_response" != *'"projectionKind":"invoice"'* || "$projections_response" != *'"status":"forecast"'* || "$projections_response" != *'"status":"paid"'* || "$projections_response" != *'"status":"cancelled"'* || "$paid_projections_response" != *'"status":"paid"'* || "$summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$summary_response" != *'"total":3'* || "$summary_response" != *'"pipelineAmountCents":105000'* || "$summary_response" != *'"paidAmountCents":105000'* || "$summary_response" != *'"forecast":1'* || "$summary_response" != *'"open":0'* || "$summary_response" != *'"paid":1'* || "$summary_response" != *'"cancelled":1'* || "$db_summary" != '3|1|0|1|1|105000|105000' ]]; then
-    echo "[test] finance initial consumer did not persist the expected projections"
+  if [[ -z "$created_open_receivable_public_id" || -z "$created_payable_public_id" || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$ingest_response" != *'"tenantSlug":"bootstrap-ops"'* || "$ingest_response" != *'"processedEvents":7'* || "$ingest_response" != *'"createdProjections":3'* || "$ingest_response" != *'"updatedProjections":3'* || "$projections_response" != *'"projectionKind":"sale-booking"'* || "$projections_response" != *'"projectionKind":"invoice"'* || "$projections_response" != *'"status":"forecast"'* || "$projections_response" != *'"status":"paid"'* || "$projections_response" != *'"status":"cancelled"'* || "$paid_projection_response" != *'"status":"paid"'* || "$summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$summary_response" != *'"total":3'* || "$summary_response" != *'"pipelineAmountCents":105000'* || "$summary_response" != *'"paidAmountCents":105000'* || "$summary_response" != *'"forecast":1'* || "$summary_response" != *'"open":0'* || "$summary_response" != *'"paid":1'* || "$summary_response" != *'"cancelled":1'*
+    || "$sync_response" != *'"createdReceivables":2'* || "$sync_response" != *'"updatedReceivables":0'* || "$sync_response" != *'"createdCommissions":1'* || "$sync_response" != *'"updatedCommissions":0'* || "$receivables_response" != *'"status":"open"'* || "$receivables_response" != *'"status":"paid"'* || "$settlement_response" != *'"settlementReference":"FIN-SETTLE-0001"'* || "$settlement_response" != *'"idempotent":false'* || "$settlement_repeat_response" != *'"idempotent":true'* || "$paid_receivables_response" != *'"settlementReference":"FIN-SETTLE-0001"'* || "$paid_receivables_response" != *'"amountCents":125000'* || "$commissions_response" != *'"status":"released"'* || "$commissions_response" != *'"amountCents":8400'* || "$commission_summary_response" != *'"total":1'* || "$commission_summary_response" != *'"released":1'* || "$commission_summary_response" != *'"releasedAmountCents":8400'* || "$create_cost_response" != *'"category":"hosting"'* || "$create_cost_response" != *'"amountCents":23000'* || "$costs_response" != *'"summary":"Infraestrutura principal do cluster local."'* || "$create_payable_response" != *'"status":"open"'* || "$create_payable_response" != *'"vendorName":"Cloud Provider Local"'* || "$payable_status_response" != *'"status":"paid"'* || "$payable_status_response" != *'"paymentReference":"FIN-PAYABLE-0001"'* || "$payables_response" != *'"status":"paid"'* || "$period_closure_response" != *"\"periodKey\":\"$closure_period\""* || "$period_closure_response" != *'"alreadyClosed":false'* || "$period_closure_repeat_response" != *'"alreadyClosed":true'* || "$period_closure_detail_response" != *'"tenantSlug":"bootstrap-ops"'* || "$period_closure_detail_response" != *'"snapshot"'* || "$operations_report_response" != *'"tenantSlug":"bootstrap-ops"'* || "$operations_report_response" != *'"total":2'* || "$operations_report_response" != *'"paidAmountCents":230000'* || "$operations_report_response" != *'"overdueCount":0'* || "$operations_report_response" != *'"releasedAmountCents":8400'* || "$operations_report_response" != *'"latestPeriodKey":"'"$closure_period"'"'* || "$operations_report_response" != *'"totalAmountCents":23000'* || "$db_summary" != '3|1|0|1|1|105000|105000|2|0|2|0|0|230000|1|0|0|1|8400|1|0|1|0|19000|1|23000|1' ]]; then
+    echo "[test] finance operational cycle did not expose the expected data"
     exit 1
   fi
 }

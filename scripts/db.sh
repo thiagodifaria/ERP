@@ -268,29 +268,6 @@ main() {
         sales)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/seeds"
           ;;
-        finance)
-          local tenant_slug="${3:-}"
-          local where_clause=""
-
-          if [[ -n "$tenant_slug" ]]; then
-            where_clause="WHERE tenant.slug = '$tenant_slug'"
-          fi
-
-          run_psql_query "
-            SELECT
-              tenant.slug,
-              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id) AS projections,
-              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'forecast') AS forecast,
-              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'open') AS open,
-              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'paid') AS paid,
-              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'cancelled') AS cancelled,
-              (SELECT COALESCE(sum(projection.amount_cents), 0) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status IN ('forecast', 'open')) AS pipeline_amount_cents,
-              (SELECT COALESCE(sum(projection.amount_cents), 0) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'paid') AS paid_amount_cents
-            FROM identity.tenants AS tenant
-            $where_clause
-            ORDER BY tenant.slug;
-          "
-          ;;
         engagement)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/seeds"
           ;;
@@ -424,6 +401,48 @@ main() {
               (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.status = 'responded') AS responded_touchpoints,
               (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.status = 'converted') AS converted_touchpoints,
               (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.last_workflow_run_public_id IS NOT NULL) AS workflow_dispatched
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
+          ;;
+        finance)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id) AS projections,
+              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'forecast') AS forecast,
+              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'open') AS projection_open,
+              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'paid') AS projection_paid,
+              (SELECT count(*) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'cancelled') AS projection_cancelled,
+              (SELECT COALESCE(sum(projection.amount_cents), 0) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status IN ('forecast', 'open')) AS pipeline_amount_cents,
+              (SELECT COALESCE(sum(projection.amount_cents), 0) FROM finance.receivable_projections AS projection WHERE projection.tenant_id = tenant.id AND projection.status = 'paid') AS projected_paid_amount_cents,
+              (SELECT count(*) FROM finance.receivable_entries AS receivable WHERE receivable.tenant_id = tenant.id) AS receivables,
+              (SELECT count(*) FROM finance.receivable_entries AS receivable WHERE receivable.tenant_id = tenant.id AND receivable.status = 'open') AS receivable_open,
+              (SELECT count(*) FROM finance.receivable_entries AS receivable WHERE receivable.tenant_id = tenant.id AND receivable.status = 'paid') AS receivable_paid,
+              (SELECT count(*) FROM finance.receivable_entries AS receivable WHERE receivable.tenant_id = tenant.id AND receivable.status = 'cancelled') AS receivable_cancelled,
+              (SELECT COALESCE(sum(receivable.amount_cents), 0) FROM finance.receivable_entries AS receivable WHERE receivable.tenant_id = tenant.id AND receivable.status = 'open') AS receivable_open_amount_cents,
+              (SELECT COALESCE(sum(receivable.amount_cents), 0) FROM finance.receivable_entries AS receivable WHERE receivable.tenant_id = tenant.id AND receivable.status = 'paid') AS receivable_paid_amount_cents,
+              (SELECT count(*) FROM finance.commission_entries AS commission WHERE commission.tenant_id = tenant.id) AS commissions,
+              (SELECT count(*) FROM finance.commission_entries AS commission WHERE commission.tenant_id = tenant.id AND commission.status = 'pending') AS commission_pending,
+              (SELECT count(*) FROM finance.commission_entries AS commission WHERE commission.tenant_id = tenant.id AND commission.status = 'blocked') AS commission_blocked,
+              (SELECT count(*) FROM finance.commission_entries AS commission WHERE commission.tenant_id = tenant.id AND commission.status = 'released') AS commission_released,
+              (SELECT COALESCE(sum(commission.amount_cents), 0) FROM finance.commission_entries AS commission WHERE commission.tenant_id = tenant.id AND commission.status = 'released') AS commission_released_amount_cents,
+              (SELECT count(*) FROM finance.payables AS payable WHERE payable.tenant_id = tenant.id) AS payables,
+              (SELECT count(*) FROM finance.payables AS payable WHERE payable.tenant_id = tenant.id AND payable.status = 'open') AS payable_open,
+              (SELECT count(*) FROM finance.payables AS payable WHERE payable.tenant_id = tenant.id AND payable.status = 'paid') AS payable_paid,
+              (SELECT count(*) FROM finance.payables AS payable WHERE payable.tenant_id = tenant.id AND payable.status = 'cancelled') AS payable_cancelled,
+              (SELECT COALESCE(sum(payable.amount_cents), 0) FROM finance.payables AS payable WHERE payable.tenant_id = tenant.id AND payable.status = 'paid') AS payable_paid_amount_cents,
+              (SELECT count(*) FROM finance.cost_entries AS cost WHERE cost.tenant_id = tenant.id) AS costs,
+              (SELECT COALESCE(sum(cost.amount_cents), 0) FROM finance.cost_entries AS cost WHERE cost.tenant_id = tenant.id) AS cost_amount_cents,
+              (SELECT count(*) FROM finance.period_closures AS closure WHERE closure.tenant_id = tenant.id) AS closures
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;
