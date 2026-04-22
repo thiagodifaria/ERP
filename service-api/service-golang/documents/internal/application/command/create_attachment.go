@@ -14,15 +14,19 @@ type CreateAttachment struct {
 }
 
 type CreateAttachmentInput struct {
-	TenantSlug    string
-	OwnerType     string
-	OwnerPublicID string
-	FileName      string
-	ContentType   string
-	StorageKey    string
-	StorageDriver string
-	Source        string
-	UploadedBy    string
+	TenantSlug     string
+	OwnerType      string
+	OwnerPublicID  string
+	FileName       string
+	ContentType    string
+	StorageKey     string
+	StorageDriver  string
+	Source         string
+	UploadedBy     string
+	FileSizeBytes  int64
+	ChecksumSHA256 string
+	Visibility     string
+	RetentionDays  int
 }
 
 type CreateAttachmentResult struct {
@@ -48,6 +52,12 @@ func (useCase CreateAttachment) Execute(input CreateAttachmentInput) CreateAttac
 		input.StorageDriver,
 		input.Source,
 		input.UploadedBy,
+		input.FileSizeBytes,
+		input.ChecksumSHA256,
+		input.Visibility,
+		input.RetentionDays,
+		"",
+		nil,
 		time.Time{},
 	)
 	if err != nil {

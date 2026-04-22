@@ -20,6 +20,9 @@ func NewRouterWithRuntime(logger *telemetry.Logger, attachmentRepository reposit
 	mux.HandleFunc("/health/details", DetailsForRuntime(repositoryDriver))
 	mux.HandleFunc("GET /api/documents/attachments", attachmentHandler.List)
 	mux.HandleFunc("POST /api/documents/attachments", attachmentHandler.Create)
+	mux.HandleFunc("GET /api/documents/attachments/{publicId}", attachmentHandler.Get)
+	mux.HandleFunc("POST /api/documents/attachments/{publicId}/archive", attachmentHandler.Archive)
+	mux.HandleFunc("POST /api/documents/attachments/{publicId}/access-links", attachmentHandler.CreateAccessLink)
 
 	return withCorrelation(logger, mux)
 }

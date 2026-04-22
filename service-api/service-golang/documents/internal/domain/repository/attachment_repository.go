@@ -6,9 +6,14 @@ type AttachmentFilters struct {
 	TenantSlug    string
 	OwnerType     string
 	OwnerPublicID string
+	Source        string
+	Visibility    string
+	Archived      string
 }
 
 type AttachmentRepository interface {
 	List(filters AttachmentFilters) []entity.Attachment
+	FindByPublicID(tenantSlug string, publicID string) (entity.Attachment, bool)
 	Save(attachment entity.Attachment) entity.Attachment
+	Archive(tenantSlug string, publicID string, reason string) (entity.Attachment, bool)
 }
