@@ -22,6 +22,7 @@ func buildTestRouter() http.Handler {
 		handler.NewTenantOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewEngagementOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewDocumentsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewFinanceOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
@@ -53,6 +54,7 @@ func TestRouterShouldExposeHealthDetails(t *testing.T) {
 		handler.NewTenantOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewEngagementOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewDocumentsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewFinanceOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
@@ -102,6 +104,7 @@ func TestRouterShouldExposeOpsHealth(t *testing.T) {
 		handler.NewTenantOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewEngagementOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewDocumentsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewFinanceOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
@@ -212,6 +215,28 @@ func TestRouterShouldExposeEngagementOverview(t *testing.T) {
 	}
 
 	var response dto.EngagementOverviewResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.TenantSlug != "bootstrap-ops" {
+		t.Fatalf("expected tenant slug bootstrap-ops, got %s", response.TenantSlug)
+	}
+}
+
+func TestRouterShouldExposeDocumentsOverview(t *testing.T) {
+	router := buildTestRouter()
+	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/documents-overview?tenantSlug=bootstrap-ops", nil)
+	request.Header.Set("Authorization", "Bearer session-123")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response dto.DocumentsOverviewResponse
 	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
 		t.Fatalf("unexpected decode error: %v", err)
 	}

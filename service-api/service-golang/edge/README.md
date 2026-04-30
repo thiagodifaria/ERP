@@ -10,6 +10,7 @@ Initial scope:
 - tenant cockpit aggregation via `GET /api/edge/ops/tenant-overview`
 - automation cockpit aggregation via `GET /api/edge/ops/automation-overview`
 - engagement cockpit aggregation via `GET /api/edge/ops/engagement-overview`
+- document governance cockpit aggregation via `GET /api/edge/ops/documents-overview`
 - sales cockpit aggregation via `GET /api/edge/ops/sales-overview`
 - revenue cockpit aggregation via `GET /api/edge/ops/revenue-overview`
 - finance cockpit aggregation via `GET /api/edge/ops/finance-overview`
@@ -29,6 +30,7 @@ Public routes:
 - `GET /api/edge/ops/tenant-overview`
 - `GET /api/edge/ops/automation-overview`
 - `GET /api/edge/ops/engagement-overview`
+- `GET /api/edge/ops/documents-overview`
 - `GET /api/edge/ops/sales-overview`
 - `GET /api/edge/ops/revenue-overview`
 - `GET /api/edge/ops/finance-overview`
@@ -39,6 +41,7 @@ Protected routes:
 - `GET /api/edge/ops/tenant-overview`
 - `GET /api/edge/ops/automation-overview`
 - `GET /api/edge/ops/engagement-overview`
+- `GET /api/edge/ops/documents-overview`
 - `GET /api/edge/ops/sales-overview`
 - `GET /api/edge/ops/revenue-overview`
 - `GET /api/edge/ops/finance-overview`
