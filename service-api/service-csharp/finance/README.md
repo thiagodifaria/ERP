@@ -13,8 +13,12 @@ Current scope:
 - operational commissions synchronized from `sales.commissions`
 - payables with creation, payment and cancellation lifecycle
 - operational cost entries
+- treasury cash accounts with opening balance and provider metadata
+- idempotent treasury sync from receivable settlements, paid payables and operational costs
+- cash movement summary with inflow, outflow and live balance
+- treasury liquidity report with current balance and projected net position
 - monthly period closures with persisted financial snapshots
-- operational report and database summaries for receivables, commissions, payables, costs and closures
+- operational report and database summaries for receivables, commissions, payables, costs, treasury and closures
 
 Public routes:
 
@@ -34,6 +38,12 @@ Public routes:
 - `PATCH /api/finance/payables/{publicId}/status`
 - `GET /api/finance/costs`
 - `POST /api/finance/costs`
+- `GET /api/finance/cash-accounts`
+- `POST /api/finance/cash-accounts`
+- `POST /api/finance/treasury/sync`
+- `GET /api/finance/cash-movements`
+- `GET /api/finance/cash-movements/summary`
+- `GET /api/finance/reports/treasury`
 - `POST /api/finance/period-closures`
 - `GET /api/finance/period-closures`
 - `GET /api/finance/period-closures/{periodKey}`

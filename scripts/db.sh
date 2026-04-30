@@ -484,7 +484,12 @@ main() {
               (SELECT COALESCE(sum(payable.amount_cents), 0) FROM finance.payables AS payable WHERE payable.tenant_id = tenant.id AND payable.status = 'paid') AS payable_paid_amount_cents,
               (SELECT count(*) FROM finance.cost_entries AS cost WHERE cost.tenant_id = tenant.id) AS costs,
               (SELECT COALESCE(sum(cost.amount_cents), 0) FROM finance.cost_entries AS cost WHERE cost.tenant_id = tenant.id) AS cost_amount_cents,
-              (SELECT count(*) FROM finance.period_closures AS closure WHERE closure.tenant_id = tenant.id) AS closures
+              (SELECT count(*) FROM finance.period_closures AS closure WHERE closure.tenant_id = tenant.id) AS closures,
+              (SELECT count(*) FROM finance.cash_accounts AS account WHERE account.tenant_id = tenant.id) AS cash_accounts,
+              (SELECT count(*) FROM finance.cash_accounts AS account WHERE account.tenant_id = tenant.id AND account.status = 'active') AS active_cash_accounts,
+              (SELECT count(*) FROM finance.cash_movements AS movement WHERE movement.tenant_id = tenant.id) AS cash_movements,
+              (SELECT COALESCE(sum(movement.amount_cents), 0) FROM finance.cash_movements AS movement WHERE movement.tenant_id = tenant.id AND movement.direction = 'inflow') AS inflow_cents,
+              (SELECT COALESCE(sum(movement.amount_cents), 0) FROM finance.cash_movements AS movement WHERE movement.tenant_id = tenant.id AND movement.direction = 'outflow') AS outflow_cents
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;

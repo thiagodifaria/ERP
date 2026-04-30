@@ -1405,6 +1405,13 @@ run_finance_runtime_smoke() {
   local created_payable_public_id
   local payable_status_response
   local payables_response
+  local create_cash_account_response
+  local created_cash_account_public_id
+  local cash_accounts_response
+  local treasury_sync_response
+  local cash_movements_response
+  local cash_movement_summary_response
+  local treasury_report_response
   local closure_period
   local period_closure_response
   local period_closure_repeat_response
@@ -1463,6 +1470,21 @@ run_finance_runtime_smoke() {
     -d '{"tenantSlug":"bootstrap-ops","status":"paid","paymentReference":"FIN-PAYABLE-0001"}' \
     "$base_url/api/finance/payables/$created_payable_public_id/status")"
   payables_response="$(curl -fsS "$base_url/api/finance/payables?tenantSlug=bootstrap-ops")"
+  create_cash_account_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","code":"treasury-primary","displayName":"Treasury Primary Account","currencyCode":"BRL","provider":"manual","openingBalanceCents":300000}' \
+    "$base_url/api/finance/cash-accounts")"
+  created_cash_account_public_id="$(echo "$create_cash_account_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  cash_accounts_response="$(curl -fsS "$base_url/api/finance/cash-accounts?tenantSlug=bootstrap-ops")"
+  treasury_sync_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"bootstrap-ops\",\"cashAccountPublicId\":\"$created_cash_account_public_id\"}" \
+    "$base_url/api/finance/treasury/sync")"
+  cash_movements_response="$(curl -fsS "$base_url/api/finance/cash-movements?tenantSlug=bootstrap-ops&cashAccountPublicId=$created_cash_account_public_id")"
+  cash_movement_summary_response="$(curl -fsS "$base_url/api/finance/cash-movements/summary?tenantSlug=bootstrap-ops&cashAccountPublicId=$created_cash_account_public_id")"
+  treasury_report_response="$(curl -fsS "$base_url/api/finance/reports/treasury?tenantSlug=bootstrap-ops&cashAccountPublicId=$created_cash_account_public_id")"
   closure_period="$(date -u +%Y-%m)"
   period_closure_response="$(curl -fsS \
     -X POST \
@@ -1504,7 +1526,12 @@ run_finance_runtime_smoke() {
         (SELECT COALESCE(sum(payable.amount_cents), 0) FROM finance.payables AS payable INNER JOIN identity.tenants AS tenant ON tenant.id = payable.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND payable.status = 'paid') || '|' ||
         (SELECT count(*) FROM finance.cost_entries AS cost INNER JOIN identity.tenants AS tenant ON tenant.id = cost.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
         (SELECT COALESCE(sum(cost.amount_cents), 0) FROM finance.cost_entries AS cost INNER JOIN identity.tenants AS tenant ON tenant.id = cost.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
-        (SELECT count(*) FROM finance.period_closures AS closure INNER JOIN identity.tenants AS tenant ON tenant.id = closure.tenant_id WHERE tenant.slug = 'bootstrap-ops')
+        (SELECT count(*) FROM finance.period_closures AS closure INNER JOIN identity.tenants AS tenant ON tenant.id = closure.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM finance.cash_accounts AS account INNER JOIN identity.tenants AS tenant ON tenant.id = account.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM finance.cash_accounts AS account INNER JOIN identity.tenants AS tenant ON tenant.id = account.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND account.status = 'active') || '|' ||
+        (SELECT count(*) FROM finance.cash_movements AS movement INNER JOIN identity.tenants AS tenant ON tenant.id = movement.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT COALESCE(sum(movement.amount_cents), 0) FROM finance.cash_movements AS movement INNER JOIN identity.tenants AS tenant ON tenant.id = movement.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND movement.direction = 'inflow') || '|' ||
+        (SELECT COALESCE(sum(movement.amount_cents), 0) FROM finance.cash_movements AS movement INNER JOIN identity.tenants AS tenant ON tenant.id = movement.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND movement.direction = 'outflow')
       FROM finance.receivable_projections AS projection
       INNER JOIN identity.tenants AS tenant
         ON tenant.id = projection.tenant_id
@@ -1529,14 +1556,94 @@ run_finance_runtime_smoke() {
   echo "[test] finance create payable => $create_payable_response"
   echo "[test] finance payable status => $payable_status_response"
   echo "[test] finance payables => $payables_response"
+  echo "[test] finance create cash account => $create_cash_account_response"
+  echo "[test] finance cash accounts => $cash_accounts_response"
+  echo "[test] finance treasury sync => $treasury_sync_response"
+  echo "[test] finance cash movements => $cash_movements_response"
+  echo "[test] finance cash movement summary => $cash_movement_summary_response"
+  echo "[test] finance treasury report => $treasury_report_response"
   echo "[test] finance period closure => $period_closure_response"
   echo "[test] finance period closure repeat => $period_closure_repeat_response"
   echo "[test] finance period closure detail => $period_closure_detail_response"
   echo "[test] finance operations report => $operations_report_response"
   echo "[test] finance db summary => $db_summary"
 
-  if [[ -z "$created_open_receivable_public_id" || -z "$created_payable_public_id" || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$ingest_response" != *'"tenantSlug":"bootstrap-ops"'* || "$ingest_response" != *'"processedEvents":7'* || "$ingest_response" != *'"createdProjections":3'* || "$ingest_response" != *'"updatedProjections":3'* || "$projections_response" != *'"projectionKind":"sale-booking"'* || "$projections_response" != *'"projectionKind":"invoice"'* || "$projections_response" != *'"status":"forecast"'* || "$projections_response" != *'"status":"paid"'* || "$projections_response" != *'"status":"cancelled"'* || "$paid_projection_response" != *'"status":"paid"'* || "$summary_response" != *'"tenantSlug":"bootstrap-ops"'* || "$summary_response" != *'"total":3'* || "$summary_response" != *'"pipelineAmountCents":105000'* || "$summary_response" != *'"paidAmountCents":105000'* || "$summary_response" != *'"forecast":1'* || "$summary_response" != *'"open":0'* || "$summary_response" != *'"paid":1'* || "$summary_response" != *'"cancelled":1'*
-    || "$sync_response" != *'"createdReceivables":2'* || "$sync_response" != *'"updatedReceivables":0'* || "$sync_response" != *'"createdCommissions":1'* || "$sync_response" != *'"updatedCommissions":0'* || "$receivables_response" != *'"status":"open"'* || "$receivables_response" != *'"status":"paid"'* || "$settlement_response" != *'"settlementReference":"FIN-SETTLE-0001"'* || "$settlement_response" != *'"idempotent":false'* || "$settlement_repeat_response" != *'"idempotent":true'* || "$paid_receivables_response" != *'"settlementReference":"FIN-SETTLE-0001"'* || "$paid_receivables_response" != *'"amountCents":125000'* || "$commissions_response" != *'"status":"released"'* || "$commissions_response" != *'"amountCents":8400'* || "$commission_summary_response" != *'"total":1'* || "$commission_summary_response" != *'"released":1'* || "$commission_summary_response" != *'"releasedAmountCents":8400'* || "$create_cost_response" != *'"category":"hosting"'* || "$create_cost_response" != *'"amountCents":23000'* || "$costs_response" != *'"summary":"Infraestrutura principal do cluster local."'* || "$create_payable_response" != *'"status":"open"'* || "$create_payable_response" != *'"vendorName":"Cloud Provider Local"'* || "$payable_status_response" != *'"status":"paid"'* || "$payable_status_response" != *'"paymentReference":"FIN-PAYABLE-0001"'* || "$payables_response" != *'"status":"paid"'* || "$period_closure_response" != *"\"periodKey\":\"$closure_period\""* || "$period_closure_response" != *'"alreadyClosed":false'* || "$period_closure_repeat_response" != *'"alreadyClosed":true'* || "$period_closure_detail_response" != *'"tenantSlug":"bootstrap-ops"'* || "$period_closure_detail_response" != *'"snapshot"'* || "$operations_report_response" != *'"tenantSlug":"bootstrap-ops"'* || "$operations_report_response" != *'"total":2'* || "$operations_report_response" != *'"paidAmountCents":230000'* || "$operations_report_response" != *'"overdueCount":0'* || "$operations_report_response" != *'"releasedAmountCents":8400'* || "$operations_report_response" != *'"latestPeriodKey":"'"$closure_period"'"'* || "$operations_report_response" != *'"totalAmountCents":23000'* || "$db_summary" != '3|1|0|1|1|105000|105000|2|0|2|0|0|230000|1|0|0|1|8400|1|0|1|0|19000|1|23000|1' ]]; then
+  if [[ -z "$created_open_receivable_public_id" || -z "$created_payable_public_id" || -z "$created_cash_account_public_id" \
+    || "$health_details_response" != *'"name":"postgresql","status":"ready"'* \
+    || "$ingest_response" != *'"tenantSlug":"bootstrap-ops"'* \
+    || "$ingest_response" != *'"processedEvents":7'* \
+    || "$ingest_response" != *'"createdProjections":3'* \
+    || "$ingest_response" != *'"updatedProjections":3'* \
+    || "$projections_response" != *'"projectionKind":"sale-booking"'* \
+    || "$projections_response" != *'"projectionKind":"invoice"'* \
+    || "$projections_response" != *'"status":"forecast"'* \
+    || "$projections_response" != *'"status":"paid"'* \
+    || "$projections_response" != *'"status":"cancelled"'* \
+    || "$paid_projection_response" != *'"status":"paid"'* \
+    || "$summary_response" != *'"tenantSlug":"bootstrap-ops"'* \
+    || "$summary_response" != *'"total":3'* \
+    || "$summary_response" != *'"pipelineAmountCents":105000'* \
+    || "$summary_response" != *'"paidAmountCents":105000'* \
+    || "$summary_response" != *'"forecast":1'* \
+    || "$summary_response" != *'"open":0'* \
+    || "$summary_response" != *'"paid":1'* \
+    || "$summary_response" != *'"cancelled":1'* \
+    || "$sync_response" != *'"createdReceivables":2'* \
+    || "$sync_response" != *'"updatedReceivables":0'* \
+    || "$sync_response" != *'"createdCommissions":1'* \
+    || "$sync_response" != *'"updatedCommissions":0'* \
+    || "$receivables_response" != *'"status":"open"'* \
+    || "$receivables_response" != *'"status":"paid"'* \
+    || "$settlement_response" != *'"settlementReference":"FIN-SETTLE-0001"'* \
+    || "$settlement_response" != *'"idempotent":false'* \
+    || "$settlement_repeat_response" != *'"idempotent":true'* \
+    || "$paid_receivables_response" != *'"settlementReference":"FIN-SETTLE-0001"'* \
+    || "$paid_receivables_response" != *'"amountCents":125000'* \
+    || "$commissions_response" != *'"status":"released"'* \
+    || "$commissions_response" != *'"amountCents":8400'* \
+    || "$commission_summary_response" != *'"total":1'* \
+    || "$commission_summary_response" != *'"released":1'* \
+    || "$commission_summary_response" != *'"releasedAmountCents":8400'* \
+    || "$create_cost_response" != *'"category":"hosting"'* \
+    || "$create_cost_response" != *'"amountCents":23000'* \
+    || "$costs_response" != *'"summary":"Infraestrutura principal do cluster local."'* \
+    || "$create_payable_response" != *'"status":"open"'* \
+    || "$create_payable_response" != *'"vendorName":"Cloud Provider Local"'* \
+    || "$payable_status_response" != *'"status":"paid"'* \
+    || "$payable_status_response" != *'"paymentReference":"FIN-PAYABLE-0001"'* \
+    || "$payables_response" != *'"status":"paid"'* \
+    || "$create_cash_account_response" != *'"code":"treasury-primary"'* \
+    || "$create_cash_account_response" != *'"openingBalanceCents":300000'* \
+    || "$cash_accounts_response" != *'"displayName":"Treasury Primary Account"'* \
+    || "$treasury_sync_response" != *'"createdMovements":3'* \
+    || "$treasury_sync_response" != *'"skippedMovements":0'* \
+    || "$cash_movements_response" != *'"movementType":"receivable_settlement"'* \
+    || "$cash_movements_response" != *'"movementType":"payable_payment"'* \
+    || "$cash_movements_response" != *'"movementType":"cost_entry"'* \
+    || "$cash_movement_summary_response" != *'"total":3'* \
+    || "$cash_movement_summary_response" != *'"inflowCents":125000'* \
+    || "$cash_movement_summary_response" != *'"outflowCents":42000'* \
+    || "$cash_movement_summary_response" != *'"currentBalanceCents":383000'* \
+    || "$cash_movement_summary_response" != *'"receivableSettlements":1'* \
+    || "$cash_movement_summary_response" != *'"payablePayments":1'* \
+    || "$cash_movement_summary_response" != *'"costEntries":1'* \
+    || "$treasury_report_response" != *'"currentBalanceCents":383000'* \
+    || "$treasury_report_response" != *'"pendingReceivablesCents":0'* \
+    || "$treasury_report_response" != *'"pendingPayablesCents":0'* \
+    || "$treasury_report_response" != *'"projectedNetPositionCents":383000'* \
+    || "$period_closure_response" != *"\"periodKey\":\"$closure_period\""* \
+    || "$period_closure_response" != *'"alreadyClosed":false'* \
+    || "$period_closure_repeat_response" != *'"alreadyClosed":true'* \
+    || "$period_closure_detail_response" != *'"tenantSlug":"bootstrap-ops"'* \
+    || "$period_closure_detail_response" != *'"snapshot"'* \
+    || "$operations_report_response" != *'"tenantSlug":"bootstrap-ops"'* \
+    || "$operations_report_response" != *'"total":2'* \
+    || "$operations_report_response" != *'"paidAmountCents":230000'* \
+    || "$operations_report_response" != *'"overdueCount":0'* \
+    || "$operations_report_response" != *'"releasedAmountCents":8400'* \
+    || "$operations_report_response" != *'"latestPeriodKey":"'"$closure_period"'"'* \
+    || "$operations_report_response" != *'"totalAmountCents":23000'* \
+    || "$db_summary" != '3|1|0|1|1|105000|105000|2|0|2|0|0|230000|1|0|0|1|8400|1|0|1|0|19000|1|23000|1|1|1|3|125000|42000' ]]; then
     echo "[test] finance operational cycle did not expose the expected data"
     exit 1
   fi

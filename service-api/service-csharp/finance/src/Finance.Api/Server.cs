@@ -370,6 +370,130 @@ public static class Server
       return TypedResults.Ok(cost);
     });
 
+    app.MapGet("/api/finance/cash-accounts", async Task<IResult> (string? tenantSlug, string? status, NpgsqlDataSource dataSource, IConfiguration configuration) =>
+    {
+      var resolvedTenantSlug = ResolveTenantSlug(tenantSlug, configuration);
+      var normalizedStatus = NormalizeCashAccountStatus(status);
+      if (status is not null && normalizedStatus.Length == 0)
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_cash_account_status", "Cash account status is invalid."));
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      var accounts = await ListCashAccounts(connection, resolvedTenantSlug, normalizedStatus);
+      return TypedResults.Ok<IReadOnlyList<CashAccountResponse>>(accounts);
+    });
+
+    app.MapPost("/api/finance/cash-accounts", async Task<IResult> (CreateCashAccountRequest? request, NpgsqlDataSource dataSource, IConfiguration configuration) =>
+    {
+      if (request is null
+        || string.IsNullOrWhiteSpace(request.Code)
+        || string.IsNullOrWhiteSpace(request.DisplayName)
+        || string.IsNullOrWhiteSpace(request.CurrencyCode)
+        || string.IsNullOrWhiteSpace(request.Provider)
+        || request.OpeningBalanceCents < 0)
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_cash_account", "Cash account payload is invalid."));
+      }
+
+      var currencyCode = request.CurrencyCode.Trim().ToUpperInvariant();
+      if (currencyCode.Length != 3)
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_cash_account_currency", "Currency code must have three uppercase characters."));
+      }
+
+      var tenantSlug = ResolveTenantSlug(request.TenantSlug, configuration);
+      await using var connection = await dataSource.OpenConnectionAsync();
+      await using var transaction = await connection.BeginTransactionAsync();
+
+      var tenantId = await LookupTenantId(connection, transaction, tenantSlug);
+      if (tenantId is null)
+      {
+        await transaction.RollbackAsync();
+        return TypedResults.NotFound(new ErrorResponse("tenant_not_found", "Tenant was not found."));
+      }
+
+      var account = await CreateCashAccount(
+        connection,
+        transaction,
+        tenantId.Value,
+        tenantSlug,
+        request.Code.Trim(),
+        request.DisplayName.Trim(),
+        currencyCode,
+        request.Provider.Trim(),
+        request.OpeningBalanceCents.GetValueOrDefault());
+
+      await transaction.CommitAsync();
+      return TypedResults.Ok(account);
+    });
+
+    app.MapPost("/api/finance/treasury/sync", async Task<IResult> (TreasurySyncRequest? request, NpgsqlDataSource dataSource, IConfiguration configuration) =>
+    {
+      if (request is null || string.IsNullOrWhiteSpace(request.CashAccountPublicId))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_treasury_sync", "Cash account public id is required."));
+      }
+
+      var tenantSlug = ResolveTenantSlug(request.TenantSlug, configuration);
+      await using var connection = await dataSource.OpenConnectionAsync();
+      await using var transaction = await connection.BeginTransactionAsync();
+
+      var tenantId = await LookupTenantId(connection, transaction, tenantSlug);
+      if (tenantId is null)
+      {
+        await transaction.RollbackAsync();
+        return TypedResults.NotFound(new ErrorResponse("tenant_not_found", "Tenant was not found."));
+      }
+
+      var account = await FindCashAccount(connection, transaction, tenantId.Value, request.CashAccountPublicId.Trim());
+      if (account is null)
+      {
+        await transaction.RollbackAsync();
+        return TypedResults.NotFound(new ErrorResponse("cash_account_not_found", "Cash account was not found."));
+      }
+
+      var sync = await SyncTreasuryMovements(connection, transaction, tenantId.Value, account.Id, tenantSlug, account.PublicId);
+      await transaction.CommitAsync();
+      return TypedResults.Ok(sync);
+    });
+
+    app.MapGet("/api/finance/cash-movements", async Task<IResult> (string? tenantSlug, string? cashAccountPublicId, string? direction, string? movementType, NpgsqlDataSource dataSource, IConfiguration configuration) =>
+    {
+      var resolvedTenantSlug = ResolveTenantSlug(tenantSlug, configuration);
+      var normalizedDirection = NormalizeCashMovementDirection(direction);
+      if (direction is not null && normalizedDirection.Length == 0)
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_cash_movement_direction", "Cash movement direction is invalid."));
+      }
+
+      var normalizedMovementType = NormalizeCashMovementType(movementType);
+      if (movementType is not null && normalizedMovementType.Length == 0)
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_cash_movement_type", "Cash movement type is invalid."));
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      var movements = await ListCashMovements(connection, resolvedTenantSlug, string.IsNullOrWhiteSpace(cashAccountPublicId) ? null : cashAccountPublicId.Trim(), normalizedDirection, normalizedMovementType);
+      return TypedResults.Ok<IReadOnlyList<CashMovementResponse>>(movements);
+    });
+
+    app.MapGet("/api/finance/cash-movements/summary", async Task<IResult> (string? tenantSlug, string? cashAccountPublicId, NpgsqlDataSource dataSource, IConfiguration configuration) =>
+    {
+      var resolvedTenantSlug = ResolveTenantSlug(tenantSlug, configuration);
+      await using var connection = await dataSource.OpenConnectionAsync();
+      var summary = await BuildCashMovementSummary(connection, resolvedTenantSlug, string.IsNullOrWhiteSpace(cashAccountPublicId) ? null : cashAccountPublicId.Trim());
+      return TypedResults.Ok(summary);
+    });
+
+    app.MapGet("/api/finance/reports/treasury", async Task<IResult> (string? tenantSlug, string? cashAccountPublicId, NpgsqlDataSource dataSource, IConfiguration configuration) =>
+    {
+      var resolvedTenantSlug = ResolveTenantSlug(tenantSlug, configuration);
+      await using var connection = await dataSource.OpenConnectionAsync();
+      var report = await BuildTreasuryReport(connection, resolvedTenantSlug, string.IsNullOrWhiteSpace(cashAccountPublicId) ? null : cashAccountPublicId.Trim());
+      return TypedResults.Ok(report);
+    });
+
     app.MapPost("/api/finance/period-closures", async Task<IResult> (CreatePeriodClosureRequest? request, NpgsqlDataSource dataSource, IConfiguration configuration) =>
     {
       if (request is null || string.IsNullOrWhiteSpace(request.PeriodKey))
@@ -1686,6 +1810,693 @@ public static class Server
       reader.GetString(7));
   }
 
+  private static async Task<IReadOnlyList<CashAccountResponse>> ListCashAccounts(NpgsqlConnection connection, string tenantSlug, string? status)
+  {
+    var sql =
+      """
+      SELECT
+        account.public_id::text,
+        tenant.slug,
+        account.code,
+        account.display_name,
+        account.currency_code,
+        account.provider,
+        account.status,
+        account.opening_balance_cents,
+        to_char(account.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+        to_char(account.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+      FROM finance.cash_accounts AS account
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = account.tenant_id
+      WHERE tenant.slug = $1
+      """;
+
+    if (!string.IsNullOrWhiteSpace(status))
+    {
+      sql += " AND account.status = $2";
+    }
+
+    sql += " ORDER BY account.created_at, account.id";
+
+    await using var command = new NpgsqlCommand(sql, connection);
+    command.Parameters.AddWithValue(tenantSlug);
+    if (!string.IsNullOrWhiteSpace(status))
+    {
+      command.Parameters.AddWithValue(status);
+    }
+
+    var response = new List<CashAccountResponse>();
+    await using var reader = await command.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+      response.Add(new CashAccountResponse(
+        reader.GetString(0),
+        reader.GetString(1),
+        reader.GetString(2),
+        reader.GetString(3),
+        reader.GetString(4),
+        reader.GetString(5),
+        reader.GetString(6),
+        reader.GetInt64(7),
+        reader.GetString(8),
+        reader.GetString(9)));
+    }
+
+    return response;
+  }
+
+  private static async Task<CashAccountResponse> CreateCashAccount(
+    NpgsqlConnection connection,
+    NpgsqlTransaction transaction,
+    long tenantId,
+    string tenantSlug,
+    string code,
+    string displayName,
+    string currencyCode,
+    string provider,
+    long openingBalanceCents)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      INSERT INTO finance.cash_accounts (
+        tenant_id,
+        public_id,
+        code,
+        display_name,
+        currency_code,
+        provider,
+        status,
+        opening_balance_cents
+      )
+      VALUES (
+        $1,
+        gen_random_uuid(),
+        $2,
+        $3,
+        $4,
+        $5,
+        'active',
+        $6
+      )
+      RETURNING
+        public_id::text,
+        code,
+        display_name,
+        currency_code,
+        provider,
+        status,
+        opening_balance_cents,
+        to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+        to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(tenantId);
+    command.Parameters.AddWithValue(code);
+    command.Parameters.AddWithValue(displayName);
+    command.Parameters.AddWithValue(currencyCode);
+    command.Parameters.AddWithValue(provider);
+    command.Parameters.AddWithValue(openingBalanceCents);
+
+    await using var reader = await command.ExecuteReaderAsync();
+    await reader.ReadAsync();
+    return new CashAccountResponse(
+      reader.GetString(0),
+      tenantSlug,
+      reader.GetString(1),
+      reader.GetString(2),
+      reader.GetString(3),
+      reader.GetString(4),
+      reader.GetString(5),
+      reader.GetInt64(6),
+      reader.GetString(7),
+      reader.GetString(8));
+  }
+
+  private static async Task<CashAccountLookup?> FindCashAccount(NpgsqlConnection connection, NpgsqlTransaction transaction, long tenantId, string publicId)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        id,
+        public_id::text,
+        code,
+        opening_balance_cents
+      FROM finance.cash_accounts
+      WHERE tenant_id = $1
+        AND public_id = $2::uuid
+      LIMIT 1
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(tenantId);
+    command.Parameters.AddWithValue(publicId);
+
+    await using var reader = await command.ExecuteReaderAsync();
+    if (!await reader.ReadAsync())
+    {
+      return null;
+    }
+
+    return new CashAccountLookup(
+      reader.GetInt64(0),
+      reader.GetString(1),
+      reader.GetString(2),
+      reader.GetInt64(3));
+  }
+
+  private static async Task<SyncTreasuryResponse> SyncTreasuryMovements(
+    NpgsqlConnection connection,
+    NpgsqlTransaction transaction,
+    long tenantId,
+    long cashAccountId,
+    string tenantSlug,
+    string cashAccountPublicId)
+  {
+    var receivableSync = await SyncTreasuryReceivableSettlements(connection, transaction, tenantId, cashAccountId);
+    var payableSync = await SyncTreasuryPayables(connection, transaction, tenantId, cashAccountId);
+    var costSync = await SyncTreasuryCosts(connection, transaction, tenantId, cashAccountId);
+
+    return new SyncTreasuryResponse(
+      tenantSlug,
+      cashAccountPublicId,
+      receivableSync.Created + payableSync.Created + costSync.Created,
+      receivableSync.Skipped + payableSync.Skipped + costSync.Skipped);
+  }
+
+  private static async Task<TreasurySyncMutation> SyncTreasuryReceivableSettlements(NpgsqlConnection connection, NpgsqlTransaction transaction, long tenantId, long cashAccountId)
+  {
+    var candidates = await LoadReceivableSettlementCandidates(connection, transaction, tenantId);
+    var created = 0;
+    var skipped = 0;
+
+    foreach (var candidate in candidates)
+    {
+      if (await TryInsertCashMovement(connection, transaction, tenantId, cashAccountId, "receivable_settlement", "inflow", candidate))
+      {
+        created += 1;
+      }
+      else
+      {
+        skipped += 1;
+      }
+    }
+
+    return new TreasurySyncMutation(created, skipped);
+  }
+
+  private static async Task<TreasurySyncMutation> SyncTreasuryPayables(NpgsqlConnection connection, NpgsqlTransaction transaction, long tenantId, long cashAccountId)
+  {
+    var candidates = await LoadPaidPayableCandidates(connection, transaction, tenantId);
+    var created = 0;
+    var skipped = 0;
+
+    foreach (var candidate in candidates)
+    {
+      if (await TryInsertCashMovement(connection, transaction, tenantId, cashAccountId, "payable_payment", "outflow", candidate))
+      {
+        created += 1;
+      }
+      else
+      {
+        skipped += 1;
+      }
+    }
+
+    return new TreasurySyncMutation(created, skipped);
+  }
+
+  private static async Task<TreasurySyncMutation> SyncTreasuryCosts(NpgsqlConnection connection, NpgsqlTransaction transaction, long tenantId, long cashAccountId)
+  {
+    var candidates = await LoadCostEntryCandidates(connection, transaction, tenantId);
+    var created = 0;
+    var skipped = 0;
+
+    foreach (var candidate in candidates)
+    {
+      if (await TryInsertCashMovement(connection, transaction, tenantId, cashAccountId, "cost_entry", "outflow", candidate))
+      {
+        created += 1;
+      }
+      else
+      {
+        skipped += 1;
+      }
+    }
+
+    return new TreasurySyncMutation(created, skipped);
+  }
+
+  private static async Task<IReadOnlyList<TreasurySourceCandidate>> LoadReceivableSettlementCandidates(NpgsqlConnection connection, NpgsqlTransaction transaction, long tenantId)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        settlement.public_id::text,
+        settlement.settlement_reference,
+        settlement.amount_cents,
+        settlement.settled_at,
+        COALESCE(customer.name, customer.email, receivable.customer_public_id::text),
+        'Recebimento liquidado a partir do financeiro operacional.'
+      FROM finance.receivable_settlements AS settlement
+      INNER JOIN finance.receivable_entries AS receivable
+        ON receivable.id = settlement.receivable_entry_id
+      LEFT JOIN crm.customers AS customer
+        ON customer.public_id = receivable.customer_public_id
+      WHERE settlement.tenant_id = $1
+      ORDER BY settlement.settled_at, settlement.id
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(tenantId);
+
+    var response = new List<TreasurySourceCandidate>();
+    await using var reader = await command.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+      response.Add(new TreasurySourceCandidate(
+        reader.GetString(0),
+        reader.GetString(1),
+        reader.GetInt64(2),
+        reader.GetFieldValue<DateTime>(3),
+        reader.GetString(4),
+        reader.GetString(5)));
+    }
+
+    return response;
+  }
+
+  private static async Task<IReadOnlyList<TreasurySourceCandidate>> LoadPaidPayableCandidates(NpgsqlConnection connection, NpgsqlTransaction transaction, long tenantId)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        payable.public_id::text,
+        COALESCE(payable.payment_reference, payable.public_id::text),
+        payable.amount_cents,
+        COALESCE(payable.paid_at, payable.updated_at),
+        payable.vendor_name,
+        payable.description
+      FROM finance.payables AS payable
+      WHERE payable.tenant_id = $1
+        AND payable.status = 'paid'
+      ORDER BY COALESCE(payable.paid_at, payable.updated_at), payable.id
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(tenantId);
+
+    var response = new List<TreasurySourceCandidate>();
+    await using var reader = await command.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+      response.Add(new TreasurySourceCandidate(
+        reader.GetString(0),
+        reader.GetString(1),
+        reader.GetInt64(2),
+        reader.GetFieldValue<DateTime>(3),
+        reader.GetString(4),
+        reader.GetString(5)));
+    }
+
+    return response;
+  }
+
+  private static async Task<IReadOnlyList<TreasurySourceCandidate>> LoadCostEntryCandidates(NpgsqlConnection connection, NpgsqlTransaction transaction, long tenantId)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        cost.public_id::text,
+        cost.public_id::text,
+        cost.amount_cents,
+        timezone('utc', cost.incurred_on::timestamp),
+        cost.category,
+        cost.summary
+      FROM finance.cost_entries AS cost
+      WHERE cost.tenant_id = $1
+      ORDER BY cost.incurred_on, cost.id
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(tenantId);
+
+    var response = new List<TreasurySourceCandidate>();
+    await using var reader = await command.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+      response.Add(new TreasurySourceCandidate(
+        reader.GetString(0),
+        reader.GetString(1),
+        reader.GetInt64(2),
+        reader.GetFieldValue<DateTime>(3),
+        reader.GetString(4),
+        reader.GetString(5)));
+    }
+
+    return response;
+  }
+
+  private static async Task<bool> TryInsertCashMovement(
+    NpgsqlConnection connection,
+    NpgsqlTransaction transaction,
+    long tenantId,
+    long cashAccountId,
+    string movementType,
+    string direction,
+    TreasurySourceCandidate candidate)
+  {
+    var payload = JsonSerializer.Serialize(new
+    {
+      movementType,
+      direction,
+      referenceCode = candidate.ReferenceCode,
+      counterpartyName = candidate.CounterpartyName,
+      description = candidate.Description
+    });
+
+    await using var command = new NpgsqlCommand(
+      """
+      INSERT INTO finance.cash_movements (
+        tenant_id,
+        cash_account_id,
+        public_id,
+        movement_type,
+        direction,
+        source_public_id,
+        reference_code,
+        amount_cents,
+        counterparty_name,
+        description,
+        effective_at,
+        snapshot_payload
+      )
+      VALUES (
+        $1,
+        $2,
+        gen_random_uuid(),
+        $3,
+        $4,
+        $5::uuid,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
+        $11::jsonb
+      )
+      ON CONFLICT DO NOTHING
+      RETURNING public_id::text
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(tenantId);
+    command.Parameters.AddWithValue(cashAccountId);
+    command.Parameters.AddWithValue(movementType);
+    command.Parameters.AddWithValue(direction);
+    command.Parameters.AddWithValue(candidate.SourcePublicId);
+    command.Parameters.AddWithValue(candidate.ReferenceCode);
+    command.Parameters.AddWithValue(candidate.AmountCents);
+    command.Parameters.AddWithValue(candidate.CounterpartyName);
+    command.Parameters.AddWithValue(candidate.Description);
+    command.Parameters.AddWithValue(candidate.EffectiveAt);
+    command.Parameters.AddWithValue(payload);
+
+    var inserted = await command.ExecuteScalarAsync();
+    return inserted is not null;
+  }
+
+  private static async Task<IReadOnlyList<CashMovementResponse>> ListCashMovements(
+    NpgsqlConnection connection,
+    string tenantSlug,
+    string? cashAccountPublicId,
+    string? direction,
+    string? movementType)
+  {
+    var sql =
+      """
+      SELECT
+        movement.public_id::text,
+        tenant.slug,
+        account.public_id::text,
+        account.code,
+        movement.movement_type,
+        movement.direction,
+        COALESCE(movement.source_public_id::text, ''),
+        movement.reference_code,
+        movement.amount_cents,
+        movement.counterparty_name,
+        movement.description,
+        to_char(movement.effective_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+        to_char(movement.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+        to_char(movement.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+      FROM finance.cash_movements AS movement
+      INNER JOIN finance.cash_accounts AS account
+        ON account.id = movement.cash_account_id
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = movement.tenant_id
+      WHERE tenant.slug = $1
+      """;
+
+    var parameters = new List<object?> { tenantSlug };
+    if (!string.IsNullOrWhiteSpace(cashAccountPublicId))
+    {
+      parameters.Add(cashAccountPublicId);
+      sql += $" AND account.public_id = ${parameters.Count}::uuid";
+    }
+
+    if (!string.IsNullOrWhiteSpace(direction))
+    {
+      parameters.Add(direction);
+      sql += $" AND movement.direction = ${parameters.Count}";
+    }
+
+    if (!string.IsNullOrWhiteSpace(movementType))
+    {
+      parameters.Add(movementType);
+      sql += $" AND movement.movement_type = ${parameters.Count}";
+    }
+
+    sql += " ORDER BY movement.effective_at DESC, movement.id DESC";
+
+    await using var command = new NpgsqlCommand(sql, connection);
+    foreach (var parameter in parameters)
+    {
+      command.Parameters.AddWithValue(parameter ?? string.Empty);
+    }
+
+    var response = new List<CashMovementResponse>();
+    await using var reader = await command.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+      response.Add(new CashMovementResponse(
+        reader.GetString(0),
+        reader.GetString(1),
+        reader.GetString(2),
+        reader.GetString(3),
+        reader.GetString(4),
+        reader.GetString(5),
+        reader.GetString(6),
+        reader.GetString(7),
+        reader.GetInt64(8),
+        reader.GetString(9),
+        reader.GetString(10),
+        reader.GetString(11),
+        reader.GetString(12),
+        reader.GetString(13)));
+    }
+
+    return response;
+  }
+
+  private static async Task<CashMovementSummaryResponse> BuildCashMovementSummary(NpgsqlConnection connection, string tenantSlug, string? cashAccountPublicId)
+  {
+    var accountFilterSql = string.IsNullOrWhiteSpace(cashAccountPublicId) ? string.Empty : " AND account.public_id = $2::uuid";
+    var movementFilterSql = string.IsNullOrWhiteSpace(cashAccountPublicId) ? string.Empty : " AND account.public_id = $2::uuid";
+
+    var sql =
+      $"""
+      SELECT
+        (
+          SELECT COALESCE(sum(account.opening_balance_cents), 0)
+          FROM finance.cash_accounts AS account
+          INNER JOIN identity.tenants AS tenant
+            ON tenant.id = account.tenant_id
+          WHERE tenant.slug = $1
+          {accountFilterSql}
+        ) AS opening_balance_cents,
+        (
+          SELECT count(*)
+          FROM finance.cash_movements AS movement
+          INNER JOIN finance.cash_accounts AS account
+            ON account.id = movement.cash_account_id
+          INNER JOIN identity.tenants AS tenant
+            ON tenant.id = movement.tenant_id
+          WHERE tenant.slug = $1
+          {movementFilterSql}
+        ) AS total,
+        (
+          SELECT COALESCE(sum(movement.amount_cents), 0)
+          FROM finance.cash_movements AS movement
+          INNER JOIN finance.cash_accounts AS account
+            ON account.id = movement.cash_account_id
+          INNER JOIN identity.tenants AS tenant
+            ON tenant.id = movement.tenant_id
+          WHERE tenant.slug = $1
+            AND movement.direction = 'inflow'
+          {movementFilterSql}
+        ) AS inflow_cents,
+        (
+          SELECT COALESCE(sum(movement.amount_cents), 0)
+          FROM finance.cash_movements AS movement
+          INNER JOIN finance.cash_accounts AS account
+            ON account.id = movement.cash_account_id
+          INNER JOIN identity.tenants AS tenant
+            ON tenant.id = movement.tenant_id
+          WHERE tenant.slug = $1
+            AND movement.direction = 'outflow'
+          {movementFilterSql}
+        ) AS outflow_cents,
+        (
+          SELECT count(*)
+          FROM finance.cash_movements AS movement
+          INNER JOIN finance.cash_accounts AS account
+            ON account.id = movement.cash_account_id
+          INNER JOIN identity.tenants AS tenant
+            ON tenant.id = movement.tenant_id
+          WHERE tenant.slug = $1
+            AND movement.movement_type = 'receivable_settlement'
+          {movementFilterSql}
+        ) AS receivable_settlements,
+        (
+          SELECT count(*)
+          FROM finance.cash_movements AS movement
+          INNER JOIN finance.cash_accounts AS account
+            ON account.id = movement.cash_account_id
+          INNER JOIN identity.tenants AS tenant
+            ON tenant.id = movement.tenant_id
+          WHERE tenant.slug = $1
+            AND movement.movement_type = 'payable_payment'
+          {movementFilterSql}
+        ) AS payable_payments,
+        (
+          SELECT count(*)
+          FROM finance.cash_movements AS movement
+          INNER JOIN finance.cash_accounts AS account
+            ON account.id = movement.cash_account_id
+          INNER JOIN identity.tenants AS tenant
+            ON tenant.id = movement.tenant_id
+          WHERE tenant.slug = $1
+            AND movement.movement_type = 'cost_entry'
+          {movementFilterSql}
+        ) AS cost_entries,
+        (
+          SELECT count(*)
+          FROM finance.cash_movements AS movement
+          INNER JOIN finance.cash_accounts AS account
+            ON account.id = movement.cash_account_id
+          INNER JOIN identity.tenants AS tenant
+            ON tenant.id = movement.tenant_id
+          WHERE tenant.slug = $1
+            AND movement.movement_type = 'manual_adjustment'
+          {movementFilterSql}
+        ) AS manual_adjustments,
+        (
+          SELECT COALESCE(to_char(max(movement.effective_at) AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), '')
+          FROM finance.cash_movements AS movement
+          INNER JOIN finance.cash_accounts AS account
+            ON account.id = movement.cash_account_id
+          INNER JOIN identity.tenants AS tenant
+            ON tenant.id = movement.tenant_id
+          WHERE tenant.slug = $1
+          {movementFilterSql}
+        ) AS latest_effective_at
+      """;
+
+    var parameters = new List<object?> { tenantSlug };
+    if (!string.IsNullOrWhiteSpace(cashAccountPublicId))
+    {
+      parameters.Add(cashAccountPublicId);
+    }
+
+    await using var command = new NpgsqlCommand(sql, connection);
+    foreach (var parameter in parameters)
+    {
+      command.Parameters.AddWithValue(parameter ?? string.Empty);
+    }
+
+    await using var reader = await command.ExecuteReaderAsync();
+    await reader.ReadAsync();
+
+    var openingBalanceCents = ConvertToInt64(reader.GetValue(0));
+    var inflowCents = ConvertToInt64(reader.GetValue(2));
+    var outflowCents = ConvertToInt64(reader.GetValue(3));
+
+    return new CashMovementSummaryResponse(
+      tenantSlug,
+      cashAccountPublicId ?? string.Empty,
+      ConvertToInt(reader.GetValue(1)),
+      inflowCents,
+      outflowCents,
+      openingBalanceCents,
+      openingBalanceCents + inflowCents - outflowCents,
+      new TreasuryMovementTypeCounts(
+        ConvertToInt(reader.GetValue(4)),
+        ConvertToInt(reader.GetValue(5)),
+        ConvertToInt(reader.GetValue(6)),
+        ConvertToInt(reader.GetValue(7))),
+      reader.GetString(8));
+  }
+
+  private static async Task<TreasuryReportResponse> BuildTreasuryReport(NpgsqlConnection connection, string tenantSlug, string? cashAccountPublicId)
+  {
+    var accounts = await ListCashAccounts(connection, tenantSlug, null);
+    var summary = await BuildCashMovementSummary(connection, tenantSlug, cashAccountPublicId);
+
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        (
+          SELECT COALESCE(sum(receivable.amount_cents), 0)
+          FROM finance.receivable_entries AS receivable
+          INNER JOIN identity.tenants AS tenant
+            ON tenant.id = receivable.tenant_id
+          WHERE tenant.slug = $1
+            AND receivable.status = 'open'
+        ) AS pending_receivables_cents,
+        (
+          SELECT COALESCE(sum(payable.amount_cents), 0)
+          FROM finance.payables AS payable
+          INNER JOIN identity.tenants AS tenant
+            ON tenant.id = payable.tenant_id
+          WHERE tenant.slug = $1
+            AND payable.status = 'open'
+        ) AS pending_payables_cents
+      """,
+      connection);
+    command.Parameters.AddWithValue(tenantSlug);
+
+    await using var reader = await command.ExecuteReaderAsync();
+    long pendingReceivablesCents = 0;
+    long pendingPayablesCents = 0;
+    if (await reader.ReadAsync())
+    {
+      pendingReceivablesCents = ConvertToInt64(reader.GetValue(0));
+      pendingPayablesCents = ConvertToInt64(reader.GetValue(1));
+    }
+
+    return new TreasuryReportResponse(
+      tenantSlug,
+      DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+      accounts,
+      summary,
+      new TreasuryLiquidityResponse(
+        summary.CurrentBalanceCents,
+        pendingReceivablesCents,
+        pendingPayablesCents,
+        summary.CurrentBalanceCents + pendingReceivablesCents - pendingPayablesCents));
+  }
+
   private static async Task<OperationalReportResponse> BuildOperationalReport(NpgsqlConnection connection, string tenantSlug)
   {
     var receivables = await BuildReceivableOperationsSummary(connection, tenantSlug);
@@ -2039,6 +2850,39 @@ public static class Server
     };
   }
 
+  private static string NormalizeCashAccountStatus(string? status)
+  {
+    var normalized = (status ?? string.Empty).Trim().ToLowerInvariant();
+    return normalized switch
+    {
+      "" => string.Empty,
+      "active" or "inactive" => normalized,
+      _ => string.Empty
+    };
+  }
+
+  private static string NormalizeCashMovementDirection(string? direction)
+  {
+    var normalized = (direction ?? string.Empty).Trim().ToLowerInvariant();
+    return normalized switch
+    {
+      "" => string.Empty,
+      "inflow" or "outflow" => normalized,
+      _ => string.Empty
+    };
+  }
+
+  private static string NormalizeCashMovementType(string? movementType)
+  {
+    var normalized = (movementType ?? string.Empty).Trim().ToLowerInvariant();
+    return normalized switch
+    {
+      "" => string.Empty,
+      "receivable_settlement" or "payable_payment" or "cost_entry" or "manual_adjustment" => normalized,
+      _ => string.Empty
+    };
+  }
+
   private static bool CanTransitionPayableStatus(string currentStatus, string targetStatus)
   {
     return currentStatus switch
@@ -2178,6 +3022,53 @@ public sealed record CostEntryResponse(
   string CreatedAt,
   string UpdatedAt);
 public sealed record CreateCostEntryRequest(string? TenantSlug, string? Category, string? Summary, long? AmountCents, string? IncurredOn, string? SalePublicId);
+public sealed record CashAccountResponse(
+  string PublicId,
+  string TenantSlug,
+  string Code,
+  string DisplayName,
+  string CurrencyCode,
+  string Provider,
+  string Status,
+  long OpeningBalanceCents,
+  string CreatedAt,
+  string UpdatedAt);
+public sealed record CreateCashAccountRequest(string? TenantSlug, string? Code, string? DisplayName, string? CurrencyCode, string? Provider, long? OpeningBalanceCents);
+public sealed record TreasurySyncRequest(string? TenantSlug, string? CashAccountPublicId);
+public sealed record SyncTreasuryResponse(string TenantSlug, string CashAccountPublicId, int CreatedMovements, int SkippedMovements);
+public sealed record CashMovementResponse(
+  string PublicId,
+  string TenantSlug,
+  string CashAccountPublicId,
+  string CashAccountCode,
+  string MovementType,
+  string Direction,
+  string SourcePublicId,
+  string ReferenceCode,
+  long AmountCents,
+  string CounterpartyName,
+  string Description,
+  string EffectiveAt,
+  string CreatedAt,
+  string UpdatedAt);
+public sealed record TreasuryMovementTypeCounts(int ReceivableSettlements, int PayablePayments, int CostEntries, int ManualAdjustments);
+public sealed record CashMovementSummaryResponse(
+  string TenantSlug,
+  string CashAccountPublicId,
+  int Total,
+  long InflowCents,
+  long OutflowCents,
+  long OpeningBalanceCents,
+  long CurrentBalanceCents,
+  TreasuryMovementTypeCounts ByType,
+  string LatestEffectiveAt);
+public sealed record TreasuryLiquidityResponse(long CurrentBalanceCents, long PendingReceivablesCents, long PendingPayablesCents, long ProjectedNetPositionCents);
+public sealed record TreasuryReportResponse(
+  string TenantSlug,
+  string GeneratedAt,
+  IReadOnlyList<CashAccountResponse> Accounts,
+  CashMovementSummaryResponse Summary,
+  TreasuryLiquidityResponse Liquidity);
 public sealed record AmountStatusCounts(int Open, int Paid, int Cancelled);
 public sealed record AmountStatusBuckets(long OpenAmountCents, long PaidAmountCents, long CancelledAmountCents);
 public sealed record ReceivableOperationsSummary(int Total, long TotalAmountCents, AmountStatusCounts Status, AmountStatusBuckets Amounts, int OverdueCount, long OverdueAmountCents);
@@ -2198,5 +3089,8 @@ public sealed record PeriodClosureDetailResponse(string PublicId, string TenantS
 internal sealed record SalesOutboxEvent(string PublicId, string AggregateType, string AggregatePublicId, string EventType, string Payload);
 internal sealed record ProjectionMutation(int Created, int Updated, int Processed);
 internal sealed record SyncMutation(int Created, int Updated);
+internal sealed record TreasurySyncMutation(int Created, int Skipped);
+internal sealed record CashAccountLookup(long Id, string PublicId, string Code, long OpeningBalanceCents);
+internal sealed record TreasurySourceCandidate(string SourcePublicId, string ReferenceCode, long AmountCents, DateTime EffectiveAt, string CounterpartyName, string Description);
 internal sealed record ReceivableLookup(long Id, string PublicId, string Status, long AmountCents);
 internal sealed record PayableReferenceLookup(string PublicId, string Status);
