@@ -47,6 +47,8 @@ def test_service_pulse_returns_cross_service_payload() -> None:
     assert payload["services"]["sales"]["salesTotal"] == 12
     assert payload["services"]["finance"]["cashAccounts"] == 2
     assert payload["services"]["billing"]["activeSubscriptions"] == 11
+    assert payload["services"]["documents"]["attachmentsTotal"] == 24
+    assert payload["services"]["documents"]["completedUploadSessions"] == 6
     assert payload["services"]["engagement"]["templatesTotal"] == 3
     assert payload["services"]["rentals"]["contractsTotal"] == 12
     assert payload["services"]["workflowControl"]["activeDefinitions"] == 6
@@ -75,10 +77,26 @@ def test_tenant_360_returns_tenant_operational_snapshot() -> None:
     assert payload["commercial"]["assignedLeads"] == 96
     assert payload["commercial"]["sales"] == 12
     assert payload["engagement"]["deliveries"] == 17
+    assert payload["documents"]["attachments"] == 24
+    assert payload["documents"]["restrictedAttachments"] == 10
     assert payload["rentals"]["contracts"] == 12
     assert payload["finance"]["cashAccounts"] == 2
     assert payload["billing"]["activeSubscriptions"] == 11
     assert payload["automation"]["workflowRuns"] == 41
+
+
+def test_document_governance_returns_document_operational_payload() -> None:
+    response = client.get("/api/analytics/reports/document-governance?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["inventory"]["attachmentsTotal"] == 24
+    assert payload["inventory"]["retentionLongTerm"] == 11
+    assert payload["visibility"]["restricted"] == 10
+    assert payload["storage"]["drivers"]["r2"] == 9
+    assert payload["uploads"]["completed"] == 6
+    assert payload["ownership"]["crm.customer"] == 9
 
 
 def test_engagement_operations_returns_engagement_operational_payload() -> None:

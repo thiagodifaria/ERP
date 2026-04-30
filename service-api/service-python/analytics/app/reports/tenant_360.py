@@ -47,6 +47,14 @@ def build_static_tenant_360(tenant_slug: str | None = None) -> dict:
             "convertedTouchpoints": 3,
             "failedDeliveries": 2,
         },
+        "documents": {
+            "attachments": 24,
+            "activeAttachments": 19,
+            "archivedAttachments": 5,
+            "uploadSessions": 9,
+            "completedUploadSessions": 6,
+            "restrictedAttachments": 10,
+        },
         "rentals": {
             "contracts": 12,
             "activeContracts": 10,
@@ -90,6 +98,7 @@ def build_postgres_tenant_360(tenant_slug: str | None = None) -> dict:
         identity_metrics = fetch_identity_metrics(connection, tenant_slug)
         commercial_metrics = fetch_commercial_metrics(connection, tenant_slug)
         engagement_metrics = fetch_engagement_metrics(connection, tenant_slug)
+        documents_metrics = fetch_documents_metrics(connection, tenant_slug)
         rentals_metrics = fetch_rentals_metrics(connection, tenant_slug)
         finance_metrics = fetch_finance_metrics(connection, tenant_slug)
         billing_metrics = fetch_billing_metrics(connection, tenant_slug)
@@ -102,6 +111,7 @@ def build_postgres_tenant_360(tenant_slug: str | None = None) -> dict:
         "identity": identity_metrics,
         "commercial": commercial_metrics,
         "engagement": engagement_metrics,
+        "documents": documents_metrics,
         "rentals": rentals_metrics,
         "finance": finance_metrics,
         "billing": billing_metrics,
@@ -519,4 +529,59 @@ def fetch_rentals_metrics(connection, tenant_slug: str | None) -> dict:
         "paidCharges": int(row.get("paid_charges", 0) or 0),
         "attachments": int(row.get("attachments", 0) or 0),
         "outstandingAmountCents": int(row.get("outstanding_amount_cents", 0) or 0),
+    }
+
+
+def fetch_documents_metrics(connection, tenant_slug: str | None) -> dict:
+    filter_sql, params = tenant_filter("slug = %s", tenant_slug)
+
+    query = f"""
+        SELECT
+            (
+                SELECT count(*)
+                FROM documents.attachments
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS attachments,
+            (
+                SELECT count(*)
+                FROM documents.attachments
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND archived_at IS NULL
+            ) AS active_attachments,
+            (
+                SELECT count(*)
+                FROM documents.attachments
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND archived_at IS NOT NULL
+            ) AS archived_attachments,
+            (
+                SELECT count(*)
+                FROM documents.upload_sessions
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS upload_sessions,
+            (
+                SELECT count(*)
+                FROM documents.upload_sessions
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'completed'
+            ) AS completed_upload_sessions,
+            (
+                SELECT count(*)
+                FROM documents.attachments
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND visibility = 'restricted'
+            ) AS restricted_attachments
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params * 6)
+        row = cursor.fetchone() or {}
+
+    return {
+        "attachments": int(row.get("attachments", 0) or 0),
+        "activeAttachments": int(row.get("active_attachments", 0) or 0),
+        "archivedAttachments": int(row.get("archived_attachments", 0) or 0),
+        "uploadSessions": int(row.get("upload_sessions", 0) or 0),
+        "completedUploadSessions": int(row.get("completed_upload_sessions", 0) or 0),
+        "restrictedAttachments": int(row.get("restricted_attachments", 0) or 0),
     }

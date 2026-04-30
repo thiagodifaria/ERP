@@ -25,6 +25,7 @@ def build_static_service_pulse(tenant_slug: str | None = None) -> dict:
             "sales": {"opportunitiesTotal": 34, "proposalsTotal": 21, "salesTotal": 12, "bookedRevenueCents": 1775000},
             "finance": {"receivablesOpen": 4, "receivablesPaid": 9, "payablesOpen": 2, "cashAccounts": 2, "currentBalanceCents": 1246000, "periodClosures": 4},
             "billing": {"activeSubscriptions": 11, "graceSubscriptions": 1, "suspendedSubscriptions": 1, "invoicesOpen": 2, "invoicesPaid": 9, "failedAttempts": 3},
+            "documents": {"attachmentsTotal": 24, "activeAttachments": 19, "archivedAttachments": 5, "pendingUploadSessions": 2, "completedUploadSessions": 6},
             "engagement": {"campaignsTotal": 2, "activeCampaigns": 1, "templatesTotal": 3, "deliveriesTotal": 17, "deliveredDeliveries": 12, "failedDeliveries": 2, "convertedTouchpoints": 3},
             "rentals": {"contractsTotal": 12, "activeContracts": 10, "scheduledCharges": 18, "paidCharges": 11, "cancelledCharges": 3, "overdueCharges": 1},
             "workflowControl": {"activeDefinitions": 6, "runsRunning": 7, "runsCompleted": 31, "runsFailed": 2, "runsCancelled": 1},
@@ -42,6 +43,7 @@ def build_postgres_service_pulse(tenant_slug: str | None = None) -> dict:
         sales_metrics = fetch_sales_service_metrics(connection, tenant_slug)
         finance_metrics = fetch_finance_service_metrics(connection, tenant_slug)
         billing_metrics = fetch_billing_service_metrics(connection, tenant_slug)
+        documents_metrics = fetch_documents_service_metrics(connection, tenant_slug)
         engagement_metrics = fetch_engagement_service_metrics(connection, tenant_slug)
         rentals_metrics = fetch_rentals_service_metrics(connection, tenant_slug)
         workflow_control_metrics = fetch_workflow_control_metrics(connection, tenant_slug)
@@ -57,6 +59,7 @@ def build_postgres_service_pulse(tenant_slug: str | None = None) -> dict:
             "sales": sales_metrics,
             "finance": finance_metrics,
             "billing": billing_metrics,
+            "documents": documents_metrics,
             "engagement": engagement_metrics,
             "rentals": rentals_metrics,
             "workflowControl": workflow_control_metrics,
@@ -192,6 +195,55 @@ def fetch_engagement_service_metrics(connection, tenant_slug: str | None) -> dic
         "deliveredDeliveries": int(row.get("delivered_deliveries", 0) or 0),
         "failedDeliveries": int(row.get("failed_deliveries", 0) or 0),
         "convertedTouchpoints": int(row.get("converted_touchpoints", 0) or 0),
+    }
+
+
+def fetch_documents_service_metrics(connection, tenant_slug: str | None) -> dict:
+    filter_sql, params = tenant_filter("slug = %s", tenant_slug)
+
+    query = f"""
+        SELECT
+            (
+                SELECT count(*)
+                FROM documents.attachments
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS attachments_total,
+            (
+                SELECT count(*)
+                FROM documents.attachments
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND archived_at IS NULL
+            ) AS active_attachments,
+            (
+                SELECT count(*)
+                FROM documents.attachments
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND archived_at IS NOT NULL
+            ) AS archived_attachments,
+            (
+                SELECT count(*)
+                FROM documents.upload_sessions
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'pending_upload'
+            ) AS pending_upload_sessions,
+            (
+                SELECT count(*)
+                FROM documents.upload_sessions
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'completed'
+            ) AS completed_upload_sessions
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params * 5)
+        row = cursor.fetchone() or {}
+
+    return {
+        "attachmentsTotal": int(row.get("attachments_total", 0) or 0),
+        "activeAttachments": int(row.get("active_attachments", 0) or 0),
+        "archivedAttachments": int(row.get("archived_attachments", 0) or 0),
+        "pendingUploadSessions": int(row.get("pending_upload_sessions", 0) or 0),
+        "completedUploadSessions": int(row.get("completed_upload_sessions", 0) or 0),
     }
 
 

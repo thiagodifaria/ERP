@@ -13,6 +13,7 @@ Initial scope:
 - finance control report crossing treasury, receivables, payables and billing health
 - rental operations report crossing contracts, recurring charges and attachment governance
 - engagement operations report crossing campaigns, templates, touchpoints and delivery reliability
+- document governance report crossing attachment inventory, visibility, storage and upload lifecycle
 - load benchmark report backed by simulation runs
 - scenario-driven cost estimator
 - selectable repository driver between memory and PostgreSQL
@@ -31,6 +32,7 @@ Public routes:
 - `GET /api/analytics/reports/workflow-definition-health`
 - `GET /api/analytics/reports/delivery-reliability`
 - `GET /api/analytics/reports/engagement-operations`
+- `GET /api/analytics/reports/document-governance`
 - `GET /api/analytics/reports/revenue-operations`
 - `GET /api/analytics/reports/finance-control`
 - `GET /api/analytics/reports/rental-operations`
