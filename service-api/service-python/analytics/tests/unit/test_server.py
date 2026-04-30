@@ -45,6 +45,8 @@ def test_service_pulse_returns_cross_service_payload() -> None:
     assert payload["tenantSlug"] == "bootstrap-ops"
     assert payload["services"]["crm"]["totalLeads"] == 128
     assert payload["services"]["sales"]["salesTotal"] == 12
+    assert payload["services"]["finance"]["cashAccounts"] == 2
+    assert payload["services"]["billing"]["activeSubscriptions"] == 11
     assert payload["services"]["engagement"]["templatesTotal"] == 3
     assert payload["services"]["rentals"]["contractsTotal"] == 12
     assert payload["services"]["workflowControl"]["activeDefinitions"] == 6
@@ -74,6 +76,8 @@ def test_tenant_360_returns_tenant_operational_snapshot() -> None:
     assert payload["commercial"]["sales"] == 12
     assert payload["engagement"]["deliveries"] == 17
     assert payload["rentals"]["contracts"] == 12
+    assert payload["finance"]["cashAccounts"] == 2
+    assert payload["billing"]["activeSubscriptions"] == 11
     assert payload["automation"]["workflowRuns"] == 41
 
 
@@ -139,6 +143,19 @@ def test_revenue_operations_returns_financial_operational_payload() -> None:
     assert payload["invoices"]["paidAmountCents"] == 845000
     assert payload["collections"]["invoiceCoverageRate"] == 0.75
     assert payload["risk"]["overdueInvoices"] == 1
+
+
+def test_finance_control_returns_treasury_and_billing_payload() -> None:
+    response = client.get("/api/analytics/reports/finance-control?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["treasury"]["accountsTotal"] == 3
+    assert payload["receivables"]["paidAmountCents"] == 845000
+    assert payload["billing"]["activeSubscriptions"] == 11
+    assert payload["profitability"]["netOperationalMarginCents"] == 453000
+    assert payload["governance"]["failedPaymentAttempts"] == 3
 
 
 def test_rental_operations_returns_rental_operational_payload() -> None:

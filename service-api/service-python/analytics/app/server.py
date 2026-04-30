@@ -8,6 +8,7 @@ from app.reports.automation_board import build_automation_board
 from app.reports.cost_estimator import build_cost_estimator
 from app.reports.delivery_reliability import build_delivery_reliability
 from app.reports.engagement_operations import build_engagement_operations
+from app.reports.finance_control import build_finance_control
 from app.reports.load_benchmark import build_load_benchmark
 from app.reports.pipeline_summary import build_pipeline_summary
 from app.reports.rental_operations import build_rental_operations
@@ -97,6 +98,11 @@ def engagement_operations(tenant_slug: str | None = None) -> dict:
 @app.get("/api/analytics/reports/revenue-operations")
 def revenue_operations(tenant_slug: str | None = None) -> dict:
     return build_revenue_operations(tenant_slug)
+
+
+@app.get("/api/analytics/reports/finance-control")
+def finance_control(tenant_slug: str | None = None) -> dict:
+    return build_finance_control(tenant_slug)
 
 
 @app.get("/api/analytics/reports/rental-operations")

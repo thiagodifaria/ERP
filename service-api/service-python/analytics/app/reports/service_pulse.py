@@ -23,6 +23,8 @@ def build_static_service_pulse(tenant_slug: str | None = None) -> dict:
         "services": {
             "crm": {"totalLeads": 128, "captured": 18, "contacted": 42, "qualified": 37, "disqualified": 31},
             "sales": {"opportunitiesTotal": 34, "proposalsTotal": 21, "salesTotal": 12, "bookedRevenueCents": 1775000},
+            "finance": {"receivablesOpen": 4, "receivablesPaid": 9, "payablesOpen": 2, "cashAccounts": 2, "currentBalanceCents": 1246000, "periodClosures": 4},
+            "billing": {"activeSubscriptions": 11, "graceSubscriptions": 1, "suspendedSubscriptions": 1, "invoicesOpen": 2, "invoicesPaid": 9, "failedAttempts": 3},
             "engagement": {"campaignsTotal": 2, "activeCampaigns": 1, "templatesTotal": 3, "deliveriesTotal": 17, "deliveredDeliveries": 12, "failedDeliveries": 2, "convertedTouchpoints": 3},
             "rentals": {"contractsTotal": 12, "activeContracts": 10, "scheduledCharges": 18, "paidCharges": 11, "cancelledCharges": 3, "overdueCharges": 1},
             "workflowControl": {"activeDefinitions": 6, "runsRunning": 7, "runsCompleted": 31, "runsFailed": 2, "runsCancelled": 1},
@@ -38,6 +40,8 @@ def build_postgres_service_pulse(tenant_slug: str | None = None) -> dict:
     with connect() as connection:
         crm_metrics = fetch_crm_metrics(connection, tenant_slug)
         sales_metrics = fetch_sales_service_metrics(connection, tenant_slug)
+        finance_metrics = fetch_finance_service_metrics(connection, tenant_slug)
+        billing_metrics = fetch_billing_service_metrics(connection, tenant_slug)
         engagement_metrics = fetch_engagement_service_metrics(connection, tenant_slug)
         rentals_metrics = fetch_rentals_service_metrics(connection, tenant_slug)
         workflow_control_metrics = fetch_workflow_control_metrics(connection, tenant_slug)
@@ -51,6 +55,8 @@ def build_postgres_service_pulse(tenant_slug: str | None = None) -> dict:
         "services": {
             "crm": crm_metrics,
             "sales": sales_metrics,
+            "finance": finance_metrics,
+            "billing": billing_metrics,
             "engagement": engagement_metrics,
             "rentals": rentals_metrics,
             "workflowControl": workflow_control_metrics,
@@ -186,6 +192,131 @@ def fetch_engagement_service_metrics(connection, tenant_slug: str | None) -> dic
         "deliveredDeliveries": int(row.get("delivered_deliveries", 0) or 0),
         "failedDeliveries": int(row.get("failed_deliveries", 0) or 0),
         "convertedTouchpoints": int(row.get("converted_touchpoints", 0) or 0),
+    }
+
+
+def fetch_finance_service_metrics(connection, tenant_slug: str | None) -> dict:
+    filter_sql, params = tenant_filter("slug = %s", tenant_slug)
+
+    query = f"""
+        SELECT
+            (
+                SELECT count(*)
+                FROM finance.receivable_entries
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'open'
+            ) AS receivables_open,
+            (
+                SELECT count(*)
+                FROM finance.receivable_entries
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'paid'
+            ) AS receivables_paid,
+            (
+                SELECT count(*)
+                FROM finance.payables
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'open'
+            ) AS payables_open,
+            (
+                SELECT count(*)
+                FROM finance.cash_accounts
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'active'
+            ) AS cash_accounts,
+            (
+                SELECT COALESCE(sum(opening_balance_cents), 0)
+                FROM finance.cash_accounts
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'active'
+            ) +
+            (
+                SELECT COALESCE(sum(amount_cents), 0)
+                FROM finance.cash_movements
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND direction = 'inflow'
+            ) -
+            (
+                SELECT COALESCE(sum(amount_cents), 0)
+                FROM finance.cash_movements
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND direction = 'outflow'
+            ) AS current_balance_cents,
+            (
+                SELECT count(*)
+                FROM finance.period_closures
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS period_closures
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params * 8)
+        row = cursor.fetchone() or {}
+
+    return {
+        "receivablesOpen": int(row.get("receivables_open", 0) or 0),
+        "receivablesPaid": int(row.get("receivables_paid", 0) or 0),
+        "payablesOpen": int(row.get("payables_open", 0) or 0),
+        "cashAccounts": int(row.get("cash_accounts", 0) or 0),
+        "currentBalanceCents": int(row.get("current_balance_cents", 0) or 0),
+        "periodClosures": int(row.get("period_closures", 0) or 0),
+    }
+
+
+def fetch_billing_service_metrics(connection, tenant_slug: str | None) -> dict:
+    filter_sql, params = tenant_filter("slug = %s", tenant_slug)
+
+    query = f"""
+        SELECT
+            (
+                SELECT count(*)
+                FROM billing.subscriptions
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'active'
+            ) AS active_subscriptions,
+            (
+                SELECT count(*)
+                FROM billing.subscriptions
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'grace_period'
+            ) AS grace_subscriptions,
+            (
+                SELECT count(*)
+                FROM billing.subscriptions
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'suspended'
+            ) AS suspended_subscriptions,
+            (
+                SELECT count(*)
+                FROM billing.subscription_invoices
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'open'
+            ) AS invoices_open,
+            (
+                SELECT count(*)
+                FROM billing.subscription_invoices
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'paid'
+            ) AS invoices_paid,
+            (
+                SELECT count(*)
+                FROM billing.payment_attempts
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'failed'
+            ) AS failed_attempts
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params * 6)
+        row = cursor.fetchone() or {}
+
+    return {
+        "activeSubscriptions": int(row.get("active_subscriptions", 0) or 0),
+        "graceSubscriptions": int(row.get("grace_subscriptions", 0) or 0),
+        "suspendedSubscriptions": int(row.get("suspended_subscriptions", 0) or 0),
+        "invoicesOpen": int(row.get("invoices_open", 0) or 0),
+        "invoicesPaid": int(row.get("invoices_paid", 0) or 0),
+        "failedAttempts": int(row.get("failed_attempts", 0) or 0),
     }
 
 

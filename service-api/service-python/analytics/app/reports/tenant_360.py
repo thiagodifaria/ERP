@@ -55,6 +55,22 @@ def build_static_tenant_360(tenant_slug: str | None = None) -> dict:
             "attachments": 7,
             "outstandingAmountCents": 3015000,
         },
+        "finance": {
+            "receivables": 14,
+            "paidReceivables": 9,
+            "commissions": 6,
+            "payables": 6,
+            "cashAccounts": 2,
+            "currentBalanceCents": 1246000,
+            "periodClosures": 4,
+        },
+        "billing": {
+            "plans": 3,
+            "activeSubscriptions": 11,
+            "paidInvoices": 9,
+            "paymentAttempts": 12,
+            "failedAttempts": 3,
+        },
         "automation": {
             "activeDefinitions": 6,
             "workflowRuns": 41,
@@ -75,6 +91,8 @@ def build_postgres_tenant_360(tenant_slug: str | None = None) -> dict:
         commercial_metrics = fetch_commercial_metrics(connection, tenant_slug)
         engagement_metrics = fetch_engagement_metrics(connection, tenant_slug)
         rentals_metrics = fetch_rentals_metrics(connection, tenant_slug)
+        finance_metrics = fetch_finance_metrics(connection, tenant_slug)
+        billing_metrics = fetch_billing_metrics(connection, tenant_slug)
         automation_metrics = fetch_automation_metrics(connection, tenant_slug)
 
     return {
@@ -85,6 +103,8 @@ def build_postgres_tenant_360(tenant_slug: str | None = None) -> dict:
         "commercial": commercial_metrics,
         "engagement": engagement_metrics,
         "rentals": rentals_metrics,
+        "finance": finance_metrics,
+        "billing": billing_metrics,
         "automation": automation_metrics,
     }
 
@@ -327,6 +347,122 @@ def fetch_automation_metrics(connection, tenant_slug: str | None) -> dict:
         "runtimeCompleted": int(runtime_row.get("runtime_completed", 0) or 0),
         "runtimeFailed": int(runtime_row.get("runtime_failed", 0) or 0),
         "runtimeCancelled": int(runtime_row.get("runtime_cancelled", 0) or 0),
+    }
+
+
+def fetch_finance_metrics(connection, tenant_slug: str | None) -> dict:
+    filter_sql, params = tenant_filter("slug = %s", tenant_slug)
+
+    query = f"""
+        SELECT
+            (
+                SELECT count(*)
+                FROM finance.receivable_entries
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS receivables,
+            (
+                SELECT count(*)
+                FROM finance.receivable_entries
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'paid'
+            ) AS paid_receivables,
+            (
+                SELECT count(*)
+                FROM finance.commission_entries
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS commissions,
+            (
+                SELECT count(*)
+                FROM finance.payables
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS payables,
+            (
+                SELECT count(*)
+                FROM finance.cash_accounts
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'active'
+            ) AS cash_accounts,
+            (
+                SELECT COALESCE(sum(opening_balance_cents), 0)
+                FROM finance.cash_accounts
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'active'
+            ) +
+            (
+                SELECT COALESCE(sum(amount_cents), 0)
+                FROM finance.cash_movements
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND direction = 'inflow'
+            ) -
+            (
+                SELECT COALESCE(sum(amount_cents), 0)
+                FROM finance.cash_movements
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND direction = 'outflow'
+            ) AS current_balance_cents,
+            (
+                SELECT count(*)
+                FROM finance.period_closures
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS period_closures
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params * 9)
+        row = cursor.fetchone() or {}
+
+    return {
+        "receivables": int(row.get("receivables", 0) or 0),
+        "paidReceivables": int(row.get("paid_receivables", 0) or 0),
+        "commissions": int(row.get("commissions", 0) or 0),
+        "payables": int(row.get("payables", 0) or 0),
+        "cashAccounts": int(row.get("cash_accounts", 0) or 0),
+        "currentBalanceCents": int(row.get("current_balance_cents", 0) or 0),
+        "periodClosures": int(row.get("period_closures", 0) or 0),
+    }
+
+
+def fetch_billing_metrics(connection, tenant_slug: str | None) -> dict:
+    filter_sql, params = tenant_filter("slug = %s", tenant_slug)
+
+    query = f"""
+        SELECT
+            (SELECT count(*) FROM billing.plans) AS plans,
+            (
+                SELECT count(*)
+                FROM billing.subscriptions
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'active'
+            ) AS active_subscriptions,
+            (
+                SELECT count(*)
+                FROM billing.subscription_invoices
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'paid'
+            ) AS paid_invoices,
+            (
+                SELECT count(*)
+                FROM billing.payment_attempts
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS payment_attempts,
+            (
+                SELECT count(*)
+                FROM billing.payment_attempts
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'failed'
+            ) AS failed_attempts
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params * 4)
+        row = cursor.fetchone() or {}
+
+    return {
+        "plans": int(row.get("plans", 0) or 0),
+        "activeSubscriptions": int(row.get("active_subscriptions", 0) or 0),
+        "paidInvoices": int(row.get("paid_invoices", 0) or 0),
+        "paymentAttempts": int(row.get("payment_attempts", 0) or 0),
+        "failedAttempts": int(row.get("failed_attempts", 0) or 0),
     }
 
 
