@@ -407,11 +407,16 @@ main() {
             SELECT
               tenant.slug,
               (SELECT count(*) FROM engagement.campaigns AS campaign WHERE campaign.tenant_id = tenant.id) AS campaigns,
+              (SELECT count(*) FROM engagement.templates AS template WHERE template.tenant_id = tenant.id) AS templates,
               (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id) AS touchpoints,
+              (SELECT count(*) FROM engagement.touchpoint_deliveries AS delivery WHERE delivery.tenant_id = tenant.id) AS deliveries,
               (SELECT count(*) FROM engagement.campaigns AS campaign WHERE campaign.tenant_id = tenant.id AND campaign.status = 'active') AS active_campaigns,
               (SELECT count(*) FROM engagement.campaigns AS campaign WHERE campaign.tenant_id = tenant.id AND campaign.status = 'paused') AS paused_campaigns,
+              (SELECT count(*) FROM engagement.templates AS template WHERE template.tenant_id = tenant.id AND template.status = 'active') AS active_templates,
               (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.status = 'responded') AS responded_touchpoints,
               (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.status = 'converted') AS converted_touchpoints,
+              (SELECT count(*) FROM engagement.touchpoint_deliveries AS delivery WHERE delivery.tenant_id = tenant.id AND delivery.status = 'delivered') AS delivered_deliveries,
+              (SELECT count(*) FROM engagement.touchpoint_deliveries AS delivery WHERE delivery.tenant_id = tenant.id AND delivery.status = 'failed') AS failed_deliveries,
               (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.last_workflow_run_public_id IS NOT NULL) AS workflow_dispatched
             FROM identity.tenants AS tenant
             $where_clause

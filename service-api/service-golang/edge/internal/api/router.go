@@ -17,6 +17,7 @@ func NewRouter(
 	opsHandler handler.OpsHandler,
 	tenantOverviewHandler handler.TenantOverviewHandler,
 	automationOverviewHandler handler.AutomationOverviewHandler,
+	engagementOverviewHandler handler.EngagementOverviewHandler,
 	salesOverviewHandler handler.SalesOverviewHandler,
 	revenueOverviewHandler handler.RevenueOverviewHandler,
 	rentalsOverviewHandler handler.RentalsOverviewHandler,
@@ -30,6 +31,7 @@ func NewRouter(
 	mux.HandleFunc("/api/edge/ops/health", opsHandler.Health)
 	mux.Handle("/api/edge/ops/tenant-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(tenantOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/automation-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(automationOverviewHandler.Overview)))
+	mux.Handle("/api/edge/ops/engagement-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(engagementOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/sales-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(salesOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/revenue-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(revenueOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/rentals-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(rentalsOverviewHandler.Overview)))

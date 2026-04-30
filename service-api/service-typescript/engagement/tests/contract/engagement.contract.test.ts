@@ -61,6 +61,44 @@ test("campaign routes expose catalog and status transition", async () => {
   });
 });
 
+test("template routes expose catalog and status transition", async () => {
+  await withServer(async (baseUrl) => {
+    const listResponse = await fetch(`${baseUrl}/api/engagement/templates?tenantSlug=bootstrap-ops`);
+    const listPayload = (await listResponse.json()) as Array<{ publicId: string; key: string }>;
+
+    assert.equal(listResponse.status, 200);
+    assert.equal(listPayload.length, 1);
+
+    const createResponse = await fetch(`${baseUrl}/api/engagement/templates`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        tenantSlug: "bootstrap-ops",
+        key: "reactivation-email-template",
+        name: "Reactivation Email Template",
+        channel: "email",
+        provider: "resend",
+        subject: "Ainda faz sentido retomarmos?",
+        body: "Ola {{firstName}}, retomamos seu contexto para seguir daqui."
+      })
+    });
+    const createdTemplate = (await createResponse.json()) as { publicId: string; status: string };
+
+    assert.equal(createResponse.status, 201);
+    assert.equal(createdTemplate.status, "draft");
+
+    const statusResponse = await fetch(`${baseUrl}/api/engagement/templates/${createdTemplate.publicId}/status`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "active" })
+    });
+    const updatedTemplate = (await statusResponse.json()) as { status: string };
+
+    assert.equal(statusResponse.status, 200);
+    assert.equal(updatedTemplate.status, "active");
+  });
+});
+
 test("touchpoint routes expose list, creation and summary", async () => {
   await withServer(async (baseUrl) => {
     const createResponse = await fetch(`${baseUrl}/api/engagement/touchpoints`, {
@@ -105,5 +143,73 @@ test("touchpoint routes expose list, creation and summary", async () => {
     assert.equal(summaryPayload.totals.touchpoints, 2);
     assert.equal(summaryPayload.totals.workflowDispatched, 2);
     assert.equal(summaryPayload.byStatus.responded, 2);
+  });
+});
+
+test("delivery routes expose creation, status transition and summary", async () => {
+  await withServer(async (baseUrl) => {
+    const createTouchpointResponse = await fetch(`${baseUrl}/api/engagement/touchpoints`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        tenantSlug: "bootstrap-ops",
+        campaignPublicId: "00000000-0000-0000-0000-00000000c101",
+        leadPublicId: "00000000-0000-0000-0000-000000008823",
+        contactValue: "+5531777777777",
+        source: "crm",
+        createdBy: "contract-test",
+        notes: "Teste publico de entregas."
+      })
+    });
+    const createdTouchpoint = (await createTouchpointResponse.json()) as { publicId: string };
+    assert.equal(createTouchpointResponse.status, 201);
+
+    const createDeliveryResponse = await fetch(
+      `${baseUrl}/api/engagement/touchpoints/${createdTouchpoint.publicId}/deliveries`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          tenantSlug: "bootstrap-ops",
+          provider: "resend",
+          providerMessageId: "msg-contract-001",
+          sentBy: "contract-test",
+          notes: "Entrega inicial do contrato."
+        })
+      }
+    );
+    const createdDelivery = (await createDeliveryResponse.json()) as { publicId: string; status: string };
+    assert.equal(createDeliveryResponse.status, 201);
+    assert.equal(createdDelivery.status, "sent");
+
+    const listDeliveriesResponse = await fetch(
+      `${baseUrl}/api/engagement/touchpoints/${createdTouchpoint.publicId}/deliveries?tenantSlug=bootstrap-ops`
+    );
+    const listDeliveriesPayload = (await listDeliveriesResponse.json()) as Array<{ publicId: string }>;
+    assert.equal(listDeliveriesResponse.status, 200);
+    assert.equal(listDeliveriesPayload.length, 1);
+
+    const statusResponse = await fetch(
+      `${baseUrl}/api/engagement/touchpoints/${createdTouchpoint.publicId}/deliveries/${createdDelivery.publicId}/status`,
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "delivered", providerMessageId: "msg-contract-001" })
+      }
+    );
+    const updatedDelivery = (await statusResponse.json()) as { status: string };
+    assert.equal(statusResponse.status, 200);
+    assert.equal(updatedDelivery.status, "delivered");
+
+    const summaryResponse = await fetch(`${baseUrl}/api/engagement/deliveries/summary?tenantSlug=bootstrap-ops`);
+    const summaryPayload = (await summaryResponse.json()) as {
+      totals: { deliveries: number; templates: number };
+      byStatus: { delivered: number };
+    };
+
+    assert.equal(summaryResponse.status, 200);
+    assert.equal(summaryPayload.totals.templates, 2);
+    assert.equal(summaryPayload.totals.deliveries, 2);
+    assert.equal(summaryPayload.byStatus.delivered, 2);
   });
 });

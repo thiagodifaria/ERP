@@ -37,6 +37,16 @@ def build_static_tenant_360(tenant_slug: str | None = None) -> dict:
             "sales": 12,
             "bookedRevenueCents": 1775000,
         },
+        "engagement": {
+            "campaigns": 2,
+            "activeCampaigns": 1,
+            "templates": 3,
+            "touchpoints": 18,
+            "deliveries": 17,
+            "deliveredDeliveries": 12,
+            "convertedTouchpoints": 3,
+            "failedDeliveries": 2,
+        },
         "rentals": {
             "contracts": 12,
             "activeContracts": 10,
@@ -63,6 +73,7 @@ def build_postgres_tenant_360(tenant_slug: str | None = None) -> dict:
     with connect() as connection:
         identity_metrics = fetch_identity_metrics(connection, tenant_slug)
         commercial_metrics = fetch_commercial_metrics(connection, tenant_slug)
+        engagement_metrics = fetch_engagement_metrics(connection, tenant_slug)
         rentals_metrics = fetch_rentals_metrics(connection, tenant_slug)
         automation_metrics = fetch_automation_metrics(connection, tenant_slug)
 
@@ -72,6 +83,7 @@ def build_postgres_tenant_360(tenant_slug: str | None = None) -> dict:
         "dataSource": "postgresql",
         "identity": identity_metrics,
         "commercial": commercial_metrics,
+        "engagement": engagement_metrics,
         "rentals": rentals_metrics,
         "automation": automation_metrics,
     }
@@ -186,6 +198,73 @@ def fetch_commercial_metrics(connection, tenant_slug: str | None) -> dict:
         "proposals": int(sales_row.get("proposals", 0) or 0),
         "sales": int(sales_row.get("sales", 0) or 0),
         "bookedRevenueCents": int(sales_row.get("booked_revenue_cents", 0) or 0),
+    }
+
+
+def fetch_engagement_metrics(connection, tenant_slug: str | None) -> dict:
+    filter_sql, params = tenant_filter("slug = %s", tenant_slug)
+
+    query = f"""
+        SELECT
+            (
+                SELECT count(*)
+                FROM engagement.campaigns
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS campaigns,
+            (
+                SELECT count(*)
+                FROM engagement.campaigns
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'active'
+            ) AS active_campaigns,
+            (
+                SELECT count(*)
+                FROM engagement.templates
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS templates,
+            (
+                SELECT count(*)
+                FROM engagement.touchpoints
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS touchpoints,
+            (
+                SELECT count(*)
+                FROM engagement.touchpoint_deliveries
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS deliveries,
+            (
+                SELECT count(*)
+                FROM engagement.touchpoint_deliveries
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'delivered'
+            ) AS delivered_deliveries,
+            (
+                SELECT count(*)
+                FROM engagement.touchpoints
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'converted'
+            ) AS converted_touchpoints,
+            (
+                SELECT count(*)
+                FROM engagement.touchpoint_deliveries
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'failed'
+            ) AS failed_deliveries
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params * 8)
+        row = cursor.fetchone() or {}
+
+    return {
+        "campaigns": int(row.get("campaigns", 0) or 0),
+        "activeCampaigns": int(row.get("active_campaigns", 0) or 0),
+        "templates": int(row.get("templates", 0) or 0),
+        "touchpoints": int(row.get("touchpoints", 0) or 0),
+        "deliveries": int(row.get("deliveries", 0) or 0),
+        "deliveredDeliveries": int(row.get("delivered_deliveries", 0) or 0),
+        "convertedTouchpoints": int(row.get("converted_touchpoints", 0) or 0),
+        "failedDeliveries": int(row.get("failed_deliveries", 0) or 0),
     }
 
 

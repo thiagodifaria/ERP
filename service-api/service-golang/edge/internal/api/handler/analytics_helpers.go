@@ -67,3 +67,41 @@ func readMapInt(payload map[string]any, path ...string) int {
 
 	return 0
 }
+
+func readMapFloat(payload map[string]any, path ...string) float64 {
+	var current any = payload
+
+	for _, key := range path {
+		currentMap, ok := current.(map[string]any)
+		if !ok {
+			return 0
+		}
+
+		nextValue, ok := currentMap[key]
+		if !ok {
+			return 0
+		}
+
+		current = nextValue
+	}
+
+	switch value := current.(type) {
+	case float32:
+		return float64(value)
+	case float64:
+		return value
+	case int:
+		return float64(value)
+	case int32:
+		return float64(value)
+	case int64:
+		return float64(value)
+	case json.Number:
+		parsed, err := value.Float64()
+		if err == nil {
+			return parsed
+		}
+	}
+
+	return 0
+}

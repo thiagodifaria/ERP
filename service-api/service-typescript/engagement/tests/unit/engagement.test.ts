@@ -24,6 +24,27 @@ test("campaign catalog exposes bootstrap campaign and supports creation", async 
   assert.equal(created.channel, "email");
 });
 
+test("template catalog exposes bootstrap template and supports creation", async () => {
+  const templates = await services.listTemplates.execute({ tenantSlug: "bootstrap-ops" });
+
+  assert.equal(templates.length, 1);
+  assert.equal(templates[0]?.key, "lead-follow-up-whatsapp");
+
+  const created = await services.createTemplate.execute({
+    tenantSlug: "bootstrap-ops",
+    key: "proposal-reminder-email",
+    name: "Proposal Reminder Email",
+    channel: "email",
+    provider: "resend",
+    status: "draft",
+    subject: "Sua proposta segue aberta",
+    body: "Ola {{firstName}}, seguimos disponiveis para concluir sua proposta."
+  });
+
+  assert.equal(created.provider, "resend");
+  assert.equal(created.status, "draft");
+});
+
 test("touchpoint stream supports creation, status update and summary", async () => {
   const created = await services.createTouchpoint.execute({
     tenantSlug: "bootstrap-ops",
@@ -53,4 +74,44 @@ test("touchpoint stream supports creation, status update and summary", async () 
   assert.equal(summary.totals.workflowDispatched, 2);
   assert.equal(summary.byStatus.converted, 1);
   assert.equal(summary.byChannel.whatsapp, 2);
+});
+
+test("delivery stream supports creation, status update and summary", async () => {
+  const created = await services.createTouchpoint.execute({
+    tenantSlug: "bootstrap-ops",
+    campaignPublicId: "00000000-0000-0000-0000-00000000c102",
+    leadPublicId: "00000000-0000-0000-0000-000000008812",
+    contactValue: "lead@example.com",
+    source: "crm",
+    createdBy: "unit-test",
+    notes: "Touchpoint para entrega do teste."
+  });
+
+  const delivery = await services.createTouchpointDelivery.execute(created.publicId, {
+    tenantSlug: "bootstrap-ops",
+    templatePublicId: null,
+    provider: "resend",
+    providerMessageId: "msg-unit-001",
+    sentBy: "unit-test",
+    notes: "Entrega inicial do teste."
+  });
+
+  assert.equal(delivery.status, "sent");
+  assert.equal(delivery.provider, "resend");
+
+  const updated = await services.updateTouchpointDeliveryStatus.execute(delivery.publicId, {
+    status: "delivered",
+    providerMessageId: "msg-unit-001",
+    notes: "Confirmado pelo provider."
+  });
+
+  assert.equal(updated?.status, "delivered");
+
+  const summary = await services.getDeliverySummary.execute({ tenantSlug: "bootstrap-ops" });
+
+  assert.equal(summary.totals.templates, 2);
+  assert.equal(summary.totals.deliveries, 2);
+  assert.equal(summary.byProvider.manual, 1);
+  assert.equal(summary.byProvider.resend, 1);
+  assert.equal(summary.byStatus.delivered, 2);
 });

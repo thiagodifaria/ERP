@@ -21,6 +21,7 @@ func buildTestRouter() http.Handler {
 		handler.NewOpsHandler("edge", stubHealthChecker{}, nil),
 		handler.NewTenantOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewEngagementOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRentalsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
@@ -50,6 +51,7 @@ func TestRouterShouldExposeHealthDetails(t *testing.T) {
 		),
 		handler.NewTenantOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewEngagementOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRentalsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
@@ -97,6 +99,7 @@ func TestRouterShouldExposeOpsHealth(t *testing.T) {
 		),
 		handler.NewTenantOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewEngagementOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRentalsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
@@ -184,6 +187,28 @@ func TestRouterShouldExposeSalesOverview(t *testing.T) {
 	}
 
 	var response dto.SalesOverviewResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.TenantSlug != "bootstrap-ops" {
+		t.Fatalf("expected tenant slug bootstrap-ops, got %s", response.TenantSlug)
+	}
+}
+
+func TestRouterShouldExposeEngagementOverview(t *testing.T) {
+	router := buildTestRouter()
+	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/engagement-overview?tenantSlug=bootstrap-ops", nil)
+	request.Header.Set("Authorization", "Bearer session-123")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response dto.EngagementOverviewResponse
 	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
 		t.Fatalf("unexpected decode error: %v", err)
 	}
@@ -319,8 +344,35 @@ func (stubHealthChecker) GetJSON(_ context.Context, requestURL string, target an
 				"total":              1,
 				"bookedRevenueCents": 125000,
 			},
+			"engagement": map[string]any{
+				"campaignsTotal":       2,
+				"templatesTotal":       2,
+				"deliveriesTotal":      4,
+				"failedDeliveries":     1,
+				"convertedTouchpoints": 1,
+			},
 			"automation": map[string]any{
 				"runtimeCompleted": 2,
+			},
+		}
+	case strings.Contains(requestURL, "/engagement-operations"):
+		payload = map[string]any{
+			"tenantSlug": "bootstrap-ops",
+			"campaigns": map[string]any{
+				"total":  2,
+				"active": 1,
+			},
+			"templates": map[string]any{
+				"total": 2,
+			},
+			"touchpoints": map[string]any{
+				"converted": 1,
+			},
+			"deliveries": map[string]any{
+				"total":        4,
+				"delivered":    3,
+				"failed":       1,
+				"deliveryRate": 0.75,
 			},
 		}
 	case strings.Contains(requestURL, "/revenue-operations"):
@@ -370,6 +422,11 @@ func (stubHealthChecker) GetJSON(_ context.Context, requestURL string, target an
 				"opportunities":  1,
 				"proposals":      1,
 				"sales":          1,
+			},
+			"engagement": map[string]any{
+				"campaigns":  2,
+				"templates":  2,
+				"deliveries": 4,
 			},
 			"rentals": map[string]any{
 				"attachments": 1,

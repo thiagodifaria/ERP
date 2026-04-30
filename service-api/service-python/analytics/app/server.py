@@ -7,6 +7,7 @@ from app.infrastructure.postgres import postgres_ready
 from app.reports.automation_board import build_automation_board
 from app.reports.cost_estimator import build_cost_estimator
 from app.reports.delivery_reliability import build_delivery_reliability
+from app.reports.engagement_operations import build_engagement_operations
 from app.reports.load_benchmark import build_load_benchmark
 from app.reports.pipeline_summary import build_pipeline_summary
 from app.reports.rental_operations import build_rental_operations
@@ -86,6 +87,11 @@ def workflow_definition_health(tenant_slug: str | None = None) -> dict:
 @app.get("/api/analytics/reports/delivery-reliability")
 def delivery_reliability(provider: str | None = None) -> dict:
     return build_delivery_reliability(provider)
+
+
+@app.get("/api/analytics/reports/engagement-operations")
+def engagement_operations(tenant_slug: str | None = None) -> dict:
+    return build_engagement_operations(tenant_slug)
 
 
 @app.get("/api/analytics/reports/revenue-operations")

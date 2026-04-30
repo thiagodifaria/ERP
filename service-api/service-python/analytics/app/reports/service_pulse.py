@@ -23,6 +23,7 @@ def build_static_service_pulse(tenant_slug: str | None = None) -> dict:
         "services": {
             "crm": {"totalLeads": 128, "captured": 18, "contacted": 42, "qualified": 37, "disqualified": 31},
             "sales": {"opportunitiesTotal": 34, "proposalsTotal": 21, "salesTotal": 12, "bookedRevenueCents": 1775000},
+            "engagement": {"campaignsTotal": 2, "activeCampaigns": 1, "templatesTotal": 3, "deliveriesTotal": 17, "deliveredDeliveries": 12, "failedDeliveries": 2, "convertedTouchpoints": 3},
             "rentals": {"contractsTotal": 12, "activeContracts": 10, "scheduledCharges": 18, "paidCharges": 11, "cancelledCharges": 3, "overdueCharges": 1},
             "workflowControl": {"activeDefinitions": 6, "runsRunning": 7, "runsCompleted": 31, "runsFailed": 2, "runsCancelled": 1},
             "workflowRuntime": {"totalExecutions": 44, "running": 4, "completed": 28, "failed": 8, "cancelled": 4},
@@ -37,6 +38,7 @@ def build_postgres_service_pulse(tenant_slug: str | None = None) -> dict:
     with connect() as connection:
         crm_metrics = fetch_crm_metrics(connection, tenant_slug)
         sales_metrics = fetch_sales_service_metrics(connection, tenant_slug)
+        engagement_metrics = fetch_engagement_service_metrics(connection, tenant_slug)
         rentals_metrics = fetch_rentals_service_metrics(connection, tenant_slug)
         workflow_control_metrics = fetch_workflow_control_metrics(connection, tenant_slug)
         workflow_runtime_metrics = fetch_workflow_runtime_metrics(connection, tenant_slug)
@@ -49,6 +51,7 @@ def build_postgres_service_pulse(tenant_slug: str | None = None) -> dict:
         "services": {
             "crm": crm_metrics,
             "sales": sales_metrics,
+            "engagement": engagement_metrics,
             "rentals": rentals_metrics,
             "workflowControl": workflow_control_metrics,
             "workflowRuntime": workflow_runtime_metrics,
@@ -122,6 +125,67 @@ def fetch_sales_service_metrics(connection, tenant_slug: str | None) -> dict:
         "proposalsTotal": int(row.get("proposals_total", 0) or 0),
         "salesTotal": int(row.get("sales_total", 0) or 0),
         "bookedRevenueCents": int(row.get("booked_revenue_cents", 0) or 0),
+    }
+
+
+def fetch_engagement_service_metrics(connection, tenant_slug: str | None) -> dict:
+    filter_sql, params = tenant_filter("slug = %s", tenant_slug)
+
+    query = f"""
+        SELECT
+            (
+                SELECT count(*)
+                FROM engagement.campaigns
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS campaigns_total,
+            (
+                SELECT count(*)
+                FROM engagement.campaigns
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'active'
+            ) AS active_campaigns,
+            (
+                SELECT count(*)
+                FROM engagement.templates
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS templates_total,
+            (
+                SELECT count(*)
+                FROM engagement.touchpoint_deliveries
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS deliveries_total,
+            (
+                SELECT count(*)
+                FROM engagement.touchpoint_deliveries
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'delivered'
+            ) AS delivered_deliveries,
+            (
+                SELECT count(*)
+                FROM engagement.touchpoint_deliveries
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'failed'
+            ) AS failed_deliveries,
+            (
+                SELECT count(*)
+                FROM engagement.touchpoints
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'converted'
+            ) AS converted_touchpoints
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params * 7)
+        row = cursor.fetchone() or {}
+
+    return {
+        "campaignsTotal": int(row.get("campaigns_total", 0) or 0),
+        "activeCampaigns": int(row.get("active_campaigns", 0) or 0),
+        "templatesTotal": int(row.get("templates_total", 0) or 0),
+        "deliveriesTotal": int(row.get("deliveries_total", 0) or 0),
+        "deliveredDeliveries": int(row.get("delivered_deliveries", 0) or 0),
+        "failedDeliveries": int(row.get("failed_deliveries", 0) or 0),
+        "convertedTouchpoints": int(row.get("converted_touchpoints", 0) or 0),
     }
 
 

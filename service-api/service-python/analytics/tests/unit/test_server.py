@@ -45,6 +45,7 @@ def test_service_pulse_returns_cross_service_payload() -> None:
     assert payload["tenantSlug"] == "bootstrap-ops"
     assert payload["services"]["crm"]["totalLeads"] == 128
     assert payload["services"]["sales"]["salesTotal"] == 12
+    assert payload["services"]["engagement"]["templatesTotal"] == 3
     assert payload["services"]["rentals"]["contractsTotal"] == 12
     assert payload["services"]["workflowControl"]["activeDefinitions"] == 6
     assert payload["services"]["webhookHub"]["forwarded"] == 87
@@ -71,8 +72,21 @@ def test_tenant_360_returns_tenant_operational_snapshot() -> None:
     assert payload["identity"]["companies"] == 3
     assert payload["commercial"]["assignedLeads"] == 96
     assert payload["commercial"]["sales"] == 12
+    assert payload["engagement"]["deliveries"] == 17
     assert payload["rentals"]["contracts"] == 12
     assert payload["automation"]["workflowRuns"] == 41
+
+
+def test_engagement_operations_returns_engagement_operational_payload() -> None:
+    response = client.get("/api/analytics/reports/engagement-operations?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["campaigns"]["total"] == 2
+    assert payload["templates"]["active"] == 2
+    assert payload["deliveries"]["byProvider"]["whatsapp_cloud"] == 8
+    assert payload["governance"]["activeProviders"] == 4
 
 
 def test_automation_board_returns_delivery_and_runtime_board() -> None:
