@@ -12,6 +12,7 @@ Initial scope:
 - engagement cockpit aggregation via `GET /api/edge/ops/engagement-overview`
 - sales cockpit aggregation via `GET /api/edge/ops/sales-overview`
 - revenue cockpit aggregation via `GET /api/edge/ops/revenue-overview`
+- finance cockpit aggregation via `GET /api/edge/ops/finance-overview`
 - rentals cockpit aggregation via `GET /api/edge/ops/rentals-overview`
 - bootstrap structure
 - request correlation
@@ -30,6 +31,7 @@ Public routes:
 - `GET /api/edge/ops/engagement-overview`
 - `GET /api/edge/ops/sales-overview`
 - `GET /api/edge/ops/revenue-overview`
+- `GET /api/edge/ops/finance-overview`
 - `GET /api/edge/ops/rentals-overview`
 
 Protected routes:
@@ -39,6 +41,7 @@ Protected routes:
 - `GET /api/edge/ops/engagement-overview`
 - `GET /api/edge/ops/sales-overview`
 - `GET /api/edge/ops/revenue-overview`
+- `GET /api/edge/ops/finance-overview`
 - `GET /api/edge/ops/rentals-overview`
 
 Protected operational routes require:

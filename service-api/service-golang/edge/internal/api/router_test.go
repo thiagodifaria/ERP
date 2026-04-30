@@ -24,6 +24,7 @@ func buildTestRouter() http.Handler {
 		handler.NewEngagementOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewFinanceOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRentalsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		"http://identity.local",
 		stubAccessResolver{},
@@ -54,6 +55,7 @@ func TestRouterShouldExposeHealthDetails(t *testing.T) {
 		handler.NewEngagementOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewFinanceOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRentalsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		"http://identity.local",
 		stubAccessResolver{},
@@ -102,6 +104,7 @@ func TestRouterShouldExposeOpsHealth(t *testing.T) {
 		handler.NewEngagementOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewFinanceOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRentalsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		"http://identity.local",
 		stubAccessResolver{},
@@ -231,6 +234,28 @@ func TestRouterShouldExposeRevenueOverview(t *testing.T) {
 	}
 
 	var response dto.RevenueOverviewResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.TenantSlug != "bootstrap-ops" {
+		t.Fatalf("expected tenant slug bootstrap-ops, got %s", response.TenantSlug)
+	}
+}
+
+func TestRouterShouldExposeFinanceOverview(t *testing.T) {
+	router := buildTestRouter()
+	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/finance-overview?tenantSlug=bootstrap-ops", nil)
+	request.Header.Set("Authorization", "Bearer session-123")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response dto.FinanceOverviewResponse
 	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
 		t.Fatalf("unexpected decode error: %v", err)
 	}
