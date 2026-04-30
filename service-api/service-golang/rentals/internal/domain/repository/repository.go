@@ -18,11 +18,13 @@ type ContractSummary struct {
 	ActiveContracts      int
 	TerminatedContracts  int
 	ScheduledCharges     int
+	PaidCharges          int
 	CancelledCharges     int
 	Adjustments          int
 	HistoryEvents        int
 	PendingOutbox        int
 	ScheduledAmountCents int64
+	PaidAmountCents      int64
 	CancelledAmountCents int64
 }
 
@@ -63,8 +65,10 @@ type ContractRepository interface {
 	FindByPublicID(tenantSlug string, publicID string) (entity.Contract, bool)
 	Create(contract entity.Contract, charges []entity.Charge, event entity.Event, outbox entity.OutboxEvent) entity.Contract
 	ListCharges(tenantSlug string, contractPublicID string, status string) []entity.Charge
+	FindChargeByPublicID(tenantSlug string, contractPublicID string, chargePublicID string) (entity.Charge, bool)
 	ListEvents(tenantSlug string, contractPublicID string) []entity.Event
 	ListAdjustments(tenantSlug string, contractPublicID string) []entity.Adjustment
 	SaveAdjustment(tenantSlug string, contract entity.Contract, adjustment entity.Adjustment, charges []entity.Charge, event entity.Event, outbox entity.OutboxEvent) (entity.Contract, bool)
+	SaveChargeStatus(tenantSlug string, charge entity.Charge, event entity.Event, outbox entity.OutboxEvent) (entity.Charge, bool)
 	SaveTermination(tenantSlug string, contract entity.Contract, charges []entity.Charge, event entity.Event, outbox entity.OutboxEvent) (entity.Contract, bool)
 }

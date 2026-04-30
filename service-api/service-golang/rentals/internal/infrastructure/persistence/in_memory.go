@@ -72,6 +72,10 @@ func (repository *InMemoryContractRepository) Summary(tenantSlug string) repo.Co
 			summary.ScheduledCharges++
 			summary.ScheduledAmountCents += charge.AmountCents
 		}
+		if charge.Status == "paid" {
+			summary.PaidCharges++
+			summary.PaidAmountCents += charge.AmountCents
+		}
 		if charge.Status == "cancelled" {
 			summary.CancelledCharges++
 			summary.CancelledAmountCents += charge.AmountCents
@@ -147,6 +151,22 @@ func (repository *InMemoryContractRepository) ListCharges(tenantSlug string, con
 	return response
 }
 
+func (repository *InMemoryContractRepository) FindChargeByPublicID(tenantSlug string, contractPublicID string, chargePublicID string) (entity.Charge, bool) {
+	contract, ok := repository.FindByPublicID(tenantSlug, contractPublicID)
+	if !ok {
+		return entity.Charge{}, false
+	}
+
+	normalizedChargePublicID := strings.TrimSpace(chargePublicID)
+	for _, charge := range repository.charges {
+		if charge.ContractPublicID == contract.PublicID && charge.PublicID == normalizedChargePublicID {
+			return charge, true
+		}
+	}
+
+	return entity.Charge{}, false
+}
+
 func (repository *InMemoryContractRepository) ListEvents(tenantSlug string, contractPublicID string) []entity.Event {
 	contract, ok := repository.FindByPublicID(tenantSlug, contractPublicID)
 	if !ok {
@@ -202,6 +222,30 @@ func (repository *InMemoryContractRepository) SaveAdjustment(tenantSlug string, 
 	}
 
 	return entity.Contract{}, false
+}
+
+func (repository *InMemoryContractRepository) SaveChargeStatus(tenantSlug string, charge entity.Charge, event entity.Event, outbox entity.OutboxEvent) (entity.Charge, bool) {
+	normalizedTenant := strings.ToLower(strings.TrimSpace(tenantSlug))
+	for index := range repository.charges {
+		if repository.charges[index].PublicID != charge.PublicID {
+			continue
+		}
+
+		contract, ok := repository.FindByPublicID(normalizedTenant, repository.charges[index].ContractPublicID)
+		if !ok {
+			continue
+		}
+		if normalizedTenant != "" && contract.TenantSlug != normalizedTenant {
+			continue
+		}
+
+		repository.charges[index] = charge
+		repository.events = append(repository.events, event)
+		repository.outbox = append(repository.outbox, outbox)
+		return charge, true
+	}
+
+	return entity.Charge{}, false
 }
 
 func (repository *InMemoryContractRepository) SaveTermination(tenantSlug string, contract entity.Contract, charges []entity.Charge, event entity.Event, outbox entity.OutboxEvent) (entity.Contract, bool) {

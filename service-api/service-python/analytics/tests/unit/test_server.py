@@ -45,6 +45,7 @@ def test_service_pulse_returns_cross_service_payload() -> None:
     assert payload["tenantSlug"] == "bootstrap-ops"
     assert payload["services"]["crm"]["totalLeads"] == 128
     assert payload["services"]["sales"]["salesTotal"] == 12
+    assert payload["services"]["rentals"]["contractsTotal"] == 12
     assert payload["services"]["workflowControl"]["activeDefinitions"] == 6
     assert payload["services"]["webhookHub"]["forwarded"] == 87
 
@@ -70,6 +71,7 @@ def test_tenant_360_returns_tenant_operational_snapshot() -> None:
     assert payload["identity"]["companies"] == 3
     assert payload["commercial"]["assignedLeads"] == 96
     assert payload["commercial"]["sales"] == 12
+    assert payload["rentals"]["contracts"] == 12
     assert payload["automation"]["workflowRuns"] == 41
 
 
@@ -123,6 +125,18 @@ def test_revenue_operations_returns_financial_operational_payload() -> None:
     assert payload["invoices"]["paidAmountCents"] == 845000
     assert payload["collections"]["invoiceCoverageRate"] == 0.75
     assert payload["risk"]["overdueInvoices"] == 1
+
+
+def test_rental_operations_returns_rental_operational_payload() -> None:
+    response = client.get("/api/analytics/reports/rental-operations?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["contracts"]["active"] == 10
+    assert payload["charges"]["scheduled"] == 18
+    assert payload["charges"]["collectedAmountCents"] == 1665000
+    assert payload["governance"]["attachments"] == 7
 
 
 def test_cost_estimator_returns_scenario_based_cost_payload() -> None:

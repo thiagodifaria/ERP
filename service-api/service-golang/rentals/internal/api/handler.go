@@ -43,11 +43,13 @@ func (handler ContractHandler) GetSummary(writer http.ResponseWriter, request *h
 		ActiveContracts:      summary.ActiveContracts,
 		TerminatedContracts:  summary.TerminatedContracts,
 		ScheduledCharges:     summary.ScheduledCharges,
+		PaidCharges:          summary.PaidCharges,
 		CancelledCharges:     summary.CancelledCharges,
 		Adjustments:          summary.Adjustments,
 		HistoryEvents:        summary.HistoryEvents,
 		PendingOutbox:        summary.PendingOutbox,
 		ScheduledAmountCents: summary.ScheduledAmountCents,
+		PaidAmountCents:      summary.PaidAmountCents,
 		CancelledAmountCents: summary.CancelledAmountCents,
 	})
 }
@@ -128,6 +130,51 @@ func (handler ContractHandler) ListCharges(writer http.ResponseWriter, request *
 	}
 
 	writeJSON(writer, http.StatusOK, response)
+}
+
+func (handler ContractHandler) UpdateChargeStatus(writer http.ResponseWriter, request *http.Request) {
+	var payload UpdateChargeStatusRequest
+	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+		writeError(writer, http.StatusBadRequest, "invalid_json", "Request body is invalid.")
+		return
+	}
+
+	tenantSlug := payload.TenantSlug
+	contractPublicID := request.PathValue("publicId")
+	if _, ok := handler.repository.FindByPublicID(tenantSlug, contractPublicID); !ok {
+		writeError(writer, http.StatusNotFound, "contract_not_found", "Contract was not found.")
+		return
+	}
+
+	charge, ok := handler.repository.FindChargeByPublicID(tenantSlug, contractPublicID, request.PathValue("chargePublicId"))
+	if !ok {
+		writeError(writer, http.StatusNotFound, "charge_not_found", "Charge was not found.")
+		return
+	}
+
+	paidAt := time.Time{}
+	if strings.TrimSpace(payload.PaidAt) != "" {
+		var parsed bool
+		paidAt, parsed = parseTimestamp(payload.PaidAt)
+		if !parsed {
+			writeError(writer, http.StatusBadRequest, "invalid_charge_status", "Charge paid at is invalid.")
+			return
+		}
+	}
+
+	updatedCharge, event, outbox, err := charge.UpdateStatus(payload.Status, payload.RecordedBy, paidAt, payload.PaymentReference)
+	if err != nil {
+		writeError(writer, http.StatusBadRequest, "invalid_charge_status", err.Error())
+		return
+	}
+
+	savedCharge, saved := handler.repository.SaveChargeStatus(tenantSlug, updatedCharge, event, outbox)
+	if !saved {
+		writeError(writer, http.StatusNotFound, "charge_not_found", "Charge was not found.")
+		return
+	}
+
+	writeJSON(writer, http.StatusOK, mapCharge(savedCharge))
 }
 
 func (handler ContractHandler) ListHistory(writer http.ResponseWriter, request *http.Request) {
@@ -325,6 +372,14 @@ func parseDate(value string) (time.Time, bool) {
 	return parsed.UTC(), true
 }
 
+func parseTimestamp(value string) (time.Time, bool) {
+	parsed, err := time.Parse(time.RFC3339, strings.TrimSpace(value))
+	if err != nil {
+		return time.Time{}, false
+	}
+	return parsed.UTC(), true
+}
+
 func resolveTenant(tenantSlug string) string {
 	normalized := strings.ToLower(strings.TrimSpace(tenantSlug))
 	if normalized == "" {
@@ -360,6 +415,8 @@ func mapCharge(charge entity.Charge) ChargeResponse {
 		DueDate:          charge.DueDate.Format("2006-01-02"),
 		AmountCents:      charge.AmountCents,
 		Status:           charge.Status,
+		PaidAt:           charge.PaidAt,
+		PaymentReference: charge.PaymentReference,
 		CreatedAt:        charge.CreatedAt,
 		UpdatedAt:        charge.UpdatedAt,
 	}

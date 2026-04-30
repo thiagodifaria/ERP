@@ -23,6 +23,10 @@ var (
 	ErrContractAlreadyTerminated  = errors.New("contract is already terminated")
 	ErrContractReasonRequired     = errors.New("contract reason is required")
 	ErrContractRecordedByRequired = errors.New("contract recorded by is required")
+	ErrChargeStatusInvalid        = errors.New("charge status is invalid")
+	ErrChargeTransitionInvalid    = errors.New("charge transition is invalid")
+	ErrChargePaymentReference     = errors.New("charge payment reference is required")
+	ErrChargePaidAtInvalid        = errors.New("charge paid at is invalid")
 )
 
 type Contract struct {
@@ -49,6 +53,8 @@ type Charge struct {
 	DueDate          time.Time
 	AmountCents      int64
 	Status           string
+	PaidAt           *time.Time
+	PaymentReference string
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 }
@@ -384,6 +390,79 @@ func (contract Contract) Terminate(effectiveAt time.Time, reason string, recorde
 	}
 
 	return updatedContract, updatedCharges, event, outbox, nil
+}
+
+func (charge Charge) UpdateStatus(nextStatus string, recordedBy string, paidAt time.Time, paymentReference string) (Charge, Event, OutboxEvent, error) {
+	if strings.TrimSpace(recordedBy) == "" {
+		return Charge{}, Event{}, OutboxEvent{}, ErrContractRecordedByRequired
+	}
+
+	normalizedStatus := strings.ToLower(strings.TrimSpace(nextStatus))
+	if normalizedStatus != "paid" && normalizedStatus != "cancelled" {
+		return Charge{}, Event{}, OutboxEvent{}, ErrChargeStatusInvalid
+	}
+	if charge.Status != "scheduled" {
+		return Charge{}, Event{}, OutboxEvent{}, ErrChargeTransitionInvalid
+	}
+
+	updatedCharge := charge
+	updatedCharge.Status = normalizedStatus
+	updatedCharge.UpdatedAt = time.Now().UTC()
+	updatedCharge.PaidAt = nil
+	updatedCharge.PaymentReference = ""
+
+	summary := fmt.Sprintf("Cobranca com vencimento em %s cancelada manualmente.", charge.DueDate.Format("2006-01-02"))
+	eventCode := "charge_cancelled"
+	eventType := "rental.contract.charge_cancelled"
+	payload := map[string]any{
+		"contractPublicId": charge.ContractPublicID,
+		"chargePublicId":   charge.PublicID,
+		"status":           normalizedStatus,
+		"amountCents":      charge.AmountCents,
+		"dueDate":          charge.DueDate.Format("2006-01-02"),
+	}
+
+	if normalizedStatus == "paid" {
+		if paidAt.IsZero() {
+			return Charge{}, Event{}, OutboxEvent{}, ErrChargePaidAtInvalid
+		}
+
+		normalizedPaidAt := paidAt.UTC()
+		reference := strings.TrimSpace(paymentReference)
+		if reference == "" {
+			return Charge{}, Event{}, OutboxEvent{}, ErrChargePaymentReference
+		}
+
+		updatedCharge.PaidAt = &normalizedPaidAt
+		updatedCharge.PaymentReference = reference
+		summary = fmt.Sprintf("Cobranca marcada como paga com referencia %s.", reference)
+		eventCode = "charge_paid"
+		eventType = "rental.contract.charge_paid"
+		payload["paidAt"] = normalizedPaidAt.Format(time.RFC3339)
+		payload["paymentReference"] = reference
+	}
+
+	event := Event{
+		PublicID:         uuid.NewString(),
+		ContractPublicID: charge.ContractPublicID,
+		EventCode:        eventCode,
+		Summary:          summary,
+		RecordedBy:       strings.TrimSpace(recordedBy),
+		CreatedAt:        time.Now().UTC(),
+	}
+
+	rawPayload, _ := json.Marshal(payload)
+	outbox := OutboxEvent{
+		PublicID:          uuid.NewString(),
+		AggregateType:     "rental.contract",
+		AggregatePublicID: charge.ContractPublicID,
+		EventType:         eventType,
+		Payload:           string(rawPayload),
+		Status:            "pending",
+		CreatedAt:         time.Now().UTC(),
+	}
+
+	return updatedCharge, event, outbox, nil
 }
 
 func cloneCharges(charges []Charge) []Charge {

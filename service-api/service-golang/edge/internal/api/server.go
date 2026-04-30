@@ -29,11 +29,12 @@ func NewServer(cfg config.Config, logger *telemetry.Logger) *http.Server {
 	automationOverviewHandler := handler.NewAutomationOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
 	salesOverviewHandler := handler.NewSalesOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
 	revenueOverviewHandler := handler.NewRevenueOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
+	rentalsOverviewHandler := handler.NewRentalsOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
 	accessResolver := integration.NewHTTPIdentityAccessResolver(cfg.DownstreamTimeout)
 
 	return &http.Server{
 		Addr:              cfg.HTTPAddress,
-		Handler:           NewRouter(logger, healthHandler, opsHandler, tenantOverviewHandler, automationOverviewHandler, salesOverviewHandler, revenueOverviewHandler, cfg.IdentityBaseURL, accessResolver),
+		Handler:           NewRouter(logger, healthHandler, opsHandler, tenantOverviewHandler, automationOverviewHandler, salesOverviewHandler, revenueOverviewHandler, rentalsOverviewHandler, cfg.IdentityBaseURL, accessResolver),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }

@@ -78,11 +78,13 @@ func (repository *PostgresContractRepository) Summary(tenantSlug string) repo.Co
         (SELECT count(*) FROM rentals.contracts WHERE tenant_id = $1 AND status = 'active'),
         (SELECT count(*) FROM rentals.contracts WHERE tenant_id = $1 AND status = 'terminated'),
         (SELECT count(*) FROM rentals.contract_charges WHERE tenant_id = $1 AND status = 'scheduled'),
+        (SELECT count(*) FROM rentals.contract_charges WHERE tenant_id = $1 AND status = 'paid'),
         (SELECT count(*) FROM rentals.contract_charges WHERE tenant_id = $1 AND status = 'cancelled'),
         (SELECT count(*) FROM rentals.contract_adjustments WHERE tenant_id = $1),
         (SELECT count(*) FROM rentals.contract_events WHERE tenant_id = $1),
         (SELECT count(*) FROM rentals.outbox_events WHERE tenant_id = $1 AND status = 'pending'),
         (SELECT COALESCE(sum(amount_cents), 0) FROM rentals.contract_charges WHERE tenant_id = $1 AND status = 'scheduled'),
+        (SELECT COALESCE(sum(amount_cents), 0) FROM rentals.contract_charges WHERE tenant_id = $1 AND status = 'paid'),
         (SELECT COALESCE(sum(amount_cents), 0) FROM rentals.contract_charges WHERE tenant_id = $1 AND status = 'cancelled')
     `,
 		tenantID,
@@ -94,11 +96,13 @@ func (repository *PostgresContractRepository) Summary(tenantSlug string) repo.Co
 		&summary.ActiveContracts,
 		&summary.TerminatedContracts,
 		&summary.ScheduledCharges,
+		&summary.PaidCharges,
 		&summary.CancelledCharges,
 		&summary.Adjustments,
 		&summary.HistoryEvents,
 		&summary.PendingOutbox,
 		&summary.ScheduledAmountCents,
+		&summary.PaidAmountCents,
 		&summary.CancelledAmountCents,
 	); err != nil {
 		return repo.ContractSummary{TenantSlug: normalizedTenantSlug}
@@ -171,9 +175,9 @@ func (repository *PostgresContractRepository) Create(contract entity.Contract, c
 		if _, err := transaction.Exec(
 			`
         INSERT INTO rentals.contract_charges (
-          tenant_id, contract_id, public_id, due_date, amount_cents, status, created_at, updated_at
+          tenant_id, contract_id, public_id, due_date, amount_cents, status, paid_at, payment_reference, created_at, updated_at
         )
-        VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8)
+        VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10)
       `,
 			tenantID,
 			contractID,
@@ -181,6 +185,8 @@ func (repository *PostgresContractRepository) Create(contract entity.Contract, c
 			charge.DueDate,
 			charge.AmountCents,
 			charge.Status,
+			charge.PaidAt,
+			charge.PaymentReference,
 			charge.CreatedAt,
 			charge.UpdatedAt,
 		); err != nil {
@@ -239,7 +245,7 @@ func (repository *PostgresContractRepository) ListCharges(tenantSlug string, con
 	}
 
 	query := `
-      SELECT charge.public_id::text, charge.due_date, charge.amount_cents, charge.status, charge.created_at, charge.updated_at
+      SELECT charge.public_id::text, charge.due_date, charge.amount_cents, charge.status, charge.created_at, charge.updated_at, charge.paid_at, charge.payment_reference
       FROM rentals.contract_charges AS charge
       INNER JOIN rentals.contracts AS contract
         ON contract.id = charge.contract_id
@@ -262,13 +268,54 @@ func (repository *PostgresContractRepository) ListCharges(tenantSlug string, con
 	response := make([]entity.Charge, 0)
 	for rows.Next() {
 		var charge entity.Charge
+		var paidAt sql.NullTime
 		charge.ContractPublicID = strings.TrimSpace(contractPublicID)
-		if err := rows.Scan(&charge.PublicID, &charge.DueDate, &charge.AmountCents, &charge.Status, &charge.CreatedAt, &charge.UpdatedAt); err == nil {
+		if err := rows.Scan(&charge.PublicID, &charge.DueDate, &charge.AmountCents, &charge.Status, &charge.CreatedAt, &charge.UpdatedAt, &paidAt, &charge.PaymentReference); err == nil {
+			if paidAt.Valid {
+				value := paidAt.Time.UTC()
+				charge.PaidAt = &value
+			}
 			response = append(response, charge)
 		}
 	}
 
 	return response
+}
+
+func (repository *PostgresContractRepository) FindChargeByPublicID(tenantSlug string, contractPublicID string, chargePublicID string) (entity.Charge, bool) {
+	tenantID, _, err := repository.resolveTenant(tenantSlug)
+	if err != nil {
+		return entity.Charge{}, false
+	}
+
+	row := repository.database.QueryRow(
+		`
+      SELECT charge.public_id::text, charge.due_date, charge.amount_cents, charge.status, charge.created_at, charge.updated_at, charge.paid_at, charge.payment_reference
+      FROM rentals.contract_charges AS charge
+      INNER JOIN rentals.contracts AS contract
+        ON contract.id = charge.contract_id
+      WHERE charge.tenant_id = $1
+        AND contract.public_id = $2::uuid
+        AND charge.public_id = $3::uuid
+      LIMIT 1
+    `,
+		tenantID,
+		strings.TrimSpace(contractPublicID),
+		strings.TrimSpace(chargePublicID),
+	)
+
+	var charge entity.Charge
+	var paidAt sql.NullTime
+	charge.ContractPublicID = strings.TrimSpace(contractPublicID)
+	if err := row.Scan(&charge.PublicID, &charge.DueDate, &charge.AmountCents, &charge.Status, &charge.CreatedAt, &charge.UpdatedAt, &paidAt, &charge.PaymentReference); err != nil {
+		return entity.Charge{}, false
+	}
+	if paidAt.Valid {
+		value := paidAt.Time.UTC()
+		charge.PaidAt = &value
+	}
+
+	return charge, true
 }
 
 func (repository *PostgresContractRepository) ListEvents(tenantSlug string, contractPublicID string) []entity.Event {
@@ -490,6 +537,53 @@ func (repository *PostgresContractRepository) SaveTermination(tenantSlug string,
 	}
 
 	return contract, true
+}
+
+func (repository *PostgresContractRepository) SaveChargeStatus(tenantSlug string, charge entity.Charge, event entity.Event, outbox entity.OutboxEvent) (entity.Charge, bool) {
+	tenantID, _, err := repository.resolveTenant(tenantSlug)
+	if err != nil {
+		return entity.Charge{}, false
+	}
+
+	transaction, err := repository.database.Begin()
+	if err != nil {
+		return entity.Charge{}, false
+	}
+	defer transaction.Rollback()
+
+	contractID, found := repository.lookupContractID(transaction, tenantID, charge.ContractPublicID)
+	if !found {
+		return entity.Charge{}, false
+	}
+
+	if _, err := transaction.Exec(
+		`
+        UPDATE rentals.contract_charges
+        SET status = $4, paid_at = $5, payment_reference = $6, updated_at = $7
+        WHERE tenant_id = $1
+          AND contract_id = $2
+          AND public_id = $3::uuid
+      `,
+		tenantID,
+		contractID,
+		charge.PublicID,
+		charge.Status,
+		charge.PaidAt,
+		charge.PaymentReference,
+		charge.UpdatedAt,
+	); err != nil {
+		return entity.Charge{}, false
+	}
+
+	if err := repository.insertEventAndOutbox(transaction, tenantID, contractID, event, outbox); err != nil {
+		return entity.Charge{}, false
+	}
+
+	if err := transaction.Commit(); err != nil {
+		return entity.Charge{}, false
+	}
+
+	return charge, true
 }
 
 func (repository *PostgresContractRepository) resolveTenant(tenantSlug string) (int64, string, error) {

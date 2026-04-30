@@ -9,6 +9,7 @@ from app.reports.cost_estimator import build_cost_estimator
 from app.reports.delivery_reliability import build_delivery_reliability
 from app.reports.load_benchmark import build_load_benchmark
 from app.reports.pipeline_summary import build_pipeline_summary
+from app.reports.rental_operations import build_rental_operations
 from app.reports.revenue_operations import build_revenue_operations
 from app.reports.sales_journey import build_sales_journey
 from app.reports.service_pulse import build_service_pulse
@@ -90,6 +91,11 @@ def delivery_reliability(provider: str | None = None) -> dict:
 @app.get("/api/analytics/reports/revenue-operations")
 def revenue_operations(tenant_slug: str | None = None) -> dict:
     return build_revenue_operations(tenant_slug)
+
+
+@app.get("/api/analytics/reports/rental-operations")
+def rental_operations(tenant_slug: str | None = None) -> dict:
+    return build_rental_operations(tenant_slug)
 
 
 @app.get("/api/analytics/reports/cost-estimator")

@@ -24,6 +24,7 @@ func NewRouterWithRuntime(logger *telemetry.Logger, contractRepository repositor
 	mux.HandleFunc("POST /api/rentals/contracts", handler.CreateContract)
 	mux.HandleFunc("GET /api/rentals/contracts/{publicId}", handler.GetContract)
 	mux.HandleFunc("GET /api/rentals/contracts/{publicId}/charges", handler.ListCharges)
+	mux.HandleFunc("PATCH /api/rentals/contracts/{publicId}/charges/{chargePublicId}/status", handler.UpdateChargeStatus)
 	mux.HandleFunc("GET /api/rentals/contracts/{publicId}/history", handler.ListHistory)
 	mux.HandleFunc("GET /api/rentals/contracts/{publicId}/adjustments", handler.ListAdjustments)
 	mux.HandleFunc("POST /api/rentals/contracts/{publicId}/adjustments", handler.CreateAdjustment)

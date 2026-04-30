@@ -37,6 +37,14 @@ def build_static_tenant_360(tenant_slug: str | None = None) -> dict:
             "sales": 12,
             "bookedRevenueCents": 1775000,
         },
+        "rentals": {
+            "contracts": 12,
+            "activeContracts": 10,
+            "scheduledCharges": 18,
+            "paidCharges": 11,
+            "attachments": 7,
+            "outstandingAmountCents": 3015000,
+        },
         "automation": {
             "activeDefinitions": 6,
             "workflowRuns": 41,
@@ -55,6 +63,7 @@ def build_postgres_tenant_360(tenant_slug: str | None = None) -> dict:
     with connect() as connection:
         identity_metrics = fetch_identity_metrics(connection, tenant_slug)
         commercial_metrics = fetch_commercial_metrics(connection, tenant_slug)
+        rentals_metrics = fetch_rentals_metrics(connection, tenant_slug)
         automation_metrics = fetch_automation_metrics(connection, tenant_slug)
 
     return {
@@ -63,6 +72,7 @@ def build_postgres_tenant_360(tenant_slug: str | None = None) -> dict:
         "dataSource": "postgresql",
         "identity": identity_metrics,
         "commercial": commercial_metrics,
+        "rentals": rentals_metrics,
         "automation": automation_metrics,
     }
 
@@ -238,4 +248,60 @@ def fetch_automation_metrics(connection, tenant_slug: str | None) -> dict:
         "runtimeCompleted": int(runtime_row.get("runtime_completed", 0) or 0),
         "runtimeFailed": int(runtime_row.get("runtime_failed", 0) or 0),
         "runtimeCancelled": int(runtime_row.get("runtime_cancelled", 0) or 0),
+    }
+
+
+def fetch_rentals_metrics(connection, tenant_slug: str | None) -> dict:
+    filter_sql, params = tenant_filter("slug = %s", tenant_slug)
+
+    query = f"""
+        SELECT
+            (
+                SELECT count(*)
+                FROM rentals.contracts
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS contracts,
+            (
+                SELECT count(*)
+                FROM rentals.contracts
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'active'
+            ) AS active_contracts,
+            (
+                SELECT count(*)
+                FROM rentals.contract_charges
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'scheduled'
+            ) AS scheduled_charges,
+            (
+                SELECT count(*)
+                FROM rentals.contract_charges
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'paid'
+            ) AS paid_charges,
+            (
+                SELECT count(*)
+                FROM documents.attachments
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND owner_type = 'rentals.contract'
+            ) AS attachments,
+            (
+                SELECT COALESCE(sum(amount_cents), 0)
+                FROM rentals.contract_charges
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'scheduled'
+            ) AS outstanding_amount_cents
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params * 6)
+        row = cursor.fetchone() or {}
+
+    return {
+        "contracts": int(row.get("contracts", 0) or 0),
+        "activeContracts": int(row.get("active_contracts", 0) or 0),
+        "scheduledCharges": int(row.get("scheduled_charges", 0) or 0),
+        "paidCharges": int(row.get("paid_charges", 0) or 0),
+        "attachments": int(row.get("attachments", 0) or 0),
+        "outstandingAmountCents": int(row.get("outstanding_amount_cents", 0) or 0),
     }

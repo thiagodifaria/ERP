@@ -60,6 +60,14 @@ type CreateAttachmentRequest struct {
 	UploadedBy    string `json:"uploadedBy"`
 }
 
+type UpdateChargeStatusRequest struct {
+	TenantSlug       string `json:"tenantSlug"`
+	Status           string `json:"status"`
+	RecordedBy       string `json:"recordedBy"`
+	PaidAt           string `json:"paidAt"`
+	PaymentReference string `json:"paymentReference"`
+}
+
 type ContractResponse struct {
 	PublicID          string     `json:"publicId"`
 	TenantSlug        string     `json:"tenantSlug"`
@@ -79,13 +87,15 @@ type ContractResponse struct {
 }
 
 type ChargeResponse struct {
-	PublicID         string    `json:"publicId"`
-	ContractPublicID string    `json:"contractPublicId"`
-	DueDate          string    `json:"dueDate"`
-	AmountCents      int64     `json:"amountCents"`
-	Status           string    `json:"status"`
-	CreatedAt        time.Time `json:"createdAt"`
-	UpdatedAt        time.Time `json:"updatedAt"`
+	PublicID         string     `json:"publicId"`
+	ContractPublicID string     `json:"contractPublicId"`
+	DueDate          string     `json:"dueDate"`
+	AmountCents      int64      `json:"amountCents"`
+	Status           string     `json:"status"`
+	PaidAt           *time.Time `json:"paidAt,omitempty"`
+	PaymentReference string     `json:"paymentReference,omitempty"`
+	CreatedAt        time.Time  `json:"createdAt"`
+	UpdatedAt        time.Time  `json:"updatedAt"`
 }
 
 type AdjustmentResponse struct {
@@ -128,10 +138,12 @@ type SummaryResponse struct {
 	ActiveContracts      int    `json:"activeContracts"`
 	TerminatedContracts  int    `json:"terminatedContracts"`
 	ScheduledCharges     int    `json:"scheduledCharges"`
+	PaidCharges          int    `json:"paidCharges"`
 	CancelledCharges     int    `json:"cancelledCharges"`
 	Adjustments          int    `json:"adjustments"`
 	HistoryEvents        int    `json:"historyEvents"`
 	PendingOutbox        int    `json:"pendingOutbox"`
 	ScheduledAmountCents int64  `json:"scheduledAmountCents"`
+	PaidAmountCents      int64  `json:"paidAmountCents"`
 	CancelledAmountCents int64  `json:"cancelledAmountCents"`
 }

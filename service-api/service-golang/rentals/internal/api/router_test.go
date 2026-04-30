@@ -78,10 +78,33 @@ func TestRouterShouldCreateAdjustTerminateAndAttachContract(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, chargesRecorder.Code)
 	}
 
+	var charges []ChargeResponse
+	if err := json.Unmarshal(chargesRecorder.Body.Bytes(), &charges); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+	if len(charges) == 0 {
+		t.Fatalf("expected charges to be generated")
+	}
+
+	payChargeRequest := httptest.NewRequest(
+		http.MethodPatch,
+		"/api/rentals/contracts/"+created.PublicID+"/charges/"+charges[0].PublicID+"/status",
+		bytes.NewBufferString(`{"tenantSlug":"bootstrap-ops","status":"paid","recordedBy":"ops-user","paidAt":"2026-05-06T10:30:00Z","paymentReference":"pix-rent-001"}`),
+	)
+	payChargeRecorder := httptest.NewRecorder()
+	router.ServeHTTP(payChargeRecorder, payChargeRequest)
+	if payChargeRecorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, payChargeRecorder.Code)
+	}
+
 	historyRequest := httptest.NewRequest(http.MethodGet, "/api/rentals/contracts/"+created.PublicID+"/history?tenantSlug=bootstrap-ops", nil)
 	historyRecorder := httptest.NewRecorder()
 	router.ServeHTTP(historyRecorder, historyRequest)
 	if historyRecorder.Code != http.StatusOK {
 		t.Fatalf("expected status %d, got %d", http.StatusOK, historyRecorder.Code)
+	}
+
+	if !bytes.Contains(historyRecorder.Body.Bytes(), []byte(`"eventCode":"charge_paid"`)) {
+		t.Fatalf("expected history to include charge_paid event")
 	}
 }

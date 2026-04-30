@@ -7,6 +7,7 @@ Current scope:
 - health and readiness endpoints
 - tenant-aware contract registry with explicit customer linkage
 - recurring charge schedule generated from start date, end date and billing day
+- charge settlement lifecycle with explicit `scheduled`, `paid` and `cancelled` states
 - contractual adjustments with future charge recalculation
 - terminations with future charge cancellation
 - auditable contractual history
@@ -23,6 +24,7 @@ Public routes:
 - `POST /api/rentals/contracts`
 - `GET /api/rentals/contracts/{publicId}`
 - `GET /api/rentals/contracts/{publicId}/charges`
+- `PATCH /api/rentals/contracts/{publicId}/charges/{chargePublicId}/status`
 - `GET /api/rentals/contracts/{publicId}/history`
 - `GET /api/rentals/contracts/{publicId}/adjustments`
 - `POST /api/rentals/contracts/{publicId}/adjustments`
@@ -35,6 +37,7 @@ Query and payload conventions:
 - `GET /api/rentals/contracts` accepts `tenantSlug`, `status` and `customerPublicId`
 - `GET /api/rentals/contracts/{publicId}/charges` accepts `tenantSlug` and optional `status`
 - `POST /api/rentals/contracts` creates an active contract with generated recurring charges
+- `PATCH /api/rentals/contracts/{publicId}/charges/{chargePublicId}/status` settles or cancels a generated charge and records contractual history plus outbox side effects
 - `POST /api/rentals/contracts/{publicId}/adjustments` updates only future scheduled charges from `effectiveAt`
 - `POST /api/rentals/contracts/{publicId}/terminate` terminates the contract and cancels future charges after the effective date
 

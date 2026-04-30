@@ -14,6 +14,21 @@ import (
 	"github.com/thiagodifaria/erp/service-api/service-golang/edge/internal/telemetry"
 )
 
+func buildTestRouter() http.Handler {
+	return NewRouter(
+		telemetry.New("edge-test"),
+		handler.NewHealthHandler("edge", stubHealthChecker{}, nil),
+		handler.NewOpsHandler("edge", stubHealthChecker{}, nil),
+		handler.NewTenantOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewRentalsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		"http://identity.local",
+		stubAccessResolver{},
+	)
+}
+
 func TestRouterShouldExposeHealthDetails(t *testing.T) {
 	router := NewRouter(
 		telemetry.New("edge-test"),
@@ -37,6 +52,7 @@ func TestRouterShouldExposeHealthDetails(t *testing.T) {
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewRentalsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		"http://identity.local",
 		stubAccessResolver{},
 	)
@@ -83,6 +99,7 @@ func TestRouterShouldExposeOpsHealth(t *testing.T) {
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewRentalsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		"http://identity.local",
 		stubAccessResolver{},
 	)
@@ -111,18 +128,7 @@ func TestRouterShouldExposeOpsHealth(t *testing.T) {
 }
 
 func TestRouterShouldExposeTenantOverview(t *testing.T) {
-	router := NewRouter(
-		telemetry.New("edge-test"),
-		handler.NewHealthHandler("edge", stubHealthChecker{}, nil),
-		handler.NewOpsHandler("edge", stubHealthChecker{}, nil),
-		handler.NewTenantOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		"http://identity.local",
-		stubAccessResolver{},
-	)
-
+	router := buildTestRouter()
 	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/tenant-overview?tenantSlug=bootstrap-ops", nil)
 	request.Header.Set("Authorization", "Bearer session-123")
 	recorder := httptest.NewRecorder()
@@ -144,18 +150,7 @@ func TestRouterShouldExposeTenantOverview(t *testing.T) {
 }
 
 func TestRouterShouldExposeAutomationOverview(t *testing.T) {
-	router := NewRouter(
-		telemetry.New("edge-test"),
-		handler.NewHealthHandler("edge", stubHealthChecker{}, nil),
-		handler.NewOpsHandler("edge", stubHealthChecker{}, nil),
-		handler.NewTenantOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		"http://identity.local",
-		stubAccessResolver{},
-	)
-
+	router := buildTestRouter()
 	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/automation-overview?tenantSlug=bootstrap-ops", nil)
 	request.Header.Set("Authorization", "Bearer session-123")
 	recorder := httptest.NewRecorder()
@@ -177,18 +172,7 @@ func TestRouterShouldExposeAutomationOverview(t *testing.T) {
 }
 
 func TestRouterShouldExposeSalesOverview(t *testing.T) {
-	router := NewRouter(
-		telemetry.New("edge-test"),
-		handler.NewHealthHandler("edge", stubHealthChecker{}, nil),
-		handler.NewOpsHandler("edge", stubHealthChecker{}, nil),
-		handler.NewTenantOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		"http://identity.local",
-		stubAccessResolver{},
-	)
-
+	router := buildTestRouter()
 	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/sales-overview?tenantSlug=bootstrap-ops", nil)
 	request.Header.Set("Authorization", "Bearer session-123")
 	recorder := httptest.NewRecorder()
@@ -210,18 +194,7 @@ func TestRouterShouldExposeSalesOverview(t *testing.T) {
 }
 
 func TestRouterShouldExposeRevenueOverview(t *testing.T) {
-	router := NewRouter(
-		telemetry.New("edge-test"),
-		handler.NewHealthHandler("edge", stubHealthChecker{}, nil),
-		handler.NewOpsHandler("edge", stubHealthChecker{}, nil),
-		handler.NewTenantOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		"http://identity.local",
-		stubAccessResolver{},
-	)
-
+	router := buildTestRouter()
 	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/revenue-overview?tenantSlug=bootstrap-ops", nil)
 	request.Header.Set("Authorization", "Bearer session-123")
 	recorder := httptest.NewRecorder()
@@ -242,19 +215,30 @@ func TestRouterShouldExposeRevenueOverview(t *testing.T) {
 	}
 }
 
-func TestRouterShouldRequireSessionForProtectedTenantOverview(t *testing.T) {
-	router := NewRouter(
-		telemetry.New("edge-test"),
-		handler.NewHealthHandler("edge", stubHealthChecker{}, nil),
-		handler.NewOpsHandler("edge", stubHealthChecker{}, nil),
-		handler.NewTenantOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
-		"http://identity.local",
-		stubAccessResolver{},
-	)
+func TestRouterShouldExposeRentalsOverview(t *testing.T) {
+	router := buildTestRouter()
+	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/rentals-overview?tenantSlug=bootstrap-ops", nil)
+	request.Header.Set("Authorization", "Bearer session-123")
+	recorder := httptest.NewRecorder()
 
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response dto.RentalsOverviewResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.TenantSlug != "bootstrap-ops" {
+		t.Fatalf("expected tenant slug bootstrap-ops, got %s", response.TenantSlug)
+	}
+}
+
+func TestRouterShouldRequireSessionForProtectedTenantOverview(t *testing.T) {
+	router := buildTestRouter()
 	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/tenant-overview?tenantSlug=bootstrap-ops", nil)
 	recorder := httptest.NewRecorder()
 
@@ -294,6 +278,9 @@ func (stubHealthChecker) GetJSON(_ context.Context, requestURL string, target an
 			"services": map[string]any{
 				"webhookHub": map[string]any{
 					"forwarded": 1,
+				},
+				"rentals": map[string]any{
+					"contractsTotal": 1,
 				},
 			},
 		}
@@ -352,6 +339,44 @@ func (stubHealthChecker) GetJSON(_ context.Context, requestURL string, target an
 			},
 			"risk": map[string]any{
 				"overdueInvoices": 1,
+			},
+		}
+	case strings.Contains(requestURL, "/rental-operations"):
+		payload = map[string]any{
+			"tenantSlug": "bootstrap-ops",
+			"contracts": map[string]any{
+				"total":  1,
+				"active": 0,
+			},
+			"charges": map[string]any{
+				"scheduled":              1,
+				"paid":                   1,
+				"cancelled":              1,
+				"outstandingAmountCents": 165000,
+				"overdue":                0,
+			},
+		}
+	case strings.Contains(requestURL, "/tenant-360"):
+		payload = map[string]any{
+			"tenantSlug": "bootstrap-ops",
+			"identity": map[string]any{
+				"companies": 1,
+			},
+			"commercial": map[string]any{
+				"leads":          1,
+				"qualifiedLeads": 1,
+				"assignedLeads":  1,
+				"leadNotes":      2,
+				"opportunities":  1,
+				"proposals":      1,
+				"sales":          1,
+			},
+			"rentals": map[string]any{
+				"attachments": 1,
+			},
+			"automation": map[string]any{
+				"workflowRuns":      1,
+				"workflowRunEvents": 2,
 			},
 		}
 	default:

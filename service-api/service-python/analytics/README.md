@@ -10,6 +10,7 @@ Initial scope:
 - automation board with workflow-level operational breakdown
 - workflow definition health report with catalog and runtime alignment
 - revenue operations report crossing booked revenue, invoice coverage and collection risk
+- rental operations report crossing contracts, recurring charges and attachment governance
 - load benchmark report backed by simulation runs
 - scenario-driven cost estimator
 - selectable repository driver between memory and PostgreSQL
@@ -28,6 +29,7 @@ Public routes:
 - `GET /api/analytics/reports/workflow-definition-health`
 - `GET /api/analytics/reports/delivery-reliability`
 - `GET /api/analytics/reports/revenue-operations`
+- `GET /api/analytics/reports/rental-operations`
 - `GET /api/analytics/reports/load-benchmark`
 - `GET /api/analytics/reports/cost-estimator`
 
