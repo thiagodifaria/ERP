@@ -40,7 +40,7 @@ Este repositorio tambem e a evolucao publica de estruturas de ERP ja aplicadas e
 - um projeto de portfolio com escopo realista
 - uma referencia de ERP empresarial em formato publico e extensivel
 
-O marco atual ja e um MVP backend-first real. A plataforma agora expoe um corte vertical comercial e de automacao conectando `identity`, `crm`, `sales`, `workflow-control`, `workflow-runtime`, `analytics`, `webhook-hub` e `edge`.
+O marco atual ja e um MVP backend-first real. A plataforma agora expoe um corte vertical comercial, contratual e de automacao conectando `identity`, `crm`, `sales`, `rentals`, `documents`, `finance`, `billing`, `workflow-control`, `workflow-runtime`, `analytics`, `webhook-hub` e `edge`.
 
 ---
 
@@ -110,6 +110,10 @@ A stack e poliglota por decisao arquitetural, nao por estetica.
 | `identity` | .NET | tenancy, empresas, usuarios, times, roles e base de acesso | bootstrap de tenant e snapshot de acesso |
 | `crm` | Go | leads, ownership, status, resumo e notas | funil de leads e historico de relacionamento |
 | `sales` | Go | oportunidades, propostas, conversao em venda e receita | ciclo comercial de oportunidade ate venda |
+| `rentals` | Go | contratos recorrentes, reajustes, rescisoes e cobrancas futuras | ciclo contratual com anexos e trilha auditavel |
+| `documents` | Go | anexos, visibilidade, retencao e access links | governanca operacional de documentos por agregado |
+| `finance` | .NET | recebiveis, liquidacao, custos, contas a pagar e fechamento | operacao financeira e resumo por tenant |
+| `billing` | .NET | planos, assinaturas, invoices e tentativas de cobranca | cobranca recorrente e reconciliacao de webhook |
 | `workflow-control` | TypeScript | definicoes, versoes, runs e eventos | APIs de controle e ledger operacional |
 | `workflow-runtime` | Elixir | execucao duravel, transicoes e retries | runtime de automacao e resumo de execucoes |
 | `analytics` | Python | leituras operacionais pesadas e relatorios | relatorios de vendas, tenant e automacao |

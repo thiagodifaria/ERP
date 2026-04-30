@@ -30,6 +30,8 @@ jobs:
             context: service-api/service-golang/crm
           - image: sales
             context: service-api/service-golang/sales
+          - image: rentals
+            context: service-api/service-golang/rentals
           - image: identity
             context: service-api/service-csharp/identity
           - image: workflow-control

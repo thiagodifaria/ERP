@@ -34,7 +34,7 @@ ERP is a portfolio-grade enterprise platform built to feel like a serious intern
 
 The project is also the public evolution of ERP structures already used in real business environments. Here, that experience is being turned into a reusable template, a study case, a portfolio centerpiece and a public enterprise ERP reference.
 
-The current milestone is already a real MVP. The platform now has an end-to-end commercial and automation slice connecting `identity`, `crm`, `sales`, `workflow-control`, `workflow-runtime`, `analytics`, `webhook-hub` and `edge` with PostgreSQL-backed flows and container-first validation.
+The current milestone is already a real MVP. The platform now has an end-to-end commercial, contractual and automation slice connecting `identity`, `crm`, `sales`, `rentals`, `documents`, `finance`, `billing`, `workflow-control`, `workflow-runtime`, `analytics`, `webhook-hub` and `edge` with PostgreSQL-backed flows and container-first validation.
 
 ### Key Highlights
 
@@ -102,6 +102,12 @@ docker compose --env-file .env.example -f infra/docker-compose.yml up --build -d
 - Workflow Runtime: `http://localhost:8085`
 - Analytics: `http://localhost:8086`
 - Sales: `http://localhost:8087`
+- Engagement: `http://localhost:8088`
+- Finance: `http://localhost:8092`
+- Documents: `http://localhost:8093`
+- Simulation: `http://localhost:8094`
+- Billing: `http://localhost:8095`
+- Rentals: `http://localhost:8096`
 - PostgreSQL: `localhost:5432` by default
 - Redis: `localhost:6379` by default
 
@@ -153,11 +159,16 @@ More details are available in the service references:
 - [service-api/service-csharp/identity/README.md](service-api/service-csharp/identity/README.md)
 - [service-api/service-golang/crm/README.md](service-api/service-golang/crm/README.md)
 - [service-api/service-golang/sales/README.md](service-api/service-golang/sales/README.md)
+- [service-api/service-golang/rentals/README.md](service-api/service-golang/rentals/README.md)
+- [service-api/service-golang/documents/README.md](service-api/service-golang/documents/README.md)
 - [service-api/service-typescript/workflow-control/README.md](service-api/service-typescript/workflow-control/README.md)
 - [service-api/service-elixir/workflow-runtime/README.md](service-api/service-elixir/workflow-runtime/README.md)
 - [service-api/service-python/analytics/README.md](service-api/service-python/analytics/README.md)
+- [service-api/service-python/simulation/README.md](service-api/service-python/simulation/README.md)
 - [service-api/service-rust/webhook-hub/README.md](service-api/service-rust/webhook-hub/README.md)
 - [service-api/service-golang/edge/README.md](service-api/service-golang/edge/README.md)
+- [service-api/service-csharp/finance/README.md](service-api/service-csharp/finance/README.md)
+- [service-api/service-csharp/billing/README.md](service-api/service-csharp/billing/README.md)
 
 ---
 

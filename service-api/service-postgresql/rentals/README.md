@@ -1,11 +1,3 @@
 # rentals
 
-This domain will own contracts, recurring operational rules and rental-specific history.
-
-Planned structure:
-
-- migrations
-- seeds
-- views
-- functions
-- indexes
+This schema owns recurring contracts, recurring charge schedules, adjustments, terminations, contractual history and outbound domain events for rentals.

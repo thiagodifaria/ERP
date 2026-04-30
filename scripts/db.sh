@@ -157,6 +157,7 @@ Usage:
   ./scripts/db.sh migrate identity
   ./scripts/db.sh migrate crm
   ./scripts/db.sh migrate sales
+  ./scripts/db.sh migrate rentals
   ./scripts/db.sh migrate finance
   ./scripts/db.sh migrate billing
   ./scripts/db.sh migrate documents
@@ -178,6 +179,7 @@ Usage:
   ./scripts/db.sh summary identity [tenant-slug]
   ./scripts/db.sh summary crm [tenant-slug]
   ./scripts/db.sh summary sales [tenant-slug]
+  ./scripts/db.sh summary rentals [tenant-slug]
   ./scripts/db.sh summary finance [tenant-slug]
   ./scripts/db.sh summary billing [tenant-slug]
   ./scripts/db.sh summary documents [tenant-slug]
@@ -214,6 +216,9 @@ main() {
         sales)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/migrations"
           ;;
+        rentals)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/rentals/migrations"
+          ;;
         finance)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/finance/migrations"
           ;;
@@ -246,6 +251,7 @@ main() {
           apply_directory "$ROOT_DIR/service-api/service-postgresql/identity/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/crm/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/sales/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/rentals/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/finance/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/billing/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/documents/migrations"
@@ -407,6 +413,31 @@ main() {
               (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.status = 'responded') AS responded_touchpoints,
               (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.status = 'converted') AS converted_touchpoints,
               (SELECT count(*) FROM engagement.touchpoints AS touchpoint WHERE touchpoint.tenant_id = tenant.id AND touchpoint.last_workflow_run_public_id IS NOT NULL) AS workflow_dispatched
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
+          ;;
+        rentals)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM rentals.contracts AS contract WHERE contract.tenant_id = tenant.id) AS contracts,
+              (SELECT count(*) FROM rentals.contracts AS contract WHERE contract.tenant_id = tenant.id AND contract.status = 'active') AS active_contracts,
+              (SELECT count(*) FROM rentals.contracts AS contract WHERE contract.tenant_id = tenant.id AND contract.status = 'terminated') AS terminated_contracts,
+              (SELECT count(*) FROM rentals.contract_charges AS charge WHERE charge.tenant_id = tenant.id AND charge.status = 'scheduled') AS scheduled_charges,
+              (SELECT count(*) FROM rentals.contract_charges AS charge WHERE charge.tenant_id = tenant.id AND charge.status = 'cancelled') AS cancelled_charges,
+              (SELECT COALESCE(sum(charge.amount_cents), 0) FROM rentals.contract_charges AS charge WHERE charge.tenant_id = tenant.id AND charge.status = 'scheduled') AS scheduled_amount_cents,
+              (SELECT count(*) FROM rentals.contract_adjustments AS adjustment WHERE adjustment.tenant_id = tenant.id) AS adjustments,
+              (SELECT count(*) FROM rentals.contract_events AS event WHERE event.tenant_id = tenant.id) AS history_events,
+              (SELECT count(*) FROM rentals.outbox_events AS event WHERE event.tenant_id = tenant.id AND event.status = 'pending') AS pending_outbox
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;

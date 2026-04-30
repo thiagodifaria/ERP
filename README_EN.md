@@ -40,7 +40,7 @@ This repository is also the public evolution of ERP work already applied in real
 - a portfolio project with realistic scope
 - a semi-open enterprise ERP reference that can be inspected and extended
 
-The current milestone is already a real backend-first MVP. The platform now exposes an end-to-end commercial and automation slice connecting `identity`, `crm`, `sales`, `workflow-control`, `workflow-runtime`, `analytics`, `webhook-hub` and `edge`.
+The current milestone is already a real backend-first MVP. The platform now exposes an end-to-end commercial, contractual and automation slice connecting `identity`, `crm`, `sales`, `rentals`, `documents`, `finance`, `billing`, `workflow-control`, `workflow-runtime`, `analytics`, `webhook-hub` and `edge`.
 
 ---
 
@@ -110,6 +110,10 @@ The stack is polyglot by design, not by aesthetics.
 | `identity` | .NET | tenancy, companies, users, teams, roles and access structure | tenant bootstrap and access snapshot |
 | `crm` | Go | leads, ownership, status, summary and notes | lead pipeline and relationship history |
 | `sales` | Go | opportunities, proposals, sale conversion and revenue transitions | commercial lifecycle from opportunity to booked sale |
+| `rentals` | Go | recurring contracts, adjustments, terminations and future charges | contractual lifecycle with attachments and audit trail |
+| `documents` | Go | attachments, visibility, retention and access links | operational document governance by aggregate |
+| `finance` | .NET | receivables, settlements, costs, payables and monthly closure | financial operations and tenant summary |
+| `billing` | .NET | plans, subscriptions, invoices and charge attempts | recurring billing and webhook reconciliation |
 | `workflow-control` | TypeScript | workflow definitions, versions, runs and run events | control-plane APIs and operational event ledger |
 | `workflow-runtime` | Elixir | durable execution, lifecycle transitions and retries | runtime orchestration and execution summary |
 | `analytics` | Python | heavy operational reads and business reports | sales, tenant and automation reports |

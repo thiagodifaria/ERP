@@ -283,6 +283,29 @@ services:
     ports:
       - "${DOCUMENTS_HTTP_PORT}:8086"
 
+  rentals:
+    build:
+      context: ../service-api/service-golang/rentals
+    container_name: erp-rentals
+    environment:
+      RENTALS_HTTP_ADDRESS: ":8096"
+      RENTALS_REPOSITORY_DRIVER: "postgres"
+      RENTALS_BOOTSTRAP_TENANT_SLUG: "${RENTALS_BOOTSTRAP_TENANT_SLUG}"
+      RENTALS_DOCUMENTS_BASE_URL: "${RENTALS_DOCUMENTS_BASE_URL}"
+      RENTALS_POSTGRES_HOST: "service-postgresql"
+      RENTALS_POSTGRES_PORT: "5432"
+      RENTALS_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      RENTALS_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      RENTALS_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      RENTALS_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+      documents:
+        condition: service_started
+    ports:
+      - "${RENTALS_HTTP_PORT}:8096"
+
   workflow-control:
     build:
       context: ../service-api/service-typescript/workflow-control
