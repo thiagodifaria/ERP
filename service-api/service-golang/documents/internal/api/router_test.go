@@ -13,7 +13,7 @@ import (
 )
 
 func TestRouterShouldCreateAndListAttachments(t *testing.T) {
-	router := NewRouter(telemetry.New("documents-test"), persistence.NewInMemoryAttachmentRepository())
+	router := NewRouter(telemetry.New("documents-test"), persistence.NewInMemoryAttachmentRepository(), persistence.NewInMemoryUploadSessionRepository())
 
 	createRequest := httptest.NewRequest(
 		http.MethodPost,
@@ -46,7 +46,7 @@ func TestRouterShouldCreateAndListAttachments(t *testing.T) {
 }
 
 func TestRouterShouldGetArchiveAndIssueAccessLinks(t *testing.T) {
-	router := NewRouter(telemetry.New("documents-test"), persistence.NewInMemoryAttachmentRepository())
+	router := NewRouter(telemetry.New("documents-test"), persistence.NewInMemoryAttachmentRepository(), persistence.NewInMemoryUploadSessionRepository())
 
 	createRequest := httptest.NewRequest(
 		http.MethodPost,
@@ -86,6 +86,22 @@ func TestRouterShouldGetArchiveAndIssueAccessLinks(t *testing.T) {
 		t.Fatalf("expected status %d, got %d", http.StatusCreated, accessLinkRecorder.Code)
 	}
 
+	var accessLink dto.AccessLinkResponse
+	if err := json.Unmarshal(accessLinkRecorder.Body.Bytes(), &accessLink); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	downloadRequest := httptest.NewRequest(http.MethodGet, accessLink.AccessURL, nil)
+	downloadRecorder := httptest.NewRecorder()
+	router.ServeHTTP(downloadRecorder, downloadRequest)
+
+	if downloadRecorder.Code != http.StatusTemporaryRedirect {
+		t.Fatalf("expected status %d, got %d", http.StatusTemporaryRedirect, downloadRecorder.Code)
+	}
+	if downloadRecorder.Header().Get("Location") == "" {
+		t.Fatalf("expected redirect location header")
+	}
+
 	archiveRequest := httptest.NewRequest(
 		http.MethodPost,
 		"/api/documents/attachments/"+created.PublicID+"/archive",
@@ -113,5 +129,54 @@ func TestRouterShouldGetArchiveAndIssueAccessLinks(t *testing.T) {
 
 	if len(archivedPayload) != 1 || archivedPayload[0].ArchivedAt == nil || archivedPayload[0].ArchiveReason != "fim-do-contrato" {
 		t.Fatalf("expected archived attachment, got %+v", archivedPayload)
+	}
+}
+
+func TestRouterShouldCreateAndCompleteUploadSession(t *testing.T) {
+	router := NewRouter(telemetry.New("documents-test"), persistence.NewInMemoryAttachmentRepository(), persistence.NewInMemoryUploadSessionRepository())
+
+	createSessionRequest := httptest.NewRequest(
+		http.MethodPost,
+		"/api/documents/upload-sessions",
+		bytes.NewBufferString(`{"tenantSlug":"bootstrap-ops","ownerType":"crm.customer","ownerPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e70000342","fileName":"evidencia.png","contentType":"image/png","storageDriver":"local","source":"crm","requestedBy":"documents-smoke","visibility":"restricted","retentionDays":120}`),
+	)
+	createSessionRequest.Host = "documents.local"
+	createSessionRecorder := httptest.NewRecorder()
+	router.ServeHTTP(createSessionRecorder, createSessionRequest)
+
+	if createSessionRecorder.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, createSessionRecorder.Code)
+	}
+
+	var session dto.UploadSessionResponse
+	if err := json.Unmarshal(createSessionRecorder.Body.Bytes(), &session); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	detailRequest := httptest.NewRequest(http.MethodGet, "/api/documents/upload-sessions/"+session.PublicID+"?tenantSlug=bootstrap-ops", nil)
+	detailRecorder := httptest.NewRecorder()
+	router.ServeHTTP(detailRecorder, detailRequest)
+
+	if detailRecorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, detailRecorder.Code)
+	}
+
+	completeRequest := httptest.NewRequest(
+		http.MethodPost,
+		"/api/documents/upload-sessions/"+session.PublicID+"/complete",
+		bytes.NewBufferString(`{"tenantSlug":"bootstrap-ops","uploadedBy":"documents-smoke","fileSizeBytes":10240,"checksumSha256":"AA11BB22"}`),
+	)
+	completeRecorder := httptest.NewRecorder()
+	router.ServeHTTP(completeRecorder, completeRequest)
+
+	if completeRecorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, completeRecorder.Code)
+	}
+
+	if !bytes.Contains(completeRecorder.Body.Bytes(), []byte(`"status":"completed"`)) {
+		t.Fatalf("expected completed upload session payload, got %s", completeRecorder.Body.String())
+	}
+	if !bytes.Contains(completeRecorder.Body.Bytes(), []byte(`"fileSizeBytes":10240`)) {
+		t.Fatalf("expected attachment payload in completion response, got %s", completeRecorder.Body.String())
 	}
 }

@@ -9,10 +9,10 @@ import (
 	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/telemetry"
 )
 
-func NewServer(cfg config.Config, logger *telemetry.Logger, attachmentRepository repository.AttachmentRepository) *http.Server {
+func NewServer(cfg config.Config, logger *telemetry.Logger, attachmentRepository repository.AttachmentRepository, uploadSessionRepository repository.UploadSessionRepository) *http.Server {
 	return &http.Server{
 		Addr:              cfg.HTTPAddress,
-		Handler:           NewRouterWithRuntime(logger, attachmentRepository, cfg.RepositoryDriver),
+		Handler:           NewRouterWithRuntime(logger, attachmentRepository, uploadSessionRepository, cfg.RepositoryDriver, cfg.AccessTokenSecret),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }

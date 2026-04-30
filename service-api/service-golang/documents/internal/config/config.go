@@ -10,6 +10,7 @@ type Config struct {
 	HTTPAddress         string
 	RepositoryDriver    string
 	BootstrapTenantSlug string
+	AccessTokenSecret   string
 	PostgresHost        string
 	PostgresPort        string
 	PostgresDatabase    string
@@ -24,6 +25,7 @@ func Load() Config {
 		HTTPAddress:         envOrDefault("DOCUMENTS_HTTP_ADDRESS", ":8086"),
 		RepositoryDriver:    envOrDefault("DOCUMENTS_REPOSITORY_DRIVER", "memory"),
 		BootstrapTenantSlug: envOrDefault("DOCUMENTS_BOOTSTRAP_TENANT_SLUG", "bootstrap-ops"),
+		AccessTokenSecret:   envOrDefault("DOCUMENTS_ACCESS_TOKEN_SECRET", "documents-local-secret"),
 		PostgresHost:        envOrDefault("DOCUMENTS_POSTGRES_HOST", "localhost"),
 		PostgresPort:        envOrDefault("DOCUMENTS_POSTGRES_PORT", "5432"),
 		PostgresDatabase:    envOrDefault("DOCUMENTS_POSTGRES_DB", envOrDefault("ERP_POSTGRES_DB", "erp")),
