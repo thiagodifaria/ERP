@@ -3214,6 +3214,7 @@ run_edge_runtime_smoke() {
   local automation_overview_response
   local engagement_overview_response
   local documents_overview_response
+  local collections_overview_response
   local sales_overview_response
   local revenue_overview_response
   local finance_overview_response
@@ -3235,6 +3236,7 @@ run_edge_runtime_smoke() {
   automation_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/automation-overview?tenantSlug=bootstrap-ops")"
   engagement_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/engagement-overview?tenantSlug=bootstrap-ops")"
   documents_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/documents-overview?tenantSlug=bootstrap-ops")"
+  collections_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/collections-overview?tenantSlug=bootstrap-ops")"
   sales_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/sales-overview?tenantSlug=bootstrap-ops")"
   revenue_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/revenue-overview?tenantSlug=bootstrap-ops")"
   finance_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/finance-overview?tenantSlug=bootstrap-ops")"
@@ -3248,6 +3250,7 @@ run_edge_runtime_smoke() {
   echo "[test] edge automation overview => $automation_overview_response"
   echo "[test] edge engagement overview => $engagement_overview_response"
   echo "[test] edge documents overview => $documents_overview_response"
+  echo "[test] edge collections overview => $collections_overview_response"
   echo "[test] edge sales overview => $sales_overview_response"
   echo "[test] edge revenue overview => $revenue_overview_response"
   echo "[test] edge finance overview => $finance_overview_response"
@@ -3260,6 +3263,11 @@ run_edge_runtime_smoke() {
 
   if [[ "$engagement_overview_response" != *'"service":"edge"'* || "$engagement_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$engagement_overview_response" != *'"status":"stable"'* || "$engagement_overview_response" != *'"campaigns":3'* || "$engagement_overview_response" != *'"activeCampaigns":2'* || "$engagement_overview_response" != *'"templates":2'* || "$engagement_overview_response" != *'"deliveries":2'* || "$engagement_overview_response" != *'"deliveredDeliveries":2'* || "$engagement_overview_response" != *'"failedDeliveries":0'* || "$engagement_overview_response" != *'"convertedTouchpoints":1'* || "$engagement_overview_response" != *'"deliveryRate":1'* || "$engagement_overview_response" != *'"engagementOperations"'* ]]; then
     echo "[test] edge engagement cockpit did not aggregate the expected live payload"
+    exit 1
+  fi
+
+  if [[ "$collections_overview_response" != *'"service":"edge"'* || "$collections_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$collections_overview_response" != *'"status":"attention"'* || "$collections_overview_response" != *'"casesTotal":1'* || "$collections_overview_response" != *'"criticalCases":1'* || "$collections_overview_response" != *'"invoicesInRecovery":0'* || "$collections_overview_response" != *'"openAmountCents":0'* || "$collections_overview_response" != *'"recoveredAmountCents":4900'* || "$collections_overview_response" != *'"failedPaymentAttempts":2'* || "$collections_overview_response" != *'"activePromises":0'* || "$collections_overview_response" != *'"nextActionsDue":0'* || "$collections_overview_response" != *'"recoveryRateBps":10000'* || "$collections_overview_response" != *'"collectionsControl"'* ]]; then
+    echo "[test] edge collections cockpit did not aggregate the expected live payload"
     exit 1
   fi
 }

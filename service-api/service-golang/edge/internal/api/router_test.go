@@ -23,6 +23,7 @@ func buildTestRouter() http.Handler {
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewEngagementOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewDocumentsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewCollectionsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewFinanceOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
@@ -55,6 +56,7 @@ func TestRouterShouldExposeHealthDetails(t *testing.T) {
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewEngagementOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewDocumentsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewCollectionsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewFinanceOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
@@ -105,6 +107,7 @@ func TestRouterShouldExposeOpsHealth(t *testing.T) {
 		handler.NewAutomationOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewEngagementOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewDocumentsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
+		handler.NewCollectionsOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewSalesOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewRevenueOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
 		handler.NewFinanceOverviewHandler("edge", "http://analytics.local", stubHealthChecker{}),
@@ -237,6 +240,28 @@ func TestRouterShouldExposeDocumentsOverview(t *testing.T) {
 	}
 
 	var response dto.DocumentsOverviewResponse
+	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	if response.TenantSlug != "bootstrap-ops" {
+		t.Fatalf("expected tenant slug bootstrap-ops, got %s", response.TenantSlug)
+	}
+}
+
+func TestRouterShouldExposeCollectionsOverview(t *testing.T) {
+	router := buildTestRouter()
+	request := httptest.NewRequest(http.MethodGet, "/api/edge/ops/collections-overview?tenantSlug=bootstrap-ops", nil)
+	request.Header.Set("Authorization", "Bearer session-123")
+	recorder := httptest.NewRecorder()
+
+	router.ServeHTTP(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, recorder.Code)
+	}
+
+	var response dto.CollectionsOverviewResponse
 	if err := json.Unmarshal(recorder.Body.Bytes(), &response); err != nil {
 		t.Fatalf("unexpected decode error: %v", err)
 	}
@@ -441,6 +466,35 @@ func (stubHealthChecker) GetJSON(_ context.Context, requestURL string, target an
 			},
 			"risk": map[string]any{
 				"overdueInvoices": 1,
+			},
+		}
+	case strings.Contains(requestURL, "/finance-control"):
+		payload = map[string]any{
+			"tenantSlug": "bootstrap-ops",
+			"billing": map[string]any{
+				"failedAttempts": 2,
+			},
+		}
+	case strings.Contains(requestURL, "/collections-control"):
+		payload = map[string]any{
+			"tenantSlug": "bootstrap-ops",
+			"portfolio": map[string]any{
+				"casesTotal":           1,
+				"criticalCases":        1,
+				"openAmountCents":      0,
+				"recoveredAmountCents": 4900,
+			},
+			"invoices": map[string]any{
+				"invoicesInRecovery": 0,
+			},
+			"promises": map[string]any{
+				"activePromises": 0,
+			},
+			"throughput": map[string]any{
+				"recoveryRate": 1.0,
+			},
+			"governance": map[string]any{
+				"nextActionsDue": 0,
 			},
 		}
 	case strings.Contains(requestURL, "/rental-operations"):
