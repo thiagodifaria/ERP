@@ -16,4 +16,6 @@ type AttachmentRepository interface {
 	FindByPublicID(tenantSlug string, publicID string) (entity.Attachment, bool)
 	Save(attachment entity.Attachment) entity.Attachment
 	Archive(tenantSlug string, publicID string, reason string) (entity.Attachment, bool)
+	ListVersions(tenantSlug string, attachmentPublicID string) []entity.AttachmentVersion
+	CreateVersion(tenantSlug string, attachmentPublicID string, version entity.AttachmentVersion) (entity.Attachment, entity.AttachmentVersion, bool)
 }

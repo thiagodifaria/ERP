@@ -17,6 +17,8 @@ type AttachmentResponse struct {
 	ChecksumSHA256 string     `json:"checksumSha256"`
 	Visibility     string     `json:"visibility"`
 	RetentionDays  int        `json:"retentionDays"`
+	CurrentVersion int        `json:"currentVersion"`
+	VersionCount   int        `json:"versionCount"`
 	ArchiveReason  string     `json:"archiveReason"`
 	ArchivedAt     *time.Time `json:"archivedAt"`
 	CreatedAt      time.Time  `json:"createdAt"`

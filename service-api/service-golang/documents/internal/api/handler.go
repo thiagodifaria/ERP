@@ -20,10 +20,12 @@ import (
 )
 
 type AttachmentHandler struct {
-	listAttachments   query.ListAttachments
-	createAttachment  command.CreateAttachment
-	getAttachment     query.GetAttachment
-	archiveAttachment command.ArchiveAttachment
+	listAttachments       query.ListAttachments
+	createAttachment      command.CreateAttachment
+	getAttachment         query.GetAttachment
+	archiveAttachment     command.ArchiveAttachment
+	listVersions          query.ListAttachmentVersions
+	createVersion         command.CreateAttachmentVersion
 	createUploadSession   command.CreateUploadSession
 	getUploadSession      query.GetUploadSession
 	completeUploadSession command.CompleteUploadSession
@@ -36,6 +38,8 @@ func NewAttachmentHandler(attachmentRepository repository.AttachmentRepository, 
 		createAttachment:      command.NewCreateAttachment(attachmentRepository),
 		getAttachment:         query.NewGetAttachment(attachmentRepository),
 		archiveAttachment:     command.NewArchiveAttachment(attachmentRepository),
+		listVersions:          query.NewListAttachmentVersions(attachmentRepository),
+		createVersion:         command.NewCreateAttachmentVersion(attachmentRepository),
 		createUploadSession:   command.NewCreateUploadSession(uploadSessionRepository),
 		getUploadSession:      query.NewGetUploadSession(uploadSessionRepository),
 		completeUploadSession: command.NewCompleteUploadSession(uploadSessionRepository, attachmentRepository),
@@ -132,6 +136,57 @@ func (handler AttachmentHandler) Archive(writer http.ResponseWriter, request *ht
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(writer).Encode(mapAttachment(*result.Attachment))
+}
+
+func (handler AttachmentHandler) ListVersions(writer http.ResponseWriter, request *http.Request) {
+	versions := handler.listVersions.Execute(request.URL.Query().Get("tenantSlug"), request.PathValue("publicId"))
+	response := make([]dto.AttachmentVersionResponse, 0, len(versions))
+	for _, version := range versions {
+		response = append(response, mapAttachmentVersion(version))
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(writer).Encode(response)
+}
+
+func (handler AttachmentHandler) CreateVersion(writer http.ResponseWriter, request *http.Request) {
+	var payload dto.CreateAttachmentVersionRequest
+	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+		writeDocumentsError(writer, http.StatusBadRequest, "invalid_json", "Request body is invalid.")
+		return
+	}
+
+	result := handler.createVersion.Execute(command.CreateAttachmentVersionInput{
+		TenantSlug:         payload.TenantSlug,
+		AttachmentPublicID: request.PathValue("publicId"),
+		FileName:           payload.FileName,
+		ContentType:        payload.ContentType,
+		StorageKey:         payload.StorageKey,
+		StorageDriver:      payload.StorageDriver,
+		Source:             payload.Source,
+		UploadedBy:         payload.UploadedBy,
+		FileSizeBytes:      payload.FileSizeBytes,
+		ChecksumSHA256:     payload.ChecksumSHA256,
+	})
+	if result.BadRequest {
+		writeDocumentsError(writer, http.StatusBadRequest, result.ErrorCode, result.ErrorText)
+		return
+	}
+	if result.NotFound {
+		writeDocumentsError(writer, http.StatusNotFound, "attachment_not_found", "Attachment was not found.")
+		return
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(writer).Encode(struct {
+		Attachment dto.AttachmentResponse        `json:"attachment"`
+		Version    dto.AttachmentVersionResponse `json:"version"`
+	}{
+		Attachment: mapAttachment(*result.Attachment),
+		Version:    mapAttachmentVersion(*result.Version),
+	})
 }
 
 func (handler AttachmentHandler) CreateAccessLink(writer http.ResponseWriter, request *http.Request) {
@@ -311,9 +366,29 @@ func mapAttachment(attachment entity.Attachment) dto.AttachmentResponse {
 		ChecksumSHA256: attachment.ChecksumSHA256,
 		Visibility:     attachment.Visibility,
 		RetentionDays:  attachment.RetentionDays,
+		CurrentVersion: attachment.CurrentVersion,
+		VersionCount:   attachment.VersionCount,
 		ArchiveReason:  attachment.ArchiveReason,
 		ArchivedAt:     attachment.ArchivedAt,
 		CreatedAt:      attachment.CreatedAt,
+	}
+}
+
+func mapAttachmentVersion(version entity.AttachmentVersion) dto.AttachmentVersionResponse {
+	return dto.AttachmentVersionResponse{
+		PublicID:           version.PublicID,
+		TenantSlug:         version.TenantSlug,
+		AttachmentPublicID: version.AttachmentPublicID,
+		VersionNumber:      version.VersionNumber,
+		FileName:           version.FileName,
+		ContentType:        version.ContentType,
+		StorageKey:         version.StorageKey,
+		StorageDriver:      version.StorageDriver,
+		Source:             version.Source,
+		UploadedBy:         version.UploadedBy,
+		FileSizeBytes:      version.FileSizeBytes,
+		ChecksumSHA256:     version.ChecksumSHA256,
+		CreatedAt:          version.CreatedAt,
 	}
 }
 

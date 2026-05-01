@@ -13,11 +13,13 @@ import (
 type InMemoryAttachmentRepository struct {
 	mutex       sync.Mutex
 	attachments []entity.Attachment
+	versions    map[string][]entity.AttachmentVersion
 }
 
 func NewInMemoryAttachmentRepository() *InMemoryAttachmentRepository {
 	return &InMemoryAttachmentRepository{
 		attachments: []entity.Attachment{},
+		versions:    map[string][]entity.AttachmentVersion{},
 	}
 }
 
@@ -78,6 +80,21 @@ func (repository *InMemoryAttachmentRepository) Save(attachment entity.Attachmen
 	defer repository.mutex.Unlock()
 
 	repository.attachments = append(repository.attachments, attachment)
+	repository.versions[attachment.PublicID] = []entity.AttachmentVersion{{
+		PublicID:           attachment.PublicID,
+		TenantSlug:         attachment.TenantSlug,
+		AttachmentPublicID: attachment.PublicID,
+		VersionNumber:      1,
+		FileName:           attachment.FileName,
+		ContentType:        attachment.ContentType,
+		StorageKey:         attachment.StorageKey,
+		StorageDriver:      attachment.StorageDriver,
+		Source:             attachment.Source,
+		UploadedBy:         attachment.UploadedBy,
+		FileSizeBytes:      attachment.FileSizeBytes,
+		ChecksumSHA256:     attachment.ChecksumSHA256,
+		CreatedAt:          attachment.CreatedAt,
+	}}
 	return attachment
 }
 
@@ -101,4 +118,57 @@ func (repository *InMemoryAttachmentRepository) Archive(tenantSlug string, publi
 	}
 
 	return entity.Attachment{}, false
+}
+
+func (repository *InMemoryAttachmentRepository) ListVersions(tenantSlug string, attachmentPublicID string) []entity.AttachmentVersion {
+	repository.mutex.Lock()
+	defer repository.mutex.Unlock()
+
+	normalizedTenantSlug := strings.ToLower(strings.TrimSpace(tenantSlug))
+	normalizedPublicID := strings.TrimSpace(attachmentPublicID)
+	for _, attachment := range repository.attachments {
+		if attachment.PublicID != normalizedPublicID {
+			continue
+		}
+		if normalizedTenantSlug != "" && attachment.TenantSlug != normalizedTenantSlug {
+			continue
+		}
+		versions := slices.Clone(repository.versions[normalizedPublicID])
+		slices.Reverse(versions)
+		return versions
+	}
+
+	return []entity.AttachmentVersion{}
+}
+
+func (repository *InMemoryAttachmentRepository) CreateVersion(tenantSlug string, attachmentPublicID string, version entity.AttachmentVersion) (entity.Attachment, entity.AttachmentVersion, bool) {
+	repository.mutex.Lock()
+	defer repository.mutex.Unlock()
+
+	normalizedTenantSlug := strings.ToLower(strings.TrimSpace(tenantSlug))
+	normalizedPublicID := strings.TrimSpace(attachmentPublicID)
+	for index, attachment := range repository.attachments {
+		if attachment.PublicID != normalizedPublicID {
+			continue
+		}
+		if normalizedTenantSlug != "" && attachment.TenantSlug != normalizedTenantSlug {
+			continue
+		}
+
+		attachment.FileName = version.FileName
+		attachment.ContentType = version.ContentType
+		attachment.StorageKey = version.StorageKey
+		attachment.StorageDriver = version.StorageDriver
+		attachment.Source = version.Source
+		attachment.UploadedBy = version.UploadedBy
+		attachment.FileSizeBytes = version.FileSizeBytes
+		attachment.ChecksumSHA256 = version.ChecksumSHA256
+		attachment.CurrentVersion = version.VersionNumber
+		attachment.VersionCount = version.VersionNumber
+		repository.attachments[index] = attachment
+		repository.versions[normalizedPublicID] = append(repository.versions[normalizedPublicID], version)
+		return attachment, version, true
+	}
+
+	return entity.Attachment{}, entity.AttachmentVersion{}, false
 }

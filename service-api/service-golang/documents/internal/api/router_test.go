@@ -132,6 +132,62 @@ func TestRouterShouldGetArchiveAndIssueAccessLinks(t *testing.T) {
 	}
 }
 
+func TestRouterShouldCreateAndListAttachmentVersions(t *testing.T) {
+	router := NewRouter(telemetry.New("documents-test"), persistence.NewInMemoryAttachmentRepository(), persistence.NewInMemoryUploadSessionRepository())
+
+	createRequest := httptest.NewRequest(
+		http.MethodPost,
+		"/api/documents/attachments",
+		bytes.NewBufferString(`{"tenantSlug":"bootstrap-ops","ownerType":"rentals.contract","ownerPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e70000351","fileName":"contrato-v1.pdf","contentType":"application/pdf","storageKey":"rentals/contrato-v1.pdf","storageDriver":"manual","source":"rentals","uploadedBy":"ops-user","fileSizeBytes":4096,"checksumSha256":"V1"}`),
+	)
+	createRecorder := httptest.NewRecorder()
+	router.ServeHTTP(createRecorder, createRequest)
+	if createRecorder.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, createRecorder.Code)
+	}
+
+	var created dto.AttachmentResponse
+	if err := json.Unmarshal(createRecorder.Body.Bytes(), &created); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+	if created.CurrentVersion != 1 || created.VersionCount != 1 {
+		t.Fatalf("expected initial version counters, got %+v", created)
+	}
+
+	createVersionRequest := httptest.NewRequest(
+		http.MethodPost,
+		"/api/documents/attachments/"+created.PublicID+"/versions",
+		bytes.NewBufferString(`{"tenantSlug":"bootstrap-ops","fileName":"contrato-v2.pdf","contentType":"application/pdf","storageKey":"rentals/contrato-v2.pdf","storageDriver":"manual","source":"rentals","uploadedBy":"ops-user","fileSizeBytes":5120,"checksumSha256":"V2"}`),
+	)
+	createVersionRecorder := httptest.NewRecorder()
+	router.ServeHTTP(createVersionRecorder, createVersionRequest)
+	if createVersionRecorder.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, createVersionRecorder.Code)
+	}
+
+	if !bytes.Contains(createVersionRecorder.Body.Bytes(), []byte(`"versionNumber":2`)) {
+		t.Fatalf("expected second version payload, got %s", createVersionRecorder.Body.String())
+	}
+	if !bytes.Contains(createVersionRecorder.Body.Bytes(), []byte(`"currentVersion":2`)) {
+		t.Fatalf("expected attachment currentVersion updated, got %s", createVersionRecorder.Body.String())
+	}
+
+	listVersionsRequest := httptest.NewRequest(http.MethodGet, "/api/documents/attachments/"+created.PublicID+"/versions?tenantSlug=bootstrap-ops", nil)
+	listVersionsRecorder := httptest.NewRecorder()
+	router.ServeHTTP(listVersionsRecorder, listVersionsRequest)
+	if listVersionsRecorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, listVersionsRecorder.Code)
+	}
+
+	var versions []dto.AttachmentVersionResponse
+	if err := json.Unmarshal(listVersionsRecorder.Body.Bytes(), &versions); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+	if len(versions) != 2 || versions[0].VersionNumber != 2 || versions[1].VersionNumber != 1 {
+		t.Fatalf("expected two ordered versions, got %+v", versions)
+	}
+}
+
 func TestRouterShouldCreateAndCompleteUploadSession(t *testing.T) {
 	router := NewRouter(telemetry.New("documents-test"), persistence.NewInMemoryAttachmentRepository(), persistence.NewInMemoryUploadSessionRepository())
 

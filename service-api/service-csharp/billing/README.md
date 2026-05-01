@@ -29,10 +29,12 @@ Public routes:
 - `POST /api/billing/subscriptions/{publicId}/suspend`
 - `POST /api/billing/subscriptions/{publicId}/reactivate`
 - `GET /api/billing/invoices`
+- `GET /api/billing/invoices/{publicId}`
 - `POST /api/billing/subscriptions/{publicId}/invoices`
 - `GET /api/billing/invoices/{publicId}/attempts`
 - `POST /api/billing/invoices/{publicId}/attempts`
 - `POST /api/billing/webhook-events/process`
+- `GET /api/billing/events`
 - `GET /api/billing/reports/operations`
 - `GET /api/billing/recovery/cases`
 - `GET /api/billing/recovery/cases/{publicId}`

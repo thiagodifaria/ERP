@@ -133,6 +133,17 @@ public static class Server
       return TypedResults.Ok(await ListSubscriptionEvents(connection, tenantSlug.Trim(), publicId));
     });
 
+    app.MapGet("/api/billing/events", async Task<IResult> (string? tenantSlug, string? subscriptionPublicId, string? invoicePublicId, string? eventCode, NpgsqlDataSource dataSource) =>
+    {
+      if (string.IsNullOrWhiteSpace(tenantSlug))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("tenant_slug_required", "Tenant slug is required."));
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      return TypedResults.Ok(await ListBillingEvents(connection, tenantSlug.Trim(), subscriptionPublicId, invoicePublicId, eventCode));
+    });
+
     app.MapPost("/api/billing/subscriptions", async Task<IResult> (CreateSubscriptionRequest? request, NpgsqlDataSource dataSource) =>
     {
       if (request is null)
@@ -246,6 +257,20 @@ public static class Server
 
       await using var connection = await dataSource.OpenConnectionAsync();
       return TypedResults.Ok(await ListInvoices(connection, tenantSlug.Trim(), NormalizeInvoiceStatus(status)));
+    });
+
+    app.MapGet("/api/billing/invoices/{publicId}", async Task<IResult> (string publicId, string? tenantSlug, NpgsqlDataSource dataSource) =>
+    {
+      if (string.IsNullOrWhiteSpace(tenantSlug))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("tenant_slug_required", "Tenant slug is required."));
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      var invoice = await FindInvoice(connection, tenantSlug.Trim(), publicId);
+      return invoice is null
+        ? TypedResults.NotFound(new ErrorResponse("billing_invoice_not_found", "Billing invoice was not found."))
+        : TypedResults.Ok(invoice);
     });
 
     app.MapPost("/api/billing/subscriptions/{publicId}/invoices", async Task<IResult> (string publicId, CreateInvoiceRequest? request, NpgsqlDataSource dataSource) =>
@@ -1199,6 +1224,74 @@ public static class Server
       connection);
     command.Parameters.AddWithValue(tenantSlug);
     command.Parameters.AddWithValue(subscriptionPublicId);
+
+    var response = new List<SubscriptionEventResponse>();
+    await using var reader = await command.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+      response.Add(new SubscriptionEventResponse(
+        reader.GetString(0),
+        reader.GetString(1),
+        reader.GetString(2),
+        reader.GetString(3),
+        reader.GetString(4),
+        reader.GetString(5),
+        reader.GetString(6),
+        reader.GetString(7),
+        reader.GetString(8)));
+    }
+
+    return response;
+  }
+
+  private static async Task<IReadOnlyList<SubscriptionEventResponse>> ListBillingEvents(
+    NpgsqlConnection connection,
+    string tenantSlug,
+    string? subscriptionPublicId,
+    string? invoicePublicId,
+    string? eventCode)
+  {
+    var sql =
+      """
+      SELECT
+        event.public_id::text,
+        tenant.slug,
+        event.subscription_public_id::text,
+        COALESCE(event.invoice_public_id::text, ''),
+        event.event_code,
+        event.actor,
+        event.summary,
+        event.payload::text,
+        to_char(event.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+      FROM billing.subscription_events AS event
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = event.tenant_id
+      WHERE tenant.slug = $1
+      """;
+
+    var parameters = new List<object?> { tenantSlug };
+    if (!string.IsNullOrWhiteSpace(subscriptionPublicId))
+    {
+      sql += $" AND event.subscription_public_id = ${parameters.Count + 1}::uuid";
+      parameters.Add(subscriptionPublicId.Trim());
+    }
+    if (!string.IsNullOrWhiteSpace(invoicePublicId))
+    {
+      sql += $" AND event.invoice_public_id = ${parameters.Count + 1}::uuid";
+      parameters.Add(invoicePublicId.Trim());
+    }
+    if (!string.IsNullOrWhiteSpace(eventCode))
+    {
+      sql += $" AND event.event_code = ${parameters.Count + 1}";
+      parameters.Add(eventCode.Trim());
+    }
+    sql += " ORDER BY event.created_at DESC, event.id DESC";
+
+    await using var command = new NpgsqlCommand(sql, connection);
+    for (var index = 0; index < parameters.Count; index++)
+    {
+      command.Parameters.AddWithValue(parameters[index] ?? string.Empty);
+    }
 
     var response = new List<SubscriptionEventResponse>();
     await using var reader = await command.ExecuteReaderAsync();

@@ -32,7 +32,7 @@ func (repository *PostgresAttachmentRepository) List(filters repository.Attachme
 	}
 
 	query := `
-      SELECT public_id::text, owner_type, owner_public_id::text, file_name, content_type, storage_key, storage_driver, source, uploaded_by, file_size_bytes, checksum_sha256, visibility, retention_days, archive_reason, archived_at, created_at
+      SELECT public_id::text, owner_type, owner_public_id::text, file_name, content_type, storage_key, storage_driver, source, uploaded_by, file_size_bytes, checksum_sha256, visibility, retention_days, current_version_number, archive_reason, archived_at, created_at
       FROM documents.attachments
       WHERE tenant_id = $1
     `
@@ -89,11 +89,12 @@ func (repository *PostgresAttachmentRepository) List(filters repository.Attachme
 		var checksumSHA256 string
 		var visibility string
 		var retentionDays int
+		var currentVersion int
 		var archiveReason string
 		var archivedAt sql.NullTime
 		var createdAt sql.NullTime
 
-		if scanErr := rows.Scan(&publicID, &ownerType, &ownerPublicID, &fileName, &contentType, &storageKey, &storageDriver, &source, &uploadedBy, &fileSizeBytes, &checksumSHA256, &visibility, &retentionDays, &archiveReason, &archivedAt, &createdAt); scanErr != nil {
+		if scanErr := rows.Scan(&publicID, &ownerType, &ownerPublicID, &fileName, &contentType, &storageKey, &storageDriver, &source, &uploadedBy, &fileSizeBytes, &checksumSHA256, &visibility, &retentionDays, &currentVersion, &archiveReason, &archivedAt, &createdAt); scanErr != nil {
 			continue
 		}
 
@@ -105,6 +106,8 @@ func (repository *PostgresAttachmentRepository) List(filters repository.Attachme
 
 		attachment, buildErr := entity.NewAttachment(publicID, tenantSlug, ownerType, ownerPublicID, fileName, contentType, storageKey, storageDriver, source, uploadedBy, fileSizeBytes, checksumSHA256, visibility, retentionDays, archiveReason, archivedAtValue, createdAt.Time)
 		if buildErr == nil {
+			attachment.CurrentVersion = currentVersion
+			attachment.VersionCount = currentVersion
 			response = append(response, attachment)
 		}
 	}
@@ -120,7 +123,7 @@ func (repository *PostgresAttachmentRepository) FindByPublicID(tenantSlug string
 
 	row := repository.database.QueryRow(
 		`
-      SELECT public_id::text, owner_type, owner_public_id::text, file_name, content_type, storage_key, storage_driver, source, uploaded_by, file_size_bytes, checksum_sha256, visibility, retention_days, archive_reason, archived_at, created_at
+      SELECT public_id::text, owner_type, owner_public_id::text, file_name, content_type, storage_key, storage_driver, source, uploaded_by, file_size_bytes, checksum_sha256, visibility, retention_days, current_version_number, archive_reason, archived_at, created_at
       FROM documents.attachments
       WHERE tenant_id = $1
         AND public_id = $2::uuid
@@ -139,7 +142,13 @@ func (repository *PostgresAttachmentRepository) Save(attachment entity.Attachmen
 		return attachment
 	}
 
-	row := repository.database.QueryRow(
+	transaction, err := repository.database.Begin()
+	if err != nil {
+		return attachment
+	}
+	defer transaction.Rollback()
+
+	row := transaction.QueryRow(
 		`
       INSERT INTO documents.attachments (
         tenant_id,
@@ -155,10 +164,11 @@ func (repository *PostgresAttachmentRepository) Save(attachment entity.Attachmen
         file_size_bytes,
         checksum_sha256,
         visibility,
-        retention_days
+        retention_days,
+        current_version_number
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      RETURNING public_id::text
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 1)
+      RETURNING id, public_id::text
     `,
 		tenantID,
 		uuid.MustParse(attachment.PublicID),
@@ -176,12 +186,41 @@ func (repository *PostgresAttachmentRepository) Save(attachment entity.Attachmen
 		attachment.RetentionDays,
 	)
 
+	var attachmentID int64
 	var publicID string
-	if err := row.Scan(&publicID); err != nil {
+	if err := row.Scan(&attachmentID, &publicID); err != nil {
+		return attachment
+	}
+
+	if _, err := transaction.Exec(
+		`
+      INSERT INTO documents.attachment_versions (
+        tenant_id, attachment_id, public_id, version_number, file_name, content_type, storage_key, storage_driver, source, uploaded_by, file_size_bytes, checksum_sha256
+      )
+      VALUES ($1, $2, $3::uuid, 1, $4, $5, $6, $7, $8, $9, $10, $11)
+    `,
+		tenantID,
+		attachmentID,
+		uuid.MustParse(attachment.PublicID),
+		attachment.FileName,
+		attachment.ContentType,
+		attachment.StorageKey,
+		attachment.StorageDriver,
+		attachment.Source,
+		attachment.UploadedBy,
+		attachment.FileSizeBytes,
+		attachment.ChecksumSHA256,
+	); err != nil {
+		return attachment
+	}
+
+	if err := transaction.Commit(); err != nil {
 		return attachment
 	}
 
 	attachment.PublicID = publicID
+	attachment.CurrentVersion = 1
+	attachment.VersionCount = 1
 	return attachment
 }
 
@@ -202,7 +241,7 @@ func (repository *PostgresAttachmentRepository) Archive(tenantSlug string, publi
         END
       WHERE tenant_id = $1
         AND public_id = $2::uuid
-      RETURNING public_id::text, owner_type, owner_public_id::text, file_name, content_type, storage_key, storage_driver, source, uploaded_by, file_size_bytes, checksum_sha256, visibility, retention_days, archive_reason, archived_at, created_at
+      RETURNING public_id::text, owner_type, owner_public_id::text, file_name, content_type, storage_key, storage_driver, source, uploaded_by, file_size_bytes, checksum_sha256, visibility, retention_days, current_version_number, archive_reason, archived_at, created_at
     `,
 		tenantID,
 		strings.TrimSpace(publicID),
@@ -210,6 +249,161 @@ func (repository *PostgresAttachmentRepository) Archive(tenantSlug string, publi
 	)
 
 	return scanAttachment(row, normalizedTenantSlug)
+}
+
+func (repository *PostgresAttachmentRepository) ListVersions(tenantSlug string, attachmentPublicID string) []entity.AttachmentVersion {
+	tenantID, normalizedTenantSlug, err := repository.resolveTenant(tenantSlug)
+	if err != nil {
+		return []entity.AttachmentVersion{}
+	}
+
+	rows, err := repository.database.Query(
+		`
+      SELECT
+        version.public_id::text,
+        attachment.public_id::text,
+        version.version_number,
+        version.file_name,
+        version.content_type,
+        version.storage_key,
+        version.storage_driver,
+        version.source,
+        version.uploaded_by,
+        version.file_size_bytes,
+        version.checksum_sha256,
+        version.created_at
+      FROM documents.attachment_versions AS version
+      INNER JOIN documents.attachments AS attachment
+        ON attachment.id = version.attachment_id
+      WHERE version.tenant_id = $1
+        AND attachment.public_id = $2::uuid
+      ORDER BY version.version_number DESC, version.id DESC
+    `,
+		tenantID,
+		strings.TrimSpace(attachmentPublicID),
+	)
+	if err != nil {
+		return []entity.AttachmentVersion{}
+	}
+	defer rows.Close()
+
+	response := make([]entity.AttachmentVersion, 0)
+	for rows.Next() {
+		var publicID string
+		var parentPublicID string
+		var versionNumber int
+		var fileName string
+		var contentType string
+		var storageKey string
+		var storageDriver string
+		var source string
+		var uploadedBy string
+		var fileSizeBytes int64
+		var checksumSHA256 string
+		var createdAt time.Time
+		if err := rows.Scan(&publicID, &parentPublicID, &versionNumber, &fileName, &contentType, &storageKey, &storageDriver, &source, &uploadedBy, &fileSizeBytes, &checksumSHA256, &createdAt); err != nil {
+			continue
+		}
+
+		version, buildErr := entity.NewAttachmentVersion(publicID, normalizedTenantSlug, parentPublicID, versionNumber, fileName, contentType, storageKey, storageDriver, source, uploadedBy, fileSizeBytes, checksumSHA256, createdAt)
+		if buildErr == nil {
+			response = append(response, version)
+		}
+	}
+
+	return response
+}
+
+func (repository *PostgresAttachmentRepository) CreateVersion(tenantSlug string, attachmentPublicID string, version entity.AttachmentVersion) (entity.Attachment, entity.AttachmentVersion, bool) {
+	tenantID, normalizedTenantSlug, err := repository.resolveTenant(tenantSlug)
+	if err != nil {
+		return entity.Attachment{}, entity.AttachmentVersion{}, false
+	}
+
+	transaction, err := repository.database.Begin()
+	if err != nil {
+		return entity.Attachment{}, entity.AttachmentVersion{}, false
+	}
+	defer transaction.Rollback()
+
+	var attachmentID int64
+	if err := transaction.QueryRow(
+		`
+      SELECT id
+      FROM documents.attachments
+      WHERE tenant_id = $1
+        AND public_id = $2::uuid
+      LIMIT 1
+    `,
+		tenantID,
+		strings.TrimSpace(attachmentPublicID),
+	).Scan(&attachmentID); err != nil {
+		return entity.Attachment{}, entity.AttachmentVersion{}, false
+	}
+
+	if _, err := transaction.Exec(
+		`
+      INSERT INTO documents.attachment_versions (
+        tenant_id, attachment_id, public_id, version_number, file_name, content_type, storage_key, storage_driver, source, uploaded_by, file_size_bytes, checksum_sha256
+      )
+      VALUES ($1, $2, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    `,
+		tenantID,
+		attachmentID,
+		uuid.MustParse(version.PublicID),
+		version.VersionNumber,
+		version.FileName,
+		version.ContentType,
+		version.StorageKey,
+		version.StorageDriver,
+		version.Source,
+		version.UploadedBy,
+		version.FileSizeBytes,
+		version.ChecksumSHA256,
+	); err != nil {
+		return entity.Attachment{}, entity.AttachmentVersion{}, false
+	}
+
+	row := transaction.QueryRow(
+		`
+      UPDATE documents.attachments
+      SET
+        file_name = $3,
+        content_type = $4,
+        storage_key = $5,
+        storage_driver = $6,
+        source = $7,
+        uploaded_by = $8,
+        file_size_bytes = $9,
+        checksum_sha256 = $10,
+        current_version_number = $11
+      WHERE tenant_id = $1
+        AND public_id = $2::uuid
+      RETURNING public_id::text, owner_type, owner_public_id::text, file_name, content_type, storage_key, storage_driver, source, uploaded_by, file_size_bytes, checksum_sha256, visibility, retention_days, current_version_number, archive_reason, archived_at, created_at
+    `,
+		tenantID,
+		strings.TrimSpace(attachmentPublicID),
+		version.FileName,
+		version.ContentType,
+		version.StorageKey,
+		version.StorageDriver,
+		version.Source,
+		version.UploadedBy,
+		version.FileSizeBytes,
+		version.ChecksumSHA256,
+		version.VersionNumber,
+	)
+
+	updatedAttachment, ok := scanAttachment(row, normalizedTenantSlug)
+	if !ok {
+		return entity.Attachment{}, entity.AttachmentVersion{}, false
+	}
+
+	if err := transaction.Commit(); err != nil {
+		return entity.Attachment{}, entity.AttachmentVersion{}, false
+	}
+
+	return updatedAttachment, version, true
 }
 
 func (repository *PostgresAttachmentRepository) resolveTenant(tenantSlug string) (int64, string, error) {
@@ -257,11 +451,12 @@ func scanAttachment(scanner attachmentScanner, tenantSlug string) (entity.Attach
 	var checksumSHA256 string
 	var visibility string
 	var retentionDays int
+	var currentVersion int
 	var archiveReason string
 	var archivedAt sql.NullTime
 	var createdAt sql.NullTime
 
-	if err := scanner.Scan(&publicID, &ownerType, &ownerPublicID, &fileName, &contentType, &storageKey, &storageDriver, &source, &uploadedBy, &fileSizeBytes, &checksumSHA256, &visibility, &retentionDays, &archiveReason, &archivedAt, &createdAt); err != nil {
+	if err := scanner.Scan(&publicID, &ownerType, &ownerPublicID, &fileName, &contentType, &storageKey, &storageDriver, &source, &uploadedBy, &fileSizeBytes, &checksumSHA256, &visibility, &retentionDays, &currentVersion, &archiveReason, &archivedAt, &createdAt); err != nil {
 		return entity.Attachment{}, false
 	}
 
@@ -275,6 +470,8 @@ func scanAttachment(scanner attachmentScanner, tenantSlug string) (entity.Attach
 	if err != nil {
 		return entity.Attachment{}, false
 	}
+	attachment.CurrentVersion = currentVersion
+	attachment.VersionCount = currentVersion
 
 	return attachment, true
 }

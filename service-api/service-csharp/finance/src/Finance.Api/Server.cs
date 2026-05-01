@@ -90,14 +90,31 @@ public static class Server
         return TypedResults.Ok(new OperationsSyncResponse(tenantSlug, 0, 0, 0, 0));
       }
 
-      var receivables = await SyncReceivableEntries(connection, transaction, tenantId.Value);
+      var salesReceivables = await SyncReceivableEntries(connection, transaction, tenantId.Value);
+      var rentalReceivables = await SyncRentalReceivableEntries(connection, transaction, tenantId.Value);
+      var rentalSettlements = await SyncRentalReceivableSettlements(connection, transaction, tenantId.Value);
       var commissions = await SyncCommissionEntries(connection, transaction, tenantId.Value);
+      await InsertActivityEvent(
+        connection,
+        transaction,
+        tenantId.Value,
+        "receivable_synced",
+        "finance.operations",
+        null,
+        $"Finance operations sync consolidated sales and rentals with {salesReceivables.Created + rentalReceivables.Created} receivables created, {salesReceivables.Updated + rentalReceivables.Updated} updated and {rentalSettlements.Created} rental settlements materialized.",
+        "finance-sync",
+        JsonSerializer.Serialize(new
+        {
+          sales = new { created = salesReceivables.Created, updated = salesReceivables.Updated },
+          rentals = new { created = rentalReceivables.Created, updated = rentalReceivables.Updated, settlements = rentalSettlements.Created },
+          commissions = new { created = commissions.Created, updated = commissions.Updated }
+        }));
 
       await transaction.CommitAsync();
       return TypedResults.Ok(new OperationsSyncResponse(
         tenantSlug,
-        receivables.Created,
-        receivables.Updated,
+        salesReceivables.Created + rentalReceivables.Created,
+        salesReceivables.Updated + rentalReceivables.Updated,
         commissions.Created,
         commissions.Updated));
     });
@@ -201,6 +218,76 @@ public static class Server
       await using var connection = await dataSource.OpenConnectionAsync();
       var summary = await BuildCommissionSummary(connection, resolvedTenantSlug);
       return TypedResults.Ok(summary);
+    });
+
+    app.MapPost("/api/finance/commissions/{publicId}/block", async Task<IResult> (string publicId, CommissionLifecycleRequest? request, NpgsqlDataSource dataSource) =>
+    {
+      if (request is null || string.IsNullOrWhiteSpace(request.TenantSlug))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("tenant_slug_required", "Tenant slug is required."));
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      await using var transaction = await connection.BeginTransactionAsync();
+
+      var commission = await FindCommissionForLifecycle(connection, transaction, request.TenantSlug.Trim(), publicId);
+      if (commission is null)
+      {
+        await transaction.RollbackAsync();
+        return TypedResults.NotFound(new ErrorResponse("commission_not_found", "Commission was not found."));
+      }
+
+      if (commission.Status == "blocked")
+      {
+        await transaction.CommitAsync();
+        return TypedResults.Ok(await GetCommissionByPublicId(connection, request.TenantSlug.Trim(), publicId)
+          ?? throw new InvalidOperationException("commission_lookup_failed"));
+      }
+
+      if (commission.Status != "pending")
+      {
+        await transaction.RollbackAsync();
+        return TypedResults.BadRequest(new ErrorResponse("commission_transition_invalid", "Only pending commissions can be blocked."));
+      }
+
+      var response = await UpdateCommissionStatus(connection, transaction, commission, "blocked", request.Actor, request.Reason);
+      await transaction.CommitAsync();
+      return TypedResults.Ok(response);
+    });
+
+    app.MapPost("/api/finance/commissions/{publicId}/release", async Task<IResult> (string publicId, CommissionLifecycleRequest? request, NpgsqlDataSource dataSource) =>
+    {
+      if (request is null || string.IsNullOrWhiteSpace(request.TenantSlug))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("tenant_slug_required", "Tenant slug is required."));
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      await using var transaction = await connection.BeginTransactionAsync();
+
+      var commission = await FindCommissionForLifecycle(connection, transaction, request.TenantSlug.Trim(), publicId);
+      if (commission is null)
+      {
+        await transaction.RollbackAsync();
+        return TypedResults.NotFound(new ErrorResponse("commission_not_found", "Commission was not found."));
+      }
+
+      if (commission.Status == "released")
+      {
+        await transaction.CommitAsync();
+        return TypedResults.Ok(await GetCommissionByPublicId(connection, request.TenantSlug.Trim(), publicId)
+          ?? throw new InvalidOperationException("commission_lookup_failed"));
+      }
+
+      if (commission.Status is not ("pending" or "blocked"))
+      {
+        await transaction.RollbackAsync();
+        return TypedResults.BadRequest(new ErrorResponse("commission_transition_invalid", "Only pending or blocked commissions can be released."));
+      }
+
+      var response = await UpdateCommissionStatus(connection, transaction, commission, "released", request.Actor, request.Reason);
+      await transaction.CommitAsync();
+      return TypedResults.Ok(response);
     });
 
     app.MapGet("/api/finance/payables", async Task<IResult> (string? tenantSlug, string? status, NpgsqlDataSource dataSource, IConfiguration configuration) =>
@@ -557,6 +644,14 @@ public static class Server
       return TypedResults.Ok(report);
     });
 
+    app.MapGet("/api/finance/activity", async Task<IResult> (string? tenantSlug, string? entityType, string? entityPublicId, string? activityType, NpgsqlDataSource dataSource, IConfiguration configuration) =>
+    {
+      var resolvedTenantSlug = ResolveTenantSlug(tenantSlug, configuration);
+      await using var connection = await dataSource.OpenConnectionAsync();
+      var events = await ListActivityEvents(connection, resolvedTenantSlug, entityType, entityPublicId, activityType);
+      return TypedResults.Ok<IReadOnlyList<FinanceActivityResponse>>(events);
+    });
+
     return app;
   }
 
@@ -871,6 +966,8 @@ public static class Server
           invoice.public_id AS source_invoice_public_id,
           sale.public_id AS sale_public_id,
           sale.customer_public_id,
+          NULL::uuid AS contract_public_id,
+          'sales_invoice'::varchar AS source_kind,
           CASE
             WHEN invoice.status = 'paid' THEN 'paid'
             WHEN invoice.status = 'cancelled' THEN 'cancelled'
@@ -883,6 +980,7 @@ public static class Server
             'invoicePublicId', invoice.public_id,
             'salePublicId', sale.public_id,
             'customerPublicId', sale.customer_public_id,
+            'sourceKind', 'sales_invoice',
             'invoiceStatus', invoice.status,
             'amountCents', invoice.amount_cents,
             'dueDate', to_char(invoice.due_date, 'YYYY-MM-DD'),
@@ -900,6 +998,8 @@ public static class Server
           source_invoice_public_id,
           sale_public_id,
           customer_public_id,
+          contract_public_id,
+          source_kind,
           status,
           amount_cents,
           due_date,
@@ -913,6 +1013,8 @@ public static class Server
           source.source_invoice_public_id,
           source.sale_public_id,
           source.customer_public_id,
+          source.contract_public_id,
+          source.source_kind,
           source.status,
           source.amount_cents,
           source.due_date,
@@ -924,6 +1026,8 @@ public static class Server
         DO UPDATE SET
           sale_public_id = EXCLUDED.sale_public_id,
           customer_public_id = EXCLUDED.customer_public_id,
+          contract_public_id = EXCLUDED.contract_public_id,
+          source_kind = EXCLUDED.source_kind,
           status = EXCLUDED.status,
           amount_cents = EXCLUDED.amount_cents,
           due_date = EXCLUDED.due_date,
@@ -948,6 +1052,168 @@ public static class Server
     }
 
     return new SyncMutation(ConvertToInt(reader.GetValue(0)), ConvertToInt(reader.GetValue(1)));
+  }
+
+  private static async Task<SyncMutation> SyncRentalReceivableEntries(NpgsqlConnection connection, NpgsqlTransaction transaction, long tenantId)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      WITH source AS (
+        SELECT
+          charge.public_id AS source_invoice_public_id,
+          NULL::uuid AS sale_public_id,
+          contract.customer_public_id,
+          contract.public_id AS contract_public_id,
+          'rental_charge'::varchar AS source_kind,
+          CASE
+            WHEN charge.status = 'paid' THEN 'paid'
+            WHEN charge.status = 'cancelled' THEN 'cancelled'
+            ELSE 'open'
+          END AS status,
+          charge.amount_cents,
+          charge.due_date,
+          charge.paid_at,
+          jsonb_build_object(
+            'chargePublicId', charge.public_id,
+            'contractPublicId', contract.public_id,
+            'customerPublicId', contract.customer_public_id,
+            'sourceKind', 'rental_charge',
+            'chargeStatus', charge.status,
+            'amountCents', charge.amount_cents,
+            'dueDate', to_char(charge.due_date, 'YYYY-MM-DD'),
+            'paidAt', CASE WHEN charge.paid_at IS NULL THEN NULL ELSE to_char(charge.paid_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"') END,
+            'paymentReference', COALESCE(charge.payment_reference, '')
+          ) AS snapshot_payload
+        FROM rentals.contract_charges AS charge
+        INNER JOIN rentals.contracts AS contract
+          ON contract.id = charge.contract_id
+        WHERE charge.tenant_id = $1
+      ),
+      upserted AS (
+        INSERT INTO finance.receivable_entries (
+          tenant_id,
+          public_id,
+          source_invoice_public_id,
+          sale_public_id,
+          customer_public_id,
+          contract_public_id,
+          source_kind,
+          status,
+          amount_cents,
+          due_date,
+          paid_at,
+          last_synced_at,
+          snapshot_payload
+        )
+        SELECT
+          $1,
+          gen_random_uuid(),
+          source.source_invoice_public_id,
+          source.sale_public_id,
+          source.customer_public_id,
+          source.contract_public_id,
+          source.source_kind,
+          source.status,
+          source.amount_cents,
+          source.due_date,
+          source.paid_at,
+          timezone('utc', now()),
+          source.snapshot_payload
+        FROM source
+        ON CONFLICT (source_invoice_public_id)
+        DO UPDATE SET
+          sale_public_id = EXCLUDED.sale_public_id,
+          customer_public_id = EXCLUDED.customer_public_id,
+          contract_public_id = EXCLUDED.contract_public_id,
+          source_kind = EXCLUDED.source_kind,
+          status = EXCLUDED.status,
+          amount_cents = EXCLUDED.amount_cents,
+          due_date = EXCLUDED.due_date,
+          paid_at = EXCLUDED.paid_at,
+          last_synced_at = EXCLUDED.last_synced_at,
+          snapshot_payload = EXCLUDED.snapshot_payload
+        RETURNING xmax = 0 AS inserted
+      )
+      SELECT
+        COALESCE(sum(CASE WHEN inserted THEN 1 ELSE 0 END), 0) AS created_count,
+        COALESCE(sum(CASE WHEN inserted THEN 0 ELSE 1 END), 0) AS updated_count
+      FROM upserted
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(tenantId);
+
+    await using var reader = await command.ExecuteReaderAsync();
+    if (!await reader.ReadAsync())
+    {
+      return new SyncMutation(0, 0);
+    }
+
+    return new SyncMutation(ConvertToInt(reader.GetValue(0)), ConvertToInt(reader.GetValue(1)));
+  }
+
+  private static async Task<SyncMutation> SyncRentalReceivableSettlements(NpgsqlConnection connection, NpgsqlTransaction transaction, long tenantId)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      WITH candidates AS (
+        SELECT
+          receivable.id AS receivable_entry_id,
+          receivable.public_id::text AS receivable_public_id,
+          charge.payment_reference,
+          charge.amount_cents,
+          charge.paid_at
+        FROM finance.receivable_entries AS receivable
+        INNER JOIN rentals.contract_charges AS charge
+          ON charge.public_id = receivable.source_invoice_public_id
+        WHERE receivable.tenant_id = $1
+          AND receivable.source_kind = 'rental_charge'
+          AND receivable.status = 'paid'
+          AND charge.status = 'paid'
+          AND charge.payment_reference IS NOT NULL
+          AND charge.payment_reference <> ''
+          AND charge.paid_at IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM finance.receivable_settlements AS settlement
+            WHERE settlement.receivable_entry_id = receivable.id
+          )
+      ),
+      inserted AS (
+        INSERT INTO finance.receivable_settlements (
+          tenant_id,
+          receivable_entry_id,
+          public_id,
+          settlement_reference,
+          amount_cents,
+          settled_at,
+          snapshot_payload
+        )
+        SELECT
+          $1,
+          candidate.receivable_entry_id,
+          gen_random_uuid(),
+          candidate.payment_reference,
+          candidate.amount_cents,
+          candidate.paid_at,
+          jsonb_build_object(
+            'receivablePublicId', candidate.receivable_public_id,
+            'settlementReference', candidate.payment_reference,
+            'amountCents', candidate.amount_cents,
+            'settledAt', to_char(candidate.paid_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+            'sourceKind', 'rental_charge'
+          )
+        FROM candidates AS candidate
+        RETURNING 1
+      )
+      SELECT COUNT(*) FROM inserted
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(tenantId);
+
+    var created = ConvertToInt(await command.ExecuteScalarAsync() ?? 0);
+    return new SyncMutation(created, 0);
   }
 
   private static async Task<SyncMutation> SyncCommissionEntries(NpgsqlConnection connection, NpgsqlTransaction transaction, long tenantId)
@@ -1122,8 +1388,10 @@ public static class Server
       SELECT
         receivable.public_id::text,
         tenant.slug,
+        receivable.source_kind,
         receivable.source_invoice_public_id::text,
-        receivable.sale_public_id::text,
+        COALESCE(receivable.sale_public_id::text, ''),
+        COALESCE(receivable.contract_public_id::text, ''),
         receivable.customer_public_id::text,
         receivable.status,
         receivable.amount_cents,
@@ -1156,12 +1424,14 @@ public static class Server
         reader.GetString(3),
         reader.GetString(4),
         reader.GetString(5),
-        reader.GetInt64(6),
+        reader.GetString(6),
         reader.GetString(7),
-        reader.GetString(8),
+        reader.GetInt64(8),
         reader.GetString(9),
         reader.GetString(10),
-        reader.GetString(11)));
+        reader.GetString(11),
+        reader.GetString(12),
+        reader.GetString(13)));
     }
 
     return response;
@@ -1305,7 +1575,7 @@ public static class Server
       await updateReceivable.ExecuteNonQueryAsync();
 
       var tenantSlug = await LookupTenantSlug(connection, transaction, tenantId) ?? string.Empty;
-      return new ReceivableSettlementResponse(
+      var response = new ReceivableSettlementResponse(
         settlementPublicId,
         receivable.PublicId,
         tenantSlug,
@@ -1313,6 +1583,18 @@ public static class Server
         amountCents,
         settledAt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
         false);
+
+      await InsertActivityEvent(
+        connection,
+        transaction,
+        tenantId,
+        "receivable_settled",
+        "finance.receivable",
+        receivable.PublicId,
+        $"Receivable settled with reference {settlementReference}.",
+        "finance-receivables",
+        payload);
+      return response;
     }
   }
 
@@ -1403,6 +1685,141 @@ public static class Server
         ConvertToInt64(reader.GetValue(5)),
         ConvertToInt64(reader.GetValue(6)),
         ConvertToInt64(reader.GetValue(7))));
+  }
+
+  private static async Task<InternalCommission?> FindCommissionForLifecycle(NpgsqlConnection connection, NpgsqlTransaction transaction, string tenantSlug, string publicId)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        commission.id,
+        commission.tenant_id,
+        commission.public_id::text,
+        tenant.slug,
+        commission.sale_public_id::text,
+        commission.status,
+        commission.amount_cents
+      FROM finance.commission_entries AS commission
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = commission.tenant_id
+      WHERE tenant.slug = $1
+        AND commission.public_id = $2::uuid
+      LIMIT 1
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(tenantSlug);
+    command.Parameters.AddWithValue(publicId);
+
+    await using var reader = await command.ExecuteReaderAsync();
+    if (!await reader.ReadAsync())
+    {
+      return null;
+    }
+
+    return new InternalCommission(
+      ConvertToInt64(reader.GetValue(0)),
+      ConvertToInt64(reader.GetValue(1)),
+      reader.GetString(2),
+      reader.GetString(3),
+      reader.GetString(4),
+      reader.GetString(5),
+      reader.GetInt64(6));
+  }
+
+  private static async Task<CommissionResponse?> GetCommissionByPublicId(NpgsqlConnection connection, string tenantSlug, string publicId)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        commission.public_id::text,
+        tenant.slug,
+        commission.source_commission_public_id::text,
+        commission.sale_public_id::text,
+        commission.recipient_user_public_id::text,
+        commission.role_code,
+        commission.rate_bps,
+        commission.amount_cents,
+        commission.status,
+        to_char(commission.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+        to_char(commission.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+      FROM finance.commission_entries AS commission
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = commission.tenant_id
+      WHERE tenant.slug = $1
+        AND commission.public_id = $2::uuid
+      LIMIT 1
+      """,
+      connection);
+    command.Parameters.AddWithValue(tenantSlug);
+    command.Parameters.AddWithValue(publicId);
+
+    await using var reader = await command.ExecuteReaderAsync();
+    if (!await reader.ReadAsync())
+    {
+      return null;
+    }
+
+    return new CommissionResponse(
+      reader.GetString(0),
+      reader.GetString(1),
+      reader.GetString(2),
+      reader.GetString(3),
+      reader.GetString(4),
+      reader.GetString(5),
+      reader.GetInt32(6),
+      reader.GetInt64(7),
+      reader.GetString(8),
+      reader.GetString(9),
+      reader.GetString(10));
+  }
+
+  private static async Task<CommissionResponse> UpdateCommissionStatus(
+    NpgsqlConnection connection,
+    NpgsqlTransaction transaction,
+    InternalCommission commission,
+    string nextStatus,
+    string? actor,
+    string? reason)
+  {
+    await using (var command = new NpgsqlCommand(
+      """
+      UPDATE finance.commission_entries
+      SET status = $3
+      WHERE tenant_id = $1
+        AND public_id = $2::uuid
+      """,
+      connection,
+      transaction))
+    {
+      command.Parameters.AddWithValue(commission.TenantId);
+      command.Parameters.AddWithValue(commission.PublicId);
+      command.Parameters.AddWithValue(nextStatus);
+      await command.ExecuteNonQueryAsync();
+    }
+
+    var payload = JsonSerializer.Serialize(new
+    {
+      commissionPublicId = commission.PublicId,
+      salePublicId = commission.SalePublicId,
+      previousStatus = commission.Status,
+      status = nextStatus,
+      reason = string.IsNullOrWhiteSpace(reason) ? string.Empty : reason.Trim()
+    });
+
+    await InsertActivityEvent(
+      connection,
+      transaction,
+      commission.TenantId,
+      nextStatus == "blocked" ? "commission_blocked" : "commission_released",
+      "finance.commission",
+      commission.PublicId,
+      $"Commission status changed from {commission.Status} to {nextStatus}.",
+      string.IsNullOrWhiteSpace(actor) ? "finance-commissions" : actor.Trim(),
+      payload);
+
+    return await GetCommissionByPublicId(connection, commission.TenantSlug, commission.PublicId)
+      ?? throw new InvalidOperationException("commission_lookup_failed");
   }
 
   private static async Task<IReadOnlyList<PayableResponse>> ListPayables(NpgsqlConnection connection, string tenantSlug, string? status)
@@ -1508,21 +1925,59 @@ public static class Server
     command.Parameters.AddWithValue(amountCents);
     command.Parameters.AddWithValue(dueDate);
 
-    await using var reader = await command.ExecuteReaderAsync();
-    await reader.ReadAsync();
-    return new PayableResponse(
-      reader.GetString(0),
+    string responsePublicId;
+    string responseCategory;
+    string responseVendorName;
+    string responseDescription;
+    long responseAmountCents;
+    string responseDueDate;
+    string responseStatus;
+    string responsePaymentReference;
+    string responsePaidAt;
+    string responseCreatedAt;
+    string responseUpdatedAt;
+
+    await using (var reader = await command.ExecuteReaderAsync())
+    {
+      await reader.ReadAsync();
+      responsePublicId = reader.GetString(0);
+      responseCategory = reader.GetString(1);
+      responseVendorName = reader.GetString(2);
+      responseDescription = reader.GetString(3);
+      responseAmountCents = reader.GetInt64(4);
+      responseDueDate = reader.GetString(5);
+      responseStatus = reader.GetString(6);
+      responsePaymentReference = reader.GetString(7);
+      responsePaidAt = reader.GetString(8);
+      responseCreatedAt = reader.GetString(9);
+      responseUpdatedAt = reader.GetString(10);
+    }
+
+    var response = new PayableResponse(
+      responsePublicId,
       tenantSlug,
-      reader.GetString(1),
-      reader.GetString(2),
-      reader.GetString(3),
-      reader.GetInt64(4),
-      reader.GetString(5),
-      reader.GetString(6),
-      reader.GetString(7),
-      reader.GetString(8),
-      reader.GetString(9),
-      reader.GetString(10));
+      responseCategory,
+      responseVendorName,
+      responseDescription,
+      responseAmountCents,
+      responseDueDate,
+      responseStatus,
+      responsePaymentReference,
+      responsePaidAt,
+      responseCreatedAt,
+      responseUpdatedAt);
+
+    await InsertActivityEvent(
+      connection,
+      transaction,
+      tenantId,
+      "payable_created",
+      "finance.payable",
+      response.PublicId,
+      $"Payable created for vendor {vendorName} in category {category}.",
+      "finance-payables",
+      JsonSerializer.Serialize(new { response.PublicId, category, vendorName, amountCents, dueDate = dueDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) }));
+    return response;
   }
 
   private static async Task<PayableResponse?> FindPayableForUpdate(NpgsqlConnection connection, NpgsqlTransaction transaction, long tenantId, string publicId)
@@ -1675,7 +2130,7 @@ public static class Server
     }
 
     var tenantSlug = await LookupTenantSlug(connection, transaction, tenantId) ?? string.Empty;
-    return new PayableResponse(
+    var response = new PayableResponse(
       responsePublicId,
       tenantSlug,
       category,
@@ -1688,6 +2143,18 @@ public static class Server
       responsePaidAt,
       createdAt,
       updatedAt);
+
+    await InsertActivityEvent(
+      connection,
+      transaction,
+      tenantId,
+      "payable_status_changed",
+      "finance.payable",
+      responsePublicId,
+      $"Payable status changed to {responseStatus}.",
+      "finance-payables",
+      JsonSerializer.Serialize(new { responsePublicId, status = responseStatus, paymentReference = responsePaymentReference, paidAt = responsePaidAt }));
+    return response;
   }
 
   private static async Task<IReadOnlyList<CostEntryResponse>> ListCosts(NpgsqlConnection connection, string tenantSlug, string? category)
@@ -1796,18 +2263,50 @@ public static class Server
     command.Parameters.AddWithValue(salePublicId ?? string.Empty);
     command.Parameters.AddWithValue(payload);
 
-    await using var reader = await command.ExecuteReaderAsync();
-    await reader.ReadAsync();
-    return new CostEntryResponse(
-      reader.GetString(0),
+    string responsePublicId;
+    string responseCategory;
+    string responseSummary;
+    long responseAmountCents;
+    string responseIncurredOn;
+    string responseSalePublicId;
+    string responseCreatedAt;
+    string responseUpdatedAt;
+
+    await using (var reader = await command.ExecuteReaderAsync())
+    {
+      await reader.ReadAsync();
+      responsePublicId = reader.GetString(0);
+      responseCategory = reader.GetString(1);
+      responseSummary = reader.GetString(2);
+      responseAmountCents = reader.GetInt64(3);
+      responseIncurredOn = reader.GetString(4);
+      responseSalePublicId = reader.GetString(5);
+      responseCreatedAt = reader.GetString(6);
+      responseUpdatedAt = reader.GetString(7);
+    }
+
+    var response = new CostEntryResponse(
+      responsePublicId,
       tenantSlug,
-      reader.GetString(1),
-      reader.GetString(2),
-      reader.GetInt64(3),
-      reader.GetString(4),
-      reader.GetString(5),
-      reader.GetString(6),
-      reader.GetString(7));
+      responseCategory,
+      responseSummary,
+      responseAmountCents,
+      responseIncurredOn,
+      responseSalePublicId,
+      responseCreatedAt,
+      responseUpdatedAt);
+
+    await InsertActivityEvent(
+      connection,
+      transaction,
+      tenantId,
+      "cost_created",
+      "finance.cost",
+      response.PublicId,
+      $"Cost entry created in category {category}.",
+      "finance-costs",
+      payload);
+    return response;
   }
 
   private static async Task<IReadOnlyList<CashAccountResponse>> ListCashAccounts(NpgsqlConnection connection, string tenantSlug, string? status)
@@ -1976,12 +2475,31 @@ public static class Server
     var receivableSync = await SyncTreasuryReceivableSettlements(connection, transaction, tenantId, cashAccountId);
     var payableSync = await SyncTreasuryPayables(connection, transaction, tenantId, cashAccountId);
     var costSync = await SyncTreasuryCosts(connection, transaction, tenantId, cashAccountId);
-
-    return new SyncTreasuryResponse(
+    var response = new SyncTreasuryResponse(
       tenantSlug,
       cashAccountPublicId,
       receivableSync.Created + payableSync.Created + costSync.Created,
       receivableSync.Skipped + payableSync.Skipped + costSync.Skipped);
+
+    await InsertActivityEvent(
+      connection,
+      transaction,
+      tenantId,
+      "treasury_synced",
+      "finance.cash_account",
+      cashAccountPublicId,
+      $"Treasury sync processed {response.CreatedMovements} movements and skipped {response.SkippedMovements}.",
+      "finance-treasury",
+      JsonSerializer.Serialize(new
+      {
+        response.CashAccountPublicId,
+        response.CreatedMovements,
+        response.SkippedMovements,
+        receivable = new { receivableSync.Created, receivableSync.Skipped },
+        payable = new { payableSync.Created, payableSync.Skipped },
+        cost = new { costSync.Created, costSync.Skipped }
+      }));
+    return response;
   }
 
   private static async Task<TreasurySyncMutation> SyncTreasuryReceivableSettlements(NpgsqlConnection connection, NpgsqlTransaction transaction, long tenantId, long cashAccountId)
@@ -2497,6 +3015,121 @@ public static class Server
         summary.CurrentBalanceCents + pendingReceivablesCents - pendingPayablesCents));
   }
 
+  private static async Task<IReadOnlyList<FinanceActivityResponse>> ListActivityEvents(
+    NpgsqlConnection connection,
+    string tenantSlug,
+    string? entityType,
+    string? entityPublicId,
+    string? activityType)
+  {
+    var sql =
+      """
+      SELECT
+        event.public_id::text,
+        tenant.slug,
+        event.activity_type,
+        event.entity_type,
+        COALESCE(event.entity_public_id::text, ''),
+        event.summary,
+        event.actor,
+        event.payload::text,
+        to_char(event.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+      FROM finance.activity_events AS event
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = event.tenant_id
+      WHERE tenant.slug = $1
+      """;
+
+    var parameters = new List<object?> { tenantSlug };
+    if (!string.IsNullOrWhiteSpace(entityType))
+    {
+      sql += $" AND event.entity_type = ${parameters.Count + 1}";
+      parameters.Add(entityType.Trim().ToLowerInvariant());
+    }
+    if (!string.IsNullOrWhiteSpace(entityPublicId))
+    {
+      sql += $" AND event.entity_public_id = ${parameters.Count + 1}::uuid";
+      parameters.Add(entityPublicId.Trim());
+    }
+    if (!string.IsNullOrWhiteSpace(activityType))
+    {
+      sql += $" AND event.activity_type = ${parameters.Count + 1}";
+      parameters.Add(activityType.Trim().ToLowerInvariant());
+    }
+    sql += " ORDER BY event.created_at DESC, event.id DESC";
+
+    await using var command = new NpgsqlCommand(sql, connection);
+    for (var index = 0; index < parameters.Count; index++)
+    {
+      command.Parameters.AddWithValue(parameters[index] ?? string.Empty);
+    }
+
+    var response = new List<FinanceActivityResponse>();
+    await using var reader = await command.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+      using var payloadDocument = JsonDocument.Parse(reader.GetString(7));
+      response.Add(new FinanceActivityResponse(
+        reader.GetString(0),
+        reader.GetString(1),
+        reader.GetString(2),
+        reader.GetString(3),
+        reader.GetString(4),
+        reader.GetString(5),
+        reader.GetString(6),
+        payloadDocument.RootElement.Clone(),
+        reader.GetString(8)));
+    }
+
+    return response;
+  }
+
+  private static async Task InsertActivityEvent(
+    NpgsqlConnection connection,
+    NpgsqlTransaction transaction,
+    long tenantId,
+    string activityType,
+    string entityType,
+    string? entityPublicId,
+    string summary,
+    string actor,
+    string payload)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      INSERT INTO finance.activity_events (
+        tenant_id,
+        public_id,
+        activity_type,
+        entity_type,
+        entity_public_id,
+        summary,
+        actor,
+        payload
+      )
+      VALUES (
+        $1,
+        gen_random_uuid(),
+        $2,
+        $3,
+        NULLIF($4, '')::uuid,
+        $5,
+        $6,
+        $7::jsonb
+      )
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(tenantId);
+    command.Parameters.AddWithValue(activityType.Trim().ToLowerInvariant());
+    command.Parameters.AddWithValue(entityType.Trim().ToLowerInvariant());
+    command.Parameters.AddWithValue(entityPublicId ?? string.Empty);
+    command.Parameters.AddWithValue(summary);
+    command.Parameters.AddWithValue(string.IsNullOrWhiteSpace(actor) ? "system" : actor.Trim());
+    command.Parameters.AddWithValue(string.IsNullOrWhiteSpace(payload) ? "{}" : payload);
+    await command.ExecuteNonQueryAsync();
+  }
+
   private static async Task<OperationalReportResponse> BuildOperationalReport(NpgsqlConnection connection, string tenantSlug)
   {
     var receivables = await BuildReceivableOperationsSummary(connection, tenantSlug);
@@ -2718,15 +3351,36 @@ public static class Server
     command.Parameters.AddWithValue(periodKey);
     command.Parameters.AddWithValue(snapshotJson);
 
-    await using var reader = await command.ExecuteReaderAsync();
-    await reader.ReadAsync();
+    string responsePublicId;
+    string responsePeriodKey;
+    string responseClosedAt;
 
-    return new PeriodClosureResponse(
-      reader.GetString(0),
+    await using (var reader = await command.ExecuteReaderAsync())
+    {
+      await reader.ReadAsync();
+      responsePublicId = reader.GetString(0);
+      responsePeriodKey = reader.GetString(1);
+      responseClosedAt = reader.GetString(2);
+    }
+
+    var response = new PeriodClosureResponse(
+      responsePublicId,
       tenantSlug,
-      reader.GetString(1),
-      reader.GetString(2),
+      responsePeriodKey,
+      responseClosedAt,
       false);
+
+    await InsertActivityEvent(
+      connection,
+      transaction,
+      tenantId,
+      "period_closed",
+      "finance.period_closure",
+      response.PublicId,
+      $"Financial period {periodKey} was closed.",
+      "finance-closure",
+      snapshotJson);
+    return response;
   }
 
   private static async Task<IReadOnlyList<PeriodClosureResponse>> ListPeriodClosures(NpgsqlConnection connection, string tenantSlug)
@@ -2962,8 +3616,10 @@ public sealed record OperationsSyncResponse(string TenantSlug, int CreatedReceiv
 public sealed record ReceivableResponse(
   string PublicId,
   string TenantSlug,
+  string SourceKind,
   string SourceInvoicePublicId,
   string SalePublicId,
+  string ContractPublicId,
   string CustomerPublicId,
   string Status,
   long AmountCents,
@@ -2996,6 +3652,7 @@ public sealed record CommissionResponse(
 public sealed record CommissionStatusCounts(int Pending, int Blocked, int Released);
 public sealed record CommissionAmountBuckets(long PendingAmountCents, long BlockedAmountCents, long ReleasedAmountCents);
 public sealed record CommissionSummaryResponse(string TenantSlug, int Total, long TotalAmountCents, CommissionStatusCounts Status, CommissionAmountBuckets Amounts);
+public sealed record CommissionLifecycleRequest(string? TenantSlug, string? Actor, string? Reason);
 public sealed record PayableResponse(
   string PublicId,
   string TenantSlug,
@@ -3083,6 +3740,16 @@ public sealed record OperationalReportResponse(
   CostOperationsSummary Costs,
   CommissionSummaryResponse Commissions,
   ClosureOperationsSummary Closures);
+public sealed record FinanceActivityResponse(
+  string PublicId,
+  string TenantSlug,
+  string ActivityType,
+  string EntityType,
+  string EntityPublicId,
+  string Summary,
+  string Actor,
+  JsonElement Payload,
+  string CreatedAt);
 public sealed record CreatePeriodClosureRequest(string? TenantSlug, string? PeriodKey);
 public sealed record PeriodClosureResponse(string PublicId, string TenantSlug, string PeriodKey, string ClosedAt, bool AlreadyClosed);
 public sealed record PeriodClosureDetailResponse(string PublicId, string TenantSlug, string PeriodKey, string ClosedAt, JsonElement Snapshot);
@@ -3093,4 +3760,5 @@ internal sealed record TreasurySyncMutation(int Created, int Skipped);
 internal sealed record CashAccountLookup(long Id, string PublicId, string Code, long OpeningBalanceCents);
 internal sealed record TreasurySourceCandidate(string SourcePublicId, string ReferenceCode, long AmountCents, DateTime EffectiveAt, string CounterpartyName, string Description);
 internal sealed record ReceivableLookup(long Id, string PublicId, string Status, long AmountCents);
+internal sealed record InternalCommission(long Id, long TenantId, string PublicId, string TenantSlug, string SalePublicId, string Status, long AmountCents);
 internal sealed record PayableReferenceLookup(string PublicId, string Status);

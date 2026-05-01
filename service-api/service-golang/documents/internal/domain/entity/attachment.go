@@ -33,6 +33,8 @@ type Attachment struct {
 	ChecksumSHA256 string
 	Visibility     string
 	RetentionDays  int
+	CurrentVersion int
+	VersionCount   int
 	ArchiveReason  string
 	ArchivedAt     *time.Time
 	CreatedAt      time.Time
@@ -138,6 +140,8 @@ func NewAttachment(
 		ChecksumSHA256: normalizedChecksumSHA256,
 		Visibility:     normalizedVisibility,
 		RetentionDays:  retentionDays,
+		CurrentVersion: 1,
+		VersionCount:   1,
 		ArchiveReason:  normalizedArchiveReason,
 		ArchivedAt:     normalizedArchivedAt,
 		CreatedAt:      createdAt.UTC(),
