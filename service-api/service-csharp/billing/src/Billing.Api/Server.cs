@@ -418,6 +418,195 @@ public static class Server
       await using var connection = await dataSource.OpenConnectionAsync();
       return TypedResults.Ok(await BuildOperationsReport(connection, tenantSlug.Trim()));
     });
+
+    app.MapGet("/api/billing/recovery/cases", async Task<IResult> (string? tenantSlug, string? status, string? severity, NpgsqlDataSource dataSource) =>
+    {
+      if (string.IsNullOrWhiteSpace(tenantSlug))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("tenant_slug_required", "Tenant slug is required."));
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      return TypedResults.Ok(await ListRecoveryCases(connection, tenantSlug.Trim(), NormalizeRecoveryStatus(status), NormalizeRecoverySeverity(severity)));
+    });
+
+    app.MapGet("/api/billing/recovery/cases/{publicId}", async Task<IResult> (string publicId, string? tenantSlug, NpgsqlDataSource dataSource) =>
+    {
+      if (string.IsNullOrWhiteSpace(tenantSlug))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("tenant_slug_required", "Tenant slug is required."));
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      var recoveryCase = await FindRecoveryCase(connection, tenantSlug.Trim(), publicId);
+      return recoveryCase is null
+        ? TypedResults.NotFound(new ErrorResponse("billing_recovery_case_not_found", "Billing recovery case was not found."))
+        : TypedResults.Ok(recoveryCase);
+    });
+
+    app.MapGet("/api/billing/recovery/cases/{publicId}/actions", async Task<IResult> (string publicId, string? tenantSlug, NpgsqlDataSource dataSource) =>
+    {
+      if (string.IsNullOrWhiteSpace(tenantSlug))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("tenant_slug_required", "Tenant slug is required."));
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      return TypedResults.Ok(await ListRecoveryActions(connection, tenantSlug.Trim(), publicId));
+    });
+
+    app.MapPost("/api/billing/invoices/{publicId}/recovery/open", async Task<IResult> (string publicId, OpenRecoveryCaseRequest? request, NpgsqlDataSource dataSource) =>
+    {
+      if (request is null || string.IsNullOrWhiteSpace(request.TenantSlug))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("tenant_slug_required", "Tenant slug is required."));
+      }
+
+      if (!TryParseUtcTimestamp(request.NextActionAt, out var nextActionAt))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_next_action_at", "Next action timestamp must be a valid UTC instant."));
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      await using var transaction = await connection.BeginTransactionAsync();
+
+      var invoice = await FindInvoiceInternal(connection, transaction, request.TenantSlug.Trim(), publicId);
+      if (invoice is null)
+      {
+        return TypedResults.NotFound(new ErrorResponse("billing_invoice_not_found", "Billing invoice was not found."));
+      }
+
+      var recoveryCase = await OpenOrRefreshRecoveryCase(
+        connection,
+        transaction,
+        invoice,
+        invoice.RetryCount > 0 ? invoice.RetryCount : 1,
+        invoice.RetryCount >= invoice.MaxRetries && invoice.MaxRetries > 0 ? "critical" : "attention",
+        nextActionAt,
+        request.WorkflowDefinitionKey?.Trim() ?? string.Empty,
+        request.Notes?.Trim() ?? string.Empty,
+        request.Actor?.Trim() ?? "billing");
+
+      await transaction.CommitAsync();
+      return TypedResults.Ok(recoveryCase);
+    });
+
+    app.MapPost("/api/billing/recovery/cases/{publicId}/touchpoints", async Task<IResult> (string publicId, RegisterRecoveryTouchpointRequest? request, NpgsqlDataSource dataSource) =>
+    {
+      if (request is null || string.IsNullOrWhiteSpace(request.TenantSlug))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("tenant_slug_required", "Tenant slug is required."));
+      }
+
+      var channel = NormalizeRecoveryChannel(request.Channel);
+      if (channel.Length == 0)
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_recovery_channel", "Recovery contact channel must be email, whatsapp, phone or manual."));
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      await using var transaction = await connection.BeginTransactionAsync();
+
+      var recoveryCase = await FindRecoveryCaseInternal(connection, transaction, request.TenantSlug.Trim(), publicId);
+      if (recoveryCase is null)
+      {
+        return TypedResults.NotFound(new ErrorResponse("billing_recovery_case_not_found", "Billing recovery case was not found."));
+      }
+
+      var response = await RegisterRecoveryTouchpoint(
+        connection,
+        transaction,
+        recoveryCase,
+        request.Actor?.Trim() ?? "billing",
+        channel,
+        request.Provider?.Trim().ToLowerInvariant() ?? string.Empty,
+        request.TouchpointPublicId?.Trim() ?? string.Empty,
+        request.DeliveryPublicId?.Trim() ?? string.Empty,
+        request.Notes?.Trim() ?? string.Empty);
+
+      await transaction.CommitAsync();
+      return TypedResults.Ok(response);
+    });
+
+    app.MapPost("/api/billing/recovery/cases/{publicId}/promise", async Task<IResult> (string publicId, RegisterRecoveryPromiseRequest? request, NpgsqlDataSource dataSource) =>
+    {
+      if (request is null || string.IsNullOrWhiteSpace(request.TenantSlug))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("tenant_slug_required", "Tenant slug is required."));
+      }
+
+      if (!TryParseDate(request.PromisedPaymentDate, out var promisedPaymentDate) || promisedPaymentDate is null)
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_promised_payment_date", "Promised payment date must be a valid YYYY-MM-DD value."));
+      }
+
+      if (!TryParseUtcTimestamp(request.NextActionAt, out var nextActionAt))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_next_action_at", "Next action timestamp must be a valid UTC instant."));
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      await using var transaction = await connection.BeginTransactionAsync();
+
+      var recoveryCase = await FindRecoveryCaseInternal(connection, transaction, request.TenantSlug.Trim(), publicId);
+      if (recoveryCase is null)
+      {
+        return TypedResults.NotFound(new ErrorResponse("billing_recovery_case_not_found", "Billing recovery case was not found."));
+      }
+
+      var response = await RegisterRecoveryPromise(
+        connection,
+        transaction,
+        recoveryCase,
+        request.Actor?.Trim() ?? "billing",
+        promisedPaymentDate.Value,
+        nextActionAt,
+        request.Notes?.Trim() ?? string.Empty);
+
+      await transaction.CommitAsync();
+      return TypedResults.Ok(response);
+    });
+
+    app.MapPost("/api/billing/recovery/cases/{publicId}/close", async Task<IResult> (string publicId, CloseRecoveryCaseRequest? request, NpgsqlDataSource dataSource) =>
+    {
+      if (request is null || string.IsNullOrWhiteSpace(request.TenantSlug))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("tenant_slug_required", "Tenant slug is required."));
+      }
+
+      var status = NormalizeRecoveryTerminalStatus(request.Status);
+      if (status.Length == 0)
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_recovery_status", "Recovery close status must be recovered, defaulted or closed."));
+      }
+
+      if (!TryParseUtcTimestamp(request.ResolvedAt, out var resolvedAt))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_resolved_at", "Resolved timestamp must be a valid UTC instant."));
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      await using var transaction = await connection.BeginTransactionAsync();
+
+      var recoveryCase = await FindRecoveryCaseInternal(connection, transaction, request.TenantSlug.Trim(), publicId);
+      if (recoveryCase is null)
+      {
+        return TypedResults.NotFound(new ErrorResponse("billing_recovery_case_not_found", "Billing recovery case was not found."));
+      }
+
+      var response = await CloseRecoveryCase(
+        connection,
+        transaction,
+        recoveryCase,
+        status,
+        request.ResolutionCode?.Trim() ?? string.Empty,
+        request.Actor?.Trim() ?? "billing",
+        request.Notes?.Trim() ?? string.Empty,
+        resolvedAt ?? DateTime.UtcNow);
+
+      await transaction.CommitAsync();
+      return TypedResults.Ok(response);
+    });
   }
 
   private static async Task<IReadOnlyList<DependencyStatus>> BuildDependencies(NpgsqlConnection connection)
@@ -1447,6 +1636,7 @@ public static class Server
     }
 
     string nextSubscriptionStatus = invoice.SubscriptionStatus;
+    var existingRecoveryCase = await FindRecoveryCaseByInvoice(connection, transaction, invoice.TenantId, invoice.PublicId);
 
     if (status == "succeeded")
     {
@@ -1488,6 +1678,19 @@ public static class Server
       await updateSubscription.ExecuteNonQueryAsync();
 
       nextSubscriptionStatus = "active";
+
+      if (existingRecoveryCase is not null && existingRecoveryCase.Status is "open" or "contacted" or "promised")
+      {
+        await CloseRecoveryCase(
+          connection,
+          transaction,
+          existingRecoveryCase,
+          "recovered",
+          "invoice_paid",
+          actor,
+          "Invoice recovered after successful payment.",
+          attemptedAt);
+      }
 
       await InsertSubscriptionEvent(
         connection,
@@ -1610,6 +1813,17 @@ public static class Server
             }));
         }
       }
+
+      await OpenOrRefreshRecoveryCase(
+        connection,
+        transaction,
+        invoice,
+        attemptNumber,
+        attemptNumber >= invoice.MaxRetries && invoice.MaxRetries > 0 ? "critical" : "attention",
+        attemptedAt.AddHours(attemptNumber >= invoice.MaxRetries && invoice.MaxRetries > 0 ? 6 : 24),
+        existingRecoveryCase?.WorkflowDefinitionKey ?? string.Empty,
+        failureReason.Length > 0 ? failureReason : "Billing recovery case refreshed after failed payment attempt.",
+        actor);
 
       await InsertSubscriptionEvent(
         connection,
@@ -1827,9 +2041,10 @@ public static class Server
     var subscriptions = await BuildSubscriptionSummary(connection, tenantSlug);
     var invoices = await BuildInvoiceSummary(connection, tenantSlug);
     var attempts = await BuildAttemptSummary(connection, tenantSlug);
+    var recovery = await BuildRecoverySummary(connection, tenantSlug);
     var plans = await BuildPlanSummary(connection);
 
-    return new BillingOperationsReportResponse(tenantSlug, now, plans, subscriptions, invoices, attempts);
+    return new BillingOperationsReportResponse(tenantSlug, now, plans, subscriptions, invoices, attempts, recovery);
   }
 
   private static async Task<PlanSummary> BuildPlanSummary(NpgsqlConnection connection)
@@ -1939,6 +2154,636 @@ public static class Server
       ConvertToInt(reader.GetValue(2)));
   }
 
+  private static async Task<RecoverySummary> BuildRecoverySummary(NpgsqlConnection connection, string tenantSlug)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        COUNT(*) AS total,
+        COUNT(*) FILTER (WHERE recovery.status = 'open') AS open_count,
+        COUNT(*) FILTER (WHERE recovery.status = 'contacted') AS contacted_count,
+        COUNT(*) FILTER (WHERE recovery.status = 'promised') AS promised_count,
+        COUNT(*) FILTER (WHERE recovery.status = 'recovered') AS recovered_count,
+        COUNT(*) FILTER (WHERE recovery.status = 'defaulted') AS defaulted_count,
+        COUNT(*) FILTER (WHERE recovery.status = 'closed') AS closed_count,
+        COUNT(*) FILTER (WHERE recovery.severity = 'attention') AS attention_count,
+        COUNT(*) FILTER (WHERE recovery.severity = 'critical') AS critical_count,
+        COUNT(*) FILTER (
+          WHERE recovery.status IN ('open', 'contacted', 'promised')
+            AND recovery.next_action_at IS NOT NULL
+            AND recovery.next_action_at <= timezone('utc', now())
+        ) AS due_actions_count,
+        COUNT(*) FILTER (
+          WHERE recovery.status = 'promised'
+            AND recovery.promised_payment_date IS NOT NULL
+            AND recovery.promised_payment_date <= timezone('utc', now())::date
+        ) AS promises_due_count
+      FROM billing.recovery_cases AS recovery
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = recovery.tenant_id
+      WHERE tenant.slug = $1
+      """,
+      connection);
+    command.Parameters.AddWithValue(tenantSlug);
+
+    await using var reader = await command.ExecuteReaderAsync();
+    await reader.ReadAsync();
+    return new RecoverySummary(
+      ConvertToInt(reader.GetValue(0)),
+      new RecoveryStatusCounts(
+        ConvertToInt(reader.GetValue(1)),
+        ConvertToInt(reader.GetValue(2)),
+        ConvertToInt(reader.GetValue(3)),
+        ConvertToInt(reader.GetValue(4)),
+        ConvertToInt(reader.GetValue(5)),
+        ConvertToInt(reader.GetValue(6))),
+      new RecoverySeverityCounts(
+        ConvertToInt(reader.GetValue(7)),
+        ConvertToInt(reader.GetValue(8))),
+      ConvertToInt(reader.GetValue(9)),
+      ConvertToInt(reader.GetValue(10)));
+  }
+
+  private static async Task<IReadOnlyList<RecoveryCaseResponse>> ListRecoveryCases(NpgsqlConnection connection, string tenantSlug, string status, string severity)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        recovery.public_id::text,
+        tenant.slug,
+        recovery.subscription_public_id::text,
+        recovery.invoice_public_id::text,
+        COALESCE(recovery.source_attempt_public_id::text, ''),
+        recovery.workflow_definition_key,
+        recovery.status,
+        recovery.severity,
+        recovery.contact_channel,
+        recovery.provider_hint,
+        recovery.last_failed_attempt_number,
+        COALESCE(to_char(recovery.next_action_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), ''),
+        COALESCE(to_char(recovery.promised_payment_date, 'YYYY-MM-DD'), ''),
+        COALESCE(to_char(recovery.resolved_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), ''),
+        recovery.resolution_code,
+        recovery.notes,
+        to_char(recovery.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+        to_char(recovery.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+      FROM billing.recovery_cases AS recovery
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = recovery.tenant_id
+      WHERE tenant.slug = $1
+        AND ($2 = '' OR recovery.status = $2)
+        AND ($3 = '' OR recovery.severity = $3)
+      ORDER BY recovery.created_at, recovery.id
+      """,
+      connection);
+    command.Parameters.AddWithValue(tenantSlug);
+    command.Parameters.AddWithValue(status);
+    command.Parameters.AddWithValue(severity);
+
+    var response = new List<RecoveryCaseResponse>();
+    await using var reader = await command.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+      response.Add(new RecoveryCaseResponse(
+        reader.GetString(0),
+        reader.GetString(1),
+        reader.GetString(2),
+        reader.GetString(3),
+        reader.GetString(4),
+        reader.GetString(5),
+        reader.GetString(6),
+        reader.GetString(7),
+        reader.GetString(8),
+        reader.GetString(9),
+        reader.GetInt32(10),
+        reader.GetString(11),
+        reader.GetString(12),
+        reader.GetString(13),
+        reader.GetString(14),
+        reader.GetString(15),
+        reader.GetString(16),
+        reader.GetString(17)));
+    }
+
+    return response;
+  }
+
+  private static async Task<RecoveryCaseResponse?> FindRecoveryCase(NpgsqlConnection connection, string tenantSlug, string publicId)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        recovery.public_id::text,
+        tenant.slug,
+        recovery.subscription_public_id::text,
+        recovery.invoice_public_id::text,
+        COALESCE(recovery.source_attempt_public_id::text, ''),
+        recovery.workflow_definition_key,
+        recovery.status,
+        recovery.severity,
+        recovery.contact_channel,
+        recovery.provider_hint,
+        recovery.last_failed_attempt_number,
+        COALESCE(to_char(recovery.next_action_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), ''),
+        COALESCE(to_char(recovery.promised_payment_date, 'YYYY-MM-DD'), ''),
+        COALESCE(to_char(recovery.resolved_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), ''),
+        recovery.resolution_code,
+        recovery.notes,
+        to_char(recovery.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+        to_char(recovery.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+      FROM billing.recovery_cases AS recovery
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = recovery.tenant_id
+      WHERE tenant.slug = $1
+        AND recovery.public_id = $2::uuid
+      LIMIT 1
+      """,
+      connection);
+    command.Parameters.AddWithValue(tenantSlug);
+    command.Parameters.AddWithValue(publicId);
+
+    await using var reader = await command.ExecuteReaderAsync();
+    if (!await reader.ReadAsync())
+    {
+      return null;
+    }
+
+    return new RecoveryCaseResponse(
+      reader.GetString(0),
+      reader.GetString(1),
+      reader.GetString(2),
+      reader.GetString(3),
+      reader.GetString(4),
+      reader.GetString(5),
+      reader.GetString(6),
+      reader.GetString(7),
+      reader.GetString(8),
+      reader.GetString(9),
+      reader.GetInt32(10),
+      reader.GetString(11),
+      reader.GetString(12),
+      reader.GetString(13),
+      reader.GetString(14),
+      reader.GetString(15),
+      reader.GetString(16),
+      reader.GetString(17));
+  }
+
+  private static async Task<InternalRecoveryCase?> FindRecoveryCaseInternal(NpgsqlConnection connection, NpgsqlTransaction transaction, string tenantSlug, string publicId)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        recovery.id,
+        recovery.tenant_id,
+        recovery.public_id::text,
+        tenant.slug,
+        recovery.subscription_public_id::text,
+        recovery.invoice_public_id::text,
+        COALESCE(recovery.source_attempt_public_id::text, ''),
+        recovery.workflow_definition_key,
+        recovery.status,
+        recovery.severity,
+        recovery.contact_channel,
+        recovery.provider_hint,
+        recovery.last_failed_attempt_number,
+        recovery.next_action_at,
+        recovery.promised_payment_date,
+        recovery.resolved_at,
+        recovery.resolution_code,
+        recovery.notes
+      FROM billing.recovery_cases AS recovery
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = recovery.tenant_id
+      WHERE tenant.slug = $1
+        AND recovery.public_id = $2::uuid
+      LIMIT 1
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(tenantSlug);
+    command.Parameters.AddWithValue(publicId);
+
+    await using var reader = await command.ExecuteReaderAsync();
+    if (!await reader.ReadAsync())
+    {
+      return null;
+    }
+
+    return new InternalRecoveryCase(
+      reader.GetInt64(0),
+      reader.GetInt64(1),
+      reader.GetString(2),
+      reader.GetString(3),
+      reader.GetString(4),
+      reader.GetString(5),
+      reader.GetString(6),
+      reader.GetString(7),
+      reader.GetString(8),
+      reader.GetString(9),
+      reader.GetString(10),
+      reader.GetString(11),
+      reader.GetInt32(12),
+      reader.IsDBNull(13) ? null : reader.GetFieldValue<DateTime>(13),
+      reader.IsDBNull(14) ? null : reader.GetFieldValue<DateOnly>(14),
+      reader.IsDBNull(15) ? null : reader.GetFieldValue<DateTime>(15),
+      reader.GetString(16),
+      reader.GetString(17));
+  }
+
+  private static async Task<InternalRecoveryCase?> FindRecoveryCaseByInvoice(NpgsqlConnection connection, NpgsqlTransaction transaction, long tenantId, string invoicePublicId)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        recovery.id,
+        recovery.tenant_id,
+        recovery.public_id::text,
+        tenant.slug,
+        recovery.subscription_public_id::text,
+        recovery.invoice_public_id::text,
+        COALESCE(recovery.source_attempt_public_id::text, ''),
+        recovery.workflow_definition_key,
+        recovery.status,
+        recovery.severity,
+        recovery.contact_channel,
+        recovery.provider_hint,
+        recovery.last_failed_attempt_number,
+        recovery.next_action_at,
+        recovery.promised_payment_date,
+        recovery.resolved_at,
+        recovery.resolution_code,
+        recovery.notes
+      FROM billing.recovery_cases AS recovery
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = recovery.tenant_id
+      WHERE recovery.tenant_id = $1
+        AND recovery.invoice_public_id = $2::uuid
+      LIMIT 1
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(tenantId);
+    command.Parameters.AddWithValue(invoicePublicId);
+
+    await using var reader = await command.ExecuteReaderAsync();
+    if (!await reader.ReadAsync())
+    {
+      return null;
+    }
+
+    return new InternalRecoveryCase(
+      reader.GetInt64(0),
+      reader.GetInt64(1),
+      reader.GetString(2),
+      reader.GetString(3),
+      reader.GetString(4),
+      reader.GetString(5),
+      reader.GetString(6),
+      reader.GetString(7),
+      reader.GetString(8),
+      reader.GetString(9),
+      reader.GetString(10),
+      reader.GetString(11),
+      reader.GetInt32(12),
+      reader.IsDBNull(13) ? null : reader.GetFieldValue<DateTime>(13),
+      reader.IsDBNull(14) ? null : reader.GetFieldValue<DateOnly>(14),
+      reader.IsDBNull(15) ? null : reader.GetFieldValue<DateTime>(15),
+      reader.GetString(16),
+      reader.GetString(17));
+  }
+
+  private static async Task<IReadOnlyList<RecoveryActionResponse>> ListRecoveryActions(NpgsqlConnection connection, string tenantSlug, string recoveryCasePublicId)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        action.public_id::text,
+        tenant.slug,
+        recovery.public_id::text,
+        action.action_code,
+        action.actor,
+        action.channel,
+        action.provider,
+        COALESCE(action.touchpoint_public_id::text, ''),
+        COALESCE(action.delivery_public_id::text, ''),
+        COALESCE(to_char(action.promised_payment_date, 'YYYY-MM-DD'), ''),
+        action.notes,
+        to_char(action.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+      FROM billing.recovery_actions AS action
+      INNER JOIN billing.recovery_cases AS recovery
+        ON recovery.id = action.recovery_case_id
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = action.tenant_id
+      WHERE tenant.slug = $1
+        AND recovery.public_id = $2::uuid
+      ORDER BY action.created_at, action.id
+      """,
+      connection);
+    command.Parameters.AddWithValue(tenantSlug);
+    command.Parameters.AddWithValue(recoveryCasePublicId);
+
+    var response = new List<RecoveryActionResponse>();
+    await using var reader = await command.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+      response.Add(new RecoveryActionResponse(
+        reader.GetString(0),
+        reader.GetString(1),
+        reader.GetString(2),
+        reader.GetString(3),
+        reader.GetString(4),
+        reader.GetString(5),
+        reader.GetString(6),
+        reader.GetString(7),
+        reader.GetString(8),
+        reader.GetString(9),
+        reader.GetString(10),
+        reader.GetString(11)));
+    }
+
+    return response;
+  }
+
+  private static async Task<RecoveryCaseResponse> OpenOrRefreshRecoveryCase(
+    NpgsqlConnection connection,
+    NpgsqlTransaction transaction,
+    InternalInvoice invoice,
+    int failedAttemptNumber,
+    string severity,
+    DateTime? nextActionAt,
+    string workflowDefinitionKey,
+    string notes,
+    string actor)
+  {
+    var existing = await FindRecoveryCaseByInvoice(connection, transaction, invoice.TenantId, invoice.PublicId);
+    var normalizedNextActionAt = nextActionAt?.ToUniversalTime() ?? DateTime.UtcNow.AddHours(severity == "critical" ? 6 : 24);
+    var summary = notes.Length > 0 ? notes : "Billing recovery case is tracking invoice collection risk.";
+
+    if (existing is null)
+    {
+      string publicId;
+      await using (var command = new NpgsqlCommand(
+        """
+        INSERT INTO billing.recovery_cases (
+          tenant_id,
+          public_id,
+          subscription_public_id,
+          invoice_public_id,
+          workflow_definition_key,
+          status,
+          severity,
+          last_failed_attempt_number,
+          next_action_at,
+          notes
+        )
+        VALUES (
+          $1,
+          gen_random_uuid(),
+          $2::uuid,
+          $3::uuid,
+          $4,
+          'open',
+          $5,
+          $6,
+          $7,
+          $8
+        )
+        RETURNING public_id::text
+        """,
+        connection,
+        transaction))
+      {
+        command.Parameters.AddWithValue(invoice.TenantId);
+        command.Parameters.AddWithValue(invoice.SubscriptionPublicId);
+        command.Parameters.AddWithValue(invoice.PublicId);
+        command.Parameters.AddWithValue(workflowDefinitionKey);
+        command.Parameters.AddWithValue(severity);
+        command.Parameters.AddWithValue(failedAttemptNumber);
+        command.Parameters.AddWithValue(normalizedNextActionAt);
+        command.Parameters.AddWithValue(summary);
+        publicId = Convert.ToString(await command.ExecuteScalarAsync(), CultureInfo.InvariantCulture) ?? string.Empty;
+      }
+
+      var created = await FindRecoveryCaseInternal(connection, transaction, invoice.TenantSlug, publicId)
+        ?? throw new InvalidOperationException("billing_recovery_case_creation_failed");
+      await InsertRecoveryAction(connection, transaction, created, "case_opened", actor, string.Empty, string.Empty, string.Empty, string.Empty, null, summary);
+      return await FindRecoveryCase(connection, invoice.TenantSlug, publicId)
+        ?? throw new InvalidOperationException("billing_recovery_case_lookup_failed");
+    }
+
+    await using (var command = new NpgsqlCommand(
+      """
+      UPDATE billing.recovery_cases
+      SET
+        workflow_definition_key = CASE WHEN $3 = '' THEN workflow_definition_key ELSE $3 END,
+        status = CASE WHEN status IN ('recovered', 'defaulted', 'closed') THEN 'open' ELSE status END,
+        severity = $4,
+        last_failed_attempt_number = GREATEST(last_failed_attempt_number, $5),
+        next_action_at = $6,
+        resolved_at = NULL,
+        resolution_code = '',
+        notes = CASE WHEN $7 = '' THEN notes ELSE $7 END
+      WHERE id = $1
+        AND tenant_id = $2
+      """,
+      connection,
+      transaction))
+    {
+      command.Parameters.AddWithValue(existing.Id);
+      command.Parameters.AddWithValue(existing.TenantId);
+      command.Parameters.AddWithValue(workflowDefinitionKey);
+      command.Parameters.AddWithValue(severity);
+      command.Parameters.AddWithValue(failedAttemptNumber);
+      command.Parameters.AddWithValue(normalizedNextActionAt);
+      command.Parameters.AddWithValue(summary);
+      await command.ExecuteNonQueryAsync();
+    }
+
+    var refreshed = await FindRecoveryCaseInternal(connection, transaction, invoice.TenantSlug, existing.PublicId)
+      ?? throw new InvalidOperationException("billing_recovery_case_refresh_failed");
+    await InsertRecoveryAction(connection, transaction, refreshed, "case_refreshed", actor, string.Empty, string.Empty, string.Empty, string.Empty, null, summary);
+    return await FindRecoveryCase(connection, invoice.TenantSlug, existing.PublicId)
+      ?? throw new InvalidOperationException("billing_recovery_case_lookup_failed");
+  }
+
+  private static async Task<RecoveryCaseResponse> RegisterRecoveryTouchpoint(
+    NpgsqlConnection connection,
+    NpgsqlTransaction transaction,
+    InternalRecoveryCase recoveryCase,
+    string actor,
+    string channel,
+    string provider,
+    string touchpointPublicId,
+    string deliveryPublicId,
+    string notes)
+  {
+    await using (var command = new NpgsqlCommand(
+      """
+      UPDATE billing.recovery_cases
+      SET
+        status = CASE WHEN status IN ('open', 'promised') THEN 'contacted' ELSE status END,
+        contact_channel = $3,
+        provider_hint = $4,
+        next_action_at = NULL,
+        notes = CASE WHEN $5 = '' THEN notes ELSE $5 END
+      WHERE id = $1
+        AND tenant_id = $2
+      """,
+      connection,
+      transaction))
+    {
+      command.Parameters.AddWithValue(recoveryCase.Id);
+      command.Parameters.AddWithValue(recoveryCase.TenantId);
+      command.Parameters.AddWithValue(channel);
+      command.Parameters.AddWithValue(provider);
+      command.Parameters.AddWithValue(notes);
+      await command.ExecuteNonQueryAsync();
+    }
+
+    var refreshed = await FindRecoveryCaseInternal(connection, transaction, recoveryCase.TenantSlug, recoveryCase.PublicId)
+      ?? throw new InvalidOperationException("billing_recovery_case_touchpoint_failed");
+    await InsertRecoveryAction(connection, transaction, refreshed, "touchpoint_registered", actor, channel, provider, touchpointPublicId, deliveryPublicId, null, notes);
+    return await FindRecoveryCase(connection, recoveryCase.TenantSlug, recoveryCase.PublicId)
+      ?? throw new InvalidOperationException("billing_recovery_case_lookup_failed");
+  }
+
+  private static async Task<RecoveryCaseResponse> RegisterRecoveryPromise(
+    NpgsqlConnection connection,
+    NpgsqlTransaction transaction,
+    InternalRecoveryCase recoveryCase,
+    string actor,
+    DateOnly promisedPaymentDate,
+    DateTime? nextActionAt,
+    string notes)
+  {
+    await using (var command = new NpgsqlCommand(
+      """
+      UPDATE billing.recovery_cases
+      SET
+        status = 'promised',
+        promised_payment_date = $3,
+        next_action_at = $4,
+        notes = CASE WHEN $5 = '' THEN notes ELSE $5 END
+      WHERE id = $1
+        AND tenant_id = $2
+      """,
+      connection,
+      transaction))
+    {
+      command.Parameters.AddWithValue(recoveryCase.Id);
+      command.Parameters.AddWithValue(recoveryCase.TenantId);
+      command.Parameters.AddWithValue(promisedPaymentDate);
+      command.Parameters.AddWithValue(nextActionAt?.ToUniversalTime() ?? DateTime.UtcNow.AddDays(1));
+      command.Parameters.AddWithValue(notes);
+      await command.ExecuteNonQueryAsync();
+    }
+
+    var refreshed = await FindRecoveryCaseInternal(connection, transaction, recoveryCase.TenantSlug, recoveryCase.PublicId)
+      ?? throw new InvalidOperationException("billing_recovery_case_promise_failed");
+    await InsertRecoveryAction(connection, transaction, refreshed, "promise_registered", actor, string.Empty, string.Empty, string.Empty, string.Empty, promisedPaymentDate, notes);
+    return await FindRecoveryCase(connection, recoveryCase.TenantSlug, recoveryCase.PublicId)
+      ?? throw new InvalidOperationException("billing_recovery_case_lookup_failed");
+  }
+
+  private static async Task<RecoveryCaseResponse> CloseRecoveryCase(
+    NpgsqlConnection connection,
+    NpgsqlTransaction transaction,
+    InternalRecoveryCase recoveryCase,
+    string status,
+    string resolutionCode,
+    string actor,
+    string notes,
+    DateTime resolvedAt)
+  {
+    await using (var command = new NpgsqlCommand(
+      """
+      UPDATE billing.recovery_cases
+      SET
+        status = $3,
+        resolved_at = $4,
+        resolution_code = $5,
+        next_action_at = NULL,
+        notes = CASE WHEN $6 = '' THEN notes ELSE $6 END
+      WHERE id = $1
+        AND tenant_id = $2
+      """,
+      connection,
+      transaction))
+    {
+      command.Parameters.AddWithValue(recoveryCase.Id);
+      command.Parameters.AddWithValue(recoveryCase.TenantId);
+      command.Parameters.AddWithValue(status);
+      command.Parameters.AddWithValue(resolvedAt.ToUniversalTime());
+      command.Parameters.AddWithValue(resolutionCode);
+      command.Parameters.AddWithValue(notes);
+      await command.ExecuteNonQueryAsync();
+    }
+
+    var refreshed = await FindRecoveryCaseInternal(connection, transaction, recoveryCase.TenantSlug, recoveryCase.PublicId)
+      ?? throw new InvalidOperationException("billing_recovery_case_close_failed");
+    await InsertRecoveryAction(connection, transaction, refreshed, status == "recovered" ? "case_recovered" : "case_closed", actor, string.Empty, string.Empty, string.Empty, string.Empty, null, notes.Length > 0 ? notes : resolutionCode);
+    return await FindRecoveryCase(connection, recoveryCase.TenantSlug, recoveryCase.PublicId)
+      ?? throw new InvalidOperationException("billing_recovery_case_lookup_failed");
+  }
+
+  private static async Task InsertRecoveryAction(
+    NpgsqlConnection connection,
+    NpgsqlTransaction transaction,
+    InternalRecoveryCase recoveryCase,
+    string actionCode,
+    string actor,
+    string channel,
+    string provider,
+    string touchpointPublicId,
+    string deliveryPublicId,
+    DateOnly? promisedPaymentDate,
+    string notes)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      INSERT INTO billing.recovery_actions (
+        tenant_id,
+        recovery_case_id,
+        public_id,
+        action_code,
+        actor,
+        channel,
+        provider,
+        touchpoint_public_id,
+        delivery_public_id,
+        promised_payment_date,
+        notes
+      )
+      VALUES (
+        $1,
+        $2,
+        gen_random_uuid(),
+        $3,
+        $4,
+        $5,
+        $6,
+        CASE WHEN $7 = '' THEN NULL ELSE $7::uuid END,
+        CASE WHEN $8 = '' THEN NULL ELSE $8::uuid END,
+        $9,
+        $10
+      )
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(recoveryCase.TenantId);
+    command.Parameters.AddWithValue(recoveryCase.Id);
+    command.Parameters.AddWithValue(actionCode);
+    command.Parameters.AddWithValue(actor);
+    command.Parameters.AddWithValue(channel);
+    command.Parameters.AddWithValue(provider);
+    command.Parameters.AddWithValue(touchpointPublicId);
+    command.Parameters.AddWithValue(deliveryPublicId);
+    command.Parameters.AddWithValue(promisedPaymentDate.HasValue ? promisedPaymentDate.Value : DBNull.Value);
+    command.Parameters.AddWithValue(notes);
+    await command.ExecuteNonQueryAsync();
+  }
+
   private static bool? ParseActiveFilter(string? value)
   {
     if (string.IsNullOrWhiteSpace(value))
@@ -1988,6 +2833,45 @@ public static class Server
     {
       "succeeded" => "succeeded",
       "failed" => "failed",
+      _ => string.Empty
+    };
+
+  private static string NormalizeRecoveryStatus(string? value)
+    => value?.Trim().ToLowerInvariant() switch
+    {
+      "open" => "open",
+      "contacted" => "contacted",
+      "promised" => "promised",
+      "recovered" => "recovered",
+      "defaulted" => "defaulted",
+      "closed" => "closed",
+      _ => string.Empty
+    };
+
+  private static string NormalizeRecoverySeverity(string? value)
+    => value?.Trim().ToLowerInvariant() switch
+    {
+      "attention" => "attention",
+      "critical" => "critical",
+      _ => string.Empty
+    };
+
+  private static string NormalizeRecoveryTerminalStatus(string? value)
+    => value?.Trim().ToLowerInvariant() switch
+    {
+      "recovered" => "recovered",
+      "defaulted" => "defaulted",
+      "closed" => "closed",
+      _ => string.Empty
+    };
+
+  private static string NormalizeRecoveryChannel(string? value)
+    => value?.Trim().ToLowerInvariant() switch
+    {
+      "email" => "email",
+      "whatsapp" => "whatsapp",
+      "phone" => "phone",
+      "manual" => "manual",
       _ => string.Empty
     };
 
@@ -2139,7 +3023,8 @@ public sealed record BillingOperationsReportResponse(
   PlanSummary Plans,
   SubscriptionSummary Subscriptions,
   InvoiceSummary Invoices,
-  AttemptSummary Attempts);
+  AttemptSummary Attempts,
+  RecoverySummary Recovery);
 public sealed record PlanSummary(int Total, int Active);
 public sealed record SubscriptionSummary(int Total, SubscriptionStatusCounts Status);
 public sealed record SubscriptionStatusCounts(int Active, int GracePeriod, int Suspended, int Cancelled);
@@ -2147,6 +3032,41 @@ public sealed record InvoiceSummary(int Total, long TotalAmountCents, InvoiceSta
 public sealed record InvoiceStatusCounts(int Open, int Paid, int Failed, int Void);
 public sealed record InvoiceAmountBuckets(long OpenAmountCents, long PaidAmountCents, long FailedAmountCents);
 public sealed record AttemptSummary(int Total, int Succeeded, int Failed);
+public sealed record RecoverySummary(int Total, RecoveryStatusCounts Status, RecoverySeverityCounts Severity, int DueActions, int PromisesDue);
+public sealed record RecoveryStatusCounts(int Open, int Contacted, int Promised, int Recovered, int Defaulted, int Closed);
+public sealed record RecoverySeverityCounts(int Attention, int Critical);
+public sealed record RecoveryCaseResponse(
+  string PublicId,
+  string TenantSlug,
+  string SubscriptionPublicId,
+  string InvoicePublicId,
+  string SourceAttemptPublicId,
+  string WorkflowDefinitionKey,
+  string Status,
+  string Severity,
+  string ContactChannel,
+  string ProviderHint,
+  int LastFailedAttemptNumber,
+  string NextActionAt,
+  string PromisedPaymentDate,
+  string ResolvedAt,
+  string ResolutionCode,
+  string Notes,
+  string CreatedAt,
+  string UpdatedAt);
+public sealed record RecoveryActionResponse(
+  string PublicId,
+  string TenantSlug,
+  string RecoveryCasePublicId,
+  string ActionCode,
+  string Actor,
+  string Channel,
+  string Provider,
+  string TouchpointPublicId,
+  string DeliveryPublicId,
+  string PromisedPaymentDate,
+  string Notes,
+  string CreatedAt);
 
 public sealed record CreatePlanRequest(
   string? Code,
@@ -2169,6 +3089,10 @@ public sealed record CreatePaymentAttemptRequest(
   string? FailureReason,
   string? AttemptedAt);
 public sealed record ProcessWebhookEventRequest(string? TenantSlug, string? WebhookEventPublicId);
+public sealed record OpenRecoveryCaseRequest(string? TenantSlug, string? Actor, string? WorkflowDefinitionKey, string? NextActionAt, string? Notes);
+public sealed record RegisterRecoveryTouchpointRequest(string? TenantSlug, string? Actor, string? Channel, string? Provider, string? TouchpointPublicId, string? DeliveryPublicId, string? Notes);
+public sealed record RegisterRecoveryPromiseRequest(string? TenantSlug, string? Actor, string? PromisedPaymentDate, string? NextActionAt, string? Notes);
+public sealed record CloseRecoveryCaseRequest(string? TenantSlug, string? Actor, string? Status, string? ResolutionCode, string? ResolvedAt, string? Notes);
 
 internal sealed record InternalPlan(
   long Id,
@@ -2210,6 +3134,25 @@ internal sealed record InternalInvoice(
   int RetryCount,
   string Status,
   string Number);
+internal sealed record InternalRecoveryCase(
+  long Id,
+  long TenantId,
+  string PublicId,
+  string TenantSlug,
+  string SubscriptionPublicId,
+  string InvoicePublicId,
+  string SourceAttemptPublicId,
+  string WorkflowDefinitionKey,
+  string Status,
+  string Severity,
+  string ContactChannel,
+  string ProviderHint,
+  int LastFailedAttemptNumber,
+  DateTime? NextActionAt,
+  DateOnly? PromisedPaymentDate,
+  DateTime? ResolvedAt,
+  string ResolutionCode,
+  string Notes);
 internal sealed record WebhookEvent(
   string PublicId,
   string Provider,

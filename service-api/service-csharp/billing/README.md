@@ -9,6 +9,8 @@ Current scope:
 - subscription invoices
 - payment attempts with idempotency keys
 - retry counting and grace period transitions
+- recovery cases with severity, next action and payment promise governance
+- recovery action ledger for contact, promise and resolution lifecycle
 - controlled suspension and reactivation
 - webhook processing through `webhook-hub`
 - billing events and operational reporting
@@ -32,6 +34,13 @@ Public routes:
 - `POST /api/billing/invoices/{publicId}/attempts`
 - `POST /api/billing/webhook-events/process`
 - `GET /api/billing/reports/operations`
+- `GET /api/billing/recovery/cases`
+- `GET /api/billing/recovery/cases/{publicId}`
+- `GET /api/billing/recovery/cases/{publicId}/actions`
+- `POST /api/billing/invoices/{publicId}/recovery/open`
+- `POST /api/billing/recovery/cases/{publicId}/touchpoints`
+- `POST /api/billing/recovery/cases/{publicId}/promise`
+- `POST /api/billing/recovery/cases/{publicId}/close`
 
 Container-first validation:
 

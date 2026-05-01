@@ -2142,12 +2142,20 @@ run_billing_runtime_smoke() {
   local second_attempt_response
   local attempts_response
   local grace_subscription_response
+  local recovery_open_response
+  local recovery_cases_response
+  local recovery_case_public_id
+  local recovery_detail_response
+  local recovery_touchpoint_response
+  local recovery_promise_response
+  local recovery_actions_response
   local suspend_response
   local webhook_create_response
   local webhook_event_public_id
   local webhook_process_response
   local webhook_process_repeat_response
   local reactivated_subscription_response
+  local recovered_case_response
   local subscription_events_response
   local operations_report_response
   local db_summary
@@ -2187,6 +2195,25 @@ run_billing_runtime_smoke() {
     -H "Content-Type: application/json" \
     -d '{"tenantSlug":"bootstrap-ops","provider":"stripe","status":"failed","idempotencyKey":"bill-attempt-002","externalReference":"pay_attempt_002","failureReason":"Saldo insuficiente.","attemptedAt":"2026-04-22T13:15:00Z"}' \
     "$base_url/api/billing/invoices/$created_invoice_public_id/attempts")"
+  recovery_open_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","actor":"billing-smoke","workflowDefinitionKey":"invoice-overdue-recovery","nextActionAt":"2026-04-22T18:00:00Z","notes":"Caso de recovery reforcado no smoke do billing."}' \
+    "$base_url/api/billing/invoices/$created_invoice_public_id/recovery/open")"
+  recovery_case_public_id="$(echo "$recovery_open_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  recovery_cases_response="$(curl -fsS "$base_url/api/billing/recovery/cases?tenantSlug=bootstrap-ops")"
+  recovery_detail_response="$(curl -fsS "$base_url/api/billing/recovery/cases/$recovery_case_public_id?tenantSlug=bootstrap-ops")"
+  recovery_touchpoint_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","actor":"billing-smoke","channel":"email","provider":"resend","touchpointPublicId":"00000000-0000-0000-0000-000000000611","deliveryPublicId":"00000000-0000-0000-0000-000000000612","notes":"Contato de cobranca registrado no smoke."}' \
+    "$base_url/api/billing/recovery/cases/$recovery_case_public_id/touchpoints")"
+  recovery_promise_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d '{"tenantSlug":"bootstrap-ops","actor":"billing-smoke","promisedPaymentDate":"2026-04-24","nextActionAt":"2026-04-24T12:00:00Z","notes":"Cliente prometeu quitar em D+2."}' \
+    "$base_url/api/billing/recovery/cases/$recovery_case_public_id/promise")"
+  recovery_actions_response="$(curl -fsS "$base_url/api/billing/recovery/cases/$recovery_case_public_id/actions?tenantSlug=bootstrap-ops")"
   attempts_response="$(curl -fsS "$base_url/api/billing/invoices/$created_invoice_public_id/attempts?tenantSlug=bootstrap-ops")"
   grace_subscription_response="$(curl -fsS "$base_url/api/billing/subscriptions/$created_subscription_public_id?tenantSlug=bootstrap-ops")"
   suspend_response="$(curl -fsS \
@@ -2211,6 +2238,7 @@ run_billing_runtime_smoke() {
     -d "{\"tenantSlug\":\"bootstrap-ops\",\"webhookEventPublicId\":\"$webhook_event_public_id\"}" \
     "$base_url/api/billing/webhook-events/process")"
   reactivated_subscription_response="$(curl -fsS "$base_url/api/billing/subscriptions/$created_subscription_public_id?tenantSlug=bootstrap-ops")"
+  recovered_case_response="$(curl -fsS "$base_url/api/billing/recovery/cases/$recovery_case_public_id?tenantSlug=bootstrap-ops")"
   subscription_events_response="$(curl -fsS "$base_url/api/billing/subscriptions/$created_subscription_public_id/events?tenantSlug=bootstrap-ops")"
   operations_report_response="$(curl -fsS "$base_url/api/billing/reports/operations?tenantSlug=bootstrap-ops")"
   db_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
@@ -2229,7 +2257,10 @@ run_billing_runtime_smoke() {
         (SELECT count(*) FROM billing.payment_attempts AS attempt INNER JOIN identity.tenants AS tenant ON tenant.id = attempt.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
         (SELECT count(*) FROM billing.payment_attempts AS attempt INNER JOIN identity.tenants AS tenant ON tenant.id = attempt.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND attempt.status = 'succeeded') || '|' ||
         (SELECT count(*) FROM billing.payment_attempts AS attempt INNER JOIN identity.tenants AS tenant ON tenant.id = attempt.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND attempt.status = 'failed') || '|' ||
-        (SELECT count(*) FROM billing.subscription_events AS event INNER JOIN identity.tenants AS tenant ON tenant.id = event.tenant_id WHERE tenant.slug = 'bootstrap-ops')
+        (SELECT count(*) FROM billing.subscription_events AS event INNER JOIN identity.tenants AS tenant ON tenant.id = event.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM billing.recovery_cases AS recovery INNER JOIN identity.tenants AS tenant ON tenant.id = recovery.tenant_id WHERE tenant.slug = 'bootstrap-ops') || '|' ||
+        (SELECT count(*) FROM billing.recovery_cases AS recovery INNER JOIN identity.tenants AS tenant ON tenant.id = recovery.tenant_id WHERE tenant.slug = 'bootstrap-ops' AND recovery.status = 'recovered') || '|' ||
+        (SELECT count(*) FROM billing.recovery_actions AS action INNER JOIN identity.tenants AS tenant ON tenant.id = action.tenant_id WHERE tenant.slug = 'bootstrap-ops')
     ")"
 
   echo "[test] billing health details => $health_details_response"
@@ -2241,6 +2272,12 @@ run_billing_runtime_smoke() {
   echo "[test] billing invoices => $invoices_response"
   echo "[test] billing first failed attempt => $first_attempt_response"
   echo "[test] billing second failed attempt => $second_attempt_response"
+  echo "[test] billing recovery open => $recovery_open_response"
+  echo "[test] billing recovery cases => $recovery_cases_response"
+  echo "[test] billing recovery detail => $recovery_detail_response"
+  echo "[test] billing recovery touchpoint => $recovery_touchpoint_response"
+  echo "[test] billing recovery promise => $recovery_promise_response"
+  echo "[test] billing recovery actions => $recovery_actions_response"
   echo "[test] billing attempts => $attempts_response"
   echo "[test] billing grace subscription => $grace_subscription_response"
   echo "[test] billing suspend subscription => $suspend_response"
@@ -2248,11 +2285,12 @@ run_billing_runtime_smoke() {
   echo "[test] billing webhook process => $webhook_process_response"
   echo "[test] billing webhook process repeat => $webhook_process_repeat_response"
   echo "[test] billing reactivated subscription => $reactivated_subscription_response"
+  echo "[test] billing recovered case => $recovered_case_response"
   echo "[test] billing subscription events => $subscription_events_response"
   echo "[test] billing operations report => $operations_report_response"
   echo "[test] billing db summary => $db_summary"
 
-  if [[ -z "$created_plan_public_id" || -z "$created_subscription_public_id" || -z "$created_invoice_public_id" || -z "$webhook_event_public_id" || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"webhook-hub","status":"ready"'* || "$create_plan_response" != *'"code":"runtime-basic"'* || "$create_plan_response" != *'"gracePeriodDays":5'* || "$plans_response" != *'"code":"runtime-basic"'* || "$create_subscription_response" != *'"status":"active"'* || "$create_subscription_response" != *'"planCode":"runtime-basic"'* || "$subscription_detail_response" != *'"externalReference":"tenant-bootstrap"'* || "$create_invoice_response" != *'"status":"open"'* || "$create_invoice_response" != *'"amountCents":4900'* || "$invoices_response" != *'"status":"open"'* || "$first_attempt_response" != *'"status":"failed"'* || "$first_attempt_response" != *'"idempotent":false'* || "$second_attempt_response" != *'"status":"failed"'* || "$grace_subscription_response" != *'"status":"grace_period"'* || "$grace_subscription_response" != *'"graceEndsAt":"2026-04-27T13:15:00Z"'* || "$attempts_response" != *'"attemptNumber":1'* || "$attempts_response" != *'"attemptNumber":2'* || "$suspend_response" != *'"status":"suspended"'* || "$webhook_create_response" != *'"event_type":"billing.invoice.paid"'* || "$webhook_process_response" != *'"outcomeStatus":"succeeded"'* || "$webhook_process_response" != *'"idempotent":false'* || "$webhook_process_response" != *'"status":"paid"'* || "$webhook_process_repeat_response" != *'"idempotent":true'* || "$reactivated_subscription_response" != *'"status":"active"'* || "$subscription_events_response" != *'"eventCode":"subscription_created"'* || "$subscription_events_response" != *'"eventCode":"invoice_created"'* || "$subscription_events_response" != *'"eventCode":"subscription_grace_period_started"'* || "$subscription_events_response" != *'"eventCode":"subscription_suspended"'* || "$subscription_events_response" != *'"eventCode":"invoice_paid"'* || "$operations_report_response" != *'"tenantSlug":"bootstrap-ops"'* || "$operations_report_response" != *'"total":1'* || "$operations_report_response" != *'"paid":1'* || "$operations_report_response" != *'"failed":2'* || "$operations_report_response" != *'"succeeded":1'* || "$db_summary" != '1|1|1|1|0|0|1|1|0|0|3|1|2|7' ]]; then
+  if [[ -z "$created_plan_public_id" || -z "$created_subscription_public_id" || -z "$created_invoice_public_id" || -z "$webhook_event_public_id" || -z "$recovery_case_public_id" || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"webhook-hub","status":"ready"'* || "$create_plan_response" != *'"code":"runtime-basic"'* || "$create_plan_response" != *'"gracePeriodDays":5'* || "$plans_response" != *'"code":"runtime-basic"'* || "$create_subscription_response" != *'"status":"active"'* || "$create_subscription_response" != *'"planCode":"runtime-basic"'* || "$subscription_detail_response" != *'"externalReference":"tenant-bootstrap"'* || "$create_invoice_response" != *'"status":"open"'* || "$create_invoice_response" != *'"amountCents":4900'* || "$invoices_response" != *'"status":"open"'* || "$first_attempt_response" != *'"status":"failed"'* || "$first_attempt_response" != *'"idempotent":false'* || "$second_attempt_response" != *'"status":"failed"'* || "$recovery_open_response" != *'"workflowDefinitionKey":"invoice-overdue-recovery"'* || "$recovery_open_response" != *'"severity":"critical"'* || "$recovery_cases_response" != *"\"publicId\":\"$recovery_case_public_id\""* || "$recovery_detail_response" != *'"status":"open"'* || "$recovery_touchpoint_response" != *'"status":"contacted"'* || "$recovery_touchpoint_response" != *'"contactChannel":"email"'* || "$recovery_promise_response" != *'"status":"promised"'* || "$recovery_promise_response" != *'"promisedPaymentDate":"2026-04-24"'* || "$recovery_actions_response" != *'"actionCode":"case_opened"'* || "$recovery_actions_response" != *'"actionCode":"case_refreshed"'* || "$recovery_actions_response" != *'"actionCode":"touchpoint_registered"'* || "$recovery_actions_response" != *'"actionCode":"promise_registered"'* || "$grace_subscription_response" != *'"status":"grace_period"'* || "$grace_subscription_response" != *'"graceEndsAt":"2026-04-27T13:15:00Z"'* || "$attempts_response" != *'"attemptNumber":1'* || "$attempts_response" != *'"attemptNumber":2'* || "$suspend_response" != *'"status":"suspended"'* || "$webhook_create_response" != *'"event_type":"billing.invoice.paid"'* || "$webhook_process_response" != *'"outcomeStatus":"succeeded"'* || "$webhook_process_response" != *'"idempotent":false'* || "$webhook_process_response" != *'"status":"paid"'* || "$webhook_process_repeat_response" != *'"idempotent":true'* || "$reactivated_subscription_response" != *'"status":"active"'* || "$recovered_case_response" != *'"status":"recovered"'* || "$recovered_case_response" != *'"resolutionCode":"invoice_paid"'* || "$subscription_events_response" != *'"eventCode":"subscription_created"'* || "$subscription_events_response" != *'"eventCode":"invoice_created"'* || "$subscription_events_response" != *'"eventCode":"subscription_grace_period_started"'* || "$subscription_events_response" != *'"eventCode":"subscription_suspended"'* || "$subscription_events_response" != *'"eventCode":"invoice_paid"'* || "$operations_report_response" != *'"tenantSlug":"bootstrap-ops"'* || "$operations_report_response" != *'"total":1'* || "$operations_report_response" != *'"paid":1'* || "$operations_report_response" != *'"failed":2'* || "$operations_report_response" != *'"succeeded":1'* || "$operations_report_response" != *'"recovery"'* || "$operations_report_response" != *'"recovered":1'* || "$operations_report_response" != *'"critical":1'* || "$db_summary" != '1|1|1|1|0|0|1|1|0|0|3|1|2|7|1|1|6' ]]; then
     echo "[test] billing operational cycle did not expose the expected data"
     exit 1
   fi
