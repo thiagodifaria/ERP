@@ -78,6 +78,11 @@ def build_static_tenant_360(tenant_slug: str | None = None) -> dict:
             "paidInvoices": 9,
             "paymentAttempts": 12,
             "failedAttempts": 3,
+            "recoveryCases": 4,
+            "recoveryOpen": 2,
+            "recoveryPromised": 1,
+            "recoveryRecovered": 1,
+            "recoveryCritical": 2,
         },
         "automation": {
             "activeDefinitions": 6,
@@ -460,11 +465,40 @@ def fetch_billing_metrics(connection, tenant_slug: str | None) -> dict:
                 FROM billing.payment_attempts
                 WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
                   AND status = 'failed'
-            ) AS failed_attempts
+            ) AS failed_attempts,
+            (
+                SELECT count(*)
+                FROM billing.recovery_cases
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS recovery_cases,
+            (
+                SELECT count(*)
+                FROM billing.recovery_cases
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status IN ('open', 'contacted')
+            ) AS recovery_open,
+            (
+                SELECT count(*)
+                FROM billing.recovery_cases
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'promised'
+            ) AS recovery_promised,
+            (
+                SELECT count(*)
+                FROM billing.recovery_cases
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'recovered'
+            ) AS recovery_recovered,
+            (
+                SELECT count(*)
+                FROM billing.recovery_cases
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND severity = 'critical'
+            ) AS recovery_critical
     """
 
     with connection.cursor() as cursor:
-        cursor.execute(query, params * 4)
+        cursor.execute(query, params * 9)
         row = cursor.fetchone() or {}
 
     return {
@@ -473,6 +507,11 @@ def fetch_billing_metrics(connection, tenant_slug: str | None) -> dict:
         "paidInvoices": int(row.get("paid_invoices", 0) or 0),
         "paymentAttempts": int(row.get("payment_attempts", 0) or 0),
         "failedAttempts": int(row.get("failed_attempts", 0) or 0),
+        "recoveryCases": int(row.get("recovery_cases", 0) or 0),
+        "recoveryOpen": int(row.get("recovery_open", 0) or 0),
+        "recoveryPromised": int(row.get("recovery_promised", 0) or 0),
+        "recoveryRecovered": int(row.get("recovery_recovered", 0) or 0),
+        "recoveryCritical": int(row.get("recovery_critical", 0) or 0),
     }
 
 

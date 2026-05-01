@@ -2448,6 +2448,7 @@ run_analytics_runtime_smoke() {
   local document_governance_response
   local revenue_operations_response
   local finance_control_response
+  local collections_control_response
   local rental_operations_response
   local cost_estimator_response
   local load_benchmark_response
@@ -2467,6 +2468,7 @@ run_analytics_runtime_smoke() {
   document_governance_response="$(curl -fsS "$base_url/api/analytics/reports/document-governance?tenant_slug=bootstrap-ops")"
   revenue_operations_response="$(curl -fsS "$base_url/api/analytics/reports/revenue-operations?tenant_slug=bootstrap-ops")"
   finance_control_response="$(curl -fsS "$base_url/api/analytics/reports/finance-control?tenant_slug=bootstrap-ops")"
+  collections_control_response="$(curl -fsS "$base_url/api/analytics/reports/collections-control?tenant_slug=bootstrap-ops")"
   rental_operations_response="$(curl -fsS "$base_url/api/analytics/reports/rental-operations?tenant_slug=bootstrap-ops")"
   cost_estimator_response="$(curl -fsS "$base_url/api/analytics/reports/cost-estimator?tenant_slug=bootstrap-ops")"
   load_benchmark_response="$(curl -fsS "$base_url/api/analytics/reports/load-benchmark?tenant_slug=bootstrap-ops")"
@@ -2482,6 +2484,7 @@ run_analytics_runtime_smoke() {
   echo "[test] analytics document governance => $document_governance_response"
   echo "[test] analytics revenue operations => $revenue_operations_response"
   echo "[test] analytics finance control => $finance_control_response"
+  echo "[test] analytics collections control => $collections_control_response"
   echo "[test] analytics rental operations => $rental_operations_response"
   echo "[test] analytics cost estimator => $cost_estimator_response"
   echo "[test] analytics load benchmark => $load_benchmark_response"
@@ -2493,6 +2496,11 @@ run_analytics_runtime_smoke() {
 
   if [[ "$engagement_operations_response" != *'"tenantSlug":"bootstrap-ops"'* || "$engagement_operations_response" != *'"dataSource":"postgresql"'* || "$engagement_operations_response" != *'"budgetCents":178000'* || "$engagement_operations_response" != *'"templates":{"total":2'* || "$engagement_operations_response" != *'"active":2'* || "$engagement_operations_response" != *'"touchpoints":{"total":2'* || "$engagement_operations_response" != *'"responded":1'* || "$engagement_operations_response" != *'"converted":1'* || "$engagement_operations_response" != *'"workflowDispatched":2'* || "$engagement_operations_response" != *'"deliveries":{"total":2'* || "$engagement_operations_response" != *'"delivered":2'* || "$engagement_operations_response" != *'"failed":0'* || "$engagement_operations_response" != *'"deliveryRate":1.0'* || "$engagement_operations_response" != *'"resend":1'* || "$engagement_operations_response" != *'"manual":1'* || "$engagement_operations_response" != *'"templateLinked":2'* || "$engagement_operations_response" != *'"activeProviders":2'* ]]; then
     echo "[test] analytics engagement operations report did not expose the expected payload"
+    exit 1
+  fi
+
+  if [[ "$service_pulse_response" != *'"recoveryOpen":0'* || "$service_pulse_response" != *'"recoveryPromised":0'* || "$service_pulse_response" != *'"recoveryCritical":1'* || "$tenant_360_response" != *'"recoveryCases":1'* || "$tenant_360_response" != *'"recoveryOpen":0'* || "$tenant_360_response" != *'"recoveryPromised":0'* || "$tenant_360_response" != *'"recoveryRecovered":1'* || "$tenant_360_response" != *'"recoveryCritical":1'* || "$finance_control_response" != *'"recoveryCasesOpen":0'* || "$finance_control_response" != *'"recoveryCasesPromised":0'* || "$finance_control_response" != *'"recoveryCasesRecovered":1'* || "$finance_control_response" != *'"recoveryCasesCritical":1'* || "$finance_control_response" != *'"openRecoveryAmountCents":0'* || "$finance_control_response" != *'"promisedRecoveryAmountCents":0'* || "$finance_control_response" != *'"recoveryActions":6'* || "$collections_control_response" != *'"tenantSlug":"bootstrap-ops"'* || "$collections_control_response" != *'"dataSource":"postgresql"'* || "$collections_control_response" != *'"casesTotal":1'* || "$collections_control_response" != *'"openCases":0'* || "$collections_control_response" != *'"promisedCases":0'* || "$collections_control_response" != *'"recoveredCases":1'* || "$collections_control_response" != *'"criticalCases":1'* || "$collections_control_response" != *'"recoveredAmountCents":4900'* || "$collections_control_response" != *'"failedAttempts":2'* || "$collections_control_response" != *'"invoicesInRecovery":0'* || "$collections_control_response" != *'"activePromises":0'* || "$collections_control_response" != *'"promisesKept":0'* || "$collections_control_response" != *'"touchpoints":1'* || "$collections_control_response" != *'"promiseActions":1'* || "$collections_control_response" != *'"recoveries":1'* || "$collections_control_response" != *'"recoveryRate":1.0'* || "$collections_control_response" != *'"pendingActions":0'* || "$collections_control_response" != *'"nextActionsDue":0'* ]]; then
+    echo "[test] analytics collections and recovery signals did not expose the expected payload"
     exit 1
   fi
 }

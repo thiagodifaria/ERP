@@ -58,6 +58,12 @@ def build_static_finance_control(tenant_slug: str | None = None) -> dict:
             "failedAttempts": 3,
             "succeededAttempts": 9,
             "monthlyRecurringRevenueCents": 539000,
+            "recoveryCasesOpen": 2,
+            "recoveryCasesPromised": 1,
+            "recoveryCasesRecovered": 4,
+            "recoveryCasesCritical": 2,
+            "openRecoveryAmountCents": 286000,
+            "promisedRecoveryAmountCents": 121000,
         },
         "profitability": {
             "collectedReceivablesCents": 845000,
@@ -72,6 +78,7 @@ def build_static_finance_control(tenant_slug: str | None = None) -> dict:
             "subscriptionEvents": 23,
             "cashMovements": 19,
             "failedPaymentAttempts": 3,
+            "recoveryActions": 18,
         },
     }
 
@@ -312,11 +319,53 @@ def fetch_billing_metrics(connection, tenant_slug: str | None) -> dict:
                 JOIN billing.plans AS plan ON plan.id = subscription.plan_id
                 WHERE subscription.tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
                   AND subscription.status = 'active'
-            ) AS monthly_recurring_revenue_cents
+            ) AS monthly_recurring_revenue_cents,
+            (
+                SELECT count(*)
+                FROM billing.recovery_cases
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status IN ('open', 'contacted')
+            ) AS recovery_cases_open,
+            (
+                SELECT count(*)
+                FROM billing.recovery_cases
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'promised'
+            ) AS recovery_cases_promised,
+            (
+                SELECT count(*)
+                FROM billing.recovery_cases
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'recovered'
+            ) AS recovery_cases_recovered,
+            (
+                SELECT count(*)
+                FROM billing.recovery_cases
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND severity = 'critical'
+            ) AS recovery_cases_critical,
+            (
+                SELECT COALESCE(sum(invoice.amount_cents), 0)
+                FROM billing.recovery_cases AS recovery
+                JOIN billing.subscription_invoices AS invoice
+                  ON invoice.tenant_id = recovery.tenant_id
+                 AND invoice.public_id = recovery.invoice_public_id
+                WHERE recovery.tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND recovery.status IN ('open', 'contacted')
+            ) AS open_recovery_amount_cents,
+            (
+                SELECT COALESCE(sum(invoice.amount_cents), 0)
+                FROM billing.recovery_cases AS recovery
+                JOIN billing.subscription_invoices AS invoice
+                  ON invoice.tenant_id = recovery.tenant_id
+                 AND invoice.public_id = recovery.invoice_public_id
+                WHERE recovery.tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND recovery.status = 'promised'
+            ) AS promised_recovery_amount_cents
     """
 
     with connection.cursor() as cursor:
-        cursor.execute(query, params * 9)
+        cursor.execute(query, params * 15)
         row = cursor.fetchone() or {}
 
     return {
@@ -331,6 +380,12 @@ def fetch_billing_metrics(connection, tenant_slug: str | None) -> dict:
         "failedAttempts": int(row.get("failed_attempts", 0) or 0),
         "succeededAttempts": int(row.get("succeeded_attempts", 0) or 0),
         "monthlyRecurringRevenueCents": int(row.get("monthly_recurring_revenue_cents", 0) or 0),
+        "recoveryCasesOpen": int(row.get("recovery_cases_open", 0) or 0),
+        "recoveryCasesPromised": int(row.get("recovery_cases_promised", 0) or 0),
+        "recoveryCasesRecovered": int(row.get("recovery_cases_recovered", 0) or 0),
+        "recoveryCasesCritical": int(row.get("recovery_cases_critical", 0) or 0),
+        "openRecoveryAmountCents": int(row.get("open_recovery_amount_cents", 0) or 0),
+        "promisedRecoveryAmountCents": int(row.get("promised_recovery_amount_cents", 0) or 0),
     }
 
 
@@ -361,6 +416,11 @@ def fetch_governance_metrics(connection, tenant_slug: str | None) -> dict:
                   AND status = 'failed'
             ) AS failed_payment_attempts,
             (
+                SELECT count(*)
+                FROM billing.recovery_actions
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS recovery_actions,
+            (
                 SELECT COALESCE(sum(amount_cents), 0)
                 FROM finance.commission_entries
                 WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
@@ -374,7 +434,7 @@ def fetch_governance_metrics(connection, tenant_slug: str | None) -> dict:
     """
 
     with connection.cursor() as cursor:
-        cursor.execute(query, params * 6)
+        cursor.execute(query, params * 7)
         row = cursor.fetchone() or {}
 
     return {
@@ -382,6 +442,7 @@ def fetch_governance_metrics(connection, tenant_slug: str | None) -> dict:
         "subscriptionEvents": int(row.get("subscription_events", 0) or 0),
         "cashMovements": int(row.get("cash_movements", 0) or 0),
         "failedPaymentAttempts": int(row.get("failed_payment_attempts", 0) or 0),
+        "recoveryActions": int(row.get("recovery_actions", 0) or 0),
         "releasedCommissionsCents": int(row.get("released_commissions_cents", 0) or 0),
         "operatingCostCents": int(row.get("operating_cost_cents", 0) or 0),
     }

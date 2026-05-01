@@ -11,6 +11,7 @@ Initial scope:
 - workflow definition health report with catalog and runtime alignment
 - revenue operations report crossing booked revenue, invoice coverage and collection risk
 - finance control report crossing treasury, receivables, payables and billing health
+- collections control report crossing recovery cases, payment promises, delinquency throughput and cash recovery
 - rental operations report crossing contracts, recurring charges and attachment governance
 - engagement operations report crossing campaigns, templates, touchpoints and delivery reliability
 - document governance report crossing attachment inventory, visibility, storage and upload lifecycle
@@ -35,6 +36,7 @@ Public routes:
 - `GET /api/analytics/reports/document-governance`
 - `GET /api/analytics/reports/revenue-operations`
 - `GET /api/analytics/reports/finance-control`
+- `GET /api/analytics/reports/collections-control`
 - `GET /api/analytics/reports/rental-operations`
 - `GET /api/analytics/reports/load-benchmark`
 - `GET /api/analytics/reports/cost-estimator`

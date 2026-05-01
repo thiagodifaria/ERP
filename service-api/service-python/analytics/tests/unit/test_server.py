@@ -172,8 +172,23 @@ def test_finance_control_returns_treasury_and_billing_payload() -> None:
     assert payload["treasury"]["accountsTotal"] == 3
     assert payload["receivables"]["paidAmountCents"] == 845000
     assert payload["billing"]["activeSubscriptions"] == 11
+    assert payload["billing"]["recoveryCasesCritical"] == 2
     assert payload["profitability"]["netOperationalMarginCents"] == 453000
     assert payload["governance"]["failedPaymentAttempts"] == 3
+    assert payload["governance"]["recoveryActions"] == 18
+
+
+def test_collections_control_returns_recovery_operational_payload() -> None:
+    response = client.get("/api/analytics/reports/collections-control?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["portfolio"]["casesTotal"] == 12
+    assert payload["portfolio"]["criticalCases"] == 4
+    assert payload["promises"]["activePromises"] == 2
+    assert payload["throughput"]["touchpoints"] == 18
+    assert payload["governance"]["pendingActions"] == 3
 
 
 def test_rental_operations_returns_rental_operational_payload() -> None:

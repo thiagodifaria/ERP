@@ -24,7 +24,17 @@ def build_static_service_pulse(tenant_slug: str | None = None) -> dict:
             "crm": {"totalLeads": 128, "captured": 18, "contacted": 42, "qualified": 37, "disqualified": 31},
             "sales": {"opportunitiesTotal": 34, "proposalsTotal": 21, "salesTotal": 12, "bookedRevenueCents": 1775000},
             "finance": {"receivablesOpen": 4, "receivablesPaid": 9, "payablesOpen": 2, "cashAccounts": 2, "currentBalanceCents": 1246000, "periodClosures": 4},
-            "billing": {"activeSubscriptions": 11, "graceSubscriptions": 1, "suspendedSubscriptions": 1, "invoicesOpen": 2, "invoicesPaid": 9, "failedAttempts": 3},
+            "billing": {
+                "activeSubscriptions": 11,
+                "graceSubscriptions": 1,
+                "suspendedSubscriptions": 1,
+                "invoicesOpen": 2,
+                "invoicesPaid": 9,
+                "failedAttempts": 3,
+                "recoveryOpen": 2,
+                "recoveryPromised": 1,
+                "recoveryCritical": 2,
+            },
             "documents": {"attachmentsTotal": 24, "activeAttachments": 19, "archivedAttachments": 5, "pendingUploadSessions": 2, "completedUploadSessions": 6},
             "engagement": {"campaignsTotal": 2, "activeCampaigns": 1, "templatesTotal": 3, "deliveriesTotal": 17, "deliveredDeliveries": 12, "failedDeliveries": 2, "convertedTouchpoints": 3},
             "rentals": {"contractsTotal": 12, "activeContracts": 10, "scheduledCharges": 18, "paidCharges": 11, "cancelledCharges": 3, "overdueCharges": 1},
@@ -355,11 +365,29 @@ def fetch_billing_service_metrics(connection, tenant_slug: str | None) -> dict:
                 FROM billing.payment_attempts
                 WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
                   AND status = 'failed'
-            ) AS failed_attempts
+            ) AS failed_attempts,
+            (
+                SELECT count(*)
+                FROM billing.recovery_cases
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status IN ('open', 'contacted')
+            ) AS recovery_open,
+            (
+                SELECT count(*)
+                FROM billing.recovery_cases
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND status = 'promised'
+            ) AS recovery_promised,
+            (
+                SELECT count(*)
+                FROM billing.recovery_cases
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND severity = 'critical'
+            ) AS recovery_critical
     """
 
     with connection.cursor() as cursor:
-        cursor.execute(query, params * 6)
+        cursor.execute(query, params * 9)
         row = cursor.fetchone() or {}
 
     return {
@@ -369,6 +397,9 @@ def fetch_billing_service_metrics(connection, tenant_slug: str | None) -> dict:
         "invoicesOpen": int(row.get("invoices_open", 0) or 0),
         "invoicesPaid": int(row.get("invoices_paid", 0) or 0),
         "failedAttempts": int(row.get("failed_attempts", 0) or 0),
+        "recoveryOpen": int(row.get("recovery_open", 0) or 0),
+        "recoveryPromised": int(row.get("recovery_promised", 0) or 0),
+        "recoveryCritical": int(row.get("recovery_critical", 0) or 0),
     }
 
 

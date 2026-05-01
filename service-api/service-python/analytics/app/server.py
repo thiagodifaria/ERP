@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from app.config.settings import settings
 from app.infrastructure.postgres import postgres_ready
 from app.reports.automation_board import build_automation_board
+from app.reports.collections_control import build_collections_control
 from app.reports.cost_estimator import build_cost_estimator
 from app.reports.document_governance import build_document_governance
 from app.reports.delivery_reliability import build_delivery_reliability
@@ -109,6 +110,11 @@ def revenue_operations(tenant_slug: str | None = None) -> dict:
 @app.get("/api/analytics/reports/finance-control")
 def finance_control(tenant_slug: str | None = None) -> dict:
     return build_finance_control(tenant_slug)
+
+
+@app.get("/api/analytics/reports/collections-control")
+def collections_control(tenant_slug: str | None = None) -> dict:
+    return build_collections_control(tenant_slug)
 
 
 @app.get("/api/analytics/reports/rental-operations")
