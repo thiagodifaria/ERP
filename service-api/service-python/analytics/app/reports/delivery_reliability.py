@@ -32,6 +32,7 @@ def build_static_delivery_reliability(provider: str | None = None) -> dict:
             "forwarded": 87,
             "failed": 3,
             "rejected": 2,
+            "dead_letter": 1,
         },
         "transitionLoad": {
             "received": 93,
@@ -41,6 +42,7 @@ def build_static_delivery_reliability(provider: str | None = None) -> dict:
             "forwarded": 87,
             "failed": 3,
             "rejected": 2,
+            "dead_letter": 1,
         },
         "providerLeaderboard": [
             {"provider": "stripe", "total": 61, "forwarded": 58, "failed": 2},
@@ -74,7 +76,7 @@ def fetch_lifecycle_metrics(connection, provider_filter_sql: str, params: list[s
     query = f"""
         SELECT
             count(*) AS total_events,
-            count(*) FILTER (WHERE status IN ('forwarded', 'rejected')) AS handled_events,
+            count(*) FILTER (WHERE status IN ('forwarded', 'rejected', 'dead_letter')) AS handled_events,
             count(*) FILTER (WHERE status = 'failed') AS failed_events,
             count(*) FILTER (WHERE status IN ('received', 'validated', 'queued', 'processing')) AS pending_events,
             COALESCE(avg(transition_totals.total_transitions), 0) AS avg_transitions_per_event
@@ -109,7 +111,8 @@ def fetch_status_footprint(connection, provider_filter_sql: str, params: list[st
             count(*) FILTER (WHERE status = 'processing') AS processing,
             count(*) FILTER (WHERE status = 'forwarded') AS forwarded,
             count(*) FILTER (WHERE status = 'failed') AS failed,
-            count(*) FILTER (WHERE status = 'rejected') AS rejected
+            count(*) FILTER (WHERE status = 'rejected') AS rejected,
+            count(*) FILTER (WHERE status = 'dead_letter') AS dead_letter
         FROM webhook_hub.webhook_events
         {provider_filter_sql}
     """
@@ -118,7 +121,7 @@ def fetch_status_footprint(connection, provider_filter_sql: str, params: list[st
         cursor.execute(query, params)
         row = cursor.fetchone() or {}
 
-    return {status: int(row.get(status, 0) or 0) for status in ["received", "validated", "queued", "processing", "forwarded", "failed", "rejected"]}
+    return {status: int(row.get(status, 0) or 0) for status in ["received", "validated", "queued", "processing", "forwarded", "failed", "rejected", "dead_letter"]}
 
 
 def fetch_transition_load(connection, provider_filter_sql: str, params: list[str]) -> dict:
@@ -137,7 +140,7 @@ def fetch_transition_load(connection, provider_filter_sql: str, params: list[str
         cursor.execute(query, params)
         rows = cursor.fetchall()
 
-    metrics = {status: 0 for status in ["received", "validated", "queued", "processing", "forwarded", "failed", "rejected"]}
+    metrics = {status: 0 for status in ["received", "validated", "queued", "processing", "forwarded", "failed", "rejected", "dead_letter"]}
     for row in rows:
         metrics[row["status"]] = int(row["total"] or 0)
 

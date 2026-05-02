@@ -30,6 +30,7 @@ func NewServer(cfg config.Config, logger *telemetry.Logger) *http.Server {
 	engagementOverviewHandler := handler.NewEngagementOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
 	documentsOverviewHandler := handler.NewDocumentsOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
 	collectionsOverviewHandler := handler.NewCollectionsOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
+	platformReliabilityOverviewHandler := handler.NewPlatformReliabilityOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
 	salesOverviewHandler := handler.NewSalesOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
 	revenueOverviewHandler := handler.NewRevenueOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
 	financeOverviewHandler := handler.NewFinanceOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
@@ -38,7 +39,7 @@ func NewServer(cfg config.Config, logger *telemetry.Logger) *http.Server {
 
 	return &http.Server{
 		Addr:              cfg.HTTPAddress,
-		Handler:           NewRouter(logger, healthHandler, opsHandler, tenantOverviewHandler, automationOverviewHandler, engagementOverviewHandler, documentsOverviewHandler, collectionsOverviewHandler, salesOverviewHandler, revenueOverviewHandler, financeOverviewHandler, rentalsOverviewHandler, cfg.IdentityBaseURL, accessResolver),
+		Handler:           NewRouter(logger, healthHandler, opsHandler, tenantOverviewHandler, automationOverviewHandler, engagementOverviewHandler, documentsOverviewHandler, collectionsOverviewHandler, platformReliabilityOverviewHandler, salesOverviewHandler, revenueOverviewHandler, financeOverviewHandler, rentalsOverviewHandler, cfg.IdentityBaseURL, accessResolver),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }

@@ -115,3 +115,67 @@ test("delivery stream supports creation, status update and summary", async () =>
   assert.equal(summary.byProvider.resend, 1);
   assert.equal(summary.byStatus.delivered, 2);
 });
+
+test("provider flows support inbound lead ingestion, workflow dispatch and callback tracking", async () => {
+  const template = await services.createTemplate.execute({
+    tenantSlug: "bootstrap-ops",
+    key: "provider-dispatch-email",
+    name: "Provider Dispatch Email",
+    channel: "email",
+    provider: "resend",
+    status: "active",
+    subject: "Seu proximo passo",
+    body: "Ola {{firstName}}, aqui vai o proximo passo do seu atendimento."
+  });
+
+  const inbound = await services.ingestProviderLead.execute({
+    tenantSlug: "bootstrap-ops",
+    provider: "meta_ads",
+    campaignPublicId: "00000000-0000-0000-0000-00000000c102",
+    externalEventId: "meta-event-001",
+    name: "Runtime Meta Lead",
+    email: "meta.runtime@example.com",
+    contactValue: "meta.runtime@example.com",
+    notes: "Lead entrou pelo provider de teste."
+  });
+
+  assert.equal(inbound.lead.source, "meta_ads");
+  assert.equal(inbound.touchpoint?.source, "meta_ads");
+  assert.equal(inbound.providerEvent.eventType, "lead.ingested");
+
+  const dispatch = await services.dispatchWorkflowTouchpoint.execute({
+    tenantSlug: "bootstrap-ops",
+    campaignPublicId: "00000000-0000-0000-0000-00000000c102",
+    templatePublicId: template.publicId,
+    leadPublicId: inbound.lead.publicId,
+    contactValue: "meta.runtime@example.com",
+    provider: "resend",
+    workflowRunPublicId: "00000000-0000-0000-0000-000000000450",
+    providerMessageId: "msg-dispatch-001",
+    createdBy: "unit-test"
+  });
+
+  assert.equal(dispatch.touchpoint.lastWorkflowRunPublicId, "00000000-0000-0000-0000-000000000450");
+  assert.equal(dispatch.delivery.provider, "resend");
+  assert.equal(dispatch.providerEvent.eventType, "workflow.dispatched");
+
+  const callback = await services.registerProviderEvent.execute({
+    tenantSlug: "bootstrap-ops",
+    provider: "resend",
+    eventType: "delivery.responded",
+    externalEventId: "resend-event-001",
+    touchpointPublicId: dispatch.touchpoint.publicId,
+    deliveryPublicId: dispatch.delivery.publicId,
+    workflowRunPublicId: "00000000-0000-0000-0000-000000000450",
+    leadPublicId: inbound.lead.publicId
+  });
+
+  assert.equal(callback.status, "processed");
+
+  const summary = await services.getProviderEventSummary.execute({ tenantSlug: "bootstrap-ops" });
+  assert.equal(summary.totals.total, 3);
+  assert.equal(summary.byProvider.meta_ads, 1);
+  assert.equal(summary.byProvider.resend, 2);
+  assert.equal(summary.byDirection.inbound, 2);
+  assert.equal(summary.byDirection.outbound, 1);
+});

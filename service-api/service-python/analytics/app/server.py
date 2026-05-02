@@ -13,6 +13,7 @@ from app.reports.engagement_operations import build_engagement_operations
 from app.reports.finance_control import build_finance_control
 from app.reports.load_benchmark import build_load_benchmark
 from app.reports.pipeline_summary import build_pipeline_summary
+from app.reports.platform_reliability import build_platform_reliability
 from app.reports.rental_operations import build_rental_operations
 from app.reports.revenue_operations import build_revenue_operations
 from app.reports.sales_journey import build_sales_journey
@@ -130,3 +131,8 @@ def cost_estimator(tenant_slug: str | None = None) -> dict:
 @app.get("/api/analytics/reports/load-benchmark")
 def load_benchmark(tenant_slug: str | None = None) -> dict:
     return build_load_benchmark(tenant_slug)
+
+
+@app.get("/api/analytics/reports/platform-reliability")
+def platform_reliability(tenant_slug: str | None = None) -> dict:
+    return build_platform_reliability(tenant_slug)

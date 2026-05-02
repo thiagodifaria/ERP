@@ -12,6 +12,7 @@ Initial scope:
 - webhook intake summary route
 - idempotent duplicate guard on intake by provider and external id
 - operational lifecycle summary by provider and status
+- dead-letter queue governance with retry metadata
 - room for signature validation, normalization and deduplication
 
 Public routes:
@@ -23,6 +24,7 @@ Public routes:
 - `GET /api/webhook-hub/events/summary`
 - `GET /api/webhook-hub/events/{publicId}`
 - `GET /api/webhook-hub/events/{publicId}/transitions`
+- `GET /api/webhook-hub/events/dead-letter`
 - `POST /api/webhook-hub/events`
 - `POST /api/webhook-hub/events/{publicId}/validate`
 - `POST /api/webhook-hub/events/{publicId}/queue`
@@ -30,6 +32,8 @@ Public routes:
 - `POST /api/webhook-hub/events/{publicId}/forward`
 - `POST /api/webhook-hub/events/{publicId}/fail`
 - `POST /api/webhook-hub/events/{publicId}/reject`
+- `POST /api/webhook-hub/events/{publicId}/dead-letter`
+- `POST /api/webhook-hub/events/{publicId}/requeue`
 
 Event query params:
 

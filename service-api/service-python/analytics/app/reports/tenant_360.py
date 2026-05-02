@@ -46,6 +46,8 @@ def build_static_tenant_360(tenant_slug: str | None = None) -> dict:
             "deliveredDeliveries": 12,
             "convertedTouchpoints": 3,
             "failedDeliveries": 2,
+            "providerEvents": 7,
+            "inboundLeads": 3,
         },
         "documents": {
             "attachments": 24,
@@ -284,11 +286,22 @@ def fetch_engagement_metrics(connection, tenant_slug: str | None) -> dict:
                 FROM engagement.touchpoint_deliveries
                 WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
                   AND status = 'failed'
-            ) AS failed_deliveries
+            ) AS failed_deliveries,
+            (
+                SELECT count(*)
+                FROM engagement.provider_events
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS provider_events,
+            (
+                SELECT count(*)
+                FROM engagement.provider_events
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND event_type = 'lead.ingested'
+            ) AS inbound_leads
     """
 
     with connection.cursor() as cursor:
-        cursor.execute(query, params * 8)
+        cursor.execute(query, params * 10)
         row = cursor.fetchone() or {}
 
     return {
@@ -300,6 +313,8 @@ def fetch_engagement_metrics(connection, tenant_slug: str | None) -> dict:
         "deliveredDeliveries": int(row.get("delivered_deliveries", 0) or 0),
         "convertedTouchpoints": int(row.get("converted_touchpoints", 0) or 0),
         "failedDeliveries": int(row.get("failed_deliveries", 0) or 0),
+        "providerEvents": int(row.get("provider_events", 0) or 0),
+        "inboundLeads": int(row.get("inbound_leads", 0) or 0),
     }
 
 

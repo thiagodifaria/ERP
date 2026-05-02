@@ -36,11 +36,11 @@ def build_static_service_pulse(tenant_slug: str | None = None) -> dict:
                 "recoveryCritical": 2,
             },
             "documents": {"attachmentsTotal": 24, "activeAttachments": 19, "archivedAttachments": 5, "pendingUploadSessions": 2, "completedUploadSessions": 6},
-            "engagement": {"campaignsTotal": 2, "activeCampaigns": 1, "templatesTotal": 3, "deliveriesTotal": 17, "deliveredDeliveries": 12, "failedDeliveries": 2, "convertedTouchpoints": 3},
+            "engagement": {"campaignsTotal": 2, "activeCampaigns": 1, "templatesTotal": 3, "deliveriesTotal": 17, "deliveredDeliveries": 12, "failedDeliveries": 2, "convertedTouchpoints": 3, "providerEvents": 7, "inboundLeads": 3},
             "rentals": {"contractsTotal": 12, "activeContracts": 10, "scheduledCharges": 18, "paidCharges": 11, "cancelledCharges": 3, "overdueCharges": 1},
             "workflowControl": {"activeDefinitions": 6, "runsRunning": 7, "runsCompleted": 31, "runsFailed": 2, "runsCancelled": 1},
             "workflowRuntime": {"totalExecutions": 44, "running": 4, "completed": 28, "failed": 8, "cancelled": 4},
-            "webhookHub": {"totalEvents": 93, "forwarded": 87, "queued": 2, "processing": 1, "failed": 3},
+            "webhookHub": {"totalEvents": 93, "forwarded": 87, "queued": 2, "processing": 1, "failed": 3, "deadLetter": 1},
         },
     }
 
@@ -191,10 +191,22 @@ def fetch_engagement_service_metrics(connection, tenant_slug: str | None) -> dic
                 WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
                   AND status = 'converted'
             ) AS converted_touchpoints
+            ,
+            (
+                SELECT count(*)
+                FROM engagement.provider_events
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+            ) AS provider_events,
+            (
+                SELECT count(*)
+                FROM engagement.provider_events
+                WHERE tenant_id IN (SELECT id FROM identity.tenants {filter_sql})
+                  AND event_type = 'lead.ingested'
+            ) AS inbound_leads
     """
 
     with connection.cursor() as cursor:
-        cursor.execute(query, params * 7)
+        cursor.execute(query, params * 9)
         row = cursor.fetchone() or {}
 
     return {
@@ -205,6 +217,8 @@ def fetch_engagement_service_metrics(connection, tenant_slug: str | None) -> dic
         "deliveredDeliveries": int(row.get("delivered_deliveries", 0) or 0),
         "failedDeliveries": int(row.get("failed_deliveries", 0) or 0),
         "convertedTouchpoints": int(row.get("converted_touchpoints", 0) or 0),
+        "providerEvents": int(row.get("provider_events", 0) or 0),
+        "inboundLeads": int(row.get("inbound_leads", 0) or 0),
     }
 
 
@@ -534,7 +548,8 @@ def fetch_webhook_hub_metrics(connection) -> dict:
                     count(*) FILTER (WHERE status = 'forwarded') AS forwarded,
                     count(*) FILTER (WHERE status = 'queued') AS queued,
                     count(*) FILTER (WHERE status = 'processing') AS processing,
-                    count(*) FILTER (WHERE status = 'failed') AS failed
+                    count(*) FILTER (WHERE status = 'failed') AS failed,
+                    count(*) FILTER (WHERE status = 'dead_letter') AS dead_letter
                 FROM webhook_hub.webhook_events
             """
         )
@@ -546,4 +561,5 @@ def fetch_webhook_hub_metrics(connection) -> dict:
         "queued": int(row.get("queued", 0) or 0),
         "processing": int(row.get("processing", 0) or 0),
         "failed": int(row.get("failed", 0) or 0),
+        "deadLetter": int(row.get("dead_letter", 0) or 0),
     }

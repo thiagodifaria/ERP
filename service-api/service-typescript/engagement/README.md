@@ -13,6 +13,10 @@ Initial scope:
 - touchpoint status transitions for delivery, response and conversion
 - touchpoint operational summary by channel and lifecycle
 - delivery summary by provider, status and template linkage
+- provider capability catalog with fallback visibility
+- inbound lead ingestion linked to CRM
+- workflow dispatch orchestration linked to workflow runtime ids
+- provider callback ledger for inbound and outbound events
 - in-memory bootstrap data for local exploration
 - unit and contract coverage for the public HTTP surface
 
@@ -38,6 +42,12 @@ Public routes:
 - `POST /api/engagement/touchpoints/{publicId}/deliveries`
 - `PATCH /api/engagement/touchpoints/{publicId}/deliveries/{deliveryPublicId}/status`
 - `GET /api/engagement/deliveries/summary`
+- `GET /api/engagement/providers`
+- `GET /api/engagement/provider-events`
+- `GET /api/engagement/provider-events/summary`
+- `POST /api/engagement/providers/inbound-leads`
+- `POST /api/engagement/workflow-dispatches`
+- `POST /api/engagement/providers/events`
 
 Container-first validation:
 

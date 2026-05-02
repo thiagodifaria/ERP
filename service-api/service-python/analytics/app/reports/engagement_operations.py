@@ -61,9 +61,20 @@ def build_static_engagement_operations(tenant_slug: str | None = None) -> dict:
                 "failed": 2,
             },
         },
+        "providers": {
+            "configured": 3,
+            "fallbackEnabled": 1,
+            "inboundEvents": 7,
+            "processedEvents": 6,
+            "failedEvents": 1,
+            "inboundLeads": 3,
+            "workflowDispatches": 4,
+            "responsesTracked": 2,
+        },
         "governance": {
             "templateLinked": 15,
             "activeProviders": 4,
+            "providerCapabilitiesReady": 3,
         },
     }
 
@@ -76,6 +87,7 @@ def build_postgres_engagement_operations(tenant_slug: str | None = None) -> dict
         templates = fetch_template_metrics(connection, tenant_slug)
         touchpoints = fetch_touchpoint_metrics(connection, tenant_slug)
         deliveries = fetch_delivery_metrics(connection, tenant_slug)
+        providers = fetch_provider_event_metrics(connection, tenant_slug)
 
     return {
         "tenantSlug": slug,
@@ -85,9 +97,11 @@ def build_postgres_engagement_operations(tenant_slug: str | None = None) -> dict
         "templates": templates,
         "touchpoints": touchpoints,
         "deliveries": deliveries,
+        "providers": providers,
         "governance": {
             "templateLinked": deliveries["templateLinked"],
             "activeProviders": deliveries["activeProviders"],
+            "providerCapabilitiesReady": providers["configured"],
         },
     }
 
@@ -215,4 +229,48 @@ def fetch_delivery_metrics(connection, tenant_slug: str | None) -> dict:
         },
         "templateLinked": int(row.get("template_linked", 0) or 0),
         "activeProviders": int(row.get("active_providers", 0) or 0),
+    }
+
+
+def fetch_provider_event_metrics(connection, tenant_slug: str | None) -> dict:
+    filter_sql, params = tenant_filter("tenant.slug = %s", tenant_slug)
+    query = f"""
+        SELECT
+            count(*) AS total,
+            count(*) FILTER (WHERE event.direction = 'inbound') AS inbound_events,
+            count(*) FILTER (WHERE event.direction = 'outbound') AS outbound_events,
+            count(*) FILTER (WHERE event.status = 'processed') AS processed_events,
+            count(*) FILTER (WHERE event.status = 'failed') AS failed_events,
+            count(*) FILTER (WHERE event.event_type = 'lead.ingested') AS inbound_leads,
+            count(*) FILTER (WHERE event.event_type = 'workflow.dispatched') AS workflow_dispatches,
+            count(*) FILTER (WHERE event.event_type = 'delivery.responded') AS responses_tracked,
+            count(*) FILTER (WHERE event.provider = 'resend') AS resend_configured,
+            count(*) FILTER (WHERE event.provider = 'whatsapp_cloud') AS whatsapp_configured,
+            count(*) FILTER (WHERE event.provider = 'telegram_bot') AS telegram_configured,
+            count(*) FILTER (WHERE event.provider = 'manual') AS fallback_events
+        FROM engagement.provider_events AS event
+        JOIN identity.tenants AS tenant ON tenant.id = event.tenant_id
+        {filter_sql}
+    """
+
+    with connection.cursor() as cursor:
+        cursor.execute(query, params)
+        row = cursor.fetchone() or {}
+
+    configured = 0
+    for key in ("resend_configured", "whatsapp_configured", "telegram_configured"):
+        if int(row.get(key, 0) or 0) > 0:
+            configured += 1
+
+    return {
+        "total": int(row.get("total", 0) or 0),
+        "inboundEvents": int(row.get("inbound_events", 0) or 0),
+        "outboundEvents": int(row.get("outbound_events", 0) or 0),
+        "processedEvents": int(row.get("processed_events", 0) or 0),
+        "failedEvents": int(row.get("failed_events", 0) or 0),
+        "inboundLeads": int(row.get("inbound_leads", 0) or 0),
+        "workflowDispatches": int(row.get("workflow_dispatches", 0) or 0),
+        "responsesTracked": int(row.get("responses_tracked", 0) or 0),
+        "configured": configured,
+        "fallbackEnabled": 1 if int(row.get("fallback_events", 0) or 0) > 0 else 0,
     }

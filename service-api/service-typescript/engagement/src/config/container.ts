@@ -3,25 +3,34 @@ import { CreateCampaign } from "../application/create-campaign.js";
 import { CreateTemplate } from "../application/create-template.js";
 import { CreateTouchpoint } from "../application/create-touchpoint.js";
 import { CreateTouchpointDelivery } from "../application/create-touchpoint-delivery.js";
+import { DispatchWorkflowTouchpoint } from "../application/dispatch-workflow-touchpoint.js";
 import { GetCampaignByPublicId } from "../application/get-campaign-by-public-id.js";
 import { GetDeliverySummary } from "../application/get-delivery-summary.js";
+import { GetProviderEventSummary } from "../application/get-provider-event-summary.js";
 import { GetTemplateByPublicId } from "../application/get-template-by-public-id.js";
 import { GetTouchpointByPublicId } from "../application/get-touchpoint-by-public-id.js";
 import { GetTouchpointSummary } from "../application/get-touchpoint-summary.js";
+import { IngestProviderLead } from "../application/ingest-provider-lead.js";
 import { ListCampaigns } from "../application/list-campaigns.js";
+import { ListProviderCapabilities } from "../application/list-provider-capabilities.js";
+import { ListProviderEvents } from "../application/list-provider-events.js";
 import { ListTemplates } from "../application/list-templates.js";
 import { ListTouchpointDeliveries } from "../application/list-touchpoint-deliveries.js";
 import { ListTouchpoints } from "../application/list-touchpoints.js";
+import { RegisterProviderEvent } from "../application/register-provider-event.js";
 import { UpdateCampaignStatus } from "../application/update-campaign-status.js";
 import { UpdateTemplateStatus } from "../application/update-template-status.js";
 import { UpdateTouchpointDeliveryStatus } from "../application/update-touchpoint-delivery-status.js";
 import { UpdateTouchpointStatus } from "../application/update-touchpoint-status.js";
 import { InMemoryDeliveryRepository } from "../infrastructure/in-memory-delivery-repository.js";
 import { InMemoryCampaignRepository } from "../infrastructure/in-memory-campaign-repository.js";
+import { InMemoryCrmGateway, HttpCrmGateway } from "../infrastructure/crm-gateway.js";
 import { InMemoryTemplateRepository } from "../infrastructure/in-memory-template-repository.js";
 import { InMemoryTouchpointRepository } from "../infrastructure/in-memory-touchpoint-repository.js";
+import { InMemoryProviderEventRepository } from "../infrastructure/in-memory-provider-event-repository.js";
 import { PostgresDeliveryRepository } from "../infrastructure/postgres-delivery-repository.js";
 import { PostgresCampaignRepository } from "../infrastructure/postgres-campaign-repository.js";
+import { PostgresProviderEventRepository } from "../infrastructure/postgres-provider-event-repository.js";
 import { PostgresTemplateRepository } from "../infrastructure/postgres-template-repository.js";
 import { PostgresTouchpointRepository } from "../infrastructure/postgres-touchpoint-repository.js";
 import { loadConfig } from "./env.js";
@@ -70,12 +79,21 @@ const deliveryRepository =
         () => templateRepository.list({ tenantSlug: config.bootstrapTenantSlug }),
         () => touchpointRepository.list({ tenantSlug: config.bootstrapTenantSlug })
       );
+const providerEventRepository =
+  config.repositoryDriver === "postgres" && pool !== null
+    ? new PostgresProviderEventRepository(pool, config.bootstrapTenantSlug)
+    : new InMemoryProviderEventRepository(config.bootstrapTenantSlug);
+const crmGateway =
+  config.repositoryDriver === "postgres"
+    ? new HttpCrmGateway(config.crmBaseUrl)
+    : new InMemoryCrmGateway();
 
 export const repositories = {
   campaigns: campaignRepository,
   touchpoints: touchpointRepository,
   templates: templateRepository,
-  deliveries: deliveryRepository
+  deliveries: deliveryRepository,
+  providerEvents: providerEventRepository
 };
 
 export const services = {
@@ -95,7 +113,18 @@ export const services = {
   listTouchpointDeliveries: new ListTouchpointDeliveries(deliveryRepository),
   createTouchpointDelivery: new CreateTouchpointDelivery(deliveryRepository),
   updateTouchpointDeliveryStatus: new UpdateTouchpointDeliveryStatus(deliveryRepository),
-  getDeliverySummary: new GetDeliverySummary(deliveryRepository)
+  getDeliverySummary: new GetDeliverySummary(deliveryRepository),
+  listProviderCapabilities: new ListProviderCapabilities({
+    resendApiKey: config.resendApiKey,
+    whatsappAccessToken: config.whatsappAccessToken,
+    telegramBotToken: config.telegramBotToken,
+    metaAdsAccessToken: config.metaAdsAccessToken
+  }),
+  listProviderEvents: new ListProviderEvents(providerEventRepository),
+  getProviderEventSummary: new GetProviderEventSummary(providerEventRepository),
+  ingestProviderLead: new IngestProviderLead(campaignRepository, touchpointRepository, providerEventRepository, crmGateway),
+  dispatchWorkflowTouchpoint: new DispatchWorkflowTouchpoint(campaignRepository, templateRepository, touchpointRepository, deliveryRepository, providerEventRepository),
+  registerProviderEvent: new RegisterProviderEvent(touchpointRepository, deliveryRepository, providerEventRepository)
 };
 
 export const runtime = {
@@ -107,7 +136,9 @@ export const runtime = {
         { name: "campaign-catalog", status: "ready" },
         { name: "templates", status: "ready" },
         { name: "touchpoints", status: "ready" },
-        { name: "deliveries", status: "ready" }
+        { name: "deliveries", status: "ready" },
+        { name: "provider-events", status: "ready" },
+        { name: "crm-gateway", status: "ready" }
       ];
     }
 
@@ -116,6 +147,7 @@ export const runtime = {
       await templateRepository.list({ tenantSlug: config.bootstrapTenantSlug });
       await touchpointRepository.list({ tenantSlug: config.bootstrapTenantSlug });
       await deliveryRepository.getSummary({ tenantSlug: config.bootstrapTenantSlug });
+      await providerEventRepository.getSummary({ tenantSlug: config.bootstrapTenantSlug });
 
       return [
         { name: "router", status: "ready" },
@@ -123,7 +155,9 @@ export const runtime = {
         { name: "campaign-catalog", status: "ready" },
         { name: "templates", status: "ready" },
         { name: "touchpoints", status: "ready" },
-        { name: "deliveries", status: "ready" }
+        { name: "deliveries", status: "ready" },
+        { name: "provider-events", status: "ready" },
+        { name: "crm-gateway", status: "ready" }
       ];
     } catch {
       return [
@@ -132,7 +166,9 @@ export const runtime = {
         { name: "campaign-catalog", status: "not_ready" },
         { name: "templates", status: "not_ready" },
         { name: "touchpoints", status: "not_ready" },
-        { name: "deliveries", status: "not_ready" }
+        { name: "deliveries", status: "not_ready" },
+        { name: "provider-events", status: "not_ready" },
+        { name: "crm-gateway", status: "not_ready" }
       ];
     }
   }

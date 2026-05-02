@@ -15,6 +15,7 @@ Initial scope:
 - rental operations report crossing contracts, recurring charges and attachment governance
 - engagement operations report crossing campaigns, templates, touchpoints and delivery reliability
 - document governance report crossing attachment inventory, visibility, storage and upload lifecycle
+- platform reliability report crossing webhook durability, workflow execution quality and recovery risk
 - load benchmark report backed by simulation runs
 - scenario-driven cost estimator
 - selectable repository driver between memory and PostgreSQL
@@ -38,6 +39,7 @@ Public routes:
 - `GET /api/analytics/reports/finance-control`
 - `GET /api/analytics/reports/collections-control`
 - `GET /api/analytics/reports/rental-operations`
+- `GET /api/analytics/reports/platform-reliability`
 - `GET /api/analytics/reports/load-benchmark`
 - `GET /api/analytics/reports/cost-estimator`
 

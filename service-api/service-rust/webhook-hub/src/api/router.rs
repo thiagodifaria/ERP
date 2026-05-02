@@ -42,6 +42,7 @@ fn build_router_with_state(state: WebhookHubState) -> Router {
         .route("/health/details", get(details))
         .route("/api/webhook-hub/events", get(list_events).post(create_event))
         .route("/api/webhook-hub/events/summary", get(get_event_summary))
+        .route("/api/webhook-hub/events/dead-letter", get(list_dead_letter_events))
         .route("/api/webhook-hub/events/:public_id", get(get_event_by_public_id))
         .route("/api/webhook-hub/events/:public_id/transitions", get(list_event_transitions))
         .route("/api/webhook-hub/events/:public_id/validate", post(validate_event))
@@ -49,6 +50,8 @@ fn build_router_with_state(state: WebhookHubState) -> Router {
         .route("/api/webhook-hub/events/:public_id/process", post(process_event))
         .route("/api/webhook-hub/events/:public_id/forward", post(forward_event))
         .route("/api/webhook-hub/events/:public_id/fail", post(fail_event))
+        .route("/api/webhook-hub/events/:public_id/dead-letter", post(dead_letter_event))
+        .route("/api/webhook-hub/events/:public_id/requeue", post(requeue_event))
         .route("/api/webhook-hub/events/:public_id/reject", post(reject_event))
         .with_state(state)
 }
@@ -126,6 +129,18 @@ async fn get_event_summary(
 ) -> Result<Json<WebhookEventSummary>, (StatusCode, Json<ErrorResponse>)> {
     let summary = state.summary().await.map_err(internal_storage_error)?;
     Ok(Json(summary))
+}
+
+async fn list_dead_letter_events(
+    State(state): State<WebhookHubState>,
+    Query(filters): Query<ListDeadLetterEventsQuery>,
+) -> Result<Json<Vec<WebhookEvent>>, (StatusCode, Json<ErrorResponse>)> {
+    let webhook_events = state
+        .list_events_filtered(filters.provider, None, Some("dead_letter".to_string()))
+        .await
+        .map_err(internal_storage_error)?;
+
+    Ok(Json(webhook_events))
 }
 
 async fn get_event_by_public_id(
@@ -234,6 +249,67 @@ async fn fail_event(
     )
 }
 
+async fn dead_letter_event(
+    State(state): State<WebhookHubState>,
+    Path(public_id): Path<String>,
+    Json(payload): Json<MoveToDeadLetterRequest>,
+) -> Result<Json<WebhookEvent>, (StatusCode, Json<ErrorResponse>)> {
+    match state
+        .move_to_dead_letter(
+            &public_id,
+            payload.error_code,
+            payload.error_message,
+            &["validated", "queued", "processing", "failed"],
+        )
+        .await
+    {
+        Ok(webhook_event) => Ok(Json(webhook_event)),
+        Err(TransitionError::NotFound) => Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse::new(
+                "webhook_event_not_found",
+                "Webhook event was not found.",
+            )),
+        )),
+        Err(TransitionError::InvalidTransition) => Err((
+            StatusCode::CONFLICT,
+            Json(ErrorResponse::new(
+                "webhook_event_transition_invalid",
+                "Webhook event cannot transition from the current status.",
+            )),
+        )),
+        Err(TransitionError::Storage) => Err(internal_storage_error(StorageError)),
+    }
+}
+
+async fn requeue_event(
+    State(state): State<WebhookHubState>,
+    Path(public_id): Path<String>,
+    Json(payload): Json<RequeueWebhookEventRequest>,
+) -> Result<Json<WebhookEvent>, (StatusCode, Json<ErrorResponse>)> {
+    match state
+        .requeue_event(&public_id, payload.reason, &["failed", "dead_letter"])
+        .await
+    {
+        Ok(webhook_event) => Ok(Json(webhook_event)),
+        Err(TransitionError::NotFound) => Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse::new(
+                "webhook_event_not_found",
+                "Webhook event was not found.",
+            )),
+        )),
+        Err(TransitionError::InvalidTransition) => Err((
+            StatusCode::CONFLICT,
+            Json(ErrorResponse::new(
+                "webhook_event_transition_invalid",
+                "Webhook event cannot transition from the current status.",
+            )),
+        )),
+        Err(TransitionError::Storage) => Err(internal_storage_error(StorageError)),
+    }
+}
+
 fn map_transition_result(
     result: Result<WebhookEvent, TransitionError>,
 ) -> Result<Json<WebhookEvent>, (StatusCode, Json<ErrorResponse>)> {
@@ -310,6 +386,7 @@ impl WebhookHubState {
             DependencyHealth::new("signature-validation", "ready"),
             DependencyHealth::new("postgresql", postgresql_status),
             DependencyHealth::new("redis", "pending-runtime-wiring"),
+            DependencyHealth::new("dlq-engine", "ready"),
         ]
     }
 
@@ -362,7 +439,7 @@ impl WebhookHubState {
                     .client
                     .query(
                         "
-                        SELECT id, public_id, provider, event_type, external_id, payload_summary, status, received_at
+                        SELECT id, public_id, provider, event_type, external_id, payload_summary, status, retry_count, last_error_code, last_error_message, dead_lettered_at, received_at
                         FROM webhook_hub.webhook_events
                         WHERE ($1::text IS NULL OR provider = $1)
                           AND ($2::text IS NULL OR event_type = $2)
@@ -402,7 +479,7 @@ impl WebhookHubState {
                     .client
                     .query_opt(
                         "
-                        SELECT id, public_id, provider, event_type, external_id, payload_summary, status, received_at
+                        SELECT id, public_id, provider, event_type, external_id, payload_summary, status, retry_count, last_error_code, last_error_message, dead_lettered_at, received_at
                         FROM webhook_hub.webhook_events
                         WHERE public_id = $1;
                         ",
@@ -437,7 +514,7 @@ impl WebhookHubState {
                     .client
                     .query_opt(
                         "
-                        SELECT id, public_id, provider, event_type, external_id, payload_summary, status, received_at
+                        SELECT id, public_id, provider, event_type, external_id, payload_summary, status, retry_count, last_error_code, last_error_message, dead_lettered_at, received_at
                         FROM webhook_hub.webhook_events
                         WHERE provider = $1 AND external_id = $2;
                         ",
@@ -518,6 +595,10 @@ impl WebhookHubState {
                     external_id,
                     payload_summary: payload_summary.map(|value| value.trim().to_string()),
                     status: "received".to_string(),
+                    retry_count: 0,
+                    last_error_code: None,
+                    last_error_message: None,
+                    dead_lettered_at: None,
                     received_at: received_at.clone(),
                     status_history: vec![WebhookEventStatusTransition::new("received", received_at)],
                 };
@@ -538,7 +619,7 @@ impl WebhookHubState {
                           public_id, provider, event_type, external_id, payload_summary, status, received_at
                         )
                         VALUES ($1, $2, $3, $4, $5, 'received', $6)
-                        RETURNING id, public_id, provider, event_type, external_id, payload_summary, status, received_at;
+                        RETURNING id, public_id, provider, event_type, external_id, payload_summary, status, retry_count, last_error_code, last_error_message, dead_lettered_at, received_at;
                         ",
                         &[&public_id, &provider, &event_type, &external_id, &payload_summary, &received_at],
                     )
@@ -650,6 +731,211 @@ impl WebhookHubState {
         }
     }
 
+    async fn move_to_dead_letter(
+        &self,
+        public_id: &str,
+        error_code: Option<String>,
+        error_message: Option<String>,
+        allowed_statuses: &[&str],
+    ) -> Result<WebhookEvent, TransitionError> {
+        match &self.storage {
+            StorageBackend::Memory(memory) => {
+                let mut events = memory.events.write().await;
+                let webhook_event = events
+                    .iter_mut()
+                    .find(|event| event.public_id == public_id)
+                    .ok_or(TransitionError::NotFound)?;
+
+                if !allowed_statuses.iter().any(|status| webhook_event.status == *status) {
+                    return Err(TransitionError::InvalidTransition);
+                }
+
+                webhook_event.status = "dead_letter".to_string();
+                webhook_event.retry_count += 1;
+                webhook_event.last_error_code = error_code
+                    .map(|value| value.trim().to_lowercase())
+                    .filter(|value| !value.is_empty());
+                webhook_event.last_error_message = error_message
+                    .map(|value| value.trim().to_string())
+                    .filter(|value| !value.is_empty());
+                webhook_event.dead_lettered_at = Some(Utc::now().to_rfc3339());
+                webhook_event.status_history.push(WebhookEventStatusTransition::new(
+                    "dead_letter",
+                    Utc::now().to_rfc3339(),
+                ));
+                Ok(webhook_event.clone())
+            }
+            StorageBackend::Postgres(postgres) => {
+                let Ok(public_id) = Uuid::parse_str(public_id) else {
+                    return Err(TransitionError::NotFound);
+                };
+
+                let row = postgres
+                    .client
+                    .query_opt(
+                        "
+                        SELECT id, status, retry_count
+                        FROM webhook_hub.webhook_events
+                        WHERE public_id = $1
+                        FOR UPDATE;
+                        ",
+                        &[&public_id],
+                    )
+                    .await
+                    .map_err(|_| TransitionError::Storage)?;
+
+                let Some(row) = row else {
+                    return Err(TransitionError::NotFound);
+                };
+
+                let event_id = row.get::<_, i64>("id");
+                let current_status = row.get::<_, String>("status");
+                if !allowed_statuses.iter().any(|status| current_status == *status) {
+                    return Err(TransitionError::InvalidTransition);
+                }
+
+                let retry_count = row.get::<_, i32>("retry_count") + 1;
+                let normalized_error_code = error_code
+                    .map(|value| value.trim().to_lowercase())
+                    .filter(|value| !value.is_empty());
+                let normalized_error_message = error_message
+                    .map(|value| value.trim().to_string())
+                    .filter(|value| !value.is_empty());
+                let dead_lettered_at = Utc::now();
+                postgres
+                    .client
+                    .execute(
+                        "
+                        UPDATE webhook_hub.webhook_events
+                        SET status = 'dead_letter',
+                            retry_count = $2,
+                            last_error_code = $3,
+                            last_error_message = $4,
+                            dead_lettered_at = $5
+                        WHERE id = $1;
+                        ",
+                        &[&event_id, &retry_count, &normalized_error_code, &normalized_error_message, &dead_lettered_at],
+                    )
+                    .await
+                    .map_err(|_| TransitionError::Storage)?;
+                postgres
+                    .client
+                    .execute(
+                        "
+                        INSERT INTO webhook_hub.webhook_event_transitions (webhook_event_id, status, changed_at)
+                        VALUES ($1, 'dead_letter', $2);
+                        ",
+                        &[&event_id, &dead_lettered_at],
+                    )
+                    .await
+                    .map_err(|_| TransitionError::Storage)?;
+
+                self.find_event_by_public_id(&public_id.to_string())
+                    .await
+                    .map_err(|_| TransitionError::Storage)?
+                    .ok_or(TransitionError::NotFound)
+            }
+        }
+    }
+
+    async fn requeue_event(
+        &self,
+        public_id: &str,
+        reason: Option<String>,
+        allowed_statuses: &[&str],
+    ) -> Result<WebhookEvent, TransitionError> {
+        match &self.storage {
+            StorageBackend::Memory(memory) => {
+                let mut events = memory.events.write().await;
+                let webhook_event = events
+                    .iter_mut()
+                    .find(|event| event.public_id == public_id)
+                    .ok_or(TransitionError::NotFound)?;
+
+                if !allowed_statuses.iter().any(|status| webhook_event.status == *status) {
+                    return Err(TransitionError::InvalidTransition);
+                }
+
+                webhook_event.status = "queued".to_string();
+                webhook_event.last_error_message = reason
+                    .map(|value| value.trim().to_string())
+                    .filter(|value| !value.is_empty())
+                    .or(Some("Webhook event requeued after operator intervention.".to_string()));
+                webhook_event.dead_lettered_at = None;
+                webhook_event.status_history.push(WebhookEventStatusTransition::new(
+                    "queued",
+                    Utc::now().to_rfc3339(),
+                ));
+                Ok(webhook_event.clone())
+            }
+            StorageBackend::Postgres(postgres) => {
+                let Ok(public_id) = Uuid::parse_str(public_id) else {
+                    return Err(TransitionError::NotFound);
+                };
+
+                let row = postgres
+                    .client
+                    .query_opt(
+                        "
+                        SELECT id, status
+                        FROM webhook_hub.webhook_events
+                        WHERE public_id = $1
+                        FOR UPDATE;
+                        ",
+                        &[&public_id],
+                    )
+                    .await
+                    .map_err(|_| TransitionError::Storage)?;
+
+                let Some(row) = row else {
+                    return Err(TransitionError::NotFound);
+                };
+
+                let event_id = row.get::<_, i64>("id");
+                let current_status = row.get::<_, String>("status");
+                if !allowed_statuses.iter().any(|status| current_status == *status) {
+                    return Err(TransitionError::InvalidTransition);
+                }
+
+                let changed_at = Utc::now();
+                let normalized_reason = reason
+                    .map(|value| value.trim().to_string())
+                    .filter(|value| !value.is_empty())
+                    .or(Some("Webhook event requeued after operator intervention.".to_string()));
+                postgres
+                    .client
+                    .execute(
+                        "
+                        UPDATE webhook_hub.webhook_events
+                        SET status = 'queued',
+                            last_error_message = $2,
+                            dead_lettered_at = NULL
+                        WHERE id = $1;
+                        ",
+                        &[&event_id, &normalized_reason],
+                    )
+                    .await
+                    .map_err(|_| TransitionError::Storage)?;
+                postgres
+                    .client
+                    .execute(
+                        "
+                        INSERT INTO webhook_hub.webhook_event_transitions (webhook_event_id, status, changed_at)
+                        VALUES ($1, 'queued', $2);
+                        ",
+                        &[&event_id, &changed_at],
+                    )
+                    .await
+                    .map_err(|_| TransitionError::Storage)?;
+
+                self.find_event_by_public_id(&public_id.to_string())
+                    .await
+                    .map_err(|_| TransitionError::Storage)?
+                    .ok_or(TransitionError::NotFound)
+            }
+        }
+    }
+
     async fn summary(&self) -> Result<WebhookEventSummary, StorageError> {
         let events = self.list_events_filtered(None, None, None).await?;
         let mut by_provider = BTreeMap::new();
@@ -672,7 +958,11 @@ impl WebhookHubState {
                 .count() as u64,
             handled: events
                 .iter()
-                .filter(|event| matches!(event.status.as_str(), "forwarded" | "failed" | "rejected"))
+                .filter(|event| matches!(event.status.as_str(), "forwarded" | "failed" | "rejected" | "dead_letter"))
+                .count() as u64,
+            dead_letter: events
+                .iter()
+                .filter(|event| event.status == "dead_letter")
                 .count() as u64,
             by_provider,
             by_status,
@@ -730,6 +1020,10 @@ struct WebhookEvent {
     external_id: String,
     payload_summary: Option<String>,
     status: String,
+    retry_count: i32,
+    last_error_code: Option<String>,
+    last_error_message: Option<String>,
+    dead_lettered_at: Option<String>,
     received_at: String,
     status_history: Vec<WebhookEventStatusTransition>,
 }
@@ -764,14 +1058,31 @@ struct ListWebhookEventsQuery {
     status: Option<String>,
 }
 
+#[derive(Default, serde::Deserialize)]
+struct ListDeadLetterEventsQuery {
+    provider: Option<String>,
+}
+
 #[derive(serde::Serialize)]
 struct WebhookEventSummary {
     total: u64,
     received: u64,
     pending_delivery: u64,
     handled: u64,
+    dead_letter: u64,
     by_provider: BTreeMap<String, u64>,
     by_status: BTreeMap<String, u64>,
+}
+
+#[derive(Default, serde::Deserialize)]
+struct MoveToDeadLetterRequest {
+    error_code: Option<String>,
+    error_message: Option<String>,
+}
+
+#[derive(Default, serde::Deserialize)]
+struct RequeueWebhookEventRequest {
+    reason: Option<String>,
 }
 
 #[derive(serde::Serialize)]
@@ -836,6 +1147,14 @@ async fn map_row_to_webhook_event(
         external_id: row.get("external_id"),
         payload_summary: row.get("payload_summary"),
         status: row.get("status"),
+        retry_count: row.try_get("retry_count").unwrap_or(0),
+        last_error_code: row.try_get("last_error_code").ok().flatten(),
+        last_error_message: row.try_get("last_error_message").ok().flatten(),
+        dead_lettered_at: row
+            .try_get::<_, Option<chrono::DateTime<Utc>>>("dead_lettered_at")
+            .ok()
+            .flatten()
+            .map(|value| value.to_rfc3339()),
         received_at: row
             .get::<_, chrono::DateTime<Utc>>("received_at")
             .to_rfc3339(),

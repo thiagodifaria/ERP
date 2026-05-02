@@ -399,38 +399,105 @@ public static class Server
         return TypedResults.Conflict(new ErrorResponse("webhook_event_rejected", "Rejected webhook events cannot be processed by billing."));
       }
 
-      var invoice = await FindInvoiceByExternalReference(connection, transaction, request.TenantSlug.Trim(), webhookEvent.ExternalId);
-      if (invoice is null)
+      var outcome = await ProcessWebhookEventAgainstBilling(connection, transaction, request.TenantSlug.Trim(), webhookEvent);
+      if (outcome.ErrorCode == "billing_invoice_not_found")
       {
         return TypedResults.NotFound(new ErrorResponse("billing_invoice_not_found", "No billing invoice matched the webhook event external id."));
       }
 
-      var outcomeStatus = webhookEvent.EventType switch
-      {
-        "payment.succeeded" or "billing.invoice.paid" or "invoice.paid" => "succeeded",
-        "payment.failed" or "billing.invoice.failed" or "invoice.failed" => "failed",
-        _ => string.Empty
-      };
-
-      if (outcomeStatus.Length == 0)
+      if (outcome.ErrorCode == "unsupported_webhook_event")
       {
         return TypedResults.BadRequest(new ErrorResponse("unsupported_webhook_event", "Webhook event type is not supported by billing."));
       }
 
-      var outcome = await ApplyPaymentAttempt(
-        connection,
-        transaction,
-        invoice,
-        webhookEvent.Provider,
-        outcomeStatus,
-        $"webhook:{webhookEvent.PublicId}:{webhookEvent.EventType}",
-        webhookEvent.ExternalId,
-        outcomeStatus == "failed" ? webhookEvent.PayloadSummary : string.Empty,
-        webhookEvent.ReceivedAt,
-        "webhook-hub");
+      await transaction.CommitAsync();
+      return TypedResults.Ok(new WebhookProcessResponse(webhookEvent.PublicId, webhookEvent.EventType, webhookEvent.ExternalId, outcome.OutcomeStatus, outcome.AttemptOutcome.Idempotent, outcome.AttemptOutcome.Attempt, outcome.AttemptOutcome.Invoice, outcome.AttemptOutcome.Subscription));
+    });
+
+    app.MapGet("/api/billing/webhook-events/pending", async Task<IResult> (string? tenantSlug, string? provider, int? limit, NpgsqlDataSource dataSource) =>
+    {
+      if (string.IsNullOrWhiteSpace(tenantSlug))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("tenant_slug_required", "Tenant slug is required."));
+      }
+
+      var normalizedProvider = provider?.Trim().ToLowerInvariant() ?? string.Empty;
+      var boundedLimit = limit.GetValueOrDefault(25);
+      if (boundedLimit <= 0)
+      {
+        boundedLimit = 25;
+      }
+
+      if (boundedLimit > 100)
+      {
+        boundedLimit = 100;
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      return TypedResults.Ok(await ListPendingWebhookEvents(connection, tenantSlug.Trim(), normalizedProvider, boundedLimit));
+    });
+
+    app.MapPost("/api/billing/webhook-events/process-batch", async Task<IResult> (ProcessWebhookBatchRequest? request, NpgsqlDataSource dataSource) =>
+    {
+      if (request is null || string.IsNullOrWhiteSpace(request.TenantSlug))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("tenant_slug_required", "Tenant slug is required."));
+      }
+
+      var normalizedProvider = request.Provider?.Trim().ToLowerInvariant() ?? string.Empty;
+      var boundedLimit = request.Limit.GetValueOrDefault(25);
+      if (boundedLimit <= 0)
+      {
+        boundedLimit = 25;
+      }
+
+      if (boundedLimit > 100)
+      {
+        boundedLimit = 100;
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      await using var transaction = await connection.BeginTransactionAsync();
+
+      var candidates = await ListPendingWebhookEvents(connection, request.TenantSlug.Trim(), normalizedProvider, boundedLimit, transaction);
+      var processed = new List<WebhookProcessResponse>();
+      var skipped = new List<WebhookBatchSkipResponse>();
+
+      foreach (var candidate in candidates)
+      {
+        var webhookEvent = await FindWebhookEvent(connection, transaction, candidate.PublicId);
+        if (webhookEvent is null)
+        {
+          skipped.Add(new WebhookBatchSkipResponse(candidate.PublicId, "webhook_event_not_found", "Webhook event was not found during batch processing."));
+          continue;
+        }
+
+        if (webhookEvent.Status == "rejected")
+        {
+          skipped.Add(new WebhookBatchSkipResponse(candidate.PublicId, "webhook_event_rejected", "Rejected webhook events cannot be processed by billing."));
+          continue;
+        }
+
+        var outcome = await ProcessWebhookEventAgainstBilling(connection, transaction, request.TenantSlug.Trim(), webhookEvent);
+        if (outcome.ErrorCode.Length > 0)
+        {
+          skipped.Add(new WebhookBatchSkipResponse(candidate.PublicId, outcome.ErrorCode, outcome.ErrorMessage));
+          continue;
+        }
+
+        processed.Add(new WebhookProcessResponse(
+          webhookEvent.PublicId,
+          webhookEvent.EventType,
+          webhookEvent.ExternalId,
+          outcome.OutcomeStatus,
+          outcome.AttemptOutcome.Idempotent,
+          outcome.AttemptOutcome.Attempt,
+          outcome.AttemptOutcome.Invoice,
+          outcome.AttemptOutcome.Subscription));
+      }
 
       await transaction.CommitAsync();
-      return TypedResults.Ok(new WebhookProcessResponse(webhookEvent.PublicId, webhookEvent.EventType, webhookEvent.ExternalId, outcomeStatus, outcome.Idempotent, outcome.Attempt, outcome.Invoice, outcome.Subscription));
+      return TypedResults.Ok(new WebhookBatchProcessResponse(request.TenantSlug.Trim(), processed.Count, skipped.Count, processed, skipped));
     });
 
     app.MapGet("/api/billing/reports/operations", async Task<IResult> (string? tenantSlug, NpgsqlDataSource dataSource) =>
@@ -2082,6 +2149,100 @@ public static class Server
       reader.GetFieldValue<DateTime>(6));
   }
 
+  private static async Task<IReadOnlyList<PendingWebhookEventResponse>> ListPendingWebhookEvents(
+    NpgsqlConnection connection,
+    string tenantSlug,
+    string provider,
+    int limit,
+    NpgsqlTransaction? transaction = null)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        event.public_id::text,
+        event.provider,
+        event.event_type,
+        event.external_id,
+        COALESCE(event.payload_summary, ''),
+        event.status,
+        to_char(event.received_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+        invoice.public_id::text,
+        invoice.status
+      FROM webhook_hub.webhook_events AS event
+      INNER JOIN billing.subscription_invoices AS invoice
+        ON invoice.external_reference = event.external_id
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = invoice.tenant_id
+      WHERE tenant.slug = $1
+        AND ($2 = '' OR event.provider = $2)
+        AND event.status IN ('validated', 'queued', 'processing', 'forwarded', 'failed')
+      ORDER BY event.received_at, event.id
+      LIMIT $3
+      """,
+      connection,
+      transaction);
+    command.Parameters.AddWithValue(tenantSlug);
+    command.Parameters.AddWithValue(provider);
+    command.Parameters.AddWithValue(limit);
+
+    var responses = new List<PendingWebhookEventResponse>();
+    await using var reader = await command.ExecuteReaderAsync();
+    while (await reader.ReadAsync())
+    {
+      responses.Add(new PendingWebhookEventResponse(
+        reader.GetString(0),
+        reader.GetString(1),
+        reader.GetString(2),
+        reader.GetString(3),
+        reader.GetString(4),
+        reader.GetString(5),
+        reader.GetString(6),
+        reader.GetString(7),
+        reader.GetString(8)));
+    }
+
+    return responses;
+  }
+
+  private static async Task<WebhookBillingProcessResult> ProcessWebhookEventAgainstBilling(
+    NpgsqlConnection connection,
+    NpgsqlTransaction transaction,
+    string tenantSlug,
+    WebhookEvent webhookEvent)
+  {
+    var invoice = await FindInvoiceByExternalReference(connection, transaction, tenantSlug, webhookEvent.ExternalId);
+    if (invoice is null)
+    {
+      return WebhookBillingProcessResult.Error("billing_invoice_not_found", "No billing invoice matched the webhook event external id.");
+    }
+
+    var outcomeStatus = webhookEvent.EventType switch
+    {
+      "payment.succeeded" or "billing.invoice.paid" or "invoice.paid" => "succeeded",
+      "payment.failed" or "billing.invoice.failed" or "invoice.failed" => "failed",
+      _ => string.Empty
+    };
+
+    if (outcomeStatus.Length == 0)
+    {
+      return WebhookBillingProcessResult.Error("unsupported_webhook_event", "Webhook event type is not supported by billing.");
+    }
+
+    var attemptOutcome = await ApplyPaymentAttempt(
+      connection,
+      transaction,
+      invoice,
+      webhookEvent.Provider,
+      outcomeStatus,
+      $"webhook:{webhookEvent.PublicId}:{webhookEvent.EventType}",
+      webhookEvent.ExternalId,
+      outcomeStatus == "failed" ? webhookEvent.PayloadSummary : string.Empty,
+      webhookEvent.ReceivedAt,
+      "webhook-hub");
+
+    return WebhookBillingProcessResult.Success(outcomeStatus, attemptOutcome);
+  }
+
   private static async Task InsertSubscriptionEvent(
     NpgsqlConnection connection,
     NpgsqlTransaction transaction,
@@ -3182,6 +3343,24 @@ public sealed record CreatePaymentAttemptRequest(
   string? FailureReason,
   string? AttemptedAt);
 public sealed record ProcessWebhookEventRequest(string? TenantSlug, string? WebhookEventPublicId);
+public sealed record ProcessWebhookBatchRequest(string? TenantSlug, string? Provider, int? Limit);
+public sealed record PendingWebhookEventResponse(
+  string PublicId,
+  string Provider,
+  string EventType,
+  string ExternalId,
+  string PayloadSummary,
+  string Status,
+  string ReceivedAt,
+  string InvoicePublicId,
+  string InvoiceStatus);
+public sealed record WebhookBatchSkipResponse(string WebhookEventPublicId, string Code, string Message);
+public sealed record WebhookBatchProcessResponse(
+  string TenantSlug,
+  int ProcessedCount,
+  int SkippedCount,
+  IReadOnlyList<WebhookProcessResponse> Processed,
+  IReadOnlyList<WebhookBatchSkipResponse> Skipped);
 public sealed record OpenRecoveryCaseRequest(string? TenantSlug, string? Actor, string? WorkflowDefinitionKey, string? NextActionAt, string? Notes);
 public sealed record RegisterRecoveryTouchpointRequest(string? TenantSlug, string? Actor, string? Channel, string? Provider, string? TouchpointPublicId, string? DeliveryPublicId, string? Notes);
 public sealed record RegisterRecoveryPromiseRequest(string? TenantSlug, string? Actor, string? PromisedPaymentDate, string? NextActionAt, string? Notes);
@@ -3254,3 +3433,27 @@ internal sealed record WebhookEvent(
   string PayloadSummary,
   string Status,
   DateTime ReceivedAt);
+internal sealed record WebhookBillingProcessResult(
+  string OutcomeStatus,
+  string ErrorCode,
+  string ErrorMessage,
+  AttemptOutcomeResponse AttemptOutcome)
+{
+  public static WebhookBillingProcessResult Success(string outcomeStatus, AttemptOutcomeResponse attemptOutcome)
+  {
+    return new WebhookBillingProcessResult(outcomeStatus, string.Empty, string.Empty, attemptOutcome);
+  }
+
+  public static WebhookBillingProcessResult Error(string errorCode, string errorMessage)
+  {
+    return new WebhookBillingProcessResult(
+      string.Empty,
+      errorCode,
+      errorMessage,
+      new AttemptOutcomeResponse(
+        new PaymentAttemptResponse(string.Empty, string.Empty, string.Empty, 0, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty),
+        new InvoiceResponse(string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, 0, string.Empty, 0, string.Empty, string.Empty, string.Empty, string.Empty),
+        new SubscriptionResponse(string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty),
+        true));
+  }
+}

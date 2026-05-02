@@ -1,9 +1,12 @@
 import { IncomingMessage, ServerResponse } from "node:http";
 import { CreateCampaignRequest } from "./dto/create-campaign-request.js";
+import { DispatchWorkflowTouchpointRequest } from "./dto/dispatch-workflow-touchpoint-request.js";
 import { CreateTemplateRequest } from "./dto/create-template-request.js";
 import { CreateTouchpointRequest } from "./dto/create-touchpoint-request.js";
 import { CreateTouchpointDeliveryRequest } from "./dto/create-touchpoint-delivery-request.js";
 import { HealthResponse, ReadinessResponse } from "./dto/health.js";
+import { IngestProviderLeadRequest } from "./dto/ingest-provider-lead-request.js";
+import { RegisterProviderEventRequest } from "./dto/register-provider-event-request.js";
 import { UpdateCampaignStatusRequest } from "./dto/update-campaign-status-request.js";
 import { UpdateTemplateStatusRequest } from "./dto/update-template-status-request.js";
 import { UpdateTouchpointDeliveryStatusRequest } from "./dto/update-touchpoint-delivery-status-request.js";
@@ -74,6 +77,7 @@ function handleDomainError(response: ServerResponse, error: unknown): void {
     code === "campaign_tenant_not_found" ||
     code === "template_tenant_not_found" ||
     code === "delivery_tenant_not_found" ||
+    code === "provider_event_tenant_not_found" ||
     code === "campaign_key_invalid" ||
     code === "campaign_name_required" ||
     code === "campaign_description_required" ||
@@ -101,6 +105,12 @@ function handleDomainError(response: ServerResponse, error: unknown): void {
     code === "delivery_channel_mismatch" ||
     code === "delivery_public_id_invalid" ||
     code === "delivery_sent_by_required" ||
+    code === "provider_invalid" ||
+    code === "provider_event_direction_invalid" ||
+    code === "provider_event_status_invalid" ||
+    code === "provider_event_type_invalid" ||
+    code === "provider_lead_name_required" ||
+    code === "provider_lead_email_required" ||
     code === "invalid_json"
   ) {
     json(response, 400, { code, message: "Request payload is invalid." });
@@ -114,6 +124,16 @@ function handleDomainError(response: ServerResponse, error: unknown): void {
 
   if (code === "template_key_conflict") {
     json(response, 409, { code, message: "Template key already exists for this tenant." });
+    return;
+  }
+
+  if (code === "provider_event_conflict") {
+    json(response, 409, { code, message: "Provider event has already been processed for this tenant." });
+    return;
+  }
+
+  if (code === "crm_gateway_error") {
+    json(response, 502, { code, message: "CRM gateway is unavailable." });
     return;
   }
 
@@ -195,6 +215,91 @@ export async function route(request: IncomingMessage, response: ServerResponse):
       json(response, 201, await services.createTemplate.execute(payload));
       return;
     } catch (error) {
+      handleDomainError(response, error);
+      return;
+    }
+  }
+
+  if (request.method === "GET" && request.url === "/api/engagement/providers") {
+    json(response, 200, await services.listProviderCapabilities.execute());
+    return;
+  }
+
+  if (request.method === "GET" && request.url?.startsWith("/api/engagement/provider-events/summary")) {
+    const params = searchParams(request);
+    json(
+      response,
+      200,
+      await services.getProviderEventSummary.execute({
+        tenantSlug: params.get("tenantSlug") ?? undefined,
+        provider: (params.get("provider") ?? undefined) as never,
+        status: (params.get("status") ?? undefined) as never,
+        direction: (params.get("direction") ?? undefined) as never,
+        eventType: params.get("eventType") ?? undefined
+      })
+    );
+    return;
+  }
+
+  if (request.method === "GET" && request.url?.startsWith("/api/engagement/provider-events")) {
+    const params = searchParams(request);
+    json(
+      response,
+      200,
+      await services.listProviderEvents.execute({
+        tenantSlug: params.get("tenantSlug") ?? undefined,
+        provider: (params.get("provider") ?? undefined) as never,
+        status: (params.get("status") ?? undefined) as never,
+        direction: (params.get("direction") ?? undefined) as never,
+        eventType: params.get("eventType") ?? undefined
+      })
+    );
+    return;
+  }
+
+  if (request.method === "POST" && request.url === "/api/engagement/providers/inbound-leads") {
+    try {
+      const payload = await readJson<IngestProviderLeadRequest>(request);
+      json(response, 201, await services.ingestProviderLead.execute(payload));
+      return;
+    } catch (error) {
+      if (error instanceof Error && error.message === "campaign_not_found") {
+        json(response, 404, { code: error.message, message: "Campaign was not found." });
+        return;
+      }
+
+      handleDomainError(response, error);
+      return;
+    }
+  }
+
+  if (request.method === "POST" && request.url === "/api/engagement/workflow-dispatches") {
+    try {
+      const payload = await readJson<DispatchWorkflowTouchpointRequest>(request);
+      json(response, 201, await services.dispatchWorkflowTouchpoint.execute(payload));
+      return;
+    } catch (error) {
+      if (error instanceof Error && (error.message === "campaign_not_found" || error.message === "template_not_found")) {
+        json(response, 404, { code: error.message, message: "Related engagement resource was not found." });
+        return;
+      }
+
+      handleDomainError(response, error);
+      return;
+    }
+  }
+
+  if (request.method === "POST" && request.url === "/api/engagement/providers/events") {
+    try {
+      const payload = await readJson<RegisterProviderEventRequest>(request);
+      json(response, 201, await services.registerProviderEvent.execute(payload));
+      return;
+    } catch (error) {
+      if (error instanceof Error && (error.message === "touchpoint_not_found" || error.message === "delivery_not_found")) {
+        json(response, 404, { code: error.message, message: "Related engagement resource was not found." });
+        return;
+      }
+
       handleDomainError(response, error);
       return;
     }

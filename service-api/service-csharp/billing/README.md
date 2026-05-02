@@ -8,6 +8,7 @@ Current scope:
 - subscriptions
 - subscription invoices
 - payment attempts with idempotency keys
+- operational batch processing of pending webhook events
 - retry counting and grace period transitions
 - recovery cases with severity, next action and payment promise governance
 - recovery action ledger for contact, promise and resolution lifecycle
@@ -34,6 +35,8 @@ Public routes:
 - `GET /api/billing/invoices/{publicId}/attempts`
 - `POST /api/billing/invoices/{publicId}/attempts`
 - `POST /api/billing/webhook-events/process`
+- `GET /api/billing/webhook-events/pending`
+- `POST /api/billing/webhook-events/process-batch`
 - `GET /api/billing/events`
 - `GET /api/billing/reports/operations`
 - `GET /api/billing/recovery/cases`
