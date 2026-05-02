@@ -6,6 +6,7 @@ Toda integracao externa deve ter:
 
 - adapter especifico
 - contrato interno proprio
+- capability registry visivel em runtime
 - timeout
 - retry com backoff
 - circuit breaker quando fizer sentido
@@ -47,3 +48,20 @@ Toda integracao externa deve ter:
 - templates
 - tracking basico
 - fallback operacional
+
+## Capability registry
+
+Integracoes e adapters criticos devem expor:
+
+- `configured`
+- `fallback`
+- `manual`
+- `unconfigured`
+
+Esses estados aparecem no `health/details` ou em endpoints dedicados de capability para evitar que o sistema esconda ausencia de configuracao real.
+
+## Contratos
+
+- specs OpenAPI ficam em `contracts/http/`
+- schemas compartilhados ficam em `contracts/events/`
+- mudanca publica de integracao deve atualizar os artefatos versionados junto com o codigo

@@ -40,6 +40,7 @@ fn build_router_with_state(state: WebhookHubState) -> Router {
         .route("/health/live", get(live))
         .route("/health/ready", get(ready))
         .route("/health/details", get(details))
+        .route("/api/webhook-hub/capabilities", get(get_capabilities))
         .route("/api/webhook-hub/events", get(list_events).post(create_event))
         .route("/api/webhook-hub/events/summary", get(get_event_summary))
         .route("/api/webhook-hub/events/dead-letter", get(list_dead_letter_events))
@@ -66,6 +67,10 @@ async fn ready() -> Json<HealthResponse> {
 
 async fn details(State(state): State<WebhookHubState>) -> Json<ReadinessResponse> {
     Json(ReadinessResponse::new("webhook-hub", "ready", state.dependencies()))
+}
+
+async fn get_capabilities(State(state): State<WebhookHubState>) -> Json<WebhookHubCapabilitiesResponse> {
+    Json(state.capabilities())
 }
 
 async fn list_events(
@@ -336,6 +341,7 @@ fn map_transition_result(
 #[derive(Clone)]
 struct WebhookHubState {
     storage: StorageBackend,
+    outbound_signing_ready: bool,
 }
 
 #[derive(Clone)]
@@ -359,6 +365,7 @@ impl WebhookHubState {
     fn memory() -> Self {
         Self {
             storage: StorageBackend::Memory(Arc::new(MemoryStorage::default())),
+            outbound_signing_ready: false,
         }
     }
 
@@ -371,6 +378,7 @@ impl WebhookHubState {
                 let client = connect_postgres(&config.postgres).await?;
                 Ok(Self {
                     storage: StorageBackend::Postgres(PostgresStorage { client }),
+                    outbound_signing_ready: !config.outbound_signing_secret.trim().is_empty(),
                 })
             }
         }
@@ -387,7 +395,31 @@ impl WebhookHubState {
             DependencyHealth::new("postgresql", postgresql_status),
             DependencyHealth::new("redis", "pending-runtime-wiring"),
             DependencyHealth::new("dlq-engine", "ready"),
+            DependencyHealth::new(
+                "outbound-webhooks",
+                if self.outbound_signing_ready {
+                    "ready"
+                } else {
+                    "unconfigured"
+                },
+            ),
         ]
+    }
+
+    fn capabilities(&self) -> WebhookHubCapabilitiesResponse {
+        WebhookHubCapabilitiesResponse {
+            outbound_webhooks: OutboundWebhookCapability {
+                signing_ready: self.outbound_signing_ready,
+                status: if self.outbound_signing_ready {
+                    "ready".to_string()
+                } else {
+                    "unconfigured".to_string()
+                },
+                supports_retries: true,
+                supports_dlq: true,
+                credential_key: "WEBHOOK_HUB_OUTBOUND_SIGNING_SECRET".to_string(),
+            },
+        }
     }
 
     async fn list_events_filtered(
@@ -1000,6 +1032,20 @@ impl ReadinessResponse {
 }
 
 #[derive(serde::Serialize)]
+struct WebhookHubCapabilitiesResponse {
+    outbound_webhooks: OutboundWebhookCapability,
+}
+
+#[derive(serde::Serialize)]
+struct OutboundWebhookCapability {
+    signing_ready: bool,
+    status: String,
+    supports_retries: bool,
+    supports_dlq: bool,
+    credential_key: String,
+}
+
+#[derive(serde::Serialize)]
 struct DependencyHealth {
     name: &'static str,
     status: &'static str,
@@ -1208,6 +1254,22 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn capabilities_route_should_return_outbound_webhook_controls() {
+        let app = build_router();
+        let response = app
+            .oneshot(Request::builder().uri("/api/webhook-hub/capabilities").body(axum::body::Body::empty()).unwrap())
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        let payload: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(payload["outbound_webhooks"]["status"], "unconfigured");
+        assert_eq!(payload["outbound_webhooks"]["supports_dlq"], true);
     }
 
     #[tokio::test]

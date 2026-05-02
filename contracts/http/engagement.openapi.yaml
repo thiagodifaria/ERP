@@ -1,0 +1,87 @@
+openapi: 3.1.0
+info:
+  title: ERP Engagement API
+  version: 0.9.7
+  description: Omnichannel engagement, provider callbacks and campaign operations.
+servers:
+  - url: http://localhost:8088
+paths:
+  /health/details:
+    get:
+      summary: Return readiness details for engagement runtime
+      responses:
+        '200':
+          description: Runtime readiness payload
+  /api/engagement/providers:
+    get:
+      summary: List provider capabilities and fallback posture
+      responses:
+        '200':
+          description: Provider capability catalog
+  /api/engagement/providers/{provider}:
+    get:
+      summary: Read one provider capability
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Provider capability detail
+        '404':
+          description: Provider not found
+  /api/engagement/providers/meta-ads/leads:
+    post:
+      summary: Ingest inbound lead from Meta Ads
+      requestBody:
+        required: true
+      responses:
+        '201':
+          description: Lead and touchpoint created
+  /api/engagement/providers/resend/events:
+    post:
+      summary: Register Resend callback event
+      requestBody:
+        required: true
+      responses:
+        '201':
+          description: Provider event processed
+  /api/engagement/providers/whatsapp-cloud/events:
+    post:
+      summary: Register WhatsApp callback event
+      requestBody:
+        required: true
+      responses:
+        '201':
+          description: Provider event processed
+  /api/engagement/providers/telegram-bot/events:
+    post:
+      summary: Register Telegram callback event
+      requestBody:
+        required: true
+      responses:
+        '201':
+          description: Provider event processed
+  /api/engagement/provider-events:
+    get:
+      summary: List provider events
+      responses:
+        '200':
+          description: Provider event ledger
+  /api/engagement/provider-events/{publicId}:
+    get:
+      summary: Read one provider event
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Provider event detail
+        '404':
+          description: Provider event not found

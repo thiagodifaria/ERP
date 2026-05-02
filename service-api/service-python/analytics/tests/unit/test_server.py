@@ -123,8 +123,20 @@ def test_integration_readiness_returns_external_operations_payload() -> None:
     assert payload["flows"]["inboundLeads"] == 3
     assert payload["flows"]["businessEntityLinkedEvents"] == 6
     assert payload["webhookHub"]["deadLetterEvents"] == 1
+    assert payload["capabilityRegistry"]["summary"]["contractArtifacts"] == 7
     assert payload["readiness"]["callbackTraceabilityReady"] is True
     assert payload["readiness"]["businessEntityLinkageReady"] is True
+
+
+def test_adapter_catalog_returns_provider_and_contract_capabilities() -> None:
+    response = client.get("/api/analytics/reports/adapter-catalog")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["summary"]["contractArtifacts"] == 7
+    assert payload["engagement"]["summary"]["fallback"] >= 1
+    assert payload["documents"]["capabilities"][0]["provider"] == "local"
+    assert payload["webhookHub"]["controls"]["dlqReady"] is True
 
 
 def test_automation_board_returns_delivery_and_runtime_board() -> None:
@@ -250,4 +262,6 @@ def test_hardening_review_returns_operational_review_payload() -> None:
     assert payload["summary"]["status"] == "attention"
     assert payload["reviews"]["security"]["mfaEnabledUsers"] == 2
     assert payload["reviews"]["backupRestore"]["validated"] is True
+    assert payload["reviews"]["providerCapabilities"]["fallbackCapabilities"] >= 1
+    assert payload["reviews"]["contractGovernance"]["httpSpecs"] == 4
     assert payload["reviews"]["performance"]["latestBenchmarkStatus"] == "attention"

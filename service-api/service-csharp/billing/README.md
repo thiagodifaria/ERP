@@ -15,12 +15,15 @@ Current scope:
 - controlled suspension and reactivation
 - webhook processing through `webhook-hub`
 - billing events and operational reporting
+- gateway capability registry with explicit `configured`, `manual` and `unconfigured` posture for Pix-ready adapters
 
 Public routes:
 
 - `GET /health/live`
 - `GET /health/ready`
 - `GET /health/details`
+- `GET /api/billing/gateways`
+- `GET /api/billing/gateways/{provider}`
 - `GET /api/billing/plans`
 - `POST /api/billing/plans`
 - `GET /api/billing/subscriptions`

@@ -1,0 +1,78 @@
+openapi: 3.1.0
+info:
+  title: ERP Billing API
+  version: 0.9.7
+  description: Subscription billing, payment recovery and gateway capabilities.
+servers:
+  - url: http://localhost:8095
+paths:
+  /health/details:
+    get:
+      summary: Return readiness details and gateway posture
+      responses:
+        '200':
+          description: Runtime readiness payload
+  /api/billing/gateways:
+    get:
+      summary: List gateway capabilities and Pix posture
+      responses:
+        '200':
+          description: Billing gateway catalog
+  /api/billing/gateways/{provider}:
+    get:
+      summary: Read one gateway capability
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Gateway detail
+        '404':
+          description: Gateway not found
+  /api/billing/plans:
+    get:
+      summary: List billing plans
+      responses:
+        '200':
+          description: Plan list
+    post:
+      summary: Create billing plan
+      requestBody:
+        required: true
+      responses:
+        '200':
+          description: Plan created
+  /api/billing/subscriptions:
+    get:
+      summary: List subscriptions
+      responses:
+        '200':
+          description: Subscription list
+    post:
+      summary: Create subscription
+      requestBody:
+        required: true
+      responses:
+        '200':
+          description: Subscription created
+  /api/billing/invoices/{publicId}/attempts:
+    post:
+      summary: Create payment attempt with idempotency support
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Attempt processed

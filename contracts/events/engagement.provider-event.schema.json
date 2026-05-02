@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erp/contracts/events/engagement.provider-event.schema.json",
+  "title": "EngagementProviderEvent",
+  "type": "object",
+  "required": ["tenantSlug", "provider", "eventType", "direction", "status"],
+  "properties": {
+    "tenantSlug": { "type": "string", "minLength": 1 },
+    "provider": { "type": "string", "enum": ["resend", "whatsapp_cloud", "telegram_bot", "meta_ads", "manual"] },
+    "eventType": { "type": "string", "minLength": 3 },
+    "direction": { "type": "string", "enum": ["inbound", "outbound"] },
+    "status": { "type": "string", "enum": ["received", "processed", "failed"] },
+    "touchpointPublicId": { "type": ["string", "null"], "format": "uuid" },
+    "deliveryPublicId": { "type": ["string", "null"], "format": "uuid" },
+    "workflowRunPublicId": { "type": ["string", "null"], "format": "uuid" },
+    "businessEntityType": { "type": ["string", "null"] },
+    "businessEntityPublicId": { "type": ["string", "null"], "format": "uuid" }
+  }
+}

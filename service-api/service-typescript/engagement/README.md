@@ -45,12 +45,18 @@ Public routes:
 - `PATCH /api/engagement/touchpoints/{publicId}/deliveries/{deliveryPublicId}/status`
 - `GET /api/engagement/deliveries/summary`
 - `GET /api/engagement/providers`
+- `GET /api/engagement/providers/{provider}`
 - `GET /api/engagement/provider-events`
 - `GET /api/engagement/provider-events/{publicId}`
 - `GET /api/engagement/provider-events/summary`
 - `POST /api/engagement/providers/inbound-leads`
+- `POST /api/engagement/providers/meta-ads/leads`
 - `POST /api/engagement/workflow-dispatches`
 - `POST /api/engagement/providers/events`
+- `POST /api/engagement/providers/resend/events`
+- `POST /api/engagement/providers/whatsapp-cloud/events`
+- `POST /api/engagement/providers/telegram-bot/events`
+- `POST /api/engagement/providers/meta-ads/events`
 
 Container-first validation:
 
@@ -65,3 +71,4 @@ Notes:
 
 - touchpoints persist `businessEntityType` and `businessEntityPublicId` when the interaction is directly attached to a business aggregate such as `crm.lead`
 - provider events inherit business linkage from their touchpoint when available, which improves callback traceability across CRM, workflow and analytics
+- provider capability detail now exposes credential key, fallback posture and readiness mode, which is reused in `/health/details` and in cross-service integration readiness

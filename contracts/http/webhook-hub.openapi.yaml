@@ -1,0 +1,59 @@
+openapi: 3.1.0
+info:
+  title: ERP Webhook Hub API
+  version: 0.9.7
+  description: Inbound webhook intake, DLQ and operator recovery surface.
+servers:
+  - url: http://localhost:8082
+paths:
+  /health/details:
+    get:
+      summary: Return readiness details for webhook runtime
+      responses:
+        '200':
+          description: Readiness payload
+  /api/webhook-hub/events:
+    get:
+      summary: List inbound webhook events
+      responses:
+        '200':
+          description: Event list
+    post:
+      summary: Register inbound webhook event
+      requestBody:
+        required: true
+      responses:
+        '201':
+          description: Event received
+  /api/webhook-hub/events/summary:
+    get:
+      summary: Aggregate inbound webhook state
+      responses:
+        '200':
+          description: Event summary
+  /api/webhook-hub/events/{publicId}/dead-letter:
+    post:
+      summary: Move event to dead letter queue
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event dead-lettered
+  /api/webhook-hub/events/{publicId}/requeue:
+    post:
+      summary: Requeue dead-letter event
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event requeued

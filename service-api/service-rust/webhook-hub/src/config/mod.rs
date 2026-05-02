@@ -5,6 +5,7 @@ pub struct AppConfig {
     pub service_name: &'static str,
     pub http_address: String,
     pub repository_driver: RepositoryDriver,
+    pub outbound_signing_secret: String,
     pub postgres: PostgresConfig,
 }
 
@@ -41,6 +42,8 @@ impl AppConfig {
             service_name: "webhook-hub",
             http_address,
             repository_driver,
+            outbound_signing_secret: std::env::var("WEBHOOK_HUB_OUTBOUND_SIGNING_SECRET")
+                .unwrap_or_else(|_| String::new()),
             postgres: PostgresConfig {
                 host: std::env::var("WEBHOOK_HUB_POSTGRES_HOST")
                     .unwrap_or_else(|_| "service-postgresql".to_string()),

@@ -35,6 +35,10 @@ func TestHardeningOverviewReturnsExecutiveCockpit(t *testing.T) {
 	if !response.ExecutiveSummary.BackupRestoreValidated {
 		t.Fatalf("expected backup restore validation to be true")
 	}
+
+	if response.ExecutiveSummary.CriticalProviderGaps != 1 {
+		t.Fatalf("expected one critical provider gap, got %d", response.ExecutiveSummary.CriticalProviderGaps)
+	}
 }
 
 func TestHardeningOverviewRequiresTenantSlug(t *testing.T) {
@@ -75,9 +79,11 @@ func (reader hardeningReader) GetJSON(_ context.Context, requestURL string, targ
 				"criticalChecks":  0,
 			},
 			"reviews": map[string]any{
-				"security":      map[string]any{"auditEvents": 14},
-				"performance":   map[string]any{"latestBenchmarkStatus": "stable"},
-				"backupRestore": map[string]any{"validated": true},
+				"security":             map[string]any{"auditEvents": 14},
+				"performance":          map[string]any{"latestBenchmarkStatus": "stable"},
+				"backupRestore":        map[string]any{"validated": true},
+				"providerCapabilities": map[string]any{"criticalProviderGaps": 1},
+				"contractGovernance":   map[string]any{"httpSpecs": 4},
 			},
 		}
 	default:

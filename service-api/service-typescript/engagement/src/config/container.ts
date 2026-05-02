@@ -43,6 +43,22 @@ export type ReadinessDependency = {
   status: string;
 };
 
+function providerStatus(capability: { configured: boolean; mode: string; status: string }): string {
+  if (capability.configured) {
+    return "ready";
+  }
+
+  if (capability.mode === "fallback" || capability.status === "fallback") {
+    return "fallback";
+  }
+
+  if (capability.mode === "manual" || capability.status === "manual") {
+    return "manual";
+  }
+
+  return "unconfigured";
+}
+
 const config = loadConfig();
 const pool =
   config.repositoryDriver === "postgres"
@@ -132,6 +148,12 @@ export const services = {
 export const runtime = {
   config,
   async readinessDependencies(): Promise<ReadinessDependency[]> {
+    const providerCapabilities = await services.listProviderCapabilities.execute();
+    const providerDependencies = providerCapabilities.map((capability) => ({
+      name: `provider:${capability.provider}`,
+      status: providerStatus(capability)
+    }));
+
     if (config.repositoryDriver !== "postgres") {
       return [
         { name: "router", status: "ready" },
@@ -140,7 +162,8 @@ export const runtime = {
         { name: "touchpoints", status: "ready" },
         { name: "deliveries", status: "ready" },
         { name: "provider-events", status: "ready" },
-        { name: "crm-gateway", status: "ready" }
+        { name: "crm-gateway", status: "ready" },
+        ...providerDependencies
       ];
     }
 
@@ -159,7 +182,8 @@ export const runtime = {
         { name: "touchpoints", status: "ready" },
         { name: "deliveries", status: "ready" },
         { name: "provider-events", status: "ready" },
-        { name: "crm-gateway", status: "ready" }
+        { name: "crm-gateway", status: "ready" },
+        ...providerDependencies
       ];
     } catch {
       return [
@@ -170,7 +194,8 @@ export const runtime = {
         { name: "touchpoints", status: "not_ready" },
         { name: "deliveries", status: "not_ready" },
         { name: "provider-events", status: "not_ready" },
-        { name: "crm-gateway", status: "not_ready" }
+        { name: "crm-gateway", status: "not_ready" },
+        ...providerDependencies
       ];
     }
   }

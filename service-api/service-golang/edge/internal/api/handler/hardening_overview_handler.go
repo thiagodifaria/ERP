@@ -75,5 +75,7 @@ func buildHardeningExecutiveSummary(platformReliability map[string]any, hardenin
 		OpenSecurityAlerts:     readMapInt(hardeningReview, "reviews", "security", "auditEvents"),
 		LatestBenchmarkStatus:  readMapString(hardeningReview, "reviews", "performance", "latestBenchmarkStatus"),
 		BackupRestoreValidated: readMapBool(hardeningReview, "reviews", "backupRestore", "validated"),
+		CriticalProviderGaps:   readMapInt(hardeningReview, "reviews", "providerCapabilities", "criticalProviderGaps"),
+		HttpSpecs:              readMapInt(hardeningReview, "reviews", "contractGovernance", "httpSpecs"),
 	}
 }

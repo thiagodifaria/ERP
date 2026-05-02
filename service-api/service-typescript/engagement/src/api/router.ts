@@ -53,6 +53,15 @@ function searchParams(request: IncomingMessage): URLSearchParams {
   return new URL(request.url ?? "/", "http://engagement.local").searchParams;
 }
 
+function providerSlugToInternal(value: string): string {
+  return value.trim().toLowerCase().replace(/-/g, "_");
+}
+
+async function findProviderCapability(provider: string) {
+  const capabilities = await services.listProviderCapabilities.execute();
+  return capabilities.find((capability) => capability.provider === provider) ?? null;
+}
+
 async function readJson<T>(request: IncomingMessage): Promise<T> {
   const chunks: Buffer[] = [];
 
@@ -233,6 +242,22 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     return;
   }
 
+  if (request.method === "GET" && request.url?.startsWith("/api/engagement/providers/")) {
+    const segments = pathSegments(request);
+
+    if (segments.length === 4) {
+      const provider = providerSlugToInternal(segments[3] ?? "");
+      const capability = await findProviderCapability(provider);
+      if (capability === null) {
+        handleDomainError(response, new Error("provider_invalid"));
+        return;
+      }
+
+      json(response, 200, capability);
+      return;
+    }
+  }
+
   if (request.method === "GET" && request.url?.startsWith("/api/engagement/provider-events/summary")) {
     const params = searchParams(request);
     json(
@@ -284,10 +309,23 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     );
     return;
   }
-  if (request.method === "POST" && request.url === "/api/engagement/providers/inbound-leads") {
+  if (
+    request.method === "POST" &&
+    (request.url === "/api/engagement/providers/inbound-leads" ||
+      request.url?.startsWith("/api/engagement/providers/meta-ads/leads"))
+  ) {
     try {
       const payload = await readJson<IngestProviderLeadRequest>(request);
-      json(response, 201, await services.ingestProviderLead.execute(payload));
+      const normalizedProvider =
+        request.url === "/api/engagement/providers/inbound-leads" ? payload.provider : "meta_ads";
+      json(
+        response,
+        201,
+        await services.ingestProviderLead.execute({
+          ...payload,
+          provider: normalizedProvider
+        })
+      );
       return;
     } catch (error) {
       if (error instanceof Error && error.message === "campaign_not_found") {
@@ -316,10 +354,29 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     }
   }
 
-  if (request.method === "POST" && request.url === "/api/engagement/providers/events") {
+  if (
+    request.method === "POST" &&
+    (request.url === "/api/engagement/providers/events" ||
+      request.url?.startsWith("/api/engagement/providers/resend/events") ||
+      request.url?.startsWith("/api/engagement/providers/whatsapp-cloud/events") ||
+      request.url?.startsWith("/api/engagement/providers/telegram-bot/events") ||
+      request.url?.startsWith("/api/engagement/providers/meta-ads/events"))
+  ) {
     try {
       const payload = await readJson<RegisterProviderEventRequest>(request);
-      json(response, 201, await services.registerProviderEvent.execute(payload));
+      const segments = pathSegments(request);
+      const provider =
+        request.url === "/api/engagement/providers/events"
+          ? payload.provider
+          : providerSlugToInternal(segments[3] ?? "");
+      json(
+        response,
+        201,
+        await services.registerProviderEvent.execute({
+          ...payload,
+          provider
+        })
+      );
       return;
     } catch (error) {
       if (error instanceof Error && (error.message === "touchpoint_not_found" || error.message === "delivery_not_found")) {

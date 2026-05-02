@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from app.config.settings import settings
 from app.infrastructure.postgres import connect
+from app.reports.adapter_catalog import build_adapter_catalog
 from app.reports.pipeline_summary import tenant_filter
 
 
@@ -20,6 +21,7 @@ def build_static_integration_readiness(tenant_slug: str | None = None) -> dict:
     return {
         "tenantSlug": slug,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "capabilityRegistry": build_adapter_catalog(),
         "providers": {
             "configured": 4,
             "activeInboundProviders": 2,
@@ -54,6 +56,7 @@ def build_static_integration_readiness(tenant_slug: str | None = None) -> dict:
 
 def build_postgres_integration_readiness(tenant_slug: str | None = None) -> dict:
     slug = tenant_slug or "global"
+    adapter_catalog = build_adapter_catalog()
 
     with connect() as connection:
         provider_metrics = fetch_provider_metrics(connection, tenant_slug)
@@ -71,6 +74,7 @@ def build_postgres_integration_readiness(tenant_slug: str | None = None) -> dict
         "tenantSlug": slug,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "dataSource": "postgresql",
+        "capabilityRegistry": adapter_catalog,
         "providers": {
             "configured": provider_metrics["configuredProviders"],
             "activeInboundProviders": provider_metrics["activeInboundProviders"],
@@ -97,8 +101,11 @@ def build_postgres_integration_readiness(tenant_slug: str | None = None) -> dict
             "workflowDispatchReady": provider_metrics["workflowDispatches"] > 0,
             "callbackTraceabilityReady": (provider_metrics["responsesTracked"] + provider_metrics["conversionsTracked"]) > 0,
             "businessEntityLinkageReady": provider_metrics["businessEntityLinkedEvents"] > 0,
-            "externalAdaptersPrepared": provider_metrics["configuredProviders"] >= 3,
-            "openProviderRisks": open_provider_risks,
+            "externalAdaptersPrepared": (
+                provider_metrics["configuredProviders"] >= 3
+                and adapter_catalog["summary"]["criticalUnconfiguredCapabilities"] == 0
+            ),
+            "openProviderRisks": open_provider_risks + adapter_catalog["summary"]["criticalUnconfiguredCapabilities"],
         },
     }
 

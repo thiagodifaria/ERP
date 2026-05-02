@@ -119,6 +119,10 @@ test("delivery stream supports creation, status update and summary", async () =>
 });
 
 test("provider flows support inbound lead ingestion, workflow dispatch and callback tracking", async () => {
+  const capability = (await services.listProviderCapabilities.execute()).find((item) => item.provider === "meta_ads");
+  assert.equal(capability?.mode, "fallback");
+  assert.equal(capability?.supportsCallbacks, true);
+
   const template = await services.createTemplate.execute({
     tenantSlug: "bootstrap-ops",
     key: "provider-dispatch-email",

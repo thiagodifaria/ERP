@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from app.config.settings import settings
 from app.infrastructure.postgres import connect
+from app.reports.adapter_catalog import build_adapter_catalog
 from app.reports.load_benchmark import build_postgres_load_benchmark
 from app.reports.platform_reliability import (
     fetch_billing_metrics,
@@ -21,6 +22,7 @@ def build_hardening_review(tenant_slug: str | None = None) -> dict:
 
 def build_static_hardening_review(tenant_slug: str | None = None) -> dict:
     slug = tenant_slug or "global"
+    adapter_catalog = build_adapter_catalog()
     reviews = {
         "security": {"status": "stable", "mfaEnabledUsers": 2, "activeSessions": 3, "auditEvents": 18},
         "observability": {"status": "stable", "dashboardsReady": True, "probeCoverage": 8},
@@ -31,6 +33,18 @@ def build_static_hardening_review(tenant_slug: str | None = None) -> dict:
         "failover": {"status": "stable", "requeueReady": True, "replayReady": True},
         "performance": {"status": "attention", "latestBenchmarkStatus": "attention", "throughputRps": 46.8, "p95LatencyMs": 332},
         "permissions": {"status": "stable", "openfgaReady": True, "sessionEnforcementReady": True, "auditTrailReady": True},
+        "providerCapabilities": {
+            "status": "attention",
+            "configuredCapabilities": adapter_catalog["summary"]["configuredCapabilities"],
+            "criticalProviderGaps": adapter_catalog["summary"]["criticalUnconfiguredCapabilities"],
+            "fallbackCapabilities": adapter_catalog["summary"]["fallbackCapabilities"],
+        },
+        "contractGovernance": {
+            "status": "stable",
+            "httpSpecs": adapter_catalog["contracts"]["summary"]["httpSpecs"],
+            "eventSchemas": adapter_catalog["contracts"]["summary"]["eventSchemas"],
+            "adrRecorded": adapter_catalog["contracts"]["summary"]["adrRecorded"],
+        },
     }
 
     return {
@@ -43,6 +57,7 @@ def build_static_hardening_review(tenant_slug: str | None = None) -> dict:
 
 def build_postgres_hardening_review(tenant_slug: str | None = None) -> dict:
     slug = tenant_slug or "global"
+    adapter_catalog = build_adapter_catalog()
 
     with connect() as connection:
         webhook_metrics = fetch_webhook_metrics(connection)
@@ -70,6 +85,7 @@ def build_postgres_hardening_review(tenant_slug: str | None = None) -> dict:
         slo_status = "critical"
 
     performance_status = latest_benchmark.get("status", "stable")
+    provider_status = "stable" if adapter_catalog["summary"]["criticalUnconfiguredCapabilities"] == 0 else "attention"
 
     reviews = {
         "security": {
@@ -120,6 +136,18 @@ def build_postgres_hardening_review(tenant_slug: str | None = None) -> dict:
             "openfgaReady": True,
             "sessionEnforcementReady": identity_metrics["activeSessions"] > 0,
             "auditTrailReady": identity_metrics["auditEvents"] > 0,
+        },
+        "providerCapabilities": {
+            "status": provider_status,
+            "configuredCapabilities": adapter_catalog["summary"]["configuredCapabilities"],
+            "criticalProviderGaps": adapter_catalog["summary"]["criticalUnconfiguredCapabilities"],
+            "fallbackCapabilities": adapter_catalog["summary"]["fallbackCapabilities"],
+        },
+        "contractGovernance": {
+            "status": "stable",
+            "httpSpecs": adapter_catalog["contracts"]["summary"]["httpSpecs"],
+            "eventSchemas": adapter_catalog["contracts"]["summary"]["eventSchemas"],
+            "adrRecorded": adapter_catalog["contracts"]["summary"]["adrRecorded"],
         },
     }
 

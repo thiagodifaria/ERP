@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 
 from app.config.settings import settings
+from app.reports.adapter_catalog import build_adapter_catalog
 from app.infrastructure.postgres import postgres_ready
 from app.reports.automation_board import build_automation_board
 from app.reports.collections_control import build_collections_control
@@ -103,6 +104,11 @@ def engagement_operations(tenant_slug: str | None = None) -> dict:
 @app.get("/api/analytics/reports/integration-readiness")
 def integration_readiness(tenant_slug: str | None = None) -> dict:
     return build_integration_readiness(tenant_slug)
+
+
+@app.get("/api/analytics/reports/adapter-catalog")
+def adapter_catalog() -> dict:
+    return build_adapter_catalog()
 
 
 @app.get("/api/analytics/reports/document-governance")

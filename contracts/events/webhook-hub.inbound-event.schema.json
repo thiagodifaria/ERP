@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erp/contracts/events/webhook-hub.inbound-event.schema.json",
+  "title": "WebhookHubInboundEvent",
+  "type": "object",
+  "required": ["provider", "eventType", "externalId"],
+  "properties": {
+    "provider": { "type": "string", "minLength": 2 },
+    "eventType": { "type": "string", "minLength": 2 },
+    "externalId": { "type": "string", "minLength": 2 },
+    "payloadSummary": { "type": ["string", "null"] }
+  }
+}

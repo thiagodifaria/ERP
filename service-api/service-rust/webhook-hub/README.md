@@ -13,6 +13,7 @@ Initial scope:
 - idempotent duplicate guard on intake by provider and external id
 - operational lifecycle summary by provider and status
 - dead-letter queue governance with retry metadata
+- outbound webhook signing capability registry
 - room for signature validation, normalization and deduplication
 
 Public routes:
@@ -20,6 +21,7 @@ Public routes:
 - `GET /health/live`
 - `GET /health/ready`
 - `GET /health/details`
+- `GET /api/webhook-hub/capabilities`
 - `GET /api/webhook-hub/events`
 - `GET /api/webhook-hub/events/summary`
 - `GET /api/webhook-hub/events/{publicId}`

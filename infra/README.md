@@ -15,3 +15,10 @@ Current local platform bootstrap:
 - OpenFGA local authorization plane bootstrap for relationship-based access experiments
 - Kafka single-node local broker for event backbone bootstrap
 - Prometheus, Grafana and Blackbox Exporter for baseline observability
+
+Operational conventions:
+
+- infra manifests here are runtime assets, not service business logic
+- new local dependencies should expose health or probe coverage when viable
+- compose additions should remain container-first and compatible with `scripts/test.sh`
+- provider adapters that depend on paid services should degrade explicitly instead of silently mocking critical behavior

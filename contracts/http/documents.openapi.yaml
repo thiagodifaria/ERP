@@ -1,0 +1,67 @@
+openapi: 3.1.0
+info:
+  title: ERP Documents API
+  version: 0.9.7
+  description: Attachment governance, upload orchestration and storage capabilities.
+servers:
+  - url: http://localhost:8093
+paths:
+  /health/details:
+    get:
+      summary: Return runtime readiness and storage posture
+      responses:
+        '200':
+          description: Readiness payload
+  /api/documents/storage/capabilities:
+    get:
+      summary: List storage capability registry
+      responses:
+        '200':
+          description: Storage capability catalog
+  /api/documents/storage/capabilities/{provider}:
+    get:
+      summary: Read one storage capability
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Storage capability detail
+        '404':
+          description: Storage capability not found
+  /api/documents/attachments:
+    get:
+      summary: List attachments
+      responses:
+        '200':
+          description: Attachment list
+    post:
+      summary: Create attachment metadata
+      requestBody:
+        required: true
+      responses:
+        '201':
+          description: Attachment created
+  /api/documents/attachments/{publicId}/versions:
+    get:
+      summary: List attachment versions
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Version list
+    post:
+      summary: Append attachment version
+      requestBody:
+        required: true
+      responses:
+        '201':
+          description: Version created

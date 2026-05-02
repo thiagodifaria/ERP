@@ -74,10 +74,16 @@ export type ProviderCapability = {
   provider: EngagementProvider;
   scope: "messaging" | "ads" | "email" | "manual";
   configured: boolean;
-  mode: "configured" | "fallback" | "manual";
+  critical: boolean;
+  mode: "configured" | "fallback" | "manual" | "unconfigured" | "disabled";
+  credentialKey: string | null;
+  fallbackViable: boolean;
+  status: "ready" | "fallback" | "unconfigured" | "manual";
+  notes: string[];
   supportsInbound: boolean;
   supportsOutbound: boolean;
   supportsTracking: boolean;
+  supportsCallbacks: boolean;
 };
 
 function ensureIncluded<T extends string>(value: string, items: readonly T[], errorCode: string): T {

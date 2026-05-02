@@ -15,6 +15,7 @@ Initial scope:
 - rental operations report crossing contracts, recurring charges and attachment governance
 - engagement operations report crossing campaigns, templates, touchpoints and delivery reliability
 - integration readiness report crossing provider activity, callback traceability and webhook durability
+- adapter catalog report crossing engagement, billing, documents and webhook capability posture
 - document governance report crossing attachment inventory, visibility, storage and upload lifecycle
 - platform reliability report crossing webhook durability, workflow execution quality and recovery risk
 - hardening review report crossing security, observability, retries, backup, SLOs, failover and permissions
@@ -37,6 +38,7 @@ Public routes:
 - `GET /api/analytics/reports/delivery-reliability`
 - `GET /api/analytics/reports/engagement-operations`
 - `GET /api/analytics/reports/integration-readiness`
+- `GET /api/analytics/reports/adapter-catalog`
 - `GET /api/analytics/reports/document-governance`
 - `GET /api/analytics/reports/revenue-operations`
 - `GET /api/analytics/reports/finance-control`

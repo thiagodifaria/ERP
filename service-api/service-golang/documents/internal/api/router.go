@@ -3,21 +3,33 @@ package api
 import (
 	"net/http"
 
+	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/config"
 	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/domain/repository"
 	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/telemetry"
 )
 
 func NewRouter(logger *telemetry.Logger, attachmentRepository repository.AttachmentRepository, uploadSessionRepository repository.UploadSessionRepository) http.Handler {
-	return NewRouterWithRuntime(logger, attachmentRepository, uploadSessionRepository, "memory", "documents-local-secret")
+	return NewRouterWithRuntime(
+		logger,
+		attachmentRepository,
+		uploadSessionRepository,
+		config.Config{
+			RepositoryDriver:  "memory",
+			AccessTokenSecret: "documents-local-secret",
+			StorageDriver:     "local",
+		},
+	)
 }
 
-func NewRouterWithRuntime(logger *telemetry.Logger, attachmentRepository repository.AttachmentRepository, uploadSessionRepository repository.UploadSessionRepository, repositoryDriver string, accessTokenSecret string) http.Handler {
+func NewRouterWithRuntime(logger *telemetry.Logger, attachmentRepository repository.AttachmentRepository, uploadSessionRepository repository.UploadSessionRepository, cfg config.Config) http.Handler {
 	mux := http.NewServeMux()
-	attachmentHandler := NewAttachmentHandler(attachmentRepository, uploadSessionRepository, accessTokenSecret)
+	attachmentHandler := NewAttachmentHandler(attachmentRepository, uploadSessionRepository, cfg.AccessTokenSecret)
 
 	mux.HandleFunc("/health/live", Live)
 	mux.HandleFunc("/health/ready", Ready)
-	mux.HandleFunc("/health/details", DetailsForRuntime(repositoryDriver))
+	mux.HandleFunc("/health/details", DetailsForRuntime(cfg.RepositoryDriver, cfg))
+	mux.HandleFunc("GET /api/documents/storage/capabilities", StorageCapabilitiesForRuntime(cfg))
+	mux.HandleFunc("GET /api/documents/storage/capabilities/{provider}", StorageCapabilitiesForRuntime(cfg))
 	mux.HandleFunc("GET /api/documents/attachments", attachmentHandler.List)
 	mux.HandleFunc("POST /api/documents/attachments", attachmentHandler.Create)
 	mux.HandleFunc("GET /api/documents/attachments/{publicId}", attachmentHandler.Get)

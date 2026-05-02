@@ -20,11 +20,24 @@ public static class Server
       return TypedResults.Ok(new HealthResponse("billing", "ready"));
     });
 
-    app.MapGet("/health/details", async Task<IResult> (NpgsqlDataSource dataSource) =>
+    app.MapGet("/health/details", async Task<IResult> (NpgsqlDataSource dataSource, IConfiguration configuration) =>
     {
       await using var connection = await dataSource.OpenConnectionAsync();
-      var dependencies = await BuildDependencies(connection);
+      var dependencies = await BuildDependencies(connection, configuration);
       return TypedResults.Ok(new ReadinessResponse("billing", dependencies.All(dep => dep.Status == "ready") ? "ready" : "degraded", dependencies));
+    });
+
+    app.MapGet("/api/billing/gateways", (IConfiguration configuration) =>
+      TypedResults.Ok(BuildGatewayCapabilities(configuration)));
+
+    app.MapGet("/api/billing/gateways/{provider}", IResult (string provider, IConfiguration configuration) =>
+    {
+      var capability = BuildGatewayCapabilities(configuration)
+        .FirstOrDefault(item => string.Equals(item.Provider, provider.Trim(), StringComparison.OrdinalIgnoreCase));
+
+      return capability is null
+        ? TypedResults.NotFound(new ErrorResponse("billing_gateway_not_found", "Billing gateway capability was not found."))
+        : TypedResults.Ok(capability);
     });
 
     app.MapGet("/api/billing/plans", async Task<IResult> (string? active, NpgsqlDataSource dataSource) =>
@@ -316,7 +329,7 @@ public static class Server
       return TypedResults.Ok(await ListPaymentAttempts(connection, tenantSlug.Trim(), publicId));
     });
 
-    app.MapPost("/api/billing/invoices/{publicId}/attempts", async Task<IResult> (string publicId, CreatePaymentAttemptRequest? request, NpgsqlDataSource dataSource) =>
+    app.MapPost("/api/billing/invoices/{publicId}/attempts", async Task<IResult> (string publicId, CreatePaymentAttemptRequest? request, HttpRequest httpRequest, NpgsqlDataSource dataSource) =>
     {
       if (request is null || string.IsNullOrWhiteSpace(request.TenantSlug))
       {
@@ -331,6 +344,10 @@ public static class Server
 
       var provider = request.Provider?.Trim().ToLowerInvariant() ?? string.Empty;
       var idempotencyKey = request.IdempotencyKey?.Trim() ?? string.Empty;
+      if (idempotencyKey.Length == 0 && httpRequest.Headers.TryGetValue("Idempotency-Key", out var headerValues))
+      {
+        idempotencyKey = headerValues.ToString().Trim();
+      }
 
       if (provider.Length == 0)
       {
@@ -701,7 +718,7 @@ public static class Server
     });
   }
 
-  private static async Task<IReadOnlyList<DependencyStatus>> BuildDependencies(NpgsqlConnection connection)
+  private static async Task<IReadOnlyList<DependencyStatus>> BuildDependencies(NpgsqlConnection connection, IConfiguration configuration)
   {
     var dependencies = new List<DependencyStatus>();
 
@@ -717,7 +734,81 @@ public static class Server
       dependencies.Add(new DependencyStatus("webhook-hub", available ? "ready" : "pending-runtime-wiring"));
     }
 
+    foreach (var gateway in BuildGatewayCapabilities(configuration))
+    {
+      dependencies.Add(new DependencyStatus($"gateway:{gateway.Provider}", gateway.Status));
+    }
+
     return dependencies;
+  }
+
+  private static IReadOnlyList<BillingGatewayCapability> BuildGatewayCapabilities(IConfiguration configuration)
+  {
+    var asaasConfigured = !string.IsNullOrWhiteSpace(configuration["BILLING_ASAAS_API_KEY"]);
+    var stripeConfigured = !string.IsNullOrWhiteSpace(configuration["BILLING_STRIPE_SECRET_KEY"]);
+    var mercadoPagoConfigured = !string.IsNullOrWhiteSpace(configuration["BILLING_MERCADO_PAGO_ACCESS_TOKEN"]);
+
+    return
+    [
+      new BillingGatewayCapability(
+        "asaas",
+        "payments",
+        asaasConfigured,
+        "BILLING_ASAAS_API_KEY",
+        false,
+        asaasConfigured ? "configured" : "unconfigured",
+        asaasConfigured ? "ready" : "unconfigured",
+        false,
+        true,
+        true,
+        true,
+        asaasConfigured
+          ? ["Provider pronto para cobranca, Pix, webhook e conciliacao."]
+          : ["Gateway critico sem fallback automatico. Defina BILLING_ASAAS_API_KEY para ativar."]),
+      new BillingGatewayCapability(
+        "stripe_pix",
+        "payments",
+        stripeConfigured,
+        "BILLING_STRIPE_SECRET_KEY",
+        false,
+        stripeConfigured ? "configured" : "unconfigured",
+        stripeConfigured ? "ready" : "unconfigured",
+        false,
+        true,
+        true,
+        true,
+        stripeConfigured
+          ? ["Provider pronto para Pix via Stripe e reconciliacao por webhook."]
+          : ["Gateway critico sem fallback automatico. Defina BILLING_STRIPE_SECRET_KEY para ativar."]),
+      new BillingGatewayCapability(
+        "mercado_pago_pix",
+        "payments",
+        mercadoPagoConfigured,
+        "BILLING_MERCADO_PAGO_ACCESS_TOKEN",
+        false,
+        mercadoPagoConfigured ? "configured" : "unconfigured",
+        mercadoPagoConfigured ? "ready" : "unconfigured",
+        false,
+        true,
+        true,
+        true,
+        mercadoPagoConfigured
+          ? ["Provider pronto para Pix e retorno transacional no ecossistema Mercado Pago."]
+          : ["Gateway critico sem fallback automatico. Defina BILLING_MERCADO_PAGO_ACCESS_TOKEN para ativar."]),
+      new BillingGatewayCapability(
+        "manual",
+        "manual",
+        true,
+        null,
+        true,
+        "manual",
+        "manual",
+        true,
+        true,
+        true,
+        true,
+        ["Contingencia local sempre disponivel para testes, smoke e operacao controlada."])
+    ];
   }
 
   private static async Task<bool> PlanCodeExists(NpgsqlConnection connection, NpgsqlTransaction transaction, string code)
@@ -3355,6 +3446,19 @@ public sealed record PendingWebhookEventResponse(
   string InvoicePublicId,
   string InvoiceStatus);
 public sealed record WebhookBatchSkipResponse(string WebhookEventPublicId, string Code, string Message);
+public sealed record BillingGatewayCapability(
+  string Provider,
+  string Scope,
+  bool Configured,
+  string? CredentialKey,
+  bool FallbackViable,
+  string Mode,
+  string Status,
+  bool SupportsFallback,
+  bool SupportsPix,
+  bool SupportsWebhook,
+  bool SupportsReconciliation,
+  IReadOnlyList<string> Notes);
 public sealed record WebhookBatchProcessResponse(
   string TenantSlug,
   int ProcessedCount,

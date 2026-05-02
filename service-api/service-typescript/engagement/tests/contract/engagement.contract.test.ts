@@ -224,6 +224,13 @@ test("delivery routes expose creation, status transition and summary", async () 
 
 test("provider routes expose callback detail and traceability", async () => {
   await withServer(async (baseUrl) => {
+    const providerResponse = await fetch(`${baseUrl}/api/engagement/providers/meta-ads`);
+    const providerPayload = (await providerResponse.json()) as { provider: string; mode: string; credentialKey: string };
+    assert.equal(providerResponse.status, 200);
+    assert.equal(providerPayload.provider, "meta_ads");
+    assert.equal(providerPayload.mode, "fallback");
+    assert.equal(providerPayload.credentialKey, "ENGAGEMENT_META_ADS_ACCESS_TOKEN");
+
     const templateResponse = await fetch(`${baseUrl}/api/engagement/templates`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -275,12 +282,11 @@ test("provider routes expose callback detail and traceability", async () => {
     const deliveryPayload = (await deliveryResponse.json()) as { publicId: string };
     assert.equal(deliveryResponse.status, 201);
 
-    const callbackResponse = await fetch(`${baseUrl}/api/engagement/providers/events`, {
+    const callbackResponse = await fetch(`${baseUrl}/api/engagement/providers/resend/events`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         tenantSlug: "bootstrap-ops",
-        provider: "resend",
         eventType: "delivery.responded",
         externalEventId: "contract-provider-event-001",
         touchpointPublicId: touchpointPayload.publicId,

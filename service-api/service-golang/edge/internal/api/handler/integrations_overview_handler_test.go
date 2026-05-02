@@ -39,6 +39,10 @@ func TestIntegrationsOverviewReturnsExecutiveCockpit(t *testing.T) {
 	if response.ExecutiveSummary.BusinessLinkedEvents != 3 {
 		t.Fatalf("expected business linked events 3, got %d", response.ExecutiveSummary.BusinessLinkedEvents)
 	}
+
+	if response.ExecutiveSummary.CriticalProviderGaps != 1 {
+		t.Fatalf("expected critical provider gaps 1, got %d", response.ExecutiveSummary.CriticalProviderGaps)
+	}
 }
 
 func TestIntegrationsOverviewRequiresTenantSlug(t *testing.T) {
@@ -81,6 +85,12 @@ func (reader integrationsReader) GetJSON(_ context.Context, requestURL string, t
 				"failedProviderEvents":    1,
 			},
 			"webhookHub": map[string]any{"deadLetterEvents": 1},
+			"capabilityRegistry": map[string]any{
+				"summary": map[string]any{
+					"criticalUnconfiguredCapabilities": 1,
+					"contractArtifacts":               7,
+				},
+			},
 			"readiness": map[string]any{
 				"status":            "attention",
 				"openProviderRisks": 1,

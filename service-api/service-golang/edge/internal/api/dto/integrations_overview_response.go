@@ -11,6 +11,8 @@ type IntegrationsExecutiveSummary struct {
 	FailedProviderEvents    int    `json:"failedProviderEvents"`
 	DeadLetterEvents        int    `json:"deadLetterEvents"`
 	OpenProviderRisks       int    `json:"openProviderRisks"`
+	CriticalProviderGaps    int    `json:"criticalProviderGaps"`
+	ContractArtifacts       int    `json:"contractArtifacts"`
 }
 
 type IntegrationsOverviewResponse struct {

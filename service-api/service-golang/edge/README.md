@@ -15,6 +15,7 @@ Initial scope:
 - collections and recovery cockpit aggregation via `GET /api/edge/ops/collections-overview`
 - platform reliability cockpit aggregation via `GET /api/edge/ops/platform-reliability`
 - hardening review cockpit aggregation via `GET /api/edge/ops/hardening-overview`
+- executive summaries now surface capability gaps and contract artifact counts for external adapters
 - sales cockpit aggregation via `GET /api/edge/ops/sales-overview`
 - revenue cockpit aggregation via `GET /api/edge/ops/revenue-overview`
 - finance cockpit aggregation via `GET /api/edge/ops/finance-overview`

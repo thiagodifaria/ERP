@@ -22,6 +22,8 @@ Public routes:
 - `GET /health/live`
 - `GET /health/ready`
 - `GET /health/details`
+- `GET /api/documents/storage/capabilities`
+- `GET /api/documents/storage/capabilities/{provider}`
 - `GET /api/documents/attachments`
 - `POST /api/documents/attachments`
 - `GET /api/documents/attachments/{publicId}`
@@ -45,3 +47,4 @@ Query and payload conventions:
 - `GET /api/documents/attachments/{publicId}/download` validates the signed token and hands off the request to the configured storage path
 - `POST /api/documents/upload-sessions` opens a tenant-aware upload session with storage key, expiration and completion URL
 - `POST /api/documents/upload-sessions/{publicId}/complete` finalizes the session and materializes the attachment metadata with file size and checksum
+- `GET /api/documents/storage/capabilities` exposes local, S3-compatible and R2 capability posture, including fallback state for environments without a paid provider

@@ -236,3 +236,34 @@ func TestRouterShouldCreateAndCompleteUploadSession(t *testing.T) {
 		t.Fatalf("expected attachment payload in completion response, got %s", completeRecorder.Body.String())
 	}
 }
+
+func TestRouterShouldExposeStorageCapabilitiesAndRuntimeDetails(t *testing.T) {
+	router := NewRouter(telemetry.New("documents-test"), persistence.NewInMemoryAttachmentRepository(), persistence.NewInMemoryUploadSessionRepository())
+
+	capabilitiesRequest := httptest.NewRequest(http.MethodGet, "/api/documents/storage/capabilities", nil)
+	capabilitiesRecorder := httptest.NewRecorder()
+	router.ServeHTTP(capabilitiesRecorder, capabilitiesRequest)
+
+	if capabilitiesRecorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, capabilitiesRecorder.Code)
+	}
+
+	if !bytes.Contains(capabilitiesRecorder.Body.Bytes(), []byte(`"provider":"local"`)) {
+		t.Fatalf("expected local storage capability, got %s", capabilitiesRecorder.Body.String())
+	}
+	if !bytes.Contains(capabilitiesRecorder.Body.Bytes(), []byte(`"provider":"s3_compatible"`)) {
+		t.Fatalf("expected s3-compatible capability, got %s", capabilitiesRecorder.Body.String())
+	}
+
+	detailRequest := httptest.NewRequest(http.MethodGet, "/health/details", nil)
+	detailRecorder := httptest.NewRecorder()
+	router.ServeHTTP(detailRecorder, detailRequest)
+
+	if detailRecorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, detailRecorder.Code)
+	}
+
+	if !bytes.Contains(detailRecorder.Body.Bytes(), []byte(`"name":"storage:local"`)) {
+		t.Fatalf("expected storage dependency in readiness details, got %s", detailRecorder.Body.String())
+	}
+}

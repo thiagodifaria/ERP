@@ -76,5 +76,7 @@ func buildIntegrationsExecutiveSummary(integrationReadiness map[string]any) dto.
 		FailedProviderEvents:    readMapInt(integrationReadiness, "flows", "failedProviderEvents"),
 		DeadLetterEvents:        readMapInt(integrationReadiness, "webhookHub", "deadLetterEvents"),
 		OpenProviderRisks:       readMapInt(integrationReadiness, "readiness", "openProviderRisks"),
+		CriticalProviderGaps:    readMapInt(integrationReadiness, "capabilityRegistry", "summary", "criticalUnconfiguredCapabilities"),
+		ContractArtifacts:       readMapInt(integrationReadiness, "capabilityRegistry", "summary", "contractArtifacts"),
 	}
 }
