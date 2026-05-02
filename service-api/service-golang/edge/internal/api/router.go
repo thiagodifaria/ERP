@@ -18,9 +18,11 @@ func NewRouter(
 	tenantOverviewHandler handler.TenantOverviewHandler,
 	automationOverviewHandler handler.AutomationOverviewHandler,
 	engagementOverviewHandler handler.EngagementOverviewHandler,
+	integrationsOverviewHandler handler.IntegrationsOverviewHandler,
 	documentsOverviewHandler handler.DocumentsOverviewHandler,
 	collectionsOverviewHandler handler.CollectionsOverviewHandler,
 	platformReliabilityOverviewHandler handler.PlatformReliabilityOverviewHandler,
+	hardeningOverviewHandler handler.HardeningOverviewHandler,
 	salesOverviewHandler handler.SalesOverviewHandler,
 	revenueOverviewHandler handler.RevenueOverviewHandler,
 	financeOverviewHandler handler.FinanceOverviewHandler,
@@ -36,9 +38,11 @@ func NewRouter(
 	mux.Handle("/api/edge/ops/tenant-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(tenantOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/automation-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(automationOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/engagement-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(engagementOverviewHandler.Overview)))
+	mux.Handle("/api/edge/ops/integrations-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(integrationsOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/documents-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(documentsOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/collections-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(collectionsOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/platform-reliability", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(platformReliabilityOverviewHandler.Overview)))
+	mux.Handle("/api/edge/ops/hardening-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(hardeningOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/sales-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(salesOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/revenue-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(revenueOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/finance-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(financeOverviewHandler.Overview)))

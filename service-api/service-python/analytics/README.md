@@ -14,8 +14,10 @@ Initial scope:
 - collections control report crossing recovery cases, payment promises, delinquency throughput and cash recovery
 - rental operations report crossing contracts, recurring charges and attachment governance
 - engagement operations report crossing campaigns, templates, touchpoints and delivery reliability
+- integration readiness report crossing provider activity, callback traceability and webhook durability
 - document governance report crossing attachment inventory, visibility, storage and upload lifecycle
 - platform reliability report crossing webhook durability, workflow execution quality and recovery risk
+- hardening review report crossing security, observability, retries, backup, SLOs, failover and permissions
 - load benchmark report backed by simulation runs
 - scenario-driven cost estimator
 - selectable repository driver between memory and PostgreSQL
@@ -34,12 +36,14 @@ Public routes:
 - `GET /api/analytics/reports/workflow-definition-health`
 - `GET /api/analytics/reports/delivery-reliability`
 - `GET /api/analytics/reports/engagement-operations`
+- `GET /api/analytics/reports/integration-readiness`
 - `GET /api/analytics/reports/document-governance`
 - `GET /api/analytics/reports/revenue-operations`
 - `GET /api/analytics/reports/finance-control`
 - `GET /api/analytics/reports/collections-control`
 - `GET /api/analytics/reports/rental-operations`
 - `GET /api/analytics/reports/platform-reliability`
+- `GET /api/analytics/reports/hardening-review`
 - `GET /api/analytics/reports/load-benchmark`
 - `GET /api/analytics/reports/cost-estimator`
 

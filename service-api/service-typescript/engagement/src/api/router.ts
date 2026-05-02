@@ -109,6 +109,7 @@ function handleDomainError(response: ServerResponse, error: unknown): void {
     code === "provider_event_direction_invalid" ||
     code === "provider_event_status_invalid" ||
     code === "provider_event_type_invalid" ||
+    code === "provider_event_public_id_invalid" ||
     code === "provider_lead_name_required" ||
     code === "provider_lead_email_required" ||
     code === "invalid_json"
@@ -129,6 +130,11 @@ function handleDomainError(response: ServerResponse, error: unknown): void {
 
   if (code === "provider_event_conflict") {
     json(response, 409, { code, message: "Provider event has already been processed for this tenant." });
+    return;
+  }
+
+  if (code === "touchpoint_not_found" || code === "delivery_not_found" || code === "provider_event_not_found") {
+    json(response, 404, { code, message: "Referenced engagement resource was not found." });
     return;
   }
 
@@ -242,6 +248,24 @@ export async function route(request: IncomingMessage, response: ServerResponse):
   }
 
   if (request.method === "GET" && request.url?.startsWith("/api/engagement/provider-events")) {
+    const segments = pathSegments(request);
+
+    if (segments.length === 4) {
+      try {
+        const providerEvent = await services.getProviderEventByPublicId.execute(segments[3] ?? "");
+        if (providerEvent === null) {
+          handleDomainError(response, new Error("provider_event_not_found"));
+          return;
+        }
+
+        json(response, 200, providerEvent);
+        return;
+      } catch (error) {
+        handleDomainError(response, error);
+        return;
+      }
+    }
+
     const params = searchParams(request);
     json(
       response,
@@ -256,7 +280,6 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     );
     return;
   }
-
   if (request.method === "POST" && request.url === "/api/engagement/providers/inbound-leads") {
     try {
       const payload = await readJson<IngestProviderLeadRequest>(request);

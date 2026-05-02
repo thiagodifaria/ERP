@@ -106,8 +106,8 @@ test("touchpoint routes expose list, creation and summary", async () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         tenantSlug: "bootstrap-ops",
-        campaignPublicId: "00000000-0000-0000-0000-00000000c101",
-        leadPublicId: "00000000-0000-0000-0000-000000008899",
+        campaignPublicId: "00000000-0000-0000-0000-00000000c102",
+        leadPublicId: "00000000-0000-0000-0000-000000008851",
         contactValue: "+5531777777777",
         source: "crm",
         createdBy: "contract-test",
@@ -211,5 +211,88 @@ test("delivery routes expose creation, status transition and summary", async () 
     assert.equal(summaryPayload.totals.templates, 2);
     assert.equal(summaryPayload.totals.deliveries, 2);
     assert.equal(summaryPayload.byStatus.delivered, 2);
+  });
+});
+
+test("provider routes expose callback detail and traceability", async () => {
+  await withServer(async (baseUrl) => {
+    const templateResponse = await fetch(`${baseUrl}/api/engagement/templates`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        tenantSlug: "bootstrap-ops",
+        key: "provider-trace-email",
+        name: "Provider Trace Email",
+        channel: "email",
+        provider: "resend",
+        status: "active",
+        subject: "Trace contract route",
+        body: "Tracking callback flow in contract coverage."
+      })
+    });
+    const templatePayload = (await templateResponse.json()) as { publicId: string };
+    assert.equal(templateResponse.status, 201);
+
+    const touchpointResponse = await fetch(`${baseUrl}/api/engagement/touchpoints`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        tenantSlug: "bootstrap-ops",
+        campaignPublicId: "00000000-0000-0000-0000-00000000c102",
+        leadPublicId: "00000000-0000-0000-0000-000000008851",
+        contactValue: "contract.trace@example.com",
+        source: "workflow",
+        createdBy: "contract-test",
+        notes: "Provider trace touchpoint."
+      })
+    });
+    const touchpointPayload = (await touchpointResponse.json()) as { publicId: string };
+    assert.equal(touchpointResponse.status, 201);
+
+    const deliveryResponse = await fetch(
+      `${baseUrl}/api/engagement/touchpoints/${touchpointPayload.publicId}/deliveries`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          tenantSlug: "bootstrap-ops",
+          templatePublicId: templatePayload.publicId,
+          provider: "resend",
+          providerMessageId: "msg-contract-trace-001",
+          sentBy: "contract-test",
+          notes: "Trace callback delivery."
+        })
+      }
+    );
+    const deliveryPayload = (await deliveryResponse.json()) as { publicId: string };
+    assert.equal(deliveryResponse.status, 201);
+
+    const callbackResponse = await fetch(`${baseUrl}/api/engagement/providers/events`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        tenantSlug: "bootstrap-ops",
+        provider: "resend",
+        eventType: "delivery.responded",
+        externalEventId: "contract-provider-event-001",
+        touchpointPublicId: touchpointPayload.publicId,
+        deliveryPublicId: deliveryPayload.publicId,
+        workflowRunPublicId: "00000000-0000-0000-0000-000000000455",
+        leadPublicId: "00000000-0000-0000-0000-000000008851"
+      })
+    });
+    const callbackPayload = (await callbackResponse.json()) as { publicId: string; eventType: string; status: string };
+
+    assert.equal(callbackResponse.status, 201);
+    assert.equal(callbackPayload.eventType, "delivery.responded");
+    assert.equal(callbackPayload.status, "processed");
+
+    const detailResponse = await fetch(`${baseUrl}/api/engagement/provider-events/${callbackPayload.publicId}`);
+    const detailPayload = (await detailResponse.json()) as { publicId: string; eventType: string; responseSummary: string };
+
+    assert.equal(detailResponse.status, 200);
+    assert.equal(detailPayload.publicId, callbackPayload.publicId);
+    assert.equal(detailPayload.eventType, "delivery.responded");
+    assert.ok(detailPayload.responseSummary.length > 0);
   });
 });

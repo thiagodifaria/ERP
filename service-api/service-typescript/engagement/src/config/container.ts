@@ -6,6 +6,7 @@ import { CreateTouchpointDelivery } from "../application/create-touchpoint-deliv
 import { DispatchWorkflowTouchpoint } from "../application/dispatch-workflow-touchpoint.js";
 import { GetCampaignByPublicId } from "../application/get-campaign-by-public-id.js";
 import { GetDeliverySummary } from "../application/get-delivery-summary.js";
+import { GetProviderEventByPublicId } from "../application/get-provider-event-by-public-id.js";
 import { GetProviderEventSummary } from "../application/get-provider-event-summary.js";
 import { GetTemplateByPublicId } from "../application/get-template-by-public-id.js";
 import { GetTouchpointByPublicId } from "../application/get-touchpoint-by-public-id.js";
@@ -121,6 +122,7 @@ export const services = {
     metaAdsAccessToken: config.metaAdsAccessToken
   }),
   listProviderEvents: new ListProviderEvents(providerEventRepository),
+  getProviderEventByPublicId: new GetProviderEventByPublicId(providerEventRepository),
   getProviderEventSummary: new GetProviderEventSummary(providerEventRepository),
   ingestProviderLead: new IngestProviderLead(campaignRepository, touchpointRepository, providerEventRepository, crmGateway),
   dispatchWorkflowTouchpoint: new DispatchWorkflowTouchpoint(campaignRepository, templateRepository, touchpointRepository, deliveryRepository, providerEventRepository),

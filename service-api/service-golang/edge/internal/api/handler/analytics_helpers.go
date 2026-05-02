@@ -105,3 +105,28 @@ func readMapFloat(payload map[string]any, path ...string) float64 {
 
 	return 0
 }
+
+func readMapBool(payload map[string]any, path ...string) bool {
+	var current any = payload
+
+	for _, key := range path {
+		currentMap, ok := current.(map[string]any)
+		if !ok {
+			return false
+		}
+
+		nextValue, ok := currentMap[key]
+		if !ok {
+			return false
+		}
+
+		current = nextValue
+	}
+
+	value, ok := current.(bool)
+	if !ok {
+		return false
+	}
+
+	return value
+}

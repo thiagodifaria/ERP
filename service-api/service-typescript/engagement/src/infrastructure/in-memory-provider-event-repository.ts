@@ -37,6 +37,10 @@ export class InMemoryProviderEventRepository implements ProviderEventRepository 
     });
   }
 
+  async getByPublicId(publicId: string): Promise<ProviderEvent | null> {
+    return this.events.find((event) => event.publicId === publicId) ?? null;
+  }
+
   async findByProviderAndExternalEventId(tenantSlug: string, provider: string, externalEventId: string): Promise<ProviderEvent | null> {
     const normalizedExternalEventId = externalEventId.trim();
     if (normalizedExternalEventId.length === 0) {

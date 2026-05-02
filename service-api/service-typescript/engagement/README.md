@@ -44,6 +44,7 @@ Public routes:
 - `GET /api/engagement/deliveries/summary`
 - `GET /api/engagement/providers`
 - `GET /api/engagement/provider-events`
+- `GET /api/engagement/provider-events/{publicId}`
 - `GET /api/engagement/provider-events/summary`
 - `POST /api/engagement/providers/inbound-leads`
 - `POST /api/engagement/workflow-dispatches`

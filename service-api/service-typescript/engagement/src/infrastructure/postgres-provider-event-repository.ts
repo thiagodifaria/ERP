@@ -90,6 +90,37 @@ export class PostgresProviderEventRepository implements ProviderEventRepository 
     return result.rows.map((row) => this.mapRow(row));
   }
 
+  async getByPublicId(publicId: string): Promise<ProviderEvent | null> {
+    const result = await this.pool.query<ProviderEventRow>(
+      `
+        SELECT
+          event.id,
+          event.public_id::text,
+          tenant.slug AS tenant_slug,
+          event.provider,
+          event.event_type,
+          event.direction,
+          COALESCE(event.external_event_id, '') AS external_event_id,
+          COALESCE(event.lead_public_id::text, '') AS lead_public_id,
+          COALESCE(event.touchpoint_public_id::text, '') AS touchpoint_public_id,
+          COALESCE(event.delivery_public_id::text, '') AS delivery_public_id,
+          COALESCE(event.workflow_run_public_id::text, '') AS workflow_run_public_id,
+          event.status,
+          event.payload_summary,
+          event.response_summary,
+          event.created_at,
+          event.processed_at
+        FROM engagement.provider_events AS event
+        INNER JOIN identity.tenants AS tenant ON tenant.id = event.tenant_id
+        WHERE event.public_id = $1::uuid
+        LIMIT 1
+      `,
+      [publicId]
+    );
+
+    return result.rowCount === 0 ? null : this.mapRow(result.rows[0]);
+  }
+
   async findByProviderAndExternalEventId(tenantSlug: string, provider: string, externalEventId: string): Promise<ProviderEvent | null> {
     const normalizedExternalEventId = externalEventId.trim();
     if (normalizedExternalEventId.length === 0) {

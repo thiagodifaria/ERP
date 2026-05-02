@@ -50,6 +50,7 @@ Cada servico critico deve documentar:
 - `./scripts/test.sh contract` executa as suites publicas de contratos de `workflow-control`, `crm` e `identity`
 - `./scripts/test.sh platform` valida a plataforma local da Fase 1, checando Keycloak, OpenFGA, Kafka, Prometheus e Grafana em container
 - `./scripts/test.sh smoke` agora valida primeiro a plataforma local e depois reseta volume, aplica bootstrap relacional e exercita `workflow-control`, `crm`, `sales`, `engagement`, `analytics`, `simulation`, `identity`, `webhook-hub`, `workflow-runtime` e `edge` ao vivo por HTTP
+- `./scripts/test.sh hardening` encadeia `smoke`, `performance` e `backup-restore` para validar resiliencia operacional, benchmark e salvaguardas criticas do stack em uma passada unica
 - `./scripts/test.sh backup-restore` valida um ciclo destrutivo controlado de dump e restauracao do PostgreSQL, preservando registros de workload em `simulation`
 
 ## Enderecos locais da plataforma

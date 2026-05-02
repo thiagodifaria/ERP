@@ -171,6 +171,9 @@ test("provider flows support inbound lead ingestion, workflow dispatch and callb
   });
 
   assert.equal(callback.status, "processed");
+  const detail = await services.getProviderEventByPublicId.execute(callback.publicId);
+  assert.equal(detail?.publicId, callback.publicId);
+  assert.equal(detail?.eventType, "delivery.responded");
 
   const summary = await services.getProviderEventSummary.execute({ tenantSlug: "bootstrap-ops" });
   assert.equal(summary.totals.total, 3);

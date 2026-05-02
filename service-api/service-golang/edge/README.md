@@ -10,9 +10,11 @@ Initial scope:
 - tenant cockpit aggregation via `GET /api/edge/ops/tenant-overview`
 - automation cockpit aggregation via `GET /api/edge/ops/automation-overview`
 - engagement cockpit aggregation via `GET /api/edge/ops/engagement-overview`
+- integration readiness cockpit aggregation via `GET /api/edge/ops/integrations-overview`
 - document governance cockpit aggregation via `GET /api/edge/ops/documents-overview`
 - collections and recovery cockpit aggregation via `GET /api/edge/ops/collections-overview`
 - platform reliability cockpit aggregation via `GET /api/edge/ops/platform-reliability`
+- hardening review cockpit aggregation via `GET /api/edge/ops/hardening-overview`
 - sales cockpit aggregation via `GET /api/edge/ops/sales-overview`
 - revenue cockpit aggregation via `GET /api/edge/ops/revenue-overview`
 - finance cockpit aggregation via `GET /api/edge/ops/finance-overview`
@@ -32,9 +34,11 @@ Public routes:
 - `GET /api/edge/ops/tenant-overview`
 - `GET /api/edge/ops/automation-overview`
 - `GET /api/edge/ops/engagement-overview`
+- `GET /api/edge/ops/integrations-overview`
 - `GET /api/edge/ops/documents-overview`
 - `GET /api/edge/ops/collections-overview`
 - `GET /api/edge/ops/platform-reliability`
+- `GET /api/edge/ops/hardening-overview`
 - `GET /api/edge/ops/sales-overview`
 - `GET /api/edge/ops/revenue-overview`
 - `GET /api/edge/ops/finance-overview`
@@ -45,9 +49,11 @@ Protected routes:
 - `GET /api/edge/ops/tenant-overview`
 - `GET /api/edge/ops/automation-overview`
 - `GET /api/edge/ops/engagement-overview`
+- `GET /api/edge/ops/integrations-overview`
 - `GET /api/edge/ops/documents-overview`
 - `GET /api/edge/ops/collections-overview`
 - `GET /api/edge/ops/platform-reliability`
+- `GET /api/edge/ops/hardening-overview`
 - `GET /api/edge/ops/sales-overview`
 - `GET /api/edge/ops/revenue-overview`
 - `GET /api/edge/ops/finance-overview`

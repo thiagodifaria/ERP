@@ -2400,6 +2400,8 @@ run_engagement_runtime_smoke() {
   local dispatch_delivery_public_id
   local provider_delivery_callback_response
   local provider_response_callback_response
+  local provider_event_detail_response
+  local callback_provider_event_public_id
   local provider_events_response
   local provider_events_filtered_response
   local provider_events_summary_response
@@ -2502,6 +2504,8 @@ run_engagement_runtime_smoke() {
     -H "Content-Type: application/json" \
     -d "{\"tenantSlug\":\"bootstrap-ops\",\"provider\":\"resend\",\"eventType\":\"delivery.responded\",\"externalEventId\":\"resend-smoke-002\",\"touchpointPublicId\":\"$dispatch_touchpoint_public_id\",\"deliveryPublicId\":\"$dispatch_delivery_public_id\",\"workflowRunPublicId\":\"00000000-0000-0000-0000-000000000451\",\"leadPublicId\":\"$CRM_RUNTIME_LEAD_PUBLIC_ID\"}" \
     "$base_url/api/engagement/providers/events")"
+  callback_provider_event_public_id="$(echo "$provider_response_callback_response" | sed -n 's/.*"publicId":"\([^"]*\)".*/\1/p')"
+  provider_event_detail_response="$(curl -fsS "$base_url/api/engagement/provider-events/$callback_provider_event_public_id")"
   provider_events_response="$(curl -fsS "$base_url/api/engagement/provider-events?tenantSlug=bootstrap-ops")"
   provider_events_filtered_response="$(curl -fsS "$base_url/api/engagement/provider-events?tenantSlug=bootstrap-ops&provider=resend&direction=inbound")"
   provider_events_summary_response="$(curl -fsS "$base_url/api/engagement/provider-events/summary?tenantSlug=bootstrap-ops")"
@@ -2541,6 +2545,7 @@ run_engagement_runtime_smoke() {
   echo "[test] engagement workflow dispatch => $workflow_dispatch_response"
   echo "[test] engagement provider delivered callback => $provider_delivery_callback_response"
   echo "[test] engagement provider responded callback => $provider_response_callback_response"
+  echo "[test] engagement provider event detail => $provider_event_detail_response"
   echo "[test] engagement provider events => $provider_events_response"
   echo "[test] engagement provider events filtered => $provider_events_filtered_response"
   echo "[test] engagement provider events summary => $provider_events_summary_response"
@@ -2550,7 +2555,7 @@ run_engagement_runtime_smoke() {
   echo "[test] engagement delivery summary => $delivery_summary_response"
   echo "[test] engagement db summary => $db_summary"
 
-  if [[ -z "$created_campaign_public_id" || -z "$created_template_public_id" || -z "$created_touchpoint_public_id" || -z "$created_delivery_public_id" || -z "$dispatch_touchpoint_public_id" || -z "$dispatch_delivery_public_id" || "$update_campaign_status_response" != *'"status":"active"'* || "$create_template_response" != *'"provider":"resend"'* || "$update_template_status_response" != *'"status":"active"'* || "$template_detail_response" != *'"key":"runtime-reactivation-email"'* || "$create_touchpoint_response" != *"\"leadPublicId\":\"$CRM_RUNTIME_LEAD_PUBLIC_ID\""* || "$create_touchpoint_response" != *'"status":"queued"'* || "$create_delivery_response" != *'"status":"sent"'* || "$create_delivery_response" != *'"provider":"resend"'* || "$create_delivery_response" != *"\"templatePublicId\":\"$created_template_public_id\""* || "$deliveries_response" != *"\"publicId\":\"$created_delivery_public_id\""* || "$update_delivery_status_response" != *'"status":"delivered"'* || "$update_touchpoint_status_response" != *'"status":"converted"'* || "$update_touchpoint_status_response" != *'"lastWorkflowRunPublicId":"00000000-0000-0000-0000-000000000390"'* || "$inbound_lead_response" != *'"source":"meta_ads"'* || "$inbound_lead_response" != *'"eventType":"lead.ingested"'* || "$workflow_dispatch_response" != *'"eventType":"workflow.dispatched"'* || "$provider_delivery_callback_response" != *'"status":"processed"'* || "$provider_response_callback_response" != *'"status":"processed"'* || "$provider_events_response" != *'"eventType":"workflow.dispatched"'* || "$provider_events_response" != *'"eventType":"delivery.delivered"'* || "$provider_events_response" != *'"eventType":"delivery.responded"'* || "$provider_events_filtered_response" != *'"eventType":"delivery.delivered"'* || "$provider_events_filtered_response" != *'"eventType":"delivery.responded"'* || "$provider_events_summary_response" != *'"total":3'* || "$provider_events_summary_response" != *'"resend":3'* || "$provider_events_summary_response" != *'"inbound":2'* || "$provider_events_summary_response" != *'"outbound":1'* || "$touchpoint_detail_response" != *'"channel":"email"'* || "$filtered_touchpoints_response" != *"\"publicId\":\"$created_touchpoint_public_id\""* || "$summary_response" != *'"touchpoints":3'* || "$summary_response" != *'"workflowDispatched":3'* || "$summary_response" != *'"responded":2'* || "$summary_response" != *'"converted":1'* || "$summary_response" != *'"email":2'* || "$delivery_summary_response" != *'"templates":2'* || "$delivery_summary_response" != *'"deliveries":3'* || "$delivery_summary_response" != *'"delivered":3'* || "$delivery_summary_response" != *'"resend":2'* || "$delivery_summary_response" != *'"manual":1'* || "$db_summary" != "3|2|3|3|2|1|2|2|1|3|0|3|3" ]]; then
+  if [[ -z "$created_campaign_public_id" || -z "$created_template_public_id" || -z "$created_touchpoint_public_id" || -z "$created_delivery_public_id" || -z "$dispatch_touchpoint_public_id" || -z "$dispatch_delivery_public_id" || -z "$callback_provider_event_public_id" || "$update_campaign_status_response" != *'"status":"active"'* || "$create_template_response" != *'"provider":"resend"'* || "$update_template_status_response" != *'"status":"active"'* || "$template_detail_response" != *'"key":"runtime-reactivation-email"'* || "$create_touchpoint_response" != *"\"leadPublicId\":\"$CRM_RUNTIME_LEAD_PUBLIC_ID\""* || "$create_touchpoint_response" != *'"status":"queued"'* || "$create_delivery_response" != *'"status":"sent"'* || "$create_delivery_response" != *'"provider":"resend"'* || "$create_delivery_response" != *"\"templatePublicId\":\"$created_template_public_id\""* || "$deliveries_response" != *"\"publicId\":\"$created_delivery_public_id\""* || "$update_delivery_status_response" != *'"status":"delivered"'* || "$update_touchpoint_status_response" != *'"status":"converted"'* || "$update_touchpoint_status_response" != *'"lastWorkflowRunPublicId":"00000000-0000-0000-0000-000000000390"'* || "$inbound_lead_response" != *'"source":"meta_ads"'* || "$inbound_lead_response" != *'"eventType":"lead.ingested"'* || "$workflow_dispatch_response" != *'"eventType":"workflow.dispatched"'* || "$provider_delivery_callback_response" != *'"status":"processed"'* || "$provider_response_callback_response" != *'"status":"processed"'* || "$provider_event_detail_response" != *"\"publicId\":\"$callback_provider_event_public_id\""* || "$provider_event_detail_response" != *'"eventType":"delivery.responded"'* || "$provider_event_detail_response" != *'"responseSummary":"Provider response linked to touchpoint."'* || "$provider_events_response" != *'"eventType":"workflow.dispatched"'* || "$provider_events_response" != *'"eventType":"delivery.delivered"'* || "$provider_events_response" != *'"eventType":"delivery.responded"'* || "$provider_events_filtered_response" != *'"eventType":"delivery.delivered"'* || "$provider_events_filtered_response" != *'"eventType":"delivery.responded"'* || "$provider_events_summary_response" != *'"total":3'* || "$provider_events_summary_response" != *'"resend":3'* || "$provider_events_summary_response" != *'"inbound":2'* || "$provider_events_summary_response" != *'"outbound":1'* || "$touchpoint_detail_response" != *'"channel":"email"'* || "$filtered_touchpoints_response" != *"\"publicId\":\"$created_touchpoint_public_id\""* || "$summary_response" != *'"touchpoints":3'* || "$summary_response" != *'"workflowDispatched":3'* || "$summary_response" != *'"responded":2'* || "$summary_response" != *'"converted":1'* || "$summary_response" != *'"email":2'* || "$delivery_summary_response" != *'"templates":2'* || "$delivery_summary_response" != *'"deliveries":3'* || "$delivery_summary_response" != *'"delivered":3'* || "$delivery_summary_response" != *'"resend":2'* || "$delivery_summary_response" != *'"manual":1'* || "$db_summary" != "3|2|3|3|2|1|2|2|1|3|0|3|3" ]]; then
     echo "[test] engagement runtime flow did not persist the expected omnichannel slice"
     exit 1
   fi
@@ -2567,12 +2572,14 @@ run_analytics_runtime_smoke() {
   local workflow_definition_health_response
   local delivery_reliability_response
   local engagement_operations_response
+  local integration_readiness_response
   local document_governance_response
   local revenue_operations_response
   local finance_control_response
   local collections_control_response
   local rental_operations_response
   local platform_reliability_response
+  local hardening_review_response
   local cost_estimator_response
   local load_benchmark_response
 
@@ -2588,12 +2595,14 @@ run_analytics_runtime_smoke() {
   workflow_definition_health_response="$(curl -fsS "$base_url/api/analytics/reports/workflow-definition-health?tenant_slug=bootstrap-ops")"
   delivery_reliability_response="$(curl -fsS "$base_url/api/analytics/reports/delivery-reliability?provider=stripe")"
   engagement_operations_response="$(curl -fsS "$base_url/api/analytics/reports/engagement-operations?tenant_slug=bootstrap-ops")"
+  integration_readiness_response="$(curl -fsS "$base_url/api/analytics/reports/integration-readiness?tenant_slug=bootstrap-ops")"
   document_governance_response="$(curl -fsS "$base_url/api/analytics/reports/document-governance?tenant_slug=bootstrap-ops")"
   revenue_operations_response="$(curl -fsS "$base_url/api/analytics/reports/revenue-operations?tenant_slug=bootstrap-ops")"
   finance_control_response="$(curl -fsS "$base_url/api/analytics/reports/finance-control?tenant_slug=bootstrap-ops")"
   collections_control_response="$(curl -fsS "$base_url/api/analytics/reports/collections-control?tenant_slug=bootstrap-ops")"
   rental_operations_response="$(curl -fsS "$base_url/api/analytics/reports/rental-operations?tenant_slug=bootstrap-ops")"
   platform_reliability_response="$(curl -fsS "$base_url/api/analytics/reports/platform-reliability?tenant_slug=bootstrap-ops")"
+  hardening_review_response="$(curl -fsS "$base_url/api/analytics/reports/hardening-review?tenant_slug=bootstrap-ops")"
   cost_estimator_response="$(curl -fsS "$base_url/api/analytics/reports/cost-estimator?tenant_slug=bootstrap-ops")"
   load_benchmark_response="$(curl -fsS "$base_url/api/analytics/reports/load-benchmark?tenant_slug=bootstrap-ops")"
   echo "[test] analytics health details => $health_details_response"
@@ -2605,12 +2614,14 @@ run_analytics_runtime_smoke() {
   echo "[test] analytics workflow definition health => $workflow_definition_health_response"
   echo "[test] analytics delivery reliability => $delivery_reliability_response"
   echo "[test] analytics engagement operations => $engagement_operations_response"
+  echo "[test] analytics integration readiness => $integration_readiness_response"
   echo "[test] analytics document governance => $document_governance_response"
   echo "[test] analytics revenue operations => $revenue_operations_response"
   echo "[test] analytics finance control => $finance_control_response"
   echo "[test] analytics collections control => $collections_control_response"
   echo "[test] analytics rental operations => $rental_operations_response"
   echo "[test] analytics platform reliability => $platform_reliability_response"
+  echo "[test] analytics hardening review => $hardening_review_response"
   echo "[test] analytics cost estimator => $cost_estimator_response"
   echo "[test] analytics load benchmark => $load_benchmark_response"
 
@@ -2624,12 +2635,17 @@ run_analytics_runtime_smoke() {
     exit 1
   fi
 
+  if [[ "$integration_readiness_response" != *'"tenantSlug":"bootstrap-ops"'* || "$integration_readiness_response" != *'"dataSource":"postgresql"'* || "$integration_readiness_response" != *'"configured":1'* || "$integration_readiness_response" != *'"activeInboundProviders":1'* || "$integration_readiness_response" != *'"activeOutboundProviders":1'* || "$integration_readiness_response" != *'"fallbackEnabled":false'* || "$integration_readiness_response" != *'"inboundLeads":0'* || "$integration_readiness_response" != *'"workflowDispatches":1'* || "$integration_readiness_response" != *'"responsesTracked":1'* || "$integration_readiness_response" != *'"conversionsTracked":0'* || "$integration_readiness_response" != *'"processedProviderEvents":3'* || "$integration_readiness_response" != *'"failedProviderEvents":0'* || "$integration_readiness_response" != *'"pendingEvents":0'* || "$integration_readiness_response" != *'"deadLetterEvents":1'* || "$integration_readiness_response" != *'"status":"attention"'* || "$integration_readiness_response" != *'"leadIntakeReady":false'* || "$integration_readiness_response" != *'"workflowDispatchReady":true'* || "$integration_readiness_response" != *'"callbackTraceabilityReady":true'* || "$integration_readiness_response" != *'"externalAdaptersPrepared":false'* || "$integration_readiness_response" != *'"openProviderRisks":1'* ]]; then
+    echo "[test] analytics integration readiness report did not expose the expected payload"
+    exit 1
+  fi
+
   if [[ "$service_pulse_response" != *'"recoveryOpen":0'* || "$service_pulse_response" != *'"recoveryPromised":0'* || "$service_pulse_response" != *'"recoveryCritical":1'* || "$tenant_360_response" != *'"recoveryCases":1'* || "$tenant_360_response" != *'"recoveryOpen":0'* || "$tenant_360_response" != *'"recoveryPromised":0'* || "$tenant_360_response" != *'"recoveryRecovered":1'* || "$tenant_360_response" != *'"recoveryCritical":1'* || "$finance_control_response" != *'"recoveryCasesOpen":0'* || "$finance_control_response" != *'"recoveryCasesPromised":0'* || "$finance_control_response" != *'"recoveryCasesRecovered":1'* || "$finance_control_response" != *'"recoveryCasesCritical":1'* || "$finance_control_response" != *'"openRecoveryAmountCents":0'* || "$finance_control_response" != *'"promisedRecoveryAmountCents":0'* || "$finance_control_response" != *'"recoveryActions":6'* || "$collections_control_response" != *'"tenantSlug":"bootstrap-ops"'* || "$collections_control_response" != *'"dataSource":"postgresql"'* || "$collections_control_response" != *'"casesTotal":1'* || "$collections_control_response" != *'"openCases":0'* || "$collections_control_response" != *'"promisedCases":0'* || "$collections_control_response" != *'"recoveredCases":1'* || "$collections_control_response" != *'"criticalCases":1'* || "$collections_control_response" != *'"recoveredAmountCents":4900'* || "$collections_control_response" != *'"failedAttempts":2'* || "$collections_control_response" != *'"invoicesInRecovery":0'* || "$collections_control_response" != *'"activePromises":0'* || "$collections_control_response" != *'"promisesKept":0'* || "$collections_control_response" != *'"touchpoints":1'* || "$collections_control_response" != *'"promiseActions":1'* || "$collections_control_response" != *'"recoveries":1'* || "$collections_control_response" != *'"recoveryRate":1.0'* || "$collections_control_response" != *'"pendingActions":0'* || "$collections_control_response" != *'"nextActionsDue":0'* ]]; then
     echo "[test] analytics collections and recovery signals did not expose the expected payload"
     exit 1
   fi
 
-  if [[ "$service_pulse_response" != *'"providerEvents":3'* || "$service_pulse_response" != *'"inboundLeads":0'* || "$service_pulse_response" != *'"deadLetter":1'* || "$tenant_360_response" != *'"providerEvents":3'* || "$tenant_360_response" != *'"inboundLeads":0'* || "$platform_reliability_response" != *'"tenantSlug":"bootstrap-ops"'* || "$platform_reliability_response" != *'"dataSource":"postgresql"'* || "$platform_reliability_response" != *'"status":"attention"'* || "$platform_reliability_response" != *'"pendingWebhookEvents":0'* || "$platform_reliability_response" != *'"deadLetterEvents":1'* || "$platform_reliability_response" != *'"failedWorkflowExecutions":0'* || "$platform_reliability_response" != *'"criticalRecoveryCases":0'* || "$platform_reliability_response" != *'"failedPaymentAttempts":2'* || "$platform_reliability_response" != *'"webhookForwardingRate":0.3333'* || "$platform_reliability_response" != *'"workflowSuccessRate":1.0'* || "$platform_reliability_response" != *'"billingRecoveryRate":1.0'* || "$platform_reliability_response" != *'"backupRestoreValidated":true'* || "$platform_reliability_response" != *'"dlqReady":true'* || "$platform_reliability_response" != *'"openCriticalRisks":1'* ]]; then
+  if [[ "$service_pulse_response" != *'"providerEvents":3'* || "$service_pulse_response" != *'"inboundLeads":0'* || "$service_pulse_response" != *'"deadLetter":1'* || "$tenant_360_response" != *'"providerEvents":3'* || "$tenant_360_response" != *'"inboundLeads":0'* || "$platform_reliability_response" != *'"tenantSlug":"bootstrap-ops"'* || "$platform_reliability_response" != *'"dataSource":"postgresql"'* || "$platform_reliability_response" != *'"status":"attention"'* || "$platform_reliability_response" != *'"pendingWebhookEvents":0'* || "$platform_reliability_response" != *'"deadLetterEvents":1'* || "$platform_reliability_response" != *'"failedWorkflowExecutions":0'* || "$platform_reliability_response" != *'"criticalRecoveryCases":0'* || "$platform_reliability_response" != *'"failedPaymentAttempts":2'* || "$platform_reliability_response" != *'"webhookForwardingRate":0.3333'* || "$platform_reliability_response" != *'"workflowSuccessRate":1.0'* || "$platform_reliability_response" != *'"billingRecoveryRate":1.0'* || "$platform_reliability_response" != *'"backupRestoreValidated":true'* || "$platform_reliability_response" != *'"dlqReady":true'* || "$platform_reliability_response" != *'"openCriticalRisks":1'* || "$hardening_review_response" != *'"tenantSlug":"bootstrap-ops"'* || "$hardening_review_response" != *'"dataSource":"postgresql"'* || "$hardening_review_response" != *'"status":"critical"'* || "$hardening_review_response" != *'"stableChecks":6'* || "$hardening_review_response" != *'"attentionChecks":2'* || "$hardening_review_response" != *'"criticalChecks":1'* || "$hardening_review_response" != *'"mfaEnabledUsers":0'* || "$hardening_review_response" != *'"activeSessions":0'* || "$hardening_review_response" != *'"auditEvents":0'* || "$hardening_review_response" != *'"validated":true'* || "$hardening_review_response" != *'"webhookForwardingRate":0.3333'* || "$hardening_review_response" != *'"latestBenchmarkStatus":"stable"'* || "$hardening_review_response" != *'"sessionEnforcementReady":false'* || "$hardening_review_response" != *'"auditTrailReady":false'* ]]; then
     echo "[test] analytics platform reliability report did not expose the expected payload"
     exit 1
   fi
@@ -3343,9 +3359,11 @@ run_edge_runtime_smoke() {
   local tenant_overview_response
   local automation_overview_response
   local engagement_overview_response
+  local integrations_overview_response
   local documents_overview_response
   local collections_overview_response
   local platform_reliability_overview_response
+  local hardening_overview_response
   local sales_overview_response
   local revenue_overview_response
   local finance_overview_response
@@ -3366,9 +3384,11 @@ run_edge_runtime_smoke() {
   tenant_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/tenant-overview?tenantSlug=bootstrap-ops")"
   automation_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/automation-overview?tenantSlug=bootstrap-ops")"
   engagement_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/engagement-overview?tenantSlug=bootstrap-ops")"
+  integrations_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/integrations-overview?tenantSlug=bootstrap-ops")"
   documents_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/documents-overview?tenantSlug=bootstrap-ops")"
   collections_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/collections-overview?tenantSlug=bootstrap-ops")"
   platform_reliability_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/platform-reliability?tenantSlug=bootstrap-ops")"
+  hardening_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/hardening-overview?tenantSlug=bootstrap-ops")"
   sales_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/sales-overview?tenantSlug=bootstrap-ops")"
   revenue_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/revenue-overview?tenantSlug=bootstrap-ops")"
   finance_overview_response="$(curl -fsS -H "Authorization: Bearer $session_token" "$base_url/api/edge/ops/finance-overview?tenantSlug=bootstrap-ops")"
@@ -3381,9 +3401,11 @@ run_edge_runtime_smoke() {
   echo "[test] edge tenant overview => $tenant_overview_response"
   echo "[test] edge automation overview => $automation_overview_response"
   echo "[test] edge engagement overview => $engagement_overview_response"
+  echo "[test] edge integrations overview => $integrations_overview_response"
   echo "[test] edge documents overview => $documents_overview_response"
   echo "[test] edge collections overview => $collections_overview_response"
   echo "[test] edge platform reliability overview => $platform_reliability_overview_response"
+  echo "[test] edge hardening overview => $hardening_overview_response"
   echo "[test] edge sales overview => $sales_overview_response"
   echo "[test] edge revenue overview => $revenue_overview_response"
   echo "[test] edge finance overview => $finance_overview_response"
@@ -3399,15 +3421,26 @@ run_edge_runtime_smoke() {
     exit 1
   fi
 
+  if [[ "$integrations_overview_response" != *'"service":"edge"'* || "$integrations_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$integrations_overview_response" != *'"status":"attention"'* || "$integrations_overview_response" != *'"configuredProviders":1'* || "$integrations_overview_response" != *'"activeInboundProviders":1'* || "$integrations_overview_response" != *'"activeOutboundProviders":1'* || "$integrations_overview_response" != *'"inboundLeads":0'* || "$integrations_overview_response" != *'"workflowDispatches":1'* || "$integrations_overview_response" != *'"failedProviderEvents":0'* || "$integrations_overview_response" != *'"deadLetterEvents":1'* || "$integrations_overview_response" != *'"openProviderRisks":1'* || "$integrations_overview_response" != *'"integrationReadiness"'* ]]; then
+    echo "[test] edge integrations cockpit did not aggregate the expected live payload"
+    exit 1
+  fi
+
   if [[ "$collections_overview_response" != *'"service":"edge"'* || "$collections_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$collections_overview_response" != *'"status":"attention"'* || "$collections_overview_response" != *'"casesTotal":1'* || "$collections_overview_response" != *'"criticalCases":1'* || "$collections_overview_response" != *'"invoicesInRecovery":0'* || "$collections_overview_response" != *'"openAmountCents":0'* || "$collections_overview_response" != *'"recoveredAmountCents":4900'* || "$collections_overview_response" != *'"failedPaymentAttempts":2'* || "$collections_overview_response" != *'"activePromises":0'* || "$collections_overview_response" != *'"nextActionsDue":0'* || "$collections_overview_response" != *'"recoveryRateBps":10000'* || "$collections_overview_response" != *'"collectionsControl"'* ]]; then
     echo "[test] edge collections cockpit did not aggregate the expected live payload"
     exit 1
   fi
 
-  if [[ "$platform_reliability_overview_response" != *'"service":"edge"'* || "$platform_reliability_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$platform_reliability_overview_response" != *'"status":"attention"'* || "$platform_reliability_overview_response" != *'"pendingWebhookEvents":0'* || "$platform_reliability_overview_response" != *'"deadLetterEvents":1'* || "$platform_reliability_overview_response" != *'"failedWorkflowExecutions":0'* || "$platform_reliability_overview_response" != *'"criticalRecoveryCases":0'* || "$platform_reliability_overview_response" != *'"failedPaymentAttempts":2'* || "$platform_reliability_overview_response" != *'"webhookForwardingRateBps":3333'* || "$platform_reliability_overview_response" != *'"workflowSuccessRateBps":10000'* || "$platform_reliability_overview_response" != *'"billingRecoveryRateBps":10000'* || "$platform_reliability_overview_response" != *'"openCriticalRisks":1'* || "$platform_reliability_overview_response" != *'"platformReliability"'* ]]; then
+  if [[ "$platform_reliability_overview_response" != *'"service":"edge"'* || "$platform_reliability_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$platform_reliability_overview_response" != *'"pendingWebhookEvents":0'* || "$platform_reliability_overview_response" != *'"deadLetterEvents":1'* || "$platform_reliability_overview_response" != *'"failedWorkflowExecutions":0'* || "$platform_reliability_overview_response" != *'"criticalRecoveryCases":0'* || "$platform_reliability_overview_response" != *'"failedPaymentAttempts":2'* || "$platform_reliability_overview_response" != *'"webhookForwardingRateBps":3333'* || "$platform_reliability_overview_response" != *'"workflowSuccessRateBps":10000'* || "$platform_reliability_overview_response" != *'"billingRecoveryRateBps":10000'* || "$platform_reliability_overview_response" != *'"openCriticalRisks":1'* || "$platform_reliability_overview_response" != *'"platformReliability"'* || "$hardening_overview_response" != *'"service":"edge"'* || "$hardening_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$hardening_overview_response" != *'"stableChecks":6'* || "$hardening_overview_response" != *'"attentionChecks":2'* || "$hardening_overview_response" != *'"criticalChecks":1'* || "$hardening_overview_response" != *'"deadLetterEvents":1'* || "$hardening_overview_response" != *'"failedPaymentAttempts":2'* || "$hardening_overview_response" != *'"latestBenchmarkStatus":"stable"'* || "$hardening_overview_response" != *'"backupRestoreValidated":true'* || "$hardening_overview_response" != *'"hardeningReview"'* ]]; then
     echo "[test] edge platform reliability cockpit did not aggregate the expected live payload"
     exit 1
   fi
+}
+
+run_hardening_suite() {
+  run_smoke
+  run_performance_runtime_suite
+  run_backup_restore_suite
 }
 
 run_smoke() {
@@ -3618,6 +3651,9 @@ main() {
       ;;
     backup-restore)
       run_backup_restore_suite
+      ;;
+    hardening)
+      run_hardening_suite
       ;;
     all)
       run_go_unit

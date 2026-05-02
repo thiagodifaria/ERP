@@ -111,6 +111,18 @@ def test_engagement_operations_returns_engagement_operational_payload() -> None:
     assert payload["governance"]["activeProviders"] == 4
 
 
+def test_integration_readiness_returns_external_operations_payload() -> None:
+    response = client.get("/api/analytics/reports/integration-readiness?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["providers"]["configured"] == 4
+    assert payload["flows"]["inboundLeads"] == 3
+    assert payload["webhookHub"]["deadLetterEvents"] == 1
+    assert payload["readiness"]["callbackTraceabilityReady"] is True
+
+
 def test_automation_board_returns_delivery_and_runtime_board() -> None:
     response = client.get("/api/analytics/reports/automation-board?tenant_slug=bootstrap-ops")
     payload = response.json()
@@ -223,3 +235,15 @@ def test_load_benchmark_returns_recent_performance_payload() -> None:
     assert payload["summary"]["totalRuns"] == 2
     assert payload["latest"]["status"] == "attention"
     assert payload["latest"]["p95LatencyMs"] == 332
+
+
+def test_hardening_review_returns_operational_review_payload() -> None:
+    response = client.get("/api/analytics/reports/hardening-review?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["summary"]["status"] == "attention"
+    assert payload["reviews"]["security"]["mfaEnabledUsers"] == 2
+    assert payload["reviews"]["backupRestore"]["validated"] is True
+    assert payload["reviews"]["performance"]["latestBenchmarkStatus"] == "attention"

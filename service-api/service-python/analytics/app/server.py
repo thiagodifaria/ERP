@@ -11,6 +11,8 @@ from app.reports.document_governance import build_document_governance
 from app.reports.delivery_reliability import build_delivery_reliability
 from app.reports.engagement_operations import build_engagement_operations
 from app.reports.finance_control import build_finance_control
+from app.reports.hardening_review import build_hardening_review
+from app.reports.integration_readiness import build_integration_readiness
 from app.reports.load_benchmark import build_load_benchmark
 from app.reports.pipeline_summary import build_pipeline_summary
 from app.reports.platform_reliability import build_platform_reliability
@@ -98,6 +100,11 @@ def engagement_operations(tenant_slug: str | None = None) -> dict:
     return build_engagement_operations(tenant_slug)
 
 
+@app.get("/api/analytics/reports/integration-readiness")
+def integration_readiness(tenant_slug: str | None = None) -> dict:
+    return build_integration_readiness(tenant_slug)
+
+
 @app.get("/api/analytics/reports/document-governance")
 def document_governance(tenant_slug: str | None = None) -> dict:
     return build_document_governance(tenant_slug)
@@ -136,3 +143,8 @@ def load_benchmark(tenant_slug: str | None = None) -> dict:
 @app.get("/api/analytics/reports/platform-reliability")
 def platform_reliability(tenant_slug: str | None = None) -> dict:
     return build_platform_reliability(tenant_slug)
+
+
+@app.get("/api/analytics/reports/hardening-review")
+def hardening_review(tenant_slug: str | None = None) -> dict:
+    return build_hardening_review(tenant_slug)
