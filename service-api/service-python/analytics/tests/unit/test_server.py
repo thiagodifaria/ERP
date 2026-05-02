@@ -107,7 +107,9 @@ def test_engagement_operations_returns_engagement_operational_payload() -> None:
     assert payload["tenantSlug"] == "bootstrap-ops"
     assert payload["campaigns"]["total"] == 2
     assert payload["templates"]["active"] == 2
+    assert payload["touchpoints"]["businessLinked"] == 18
     assert payload["deliveries"]["byProvider"]["whatsapp_cloud"] == 8
+    assert payload["providers"]["businessLinkedEvents"] == 6
     assert payload["governance"]["activeProviders"] == 4
 
 
@@ -119,8 +121,10 @@ def test_integration_readiness_returns_external_operations_payload() -> None:
     assert payload["tenantSlug"] == "bootstrap-ops"
     assert payload["providers"]["configured"] == 4
     assert payload["flows"]["inboundLeads"] == 3
+    assert payload["flows"]["businessEntityLinkedEvents"] == 6
     assert payload["webhookHub"]["deadLetterEvents"] == 1
     assert payload["readiness"]["callbackTraceabilityReady"] is True
+    assert payload["readiness"]["businessEntityLinkageReady"] is True
 
 
 def test_automation_board_returns_delivery_and_runtime_board() -> None:

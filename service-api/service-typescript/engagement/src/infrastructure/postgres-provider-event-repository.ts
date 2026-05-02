@@ -20,6 +20,8 @@ type ProviderEventRow = {
   direction: ProviderEvent["direction"];
   external_event_id: string | null;
   lead_public_id: string | null;
+  business_entity_type: string | null;
+  business_entity_public_id: string | null;
   touchpoint_public_id: string | null;
   delivery_public_id: string | null;
   workflow_run_public_id: string | null;
@@ -59,6 +61,14 @@ export class PostgresProviderEventRepository implements ProviderEventRepository 
       params.push(filters.status);
       conditions.push(`event.status = $${params.length}`);
     }
+    if (filters.businessEntityType) {
+      params.push(filters.businessEntityType);
+      conditions.push(`event.business_entity_type = $${params.length}`);
+    }
+    if (filters.businessEntityPublicId) {
+      params.push(filters.businessEntityPublicId);
+      conditions.push(`event.business_entity_public_id = $${params.length}::uuid`);
+    }
 
     const result = await this.pool.query<ProviderEventRow>(
       `
@@ -71,6 +81,8 @@ export class PostgresProviderEventRepository implements ProviderEventRepository 
           event.direction,
           COALESCE(event.external_event_id, '') AS external_event_id,
           COALESCE(event.lead_public_id::text, '') AS lead_public_id,
+          COALESCE(event.business_entity_type, '') AS business_entity_type,
+          COALESCE(event.business_entity_public_id::text, '') AS business_entity_public_id,
           COALESCE(event.touchpoint_public_id::text, '') AS touchpoint_public_id,
           COALESCE(event.delivery_public_id::text, '') AS delivery_public_id,
           COALESCE(event.workflow_run_public_id::text, '') AS workflow_run_public_id,
@@ -102,6 +114,8 @@ export class PostgresProviderEventRepository implements ProviderEventRepository 
           event.direction,
           COALESCE(event.external_event_id, '') AS external_event_id,
           COALESCE(event.lead_public_id::text, '') AS lead_public_id,
+          COALESCE(event.business_entity_type, '') AS business_entity_type,
+          COALESCE(event.business_entity_public_id::text, '') AS business_entity_public_id,
           COALESCE(event.touchpoint_public_id::text, '') AS touchpoint_public_id,
           COALESCE(event.delivery_public_id::text, '') AS delivery_public_id,
           COALESCE(event.workflow_run_public_id::text, '') AS workflow_run_public_id,
@@ -139,6 +153,8 @@ export class PostgresProviderEventRepository implements ProviderEventRepository 
           event.direction,
           COALESCE(event.external_event_id, '') AS external_event_id,
           COALESCE(event.lead_public_id::text, '') AS lead_public_id,
+          COALESCE(event.business_entity_type, '') AS business_entity_type,
+          COALESCE(event.business_entity_public_id::text, '') AS business_entity_public_id,
           COALESCE(event.touchpoint_public_id::text, '') AS touchpoint_public_id,
           COALESCE(event.delivery_public_id::text, '') AS delivery_public_id,
           COALESCE(event.workflow_run_public_id::text, '') AS workflow_run_public_id,
@@ -178,6 +194,8 @@ export class PostgresProviderEventRepository implements ProviderEventRepository 
           direction,
           external_event_id,
           lead_public_id,
+          business_entity_type,
+          business_entity_public_id,
           touchpoint_public_id,
           delivery_public_id,
           workflow_run_public_id,
@@ -194,23 +212,27 @@ export class PostgresProviderEventRepository implements ProviderEventRepository 
           $4,
           NULLIF($5, ''),
           CASE WHEN $6 = '' THEN NULL ELSE $6::uuid END,
-          CASE WHEN $7 = '' THEN NULL ELSE $7::uuid END,
+          NULLIF($7, ''),
           CASE WHEN $8 = '' THEN NULL ELSE $8::uuid END,
           CASE WHEN $9 = '' THEN NULL ELSE $9::uuid END,
-          $10,
-          $11,
+          CASE WHEN $10 = '' THEN NULL ELSE $10::uuid END,
+          CASE WHEN $11 = '' THEN NULL ELSE $11::uuid END,
           $12,
-          CASE WHEN $13 = '' THEN NULL ELSE $13::timestamptz END
+          $13,
+          $14,
+          CASE WHEN $15 = '' THEN NULL ELSE $15::timestamptz END
         )
         RETURNING
           id,
           public_id::text,
-          $14::text AS tenant_slug,
+          $16::text AS tenant_slug,
           provider,
           event_type,
           direction,
           COALESCE(external_event_id, '') AS external_event_id,
           COALESCE(lead_public_id::text, '') AS lead_public_id,
+          COALESCE(business_entity_type, '') AS business_entity_type,
+          COALESCE(business_entity_public_id::text, '') AS business_entity_public_id,
           COALESCE(touchpoint_public_id::text, '') AS touchpoint_public_id,
           COALESCE(delivery_public_id::text, '') AS delivery_public_id,
           COALESCE(workflow_run_public_id::text, '') AS workflow_run_public_id,
@@ -227,6 +249,8 @@ export class PostgresProviderEventRepository implements ProviderEventRepository 
         normalized.direction,
         normalized.externalEventId ?? "",
         normalized.leadPublicId ?? "",
+        normalized.businessEntityType ?? "",
+        normalized.businessEntityPublicId ?? "",
         normalized.touchpointPublicId ?? "",
         normalized.deliveryPublicId ?? "",
         normalized.workflowRunPublicId ?? "",
@@ -281,6 +305,8 @@ export class PostgresProviderEventRepository implements ProviderEventRepository 
       direction: row.direction,
       externalEventId: row.external_event_id || null,
       leadPublicId: row.lead_public_id || null,
+      businessEntityType: row.business_entity_type || null,
+      businessEntityPublicId: row.business_entity_public_id || null,
       touchpointPublicId: row.touchpoint_public_id || null,
       deliveryPublicId: row.delivery_public_id || null,
       workflowRunPublicId: row.workflow_run_public_id || null,

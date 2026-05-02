@@ -12,6 +12,8 @@ export type RegisterProviderEventInput = {
   deliveryPublicId?: string | null;
   workflowRunPublicId?: string | null;
   leadPublicId?: string | null;
+  businessEntityType?: string | null;
+  businessEntityPublicId?: string | null;
   providerMessageId?: string | null;
   payloadSummary?: string;
   responseSummary?: string;
@@ -46,6 +48,8 @@ export class RegisterProviderEvent {
 
     let touchpointPublicId = (input.touchpointPublicId ?? "").trim() || null;
     let deliveryPublicId = (input.deliveryPublicId ?? "").trim() || null;
+    let businessEntityType = (input.businessEntityType ?? "").trim().toLowerCase() || null;
+    let businessEntityPublicId = (input.businessEntityPublicId ?? "").trim() || null;
     let status: "processed" | "failed" = "processed";
     let responseSummary = (input.responseSummary ?? "").trim();
 
@@ -81,6 +85,14 @@ export class RegisterProviderEvent {
         throw new Error("touchpoint_not_found");
       }
 
+      if (businessEntityType === null) {
+        businessEntityType = touchpoint.businessEntityType;
+      }
+
+      if (businessEntityPublicId === null) {
+        businessEntityPublicId = touchpoint.businessEntityPublicId;
+      }
+
       if (eventType === "delivery.delivered" && touchpoint.status === "queued") {
         await this.touchpoints.updateStatus(touchpointPublicId, "delivered", input.workflowRunPublicId ?? null);
       } else if (eventType === "delivery.responded") {
@@ -109,6 +121,8 @@ export class RegisterProviderEvent {
       direction: "inbound",
       externalEventId,
       leadPublicId: input.leadPublicId ?? null,
+      businessEntityType,
+      businessEntityPublicId,
       touchpointPublicId,
       deliveryPublicId,
       workflowRunPublicId: input.workflowRunPublicId ?? null,

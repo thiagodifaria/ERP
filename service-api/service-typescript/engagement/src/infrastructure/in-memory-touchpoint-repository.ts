@@ -18,6 +18,8 @@ function bootstrapTouchpoints(tenantSlug: string): Touchpoint[] {
       campaignPublicId: "00000000-0000-0000-0000-00000000c101",
       campaignKey: "lead-follow-up-campaign",
       leadPublicId: "00000000-0000-0000-0000-000000008850",
+      businessEntityType: "crm.lead",
+      businessEntityPublicId: "00000000-0000-0000-0000-000000008850",
       channel: "whatsapp",
       contactValue: "+5531999999999",
       source: "crm",
@@ -61,6 +63,14 @@ export class InMemoryTouchpointRepository implements TouchpointRepository {
         return false;
       }
 
+      if (filters.businessEntityType && touchpoint.businessEntityType !== filters.businessEntityType) {
+        return false;
+      }
+
+      if (filters.businessEntityPublicId && touchpoint.businessEntityPublicId !== filters.businessEntityPublicId) {
+        return false;
+      }
+
       return true;
     });
   }
@@ -84,6 +94,8 @@ export class InMemoryTouchpointRepository implements TouchpointRepository {
       campaignPublicId: input.campaignPublicId,
       campaignKey: input.campaignKey,
       leadPublicId: input.leadPublicId,
+      businessEntityType: input.businessEntityType ?? null,
+      businessEntityPublicId: input.businessEntityPublicId ?? null,
       channel: input.channel,
       contactValue: input.contactValue,
       source: input.source,

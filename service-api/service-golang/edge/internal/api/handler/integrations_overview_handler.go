@@ -72,6 +72,7 @@ func buildIntegrationsExecutiveSummary(integrationReadiness map[string]any) dto.
 		ActiveOutboundProviders: readMapInt(integrationReadiness, "providers", "activeOutboundProviders"),
 		InboundLeads:            readMapInt(integrationReadiness, "flows", "inboundLeads"),
 		WorkflowDispatches:      readMapInt(integrationReadiness, "flows", "workflowDispatches"),
+		BusinessLinkedEvents:    readMapInt(integrationReadiness, "flows", "businessEntityLinkedEvents"),
 		FailedProviderEvents:    readMapInt(integrationReadiness, "flows", "failedProviderEvents"),
 		DeadLetterEvents:        readMapInt(integrationReadiness, "webhookHub", "deadLetterEvents"),
 		OpenProviderRisks:       readMapInt(integrationReadiness, "readiness", "openProviderRisks"),

@@ -35,6 +35,10 @@ func TestIntegrationsOverviewReturnsExecutiveCockpit(t *testing.T) {
 	if response.ExecutiveSummary.ConfiguredProviders != 4 {
 		t.Fatalf("expected four configured providers, got %d", response.ExecutiveSummary.ConfiguredProviders)
 	}
+
+	if response.ExecutiveSummary.BusinessLinkedEvents != 3 {
+		t.Fatalf("expected business linked events 3, got %d", response.ExecutiveSummary.BusinessLinkedEvents)
+	}
 }
 
 func TestIntegrationsOverviewRequiresTenantSlug(t *testing.T) {
@@ -71,9 +75,10 @@ func (reader integrationsReader) GetJSON(_ context.Context, requestURL string, t
 				"activeOutboundProviders": 2,
 			},
 			"flows": map[string]any{
-				"inboundLeads":         1,
-				"workflowDispatches":   1,
-				"failedProviderEvents": 1,
+				"inboundLeads":            1,
+				"workflowDispatches":      1,
+				"businessEntityLinkedEvents": 3,
+				"failedProviderEvents":    1,
 			},
 			"webhookHub": map[string]any{"deadLetterEvents": 1},
 			"readiness": map[string]any{

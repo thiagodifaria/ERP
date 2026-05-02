@@ -87,6 +87,8 @@ func buildEngagementExecutiveSummary(engagementOperations map[string]any) dto.En
 		DeliveredDeliveries:  readMapInt(engagementOperations, "deliveries", "delivered"),
 		FailedDeliveries:     failedDeliveries,
 		ConvertedTouchpoints: readMapInt(engagementOperations, "touchpoints", "converted"),
+		BusinessLinked:       readMapInt(engagementOperations, "touchpoints", "businessLinked"),
+		ProviderLinkedEvents: readMapInt(engagementOperations, "providers", "businessLinkedEvents"),
 		DeliveryRate:         deliveryRate,
 	}
 }

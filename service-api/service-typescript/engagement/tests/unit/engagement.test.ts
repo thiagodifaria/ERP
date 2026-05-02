@@ -58,6 +58,8 @@ test("touchpoint stream supports creation, status update and summary", async () 
 
   assert.equal(created.status, "queued");
   assert.equal(created.workflowDefinitionKey, "lead-follow-up");
+  assert.equal(created.businessEntityType, "crm.lead");
+  assert.equal(created.businessEntityPublicId, "00000000-0000-0000-0000-000000008851");
 
   const updated = await services.updateTouchpointStatus.execute(
     created.publicId,
@@ -141,7 +143,11 @@ test("provider flows support inbound lead ingestion, workflow dispatch and callb
 
   assert.equal(inbound.lead.source, "meta_ads");
   assert.equal(inbound.touchpoint?.source, "meta_ads");
+  assert.equal(inbound.touchpoint?.businessEntityType, "crm.lead");
+  assert.equal(inbound.touchpoint?.businessEntityPublicId, inbound.lead.publicId);
   assert.equal(inbound.providerEvent.eventType, "lead.ingested");
+  assert.equal(inbound.providerEvent.businessEntityType, "crm.lead");
+  assert.equal(inbound.providerEvent.businessEntityPublicId, inbound.lead.publicId);
 
   const dispatch = await services.dispatchWorkflowTouchpoint.execute({
     tenantSlug: "bootstrap-ops",
@@ -156,8 +162,10 @@ test("provider flows support inbound lead ingestion, workflow dispatch and callb
   });
 
   assert.equal(dispatch.touchpoint.lastWorkflowRunPublicId, "00000000-0000-0000-0000-000000000450");
+  assert.equal(dispatch.touchpoint.businessEntityType, "crm.lead");
   assert.equal(dispatch.delivery.provider, "resend");
   assert.equal(dispatch.providerEvent.eventType, "workflow.dispatched");
+  assert.equal(dispatch.providerEvent.businessEntityPublicId, inbound.lead.publicId);
 
   const callback = await services.registerProviderEvent.execute({
     tenantSlug: "bootstrap-ops",
@@ -174,6 +182,8 @@ test("provider flows support inbound lead ingestion, workflow dispatch and callb
   const detail = await services.getProviderEventByPublicId.execute(callback.publicId);
   assert.equal(detail?.publicId, callback.publicId);
   assert.equal(detail?.eventType, "delivery.responded");
+  assert.equal(detail?.businessEntityType, "crm.lead");
+  assert.equal(detail?.businessEntityPublicId, inbound.lead.publicId);
 
   const summary = await services.getProviderEventSummary.execute({ tenantSlug: "bootstrap-ops" });
   assert.equal(summary.totals.total, 3);

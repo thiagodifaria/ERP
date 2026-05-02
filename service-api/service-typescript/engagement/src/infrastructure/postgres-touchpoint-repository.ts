@@ -18,6 +18,8 @@ type TouchpointRow = {
   campaign_public_id: string;
   campaign_key: string;
   lead_public_id: string;
+  business_entity_type: string | null;
+  business_entity_public_id: string | null;
   channel: Touchpoint["channel"];
   contact_value: string;
   source: string;
@@ -63,6 +65,16 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
       conditions.push(`touchpoint.lead_public_id = $${params.length}::uuid`);
     }
 
+    if (filters.businessEntityType) {
+      params.push(filters.businessEntityType);
+      conditions.push(`touchpoint.business_entity_type = $${params.length}`);
+    }
+
+    if (filters.businessEntityPublicId) {
+      params.push(filters.businessEntityPublicId);
+      conditions.push(`touchpoint.business_entity_public_id = $${params.length}::uuid`);
+    }
+
     const result = await this.pool.query<TouchpointRow>(
       `
         SELECT
@@ -72,6 +84,8 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
           campaign.public_id::text AS campaign_public_id,
           campaign.key AS campaign_key,
           touchpoint.lead_public_id::text,
+          touchpoint.business_entity_type,
+          touchpoint.business_entity_public_id::text,
           touchpoint.channel,
           touchpoint.contact_value,
           touchpoint.source,
@@ -104,6 +118,8 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
           campaign.public_id::text AS campaign_public_id,
           campaign.key AS campaign_key,
           touchpoint.lead_public_id::text,
+          touchpoint.business_entity_type,
+          touchpoint.business_entity_public_id::text,
           touchpoint.channel,
           touchpoint.contact_value,
           touchpoint.source,
@@ -156,6 +172,8 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
           campaign_id,
           public_id,
           lead_public_id,
+          business_entity_type,
+          business_entity_public_id,
           channel,
           contact_value,
           source,
@@ -170,20 +188,24 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
           gen_random_uuid(),
           $3::uuid,
           $4,
-          $5,
+          $5::uuid,
           $6,
-          'queued',
           $7,
           $8,
-          $9
+          'queued',
+          $9,
+          $10,
+          $11
         )
         RETURNING
           id,
           public_id::text,
-          $10::text AS tenant_slug,
-          $11::text AS campaign_public_id,
-          $12::text AS campaign_key,
+          $12::text AS tenant_slug,
+          $13::text AS campaign_public_id,
+          $14::text AS campaign_key,
           lead_public_id::text,
+          business_entity_type,
+          business_entity_public_id::text,
           channel,
           contact_value,
           source,
@@ -199,6 +221,8 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
         tenantId,
         campaignResult.rows[0].id,
         input.leadPublicId,
+        input.businessEntityType,
+        input.businessEntityPublicId,
         input.channel,
         input.contactValue,
         input.source,
@@ -235,6 +259,8 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
           campaign.public_id::text AS campaign_public_id,
           campaign.key AS campaign_key,
           touchpoint.lead_public_id::text,
+          touchpoint.business_entity_type,
+          touchpoint.business_entity_public_id::text,
           touchpoint.channel,
           touchpoint.contact_value,
           touchpoint.source,
@@ -290,6 +316,8 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
       campaignPublicId: row.campaign_public_id,
       campaignKey: row.campaign_key,
       leadPublicId: row.lead_public_id,
+      businessEntityType: row.business_entity_type,
+      businessEntityPublicId: row.business_entity_public_id,
       channel: row.channel,
       contactValue: row.contact_value,
       source: row.source,

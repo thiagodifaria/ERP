@@ -7,6 +7,7 @@ type IntegrationsExecutiveSummary struct {
 	ActiveOutboundProviders int    `json:"activeOutboundProviders"`
 	InboundLeads            int    `json:"inboundLeads"`
 	WorkflowDispatches      int    `json:"workflowDispatches"`
+	BusinessLinkedEvents    int    `json:"businessLinkedEvents"`
 	FailedProviderEvents    int    `json:"failedProviderEvents"`
 	DeadLetterEvents        int    `json:"deadLetterEvents"`
 	OpenProviderRisks       int    `json:"openProviderRisks"`

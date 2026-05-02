@@ -32,6 +32,12 @@ export class InMemoryProviderEventRepository implements ProviderEventRepository 
       if (filters.status && event.status !== filters.status) {
         return false;
       }
+      if (filters.businessEntityType && event.businessEntityType !== filters.businessEntityType) {
+        return false;
+      }
+      if (filters.businessEntityPublicId && event.businessEntityPublicId !== filters.businessEntityPublicId) {
+        return false;
+      }
 
       return true;
     });
@@ -67,6 +73,8 @@ export class InMemoryProviderEventRepository implements ProviderEventRepository 
       direction: normalized.direction,
       externalEventId: normalized.externalEventId || null,
       leadPublicId: normalized.leadPublicId ?? null,
+      businessEntityType: normalized.businessEntityType ?? null,
+      businessEntityPublicId: normalized.businessEntityPublicId ?? null,
       touchpointPublicId: normalized.touchpointPublicId ?? null,
       deliveryPublicId: normalized.deliveryPublicId ?? null,
       workflowRunPublicId: normalized.workflowRunPublicId ?? null,

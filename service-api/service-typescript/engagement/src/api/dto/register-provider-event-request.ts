@@ -7,6 +7,8 @@ export type RegisterProviderEventRequest = {
   deliveryPublicId?: string | null;
   workflowRunPublicId?: string | null;
   leadPublicId?: string | null;
+  businessEntityType?: string | null;
+  businessEntityPublicId?: string | null;
   providerMessageId?: string | null;
   payloadSummary?: string;
   responseSummary?: string;

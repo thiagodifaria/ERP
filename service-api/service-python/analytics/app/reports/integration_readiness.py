@@ -33,6 +33,7 @@ def build_static_integration_readiness(tenant_slug: str | None = None) -> dict:
             "conversionsTracked": 1,
             "processedProviderEvents": 6,
             "failedProviderEvents": 1,
+            "businessEntityLinkedEvents": 6,
         },
         "webhookHub": {
             "pendingEvents": 1,
@@ -44,6 +45,7 @@ def build_static_integration_readiness(tenant_slug: str | None = None) -> dict:
             "leadIntakeReady": True,
             "workflowDispatchReady": True,
             "callbackTraceabilityReady": True,
+            "businessEntityLinkageReady": True,
             "externalAdaptersPrepared": True,
             "openProviderRisks": 1,
         },
@@ -82,6 +84,7 @@ def build_postgres_integration_readiness(tenant_slug: str | None = None) -> dict
             "conversionsTracked": provider_metrics["conversionsTracked"],
             "processedProviderEvents": provider_metrics["processedProviderEvents"],
             "failedProviderEvents": provider_metrics["failedProviderEvents"],
+            "businessEntityLinkedEvents": provider_metrics["businessEntityLinkedEvents"],
         },
         "webhookHub": {
             "pendingEvents": webhook_metrics["pendingEvents"],
@@ -93,6 +96,7 @@ def build_postgres_integration_readiness(tenant_slug: str | None = None) -> dict
             "leadIntakeReady": provider_metrics["inboundLeads"] > 0,
             "workflowDispatchReady": provider_metrics["workflowDispatches"] > 0,
             "callbackTraceabilityReady": (provider_metrics["responsesTracked"] + provider_metrics["conversionsTracked"]) > 0,
+            "businessEntityLinkageReady": provider_metrics["businessEntityLinkedEvents"] > 0,
             "externalAdaptersPrepared": provider_metrics["configuredProviders"] >= 3,
             "openProviderRisks": open_provider_risks,
         },
@@ -113,6 +117,7 @@ def fetch_provider_metrics(connection, tenant_slug: str | None) -> dict:
             count(*) FILTER (WHERE event.event_type = 'delivery.converted') AS conversions_tracked,
             count(*) FILTER (WHERE event.status = 'processed') AS processed_provider_events,
             count(*) FILTER (WHERE event.status = 'failed') AS failed_provider_events,
+            count(*) FILTER (WHERE event.business_entity_public_id IS NOT NULL) AS business_linked_events,
             count(*) FILTER (WHERE event.provider = 'resend') AS resend_events,
             count(*) FILTER (WHERE event.provider = 'whatsapp_cloud') AS whatsapp_events,
             count(*) FILTER (WHERE event.provider = 'telegram_bot') AS telegram_events,
@@ -141,6 +146,7 @@ def fetch_provider_metrics(connection, tenant_slug: str | None) -> dict:
         "conversionsTracked": int(row.get("conversions_tracked", 0) or 0),
         "processedProviderEvents": int(row.get("processed_provider_events", 0) or 0),
         "failedProviderEvents": int(row.get("failed_provider_events", 0) or 0),
+        "businessEntityLinkedEvents": int(row.get("business_linked_events", 0) or 0),
     }
 
 

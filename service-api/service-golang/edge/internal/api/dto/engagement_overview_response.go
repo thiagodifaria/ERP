@@ -11,6 +11,8 @@ type EngagementExecutiveSummary struct {
 	DeliveredDeliveries  int     `json:"deliveredDeliveries"`
 	FailedDeliveries     int     `json:"failedDeliveries"`
 	ConvertedTouchpoints int     `json:"convertedTouchpoints"`
+	BusinessLinked       int     `json:"businessLinked"`
+	ProviderLinkedEvents int     `json:"providerLinkedEvents"`
 	DeliveryRate         float64 `json:"deliveryRate"`
 }
 

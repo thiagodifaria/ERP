@@ -1,6 +1,8 @@
 import { CampaignRepository } from "../domain/campaign-repository.js";
 import {
   CreateTouchpointInput,
+  ensureBusinessEntityPublicId,
+  ensureBusinessEntityType,
   ensurePublicId,
   ensureTouchpointText
 } from "../domain/touchpoint.js";
@@ -28,6 +30,8 @@ export class CreateTouchpoint {
       channel: campaign.channel,
       workflowDefinitionKey: campaign.workflowDefinitionKey,
       leadPublicId: ensurePublicId(input.leadPublicId, "lead_public_id_invalid"),
+      businessEntityType: ensureBusinessEntityType(input.businessEntityType) ?? "crm.lead",
+      businessEntityPublicId: ensureBusinessEntityPublicId(input.businessEntityPublicId) ?? ensurePublicId(input.leadPublicId, "lead_public_id_invalid"),
       contactValue: ensureTouchpointText(input.contactValue, "touchpoint_contact_value_required"),
       source: ensureTouchpointText(input.source, "touchpoint_source_required"),
       createdBy: ensureTouchpointText(input.createdBy, "touchpoint_created_by_required"),

@@ -36,6 +36,14 @@ func TestEngagementOverviewReturnsExecutiveCockpit(t *testing.T) {
 		t.Fatalf("expected templates 2, got %d", response.ExecutiveSummary.Templates)
 	}
 
+	if response.ExecutiveSummary.BusinessLinked != 4 {
+		t.Fatalf("expected business linked touchpoints 4, got %d", response.ExecutiveSummary.BusinessLinked)
+	}
+
+	if response.ExecutiveSummary.ProviderLinkedEvents != 3 {
+		t.Fatalf("expected provider linked events 3, got %d", response.ExecutiveSummary.ProviderLinkedEvents)
+	}
+
 	if response.ExecutiveSummary.DeliveryRate != 0.75 {
 		t.Fatalf("expected delivery rate 0.75, got %f", response.ExecutiveSummary.DeliveryRate)
 	}
@@ -110,7 +118,11 @@ func (reader engagementOverviewReader) GetJSON(_ context.Context, requestURL str
 				"total": 2,
 			},
 			"touchpoints": map[string]any{
-				"converted": 1,
+				"converted":      1,
+				"businessLinked": 4,
+			},
+			"providers": map[string]any{
+				"businessLinkedEvents": 3,
 			},
 			"deliveries": map[string]any{
 				"total":        4,

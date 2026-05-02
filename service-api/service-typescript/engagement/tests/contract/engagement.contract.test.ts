@@ -114,10 +114,17 @@ test("touchpoint routes expose list, creation and summary", async () => {
         notes: "Teste publico do contrato."
       })
     });
-    const createdTouchpoint = (await createResponse.json()) as { publicId: string; status: string };
+    const createdTouchpoint = (await createResponse.json()) as {
+      publicId: string;
+      status: string;
+      businessEntityType: string;
+      businessEntityPublicId: string;
+    };
 
     assert.equal(createResponse.status, 201);
     assert.equal(createdTouchpoint.status, "queued");
+    assert.equal(createdTouchpoint.businessEntityType, "crm.lead");
+    assert.equal(createdTouchpoint.businessEntityPublicId, "00000000-0000-0000-0000-000000008851");
 
     const statusResponse = await fetch(`${baseUrl}/api/engagement/touchpoints/${createdTouchpoint.publicId}/status`, {
       method: "PATCH",
@@ -135,13 +142,14 @@ test("touchpoint routes expose list, creation and summary", async () => {
 
     const summaryResponse = await fetch(`${baseUrl}/api/engagement/touchpoints/summary?tenantSlug=bootstrap-ops`);
     const summaryPayload = (await summaryResponse.json()) as {
-      totals: { touchpoints: number; workflowDispatched: number };
+      totals: { touchpoints: number; workflowDispatched: number; businessLinked: number };
       byStatus: { responded: number };
     };
 
     assert.equal(summaryResponse.status, 200);
     assert.equal(summaryPayload.totals.touchpoints, 2);
     assert.equal(summaryPayload.totals.workflowDispatched, 2);
+    assert.equal(summaryPayload.totals.businessLinked, 2);
     assert.equal(summaryPayload.byStatus.responded, 2);
   });
 });
@@ -288,11 +296,19 @@ test("provider routes expose callback detail and traceability", async () => {
     assert.equal(callbackPayload.status, "processed");
 
     const detailResponse = await fetch(`${baseUrl}/api/engagement/provider-events/${callbackPayload.publicId}`);
-    const detailPayload = (await detailResponse.json()) as { publicId: string; eventType: string; responseSummary: string };
+    const detailPayload = (await detailResponse.json()) as {
+      publicId: string;
+      eventType: string;
+      responseSummary: string;
+      businessEntityType: string;
+      businessEntityPublicId: string;
+    };
 
     assert.equal(detailResponse.status, 200);
     assert.equal(detailPayload.publicId, callbackPayload.publicId);
     assert.equal(detailPayload.eventType, "delivery.responded");
+    assert.equal(detailPayload.businessEntityType, "crm.lead");
+    assert.equal(detailPayload.businessEntityPublicId, "00000000-0000-0000-0000-000000008851");
     assert.ok(detailPayload.responseSummary.length > 0);
   });
 });

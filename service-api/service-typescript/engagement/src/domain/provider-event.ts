@@ -15,6 +15,8 @@ export type ProviderEvent = {
   direction: ProviderEventDirection;
   externalEventId: string | null;
   leadPublicId: string | null;
+  businessEntityType: string | null;
+  businessEntityPublicId: string | null;
   touchpointPublicId: string | null;
   deliveryPublicId: string | null;
   workflowRunPublicId: string | null;
@@ -31,6 +33,8 @@ export type ProviderEventFilters = {
   eventType?: string;
   direction?: ProviderEventDirection;
   status?: ProviderEventStatus;
+  businessEntityType?: string;
+  businessEntityPublicId?: string;
 };
 
 export type CreateProviderEventInput = {
@@ -40,6 +44,8 @@ export type CreateProviderEventInput = {
   direction: ProviderEventDirection;
   externalEventId?: string | null;
   leadPublicId?: string | null;
+  businessEntityType?: string | null;
+  businessEntityPublicId?: string | null;
   touchpointPublicId?: string | null;
   deliveryPublicId?: string | null;
   workflowRunPublicId?: string | null;
@@ -121,6 +127,19 @@ function ensureOptionalPublicId(value: string | null | undefined, errorCode: str
   return normalized.toLowerCase();
 }
 
+function ensureOptionalBusinessEntityType(value: string | null | undefined): string | null {
+  const normalized = ensureText(value).toLowerCase();
+  if (normalized.length === 0) {
+    return null;
+  }
+
+  if (!/^[a-z0-9_.-]{3,80}$/.test(normalized)) {
+    throw new Error("business_entity_type_invalid");
+  }
+
+  return normalized;
+}
+
 export function ensureProviderEventInput(input: CreateProviderEventInput): CreateProviderEventInput {
   const tenantSlug = ensureText(input.tenantSlug);
   if (tenantSlug.length === 0) {
@@ -134,6 +153,8 @@ export function ensureProviderEventInput(input: CreateProviderEventInput): Creat
     direction: ensureProviderDirection(input.direction),
     externalEventId: ensureText(input.externalEventId),
     leadPublicId: ensureOptionalPublicId(input.leadPublicId, "lead_public_id_invalid"),
+    businessEntityType: ensureOptionalBusinessEntityType(input.businessEntityType),
+    businessEntityPublicId: ensureOptionalPublicId(input.businessEntityPublicId, "business_entity_public_id_invalid"),
     touchpointPublicId: ensureOptionalPublicId(input.touchpointPublicId, "touchpoint_public_id_invalid"),
     deliveryPublicId: ensureOptionalPublicId(input.deliveryPublicId, "delivery_public_id_invalid"),
     workflowRunPublicId: ensureOptionalPublicId(input.workflowRunPublicId, "touchpoint_workflow_run_public_id_invalid"),

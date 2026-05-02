@@ -8,6 +8,8 @@ export interface TouchpointRepository {
       campaignKey: string;
       channel: Touchpoint["channel"];
       workflowDefinitionKey: string | null;
+      businessEntityType: string | null;
+      businessEntityPublicId: string | null;
     }
   ): Promise<Touchpoint>;
   updateStatus(

@@ -41,6 +41,7 @@ def build_static_engagement_operations(tenant_slug: str | None = None) -> dict:
             "converted": 3,
             "failed": 1,
             "workflowDispatched": 11,
+            "businessLinked": 18,
         },
         "deliveries": {
             "total": 17,
@@ -70,11 +71,14 @@ def build_static_engagement_operations(tenant_slug: str | None = None) -> dict:
             "inboundLeads": 3,
             "workflowDispatches": 4,
             "responsesTracked": 2,
+            "businessLinkedEvents": 6,
         },
         "governance": {
             "templateLinked": 15,
             "activeProviders": 4,
             "providerCapabilitiesReady": 3,
+            "businessEntityLinkedTouchpoints": 18,
+            "businessEntityLinkedEvents": 6,
         },
     }
 
@@ -102,6 +106,8 @@ def build_postgres_engagement_operations(tenant_slug: str | None = None) -> dict
             "templateLinked": deliveries["templateLinked"],
             "activeProviders": deliveries["activeProviders"],
             "providerCapabilitiesReady": providers["configured"],
+            "businessEntityLinkedTouchpoints": touchpoints["businessLinked"],
+            "businessEntityLinkedEvents": providers["businessLinkedEvents"],
         },
     }
 
@@ -163,7 +169,8 @@ def fetch_touchpoint_metrics(connection, tenant_slug: str | None) -> dict:
             count(*) FILTER (WHERE touchpoint.status = 'responded') AS responded,
             count(*) FILTER (WHERE touchpoint.status = 'converted') AS converted,
             count(*) FILTER (WHERE touchpoint.status = 'failed') AS failed,
-            count(*) FILTER (WHERE touchpoint.last_workflow_run_public_id IS NOT NULL) AS workflow_dispatched
+            count(*) FILTER (WHERE touchpoint.last_workflow_run_public_id IS NOT NULL) AS workflow_dispatched,
+            count(*) FILTER (WHERE touchpoint.business_entity_public_id IS NOT NULL) AS business_linked
         FROM engagement.touchpoints AS touchpoint
         JOIN identity.tenants AS tenant ON tenant.id = touchpoint.tenant_id
         {filter_sql}
@@ -180,6 +187,7 @@ def fetch_touchpoint_metrics(connection, tenant_slug: str | None) -> dict:
         "converted": int(row.get("converted", 0) or 0),
         "failed": int(row.get("failed", 0) or 0),
         "workflowDispatched": int(row.get("workflow_dispatched", 0) or 0),
+        "businessLinked": int(row.get("business_linked", 0) or 0),
     }
 
 
@@ -244,6 +252,7 @@ def fetch_provider_event_metrics(connection, tenant_slug: str | None) -> dict:
             count(*) FILTER (WHERE event.event_type = 'lead.ingested') AS inbound_leads,
             count(*) FILTER (WHERE event.event_type = 'workflow.dispatched') AS workflow_dispatches,
             count(*) FILTER (WHERE event.event_type = 'delivery.responded') AS responses_tracked,
+            count(*) FILTER (WHERE event.business_entity_public_id IS NOT NULL) AS business_linked_events,
             count(*) FILTER (WHERE event.provider = 'resend') AS resend_configured,
             count(*) FILTER (WHERE event.provider = 'whatsapp_cloud') AS whatsapp_configured,
             count(*) FILTER (WHERE event.provider = 'telegram_bot') AS telegram_configured,
@@ -271,6 +280,7 @@ def fetch_provider_event_metrics(connection, tenant_slug: str | None) -> dict:
         "inboundLeads": int(row.get("inbound_leads", 0) or 0),
         "workflowDispatches": int(row.get("workflow_dispatches", 0) or 0),
         "responsesTracked": int(row.get("responses_tracked", 0) or 0),
+        "businessLinkedEvents": int(row.get("business_linked_events", 0) or 0),
         "configured": configured,
         "fallbackEnabled": 1 if int(row.get("fallback_events", 0) or 0) > 0 else 0,
     }

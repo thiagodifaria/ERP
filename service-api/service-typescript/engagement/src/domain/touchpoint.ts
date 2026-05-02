@@ -10,6 +10,8 @@ export type Touchpoint = {
   campaignPublicId: string;
   campaignKey: string;
   leadPublicId: string;
+  businessEntityType: string | null;
+  businessEntityPublicId: string | null;
   channel: CampaignChannel;
   contactValue: string;
   source: string;
@@ -28,12 +30,16 @@ export type TouchpointFilters = {
   status?: TouchpointStatus;
   channel?: CampaignChannel;
   leadPublicId?: string;
+  businessEntityType?: string;
+  businessEntityPublicId?: string;
 };
 
 export type CreateTouchpointInput = {
   tenantSlug: string;
   campaignPublicId: string;
   leadPublicId: string;
+  businessEntityType?: string | null;
+  businessEntityPublicId?: string | null;
   contactValue: string;
   source: string;
   createdBy: string;
@@ -53,6 +59,7 @@ export type TouchpointSummary = {
     touchpoints: number;
     workflowConfigured: number;
     workflowDispatched: number;
+    businessLinked: number;
   };
   byStatus: Record<TouchpointStatus, number>;
   byChannel: Record<CampaignChannel, number>;
@@ -91,7 +98,8 @@ export function buildTouchpointSummary(
       campaigns: campaignIds.size,
       touchpoints: touchpoints.length,
       workflowConfigured: touchpoints.filter((touchpoint) => touchpoint.workflowDefinitionKey !== null).length,
-      workflowDispatched: touchpoints.filter((touchpoint) => touchpoint.lastWorkflowRunPublicId !== null).length
+      workflowDispatched: touchpoints.filter((touchpoint) => touchpoint.lastWorkflowRunPublicId !== null).length,
+      businessLinked: touchpoints.filter((touchpoint) => touchpoint.businessEntityPublicId !== null).length
     },
     byStatus,
     byChannel,
@@ -143,4 +151,26 @@ export function ensureOptionalPublicId(value: string | null | undefined): string
 
 export function ensureTouchpointText(value: string, errorCode: string): string {
   return ensureText(value, errorCode);
+}
+
+export function ensureBusinessEntityType(value: string | null | undefined): string | null {
+  const normalizedValue = (value ?? "").trim().toLowerCase();
+
+  if (normalizedValue.length === 0) {
+    return null;
+  }
+
+  if (!/^[a-z0-9_.-]{3,80}$/.test(normalizedValue)) {
+    throw new Error("business_entity_type_invalid");
+  }
+
+  return normalizedValue;
+}
+
+export function ensureBusinessEntityPublicId(value: string | null | undefined): string | null {
+  if (value == null || value.trim().length === 0) {
+    return null;
+  }
+
+  return ensurePublicId(value, "business_entity_public_id_invalid");
 }
