@@ -2,7 +2,7 @@
 
 ![ERP](https://img.shields.io/badge/ERP-Enterprise%20Platform-111827?style=for-the-badge&logo=github&logoColor=white)
 
-**Polyglot ERP platform for identity, CRM, sales, workflows, analytics and operational automation**
+**Polyglot ERP platform for identity, CRM, sales, workflows, analytics, contracts and operational automation**
 
 [![Go](https://img.shields.io/badge/Go-edge%20crm%20sales-00ADD8?style=flat&logo=go&logoColor=white)](https://go.dev/)
 [![.NET](https://img.shields.io/badge/.NET-identity-512BD4?style=flat&logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
@@ -34,7 +34,7 @@ ERP is a portfolio-grade enterprise platform built to feel like a serious intern
 
 The project is also the public evolution of ERP structures already used in real business environments. Here, that experience is being turned into a reusable template, a study case, a portfolio centerpiece and a public enterprise ERP reference.
 
-The current milestone is already a real MVP. The platform now has an end-to-end commercial, contractual and automation slice connecting `identity`, `crm`, `sales`, `rentals`, `documents`, `finance`, `billing`, `workflow-control`, `workflow-runtime`, `analytics`, `webhook-hub` and `edge` with PostgreSQL-backed flows and container-first validation.
+The current milestone is already a real MVP. The platform now has an end-to-end commercial, contractual and automation slice connecting `identity`, `crm`, `sales`, `rentals`, `documents`, `finance`, `billing`, `workflow-control`, `workflow-runtime`, `analytics`, `catalog`, `platform-control`, `webhook-hub` and `edge` with PostgreSQL-backed flows, versioned integration contracts and container-first validation.
 
 ### Key Highlights
 
@@ -42,6 +42,7 @@ The current milestone is already a real MVP. The platform now has an end-to-end 
 - evolution of real ERP implementation experience into a reusable platform reference
 - identity, CRM, sales and automation already connected in the same operational flow
 - bounded PostgreSQL schemas with migrations and seeds per context
+- versioned OpenAPI and event schemas living alongside the services they describe
 - `edge` exposing platform, automation and sales cockpits
 - `analytics` exposing pipeline, sales and tenant-wide operational reports
 - unit, integration, contract and smoke validation running in containers
@@ -55,6 +56,7 @@ Monorepo organized by language and bounded service ownership
 Domain-owned PostgreSQL schemas, migrations and bootstrap seeds
 Container-first validation across unit, integration, contract and smoke layers
 Commercial flow already connected from lead capture to sale conversion
+Capability, entitlement and contract governance treated as first-class platform concerns
 Operational dashboards exposed through analytics and edge aggregation
 CI/CD workflows prepared for GitHub Actions and GHCR publishing
 ```
@@ -108,6 +110,8 @@ docker compose --env-file .env.example -f infra/docker-compose.yml up --build -d
 - Simulation: `http://localhost:8094`
 - Billing: `http://localhost:8095`
 - Rentals: `http://localhost:8096`
+- Catalog: `http://localhost:8097`
+- Platform Control: `http://localhost:8098`
 - PostgreSQL: `localhost:5432` by default
 - Redis: `localhost:6379` by default
 
@@ -123,6 +127,8 @@ The current MVP is backend-first and already covers a complete vertical slice:
 - opportunity pipeline, proposal lifecycle, sale conversion and revenue transitions in `sales`
 - workflow catalog, publication, runs and operational events in `workflow-control`
 - execution lifecycle, retries and transitions in `workflow-runtime`
+- category and item governance in `catalog`
+- entitlement, metering and tenant lifecycle operations in `platform-control`
 - sales, tenant and automation reports in `analytics`
 - aggregated operational cockpits in `edge`
 - webhook intake and delivery transition tracking in `webhook-hub`
@@ -146,6 +152,8 @@ For the complete service-by-service presentation, use the detailed guides:
 | Sales | `POST /api/sales/proposals/{publicId}/convert` | Convert an accepted proposal into a sale |
 | Workflow Control | `POST /api/workflow-control/runs` | Create a workflow run for a business subject |
 | Workflow Runtime | `POST /api/workflow-runtime/executions` | Create a runtime execution from a workflow definition |
+| Catalog | `POST /api/catalog/items` | Create a catalog item linked to a business category |
+| Platform Control | `PUT /api/platform-control/tenants/{tenantSlug}/entitlements/{capabilityKey}` | Upsert tenant entitlements and capability posture |
 | Analytics | `GET /api/analytics/reports/sales-journey` | Read the commercial funnel from lead to sale |
 | Analytics | `GET /api/analytics/reports/tenant-360` | Read a consolidated tenant snapshot |
 | Edge | `GET /api/edge/ops/automation-overview` | Read the operational automation cockpit |
@@ -164,6 +172,8 @@ More details are available in the service references:
 - [service-api/service-typescript/workflow-control/README.md](service-api/service-typescript/workflow-control/README.md)
 - [service-api/service-elixir/workflow-runtime/README.md](service-api/service-elixir/workflow-runtime/README.md)
 - [service-api/service-python/analytics/README.md](service-api/service-python/analytics/README.md)
+- [service-api/service-python/catalog/README.md](service-api/service-python/catalog/README.md)
+- [service-api/service-python/platform-control/README.md](service-api/service-python/platform-control/README.md)
 - [service-api/service-python/simulation/README.md](service-api/service-python/simulation/README.md)
 - [service-api/service-rust/webhook-hub/README.md](service-api/service-rust/webhook-hub/README.md)
 - [service-api/service-golang/edge/README.md](service-api/service-golang/edge/README.md)

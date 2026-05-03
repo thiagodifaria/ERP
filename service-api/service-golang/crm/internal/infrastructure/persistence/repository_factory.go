@@ -42,6 +42,7 @@ func (factory *InMemoryTenantRepositoryFactory) ForTenant(tenantSlug string) (re
 		LeadRepository:              NewInMemoryLeadRepository(slug),
 		LeadNoteRepository:          NewInMemoryLeadNoteRepository(slug),
 		CustomerRepository:          NewInMemoryCustomerRepository(slug),
+		PipelineConfigRepository:    NewInMemoryPipelineConfigRepository(),
 		RelationshipEventRepository: NewInMemoryRelationshipEventRepository(slug),
 		OutboxEventRepository:       NewInMemoryOutboxEventRepository(slug),
 	}
@@ -86,6 +87,11 @@ func (factory *PostgresTenantRepositoryFactory) ForTenant(tenantSlug string) (re
 		return repository.TenantRepositorySet{}, err
 	}
 
+	pipelineConfigRepository, err := NewPostgresPipelineConfigRepository(factory.database, slug)
+	if err != nil {
+		return repository.TenantRepositorySet{}, err
+	}
+
 	eventRepository, err := NewPostgresRelationshipEventRepository(factory.database, slug)
 	if err != nil {
 		return repository.TenantRepositorySet{}, err
@@ -100,6 +106,7 @@ func (factory *PostgresTenantRepositoryFactory) ForTenant(tenantSlug string) (re
 		LeadRepository:              leadRepository,
 		LeadNoteRepository:          leadNoteRepository,
 		CustomerRepository:          customerRepository,
+		PipelineConfigRepository:    pipelineConfigRepository,
 		RelationshipEventRepository: eventRepository,
 		OutboxEventRepository:       outboxRepository,
 	}, nil

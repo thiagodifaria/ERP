@@ -426,6 +426,46 @@ services:
     ports:
       - "${SIMULATION_HTTP_PORT}:8094"
 
+  catalog:
+    build:
+      context: ../service-api/service-python/catalog
+    container_name: erp-catalog
+    environment:
+      CATALOG_HTTP_PORT: "8097"
+      CATALOG_REPOSITORY_DRIVER: "postgres"
+      CATALOG_BOOTSTRAP_TENANT_SLUG: "${CATALOG_BOOTSTRAP_TENANT_SLUG}"
+      CATALOG_POSTGRES_HOST: "service-postgresql"
+      CATALOG_POSTGRES_PORT: "5432"
+      ERP_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      ERP_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      ERP_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      CATALOG_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+    ports:
+      - "${CATALOG_HTTP_PORT}:8097"
+
+  platform-control:
+    build:
+      context: ../service-api/service-python/platform-control
+    container_name: erp-platform-control
+    environment:
+      PLATFORM_CONTROL_HTTP_PORT: "8098"
+      PLATFORM_CONTROL_REPOSITORY_DRIVER: "postgres"
+      PLATFORM_CONTROL_BOOTSTRAP_TENANT_SLUG: "${PLATFORM_CONTROL_BOOTSTRAP_TENANT_SLUG}"
+      PLATFORM_CONTROL_POSTGRES_HOST: "service-postgresql"
+      PLATFORM_CONTROL_POSTGRES_PORT: "5432"
+      ERP_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      ERP_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      ERP_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      PLATFORM_CONTROL_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+    ports:
+      - "${PLATFORM_CONTROL_HTTP_PORT}:8098"
+
   identity:
     build:
       context: ../service-api/service-csharp/identity

@@ -1,0 +1,75 @@
+openapi: 3.1.0
+info:
+  title: ERP Catalog API
+  version: 0.1.0
+  description: Product and service catalog with categories, activation and versioned items.
+paths:
+  /api/catalog/capabilities:
+    get:
+      summary: Read catalog capability posture
+      responses:
+        "200":
+          description: Catalog capability document
+  /api/catalog/categories:
+    get:
+      summary: List categories by tenant
+      parameters:
+        - in: query
+          name: tenant_slug
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Category list
+    post:
+      summary: Create one category
+      responses:
+        "200":
+          description: Created category
+  /api/catalog/items:
+    get:
+      summary: List catalog items
+      parameters:
+        - in: query
+          name: tenant_slug
+          schema:
+            type: string
+        - in: query
+          name: item_type
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Catalog item list
+    post:
+      summary: Create one catalog item
+      responses:
+        "200":
+          description: Created catalog item
+  /api/catalog/items/{publicId}:
+    get:
+      summary: Read one catalog item
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Catalog item detail
+        "404":
+          description: Catalog item not found
+    patch:
+      summary: Update active state, price and attributes
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Updated catalog item
+        "404":
+          description: Catalog item not found

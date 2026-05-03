@@ -40,7 +40,7 @@ Este repositorio tambem e a evolucao publica de estruturas de ERP ja aplicadas e
 - um projeto de portfolio com escopo realista
 - uma referencia de ERP empresarial em formato publico e extensivel
 
-O marco atual ja e um MVP backend-first real. A plataforma agora expoe um corte vertical comercial, contratual e de automacao conectando `identity`, `crm`, `sales`, `rentals`, `documents`, `finance`, `billing`, `workflow-control`, `workflow-runtime`, `analytics`, `webhook-hub` e `edge`.
+O marco atual ja e um MVP backend-first real. A plataforma agora expoe um corte vertical comercial, contratual e de automacao conectando `identity`, `crm`, `sales`, `rentals`, `documents`, `finance`, `billing`, `workflow-control`, `workflow-runtime`, `analytics`, `catalog`, `platform-control`, `webhook-hub` e `edge`.
 
 ---
 
@@ -53,6 +53,8 @@ Hoje o MVP ja inclui:
 - ciclo de oportunidade, proposta e venda em `sales`
 - catalogo de definicoes, versionamento, runs e eventos operacionais em `workflow-control`
 - execucoes runtime, retries e ledger de transicoes em `workflow-runtime`
+- governanca de categorias e itens em `catalog`
+- entitlement, metering e lifecycle de tenant em `platform-control`
 - relatorios operacionais agregados em `analytics`
 - intake de webhooks e rastreio de transicoes em `webhook-hub`
 - cockpits operacionais em `edge`
@@ -117,6 +119,8 @@ A stack e poliglota por decisao arquitetural, nao por estetica.
 | `workflow-control` | TypeScript | definicoes, versoes, runs e eventos | APIs de controle e ledger operacional |
 | `workflow-runtime` | Elixir | execucao duravel, transicoes e retries | runtime de automacao e resumo de execucoes |
 | `analytics` | Python | leituras operacionais pesadas e relatorios | relatorios de vendas, tenant e automacao |
+| `catalog` | Python | categorias, itens e postura de catalogo do core de produto | APIs reutilizaveis de classificacao e inventario |
+| `platform-control` | Python | entitlements, metering e jobs de lifecycle do tenant | governanca de capabilities e orquestracao de ciclo de vida |
 | `webhook-hub` | Rust | intake de webhooks e transicoes de entrega | ingestao de eventos externos |
 | `edge` | Go | agregacao entre servicos e cockpit publico | health, tenant, automacao e overview comercial |
 
@@ -167,6 +171,7 @@ Principais rotas:
 
 - `GET /api/crm/leads`
 - `GET /api/crm/leads/summary`
+- `GET /api/crm/leads/intelligence/summary`
 - `POST /api/crm/leads`
 - `GET /api/crm/leads/{publicId}`
 - `PATCH /api/crm/leads/{publicId}`
@@ -174,6 +179,8 @@ Principais rotas:
 - `PATCH /api/crm/leads/{publicId}/status`
 - `GET /api/crm/leads/{publicId}/notes`
 - `POST /api/crm/leads/{publicId}/notes`
+- `GET /api/crm/pipeline/config`
+- `PUT /api/crm/pipeline/config`
 
 ### Sales
 
@@ -245,6 +252,32 @@ Principais rotas:
 - `GET /api/analytics/reports/automation-board`
 - `GET /api/analytics/reports/workflow-definition-health`
 - `GET /api/analytics/reports/delivery-reliability`
+- `GET /api/analytics/reports/adapter-catalog`
+
+### Catalog
+
+Principais rotas:
+
+- `GET /api/catalog/capabilities`
+- `GET /api/catalog/categories`
+- `POST /api/catalog/categories`
+- `GET /api/catalog/items`
+- `POST /api/catalog/items`
+- `GET /api/catalog/items/{publicId}`
+- `PATCH /api/catalog/items/{publicId}`
+
+### Platform Control
+
+Principais rotas:
+
+- `GET /api/platform-control/capabilities/catalog`
+- `GET /api/platform-control/tenants/{tenantSlug}/entitlements`
+- `PUT /api/platform-control/tenants/{tenantSlug}/entitlements/{capabilityKey}`
+- `GET /api/platform-control/tenants/{tenantSlug}/metering`
+- `POST /api/platform-control/tenants/{tenantSlug}/metering/snapshots`
+- `GET /api/platform-control/tenants/{tenantSlug}/lifecycle/jobs`
+- `POST /api/platform-control/tenants/{tenantSlug}/lifecycle/onboarding`
+- `POST /api/platform-control/tenants/{tenantSlug}/lifecycle/offboarding`
 
 ### Edge
 
@@ -254,6 +287,8 @@ Principais rotas:
 - `GET /api/edge/ops/tenant-overview`
 - `GET /api/edge/ops/automation-overview`
 - `GET /api/edge/ops/sales-overview`
+- `GET /api/edge/ops/integrations-overview`
+- `GET /api/edge/ops/hardening-overview`
 
 ### Webhook Hub
 
@@ -318,6 +353,14 @@ docker compose --env-file .env.example -f infra/docker-compose.yml up --build -d
 - Workflow Runtime: `http://localhost:8085`
 - Analytics: `http://localhost:8086`
 - Sales: `http://localhost:8087`
+- Engagement: `http://localhost:8088`
+- Finance: `http://localhost:8092`
+- Documents: `http://localhost:8093`
+- Simulation: `http://localhost:8094`
+- Billing: `http://localhost:8095`
+- Rentals: `http://localhost:8096`
+- Catalog: `http://localhost:8097`
+- Platform Control: `http://localhost:8098`
 - PostgreSQL: `localhost:5432` por padrao
 - Redis: `localhost:6379` por padrao
 
@@ -354,6 +397,8 @@ Imagens esperadas:
 - `ghcr.io/thiagodifaria/erp-workflow-control`
 - `ghcr.io/thiagodifaria/erp-workflow-runtime`
 - `ghcr.io/thiagodifaria/erp-analytics`
+- `ghcr.io/thiagodifaria/erp-catalog`
+- `ghcr.io/thiagodifaria/erp-platform-control`
 - `ghcr.io/thiagodifaria/erp-webhook-hub`
 
 ---

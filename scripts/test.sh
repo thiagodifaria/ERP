@@ -98,6 +98,8 @@ prepare_runtime_ports() {
   remap_host_port_if_needed "FINANCE_HTTP_PORT" "finance"
   remap_host_port_if_needed "DOCUMENTS_HTTP_PORT" "documents"
   remap_host_port_if_needed "RENTALS_HTTP_PORT" "rentals"
+  remap_host_port_if_needed "CATALOG_HTTP_PORT" "catalog"
+  remap_host_port_if_needed "PLATFORM_CONTROL_HTTP_PORT" "platform-control"
 }
 
 prepare_runtime_ports
@@ -189,6 +191,18 @@ run_python_unit() {
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache simulation.egg-info"
+
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-python/catalog:/workspace" \
+    -w /workspace \
+    python:3.12-slim \
+    sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache catalog.egg-info"
+
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-python/platform-control:/workspace" \
+    -w /workspace \
+    python:3.12-slim \
+    sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache platform_control.egg-info"
 }
 
 run_dotnet_build() {
@@ -634,6 +648,41 @@ code = (
 ) % 1000000
 print(f"{code:06d}")
 PY
+}
+
+extract_json_field() {
+  local field_path="$1"
+
+  if command -v python3 >/dev/null 2>&1; then
+    python3 -c '
+import json
+import sys
+
+field_path = sys.argv[1].split(".")
+payload = json.load(sys.stdin)
+
+value = payload
+for field in field_path:
+    value = value[field]
+
+print(value)
+' "$field_path"
+    return
+  fi
+
+  docker run --rm -i python:3.12-alpine python -c '
+import json
+import sys
+
+field_path = sys.argv[1].split(".")
+payload = json.load(sys.stdin)
+
+value = payload
+for field in field_path:
+    value = value[field]
+
+print(value)
+' "$field_path"
 }
 
 run_documents_runtime_smoke() {
@@ -2650,7 +2699,7 @@ run_analytics_runtime_smoke() {
     exit 1
   fi
 
-  if [[ "$integration_readiness_response" != *'"tenantSlug":"bootstrap-ops"'* || "$integration_readiness_response" != *'"dataSource":"postgresql"'* || "$integration_readiness_response" != *'"configured":1'* || "$integration_readiness_response" != *'"activeInboundProviders":1'* || "$integration_readiness_response" != *'"activeOutboundProviders":1'* || "$integration_readiness_response" != *'"fallbackEnabled":false'* || "$integration_readiness_response" != *'"contractArtifacts":7'* || "$integration_readiness_response" != *'"criticalUnconfiguredCapabilities":4'* || "$integration_readiness_response" != *'"inboundLeads":0'* || "$integration_readiness_response" != *'"workflowDispatches":1'* || "$integration_readiness_response" != *'"responsesTracked":1'* || "$integration_readiness_response" != *'"conversionsTracked":0'* || "$integration_readiness_response" != *'"processedProviderEvents":3'* || "$integration_readiness_response" != *'"failedProviderEvents":0'* || "$integration_readiness_response" != *'"businessEntityLinkedEvents":3'* || "$integration_readiness_response" != *'"pendingEvents":0'* || "$integration_readiness_response" != *'"deadLetterEvents":1'* || "$integration_readiness_response" != *'"status":"attention"'* || "$integration_readiness_response" != *'"leadIntakeReady":false'* || "$integration_readiness_response" != *'"workflowDispatchReady":true'* || "$integration_readiness_response" != *'"callbackTraceabilityReady":true'* || "$integration_readiness_response" != *'"businessEntityLinkageReady":true'* || "$integration_readiness_response" != *'"externalAdaptersPrepared":false'* || "$integration_readiness_response" != *'"openProviderRisks":5'* || "$adapter_catalog_response" != *'"configuredCapabilities":1'* || "$adapter_catalog_response" != *'"fallbackCapabilities":6'* || "$adapter_catalog_response" != *'"criticalUnconfiguredCapabilities":4'* ]]; then
+  if [[ "$integration_readiness_response" != *'"tenantSlug":"bootstrap-ops"'* || "$integration_readiness_response" != *'"dataSource":"postgresql"'* || "$integration_readiness_response" != *'"configured":1'* || "$integration_readiness_response" != *'"activeInboundProviders":1'* || "$integration_readiness_response" != *'"activeOutboundProviders":1'* || "$integration_readiness_response" != *'"fallbackEnabled":false'* || "$integration_readiness_response" != *'"contractArtifacts":11'* || "$integration_readiness_response" != *'"criticalUnconfiguredCapabilities":4'* || "$integration_readiness_response" != *'"inboundLeads":0'* || "$integration_readiness_response" != *'"workflowDispatches":1'* || "$integration_readiness_response" != *'"responsesTracked":1'* || "$integration_readiness_response" != *'"conversionsTracked":0'* || "$integration_readiness_response" != *'"processedProviderEvents":3'* || "$integration_readiness_response" != *'"failedProviderEvents":0'* || "$integration_readiness_response" != *'"businessEntityLinkedEvents":3'* || "$integration_readiness_response" != *'"pendingEvents":0'* || "$integration_readiness_response" != *'"deadLetterEvents":1'* || "$integration_readiness_response" != *'"status":"attention"'* || "$integration_readiness_response" != *'"leadIntakeReady":false'* || "$integration_readiness_response" != *'"workflowDispatchReady":true'* || "$integration_readiness_response" != *'"callbackTraceabilityReady":true'* || "$integration_readiness_response" != *'"businessEntityLinkageReady":true'* || "$integration_readiness_response" != *'"externalAdaptersPrepared":false'* || "$integration_readiness_response" != *'"openProviderRisks":5'* || "$adapter_catalog_response" != *'"configuredCapabilities":1'* || "$adapter_catalog_response" != *'"fallbackCapabilities":6'* || "$adapter_catalog_response" != *'"criticalUnconfiguredCapabilities":4'* ]]; then
     echo "[test] analytics integration readiness report did not expose the expected payload"
     exit 1
   fi
@@ -2660,7 +2709,7 @@ run_analytics_runtime_smoke() {
     exit 1
   fi
 
-  if [[ "$service_pulse_response" != *'"providerEvents":3'* || "$service_pulse_response" != *'"inboundLeads":0'* || "$service_pulse_response" != *'"deadLetter":1'* || "$tenant_360_response" != *'"providerEvents":3'* || "$tenant_360_response" != *'"inboundLeads":0'* || "$platform_reliability_response" != *'"tenantSlug":"bootstrap-ops"'* || "$platform_reliability_response" != *'"dataSource":"postgresql"'* || "$platform_reliability_response" != *'"status":"attention"'* || "$platform_reliability_response" != *'"pendingWebhookEvents":0'* || "$platform_reliability_response" != *'"deadLetterEvents":1'* || "$platform_reliability_response" != *'"failedWorkflowExecutions":0'* || "$platform_reliability_response" != *'"criticalRecoveryCases":0'* || "$platform_reliability_response" != *'"failedPaymentAttempts":2'* || "$platform_reliability_response" != *'"webhookForwardingRate":0.3333'* || "$platform_reliability_response" != *'"workflowSuccessRate":1.0'* || "$platform_reliability_response" != *'"billingRecoveryRate":1.0'* || "$platform_reliability_response" != *'"backupRestoreValidated":true'* || "$platform_reliability_response" != *'"dlqReady":true'* || "$platform_reliability_response" != *'"openCriticalRisks":1'* || "$hardening_review_response" != *'"tenantSlug":"bootstrap-ops"'* || "$hardening_review_response" != *'"dataSource":"postgresql"'* || "$hardening_review_response" != *'"status":"critical"'* || "$hardening_review_response" != *'"stableChecks":7'* || "$hardening_review_response" != *'"attentionChecks":3'* || "$hardening_review_response" != *'"criticalChecks":1'* || "$hardening_review_response" != *'"criticalProviderGaps":4'* || "$hardening_review_response" != *'"httpSpecs":4'* || "$hardening_review_response" != *'"mfaEnabledUsers":0'* || "$hardening_review_response" != *'"activeSessions":0'* || "$hardening_review_response" != *'"auditEvents":0'* || "$hardening_review_response" != *'"validated":true'* || "$hardening_review_response" != *'"webhookForwardingRate":0.3333'* || "$hardening_review_response" != *'"latestBenchmarkStatus":"stable"'* || "$hardening_review_response" != *'"sessionEnforcementReady":false'* || "$hardening_review_response" != *'"auditTrailReady":false'* ]]; then
+  if [[ "$service_pulse_response" != *'"providerEvents":3'* || "$service_pulse_response" != *'"inboundLeads":0'* || "$service_pulse_response" != *'"deadLetter":1'* || "$tenant_360_response" != *'"providerEvents":3'* || "$tenant_360_response" != *'"inboundLeads":0'* || "$platform_reliability_response" != *'"tenantSlug":"bootstrap-ops"'* || "$platform_reliability_response" != *'"dataSource":"postgresql"'* || "$platform_reliability_response" != *'"status":"attention"'* || "$platform_reliability_response" != *'"pendingWebhookEvents":0'* || "$platform_reliability_response" != *'"deadLetterEvents":1'* || "$platform_reliability_response" != *'"failedWorkflowExecutions":0'* || "$platform_reliability_response" != *'"criticalRecoveryCases":0'* || "$platform_reliability_response" != *'"failedPaymentAttempts":2'* || "$platform_reliability_response" != *'"webhookForwardingRate":0.3333'* || "$platform_reliability_response" != *'"workflowSuccessRate":1.0'* || "$platform_reliability_response" != *'"billingRecoveryRate":1.0'* || "$platform_reliability_response" != *'"backupRestoreValidated":true'* || "$platform_reliability_response" != *'"dlqReady":true'* || "$platform_reliability_response" != *'"openCriticalRisks":1'* || "$hardening_review_response" != *'"tenantSlug":"bootstrap-ops"'* || "$hardening_review_response" != *'"dataSource":"postgresql"'* || "$hardening_review_response" != *'"status":"critical"'* || "$hardening_review_response" != *'"stableChecks":7'* || "$hardening_review_response" != *'"attentionChecks":3'* || "$hardening_review_response" != *'"criticalChecks":1'* || "$hardening_review_response" != *'"criticalProviderGaps":4'* || "$hardening_review_response" != *'"httpSpecs":7'* || "$hardening_review_response" != *'"mfaEnabledUsers":0'* || "$hardening_review_response" != *'"activeSessions":0'* || "$hardening_review_response" != *'"auditEvents":0'* || "$hardening_review_response" != *'"validated":true'* || "$hardening_review_response" != *'"webhookForwardingRate":0.3333'* || "$hardening_review_response" != *'"latestBenchmarkStatus":"stable"'* || "$hardening_review_response" != *'"sessionEnforcementReady":false'* || "$hardening_review_response" != *'"auditTrailReady":false'* ]]; then
     echo "[test] analytics platform reliability report did not expose the expected payload"
     exit 1
   fi
@@ -2718,6 +2767,106 @@ run_simulation_runtime_smoke() {
 
   if [[ "$health_details_response" != *'"name":"scenario-engine","status":"ready"'* || "$health_details_response" != *'"name":"postgresql","status":"ready"'* || "$health_details_response" != *'"name":"cost-model","status":"ready"'* || "$catalog_response" != *'"service":"simulation"'* || "$catalog_response" != *'"key":"operational-load"'* || "$catalog_response" != *'"key":"load-benchmark"'* || -z "$scenario_public_id" || "$create_scenario_response" != *'"tenantSlug":"bootstrap-ops"'* || "$create_scenario_response" != *'"leadsProjected":4'* || "$create_scenario_response" != *'"workflowRunsProjected":14'* || "$create_scenario_response" != *'"storageProjectedMb":2096'* || "$create_scenario_response" != *'"estimatedMonthlyCostCents":34992'* || "$create_scenario_response" != *'"risk":"attention"'* || "$scenario_list_response" != *"\"publicId\":\"$scenario_public_id\""* || "$scenario_detail_response" != *"\"publicId\":\"$scenario_public_id\""* || "$create_benchmark_response" != *'"tenantSlug":"bootstrap-ops"'* || "$create_benchmark_response" != *'"sampleSize":120'* || "$create_benchmark_response" != *'"avgLatencyMs":56'* || "$create_benchmark_response" != *'"p95LatencyMs":103'* || "$create_benchmark_response" != *'"throughputRps":62.22'* || "$create_benchmark_response" != *'"status":"stable"'* || "$benchmark_list_response" != *'"publicId"'* || "$benchmark_list_response" != *'"status":"stable"'* || "$simulation_db_summary" != '1|1' ]]; then
     echo "[test] simulation runtime foundation did not return the expected payload"
+    exit 1
+  fi
+}
+
+run_catalog_runtime_smoke() {
+  local base_url="http://localhost:${CATALOG_HTTP_PORT:-8097}"
+  local capabilities_response
+  local category_response
+  local item_response
+  local detail_response
+  local update_response
+  local list_response
+  local db_summary
+  local created_public_id
+  local category_public_id
+
+  "${COMPOSE_CMD[@]}" up -d --build catalog
+  wait_for_http_ready "$base_url/health/ready"
+
+  capabilities_response="$(curl -fsS "$base_url/api/catalog/capabilities")"
+  category_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"tenantSlug":"bootstrap-ops","key":"software","name":"Software"}' "$base_url/api/catalog/categories")"
+  category_public_id="$(printf '%s' "$category_response" | extract_json_field "publicId")"
+  item_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d "{\"tenantSlug\":\"bootstrap-ops\",\"categoryPublicId\":\"$category_public_id\",\"sku\":\"ERP-SAAS-001\",\"name\":\"ERP SaaS Suite\",\"itemType\":\"service\",\"unitCode\":\"seat\",\"priceBaseCents\":19900,\"attributes\":{\"billingMode\":\"monthly\"}}" "$base_url/api/catalog/items")"
+  created_public_id="$(printf '%s' "$item_response" | extract_json_field "publicId")"
+  detail_response="$(curl -fsS "$base_url/api/catalog/items/$created_public_id?tenant_slug=bootstrap-ops")"
+  update_response="$(curl -fsS -X PATCH -H "Content-Type: application/json" -d '{"tenantSlug":"bootstrap-ops","priceBaseCents":24900,"active":false,"attributes":{"billingMode":"annual"}}' "$base_url/api/catalog/items/$created_public_id")"
+  list_response="$(curl -fsS "$base_url/api/catalog/items?tenant_slug=bootstrap-ops&item_type=service")"
+  db_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        tenant.slug || '|' ||
+        (SELECT count(*) FROM catalog.categories AS category WHERE category.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM catalog.items AS item WHERE item.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM catalog.items AS item WHERE item.tenant_id = tenant.id AND item.item_type = 'service') || '|' ||
+        (SELECT count(*) FROM catalog.items AS item WHERE item.tenant_id = tenant.id AND item.active = false)
+      FROM identity.tenants AS tenant
+      WHERE tenant.slug = 'bootstrap-ops'
+      LIMIT 1;
+    ")"
+
+  echo "[test] catalog capabilities => $capabilities_response"
+  echo "[test] catalog category => $category_response"
+  echo "[test] catalog create => $item_response"
+  echo "[test] catalog detail => $detail_response"
+  echo "[test] catalog update => $update_response"
+  echo "[test] catalog list => $list_response"
+  echo "[test] catalog db summary => $db_summary"
+
+  if [[ "$capabilities_response" != *'"supportsCategories":true'* || "$category_response" != *'"key":"software"'* || -z "$created_public_id" || "$item_response" != *'"sku":"ERP-SAAS-001"'* || "$detail_response" != *'"itemType":"service"'* || "$update_response" != *'"priceBaseCents":24900'* || "$update_response" != *'"active":false'* || "$list_response" != *'"billingMode":"annual"'* || "$db_summary" != 'bootstrap-ops|1|1|1|1' ]]; then
+    echo "[test] catalog runtime state did not expose the expected product catalog cycle"
+    exit 1
+  fi
+}
+
+run_platform_control_runtime_smoke() {
+  local base_url="http://localhost:${PLATFORM_CONTROL_HTTP_PORT:-8098}"
+  local catalog_response
+  local entitlement_response
+  local entitlements_response
+  local metering_create_response
+  local metering_response
+  local onboarding_response
+  local offboarding_response
+  local jobs_response
+  local db_summary
+
+  "${COMPOSE_CMD[@]}" up -d --build platform-control
+  wait_for_http_ready "$base_url/health/ready"
+
+  catalog_response="$(curl -fsS "$base_url/api/platform-control/capabilities/catalog")"
+  entitlement_response="$(curl -fsS -X PUT -H "Content-Type: application/json" -d '{"enabled":true,"planCode":"growth","limitValue":2500,"source":"billing-plan"}' "$base_url/api/platform-control/tenants/bootstrap-ops/entitlements/catalog.items")"
+  entitlements_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/entitlements")"
+  metering_create_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"metricKey":"documents.storage_bytes","metricUnit":"bytes","quantity":1048576,"source":"documents"}' "$base_url/api/platform-control/tenants/bootstrap-ops/metering/snapshots")"
+  metering_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/metering")"
+  onboarding_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"requestedBy":"ops@bootstrap-ops.local","payload":{"seed":"saas-growth"}}' "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/onboarding")"
+  offboarding_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"requestedBy":"ops@bootstrap-ops.local","payload":{"mode":"export-only"}}' "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/offboarding")"
+  jobs_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/jobs")"
+  db_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql psql -U "$DB_USER" -d "$DB_NAME" -At -c "
+      SELECT
+        tenant.slug || '|' ||
+        (SELECT count(*) FROM platform_control.entitlements AS entitlement WHERE entitlement.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM platform_control.usage_snapshots AS snapshot WHERE snapshot.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM platform_control.lifecycle_jobs AS job WHERE job.tenant_id = tenant.id AND job.job_type = 'onboarding') || '|' ||
+        (SELECT count(*) FROM platform_control.lifecycle_jobs AS job WHERE job.tenant_id = tenant.id AND job.job_type = 'offboarding')
+      FROM identity.tenants AS tenant
+      WHERE tenant.slug = 'bootstrap-ops'
+      LIMIT 1;
+    ")"
+
+  echo "[test] platform-control catalog => $catalog_response"
+  echo "[test] platform-control entitlement => $entitlement_response"
+  echo "[test] platform-control entitlements => $entitlements_response"
+  echo "[test] platform-control metering create => $metering_create_response"
+  echo "[test] platform-control metering => $metering_response"
+  echo "[test] platform-control onboarding => $onboarding_response"
+  echo "[test] platform-control offboarding => $offboarding_response"
+  echo "[test] platform-control jobs => $jobs_response"
+  echo "[test] platform-control db summary => $db_summary"
+
+  if [[ "$catalog_response" != *'"capabilityKey":"catalog.items"'* || "$entitlement_response" != *'"planCode":"growth"'* || "$entitlements_response" != *'"capabilityKey":"catalog.items"'* || "$metering_create_response" != *'"metricKey":"documents.storage_bytes"'* || "$metering_response" != *'"totalQuantity":1048576'* || "$onboarding_response" != *'"jobType":"onboarding"'* || "$offboarding_response" != *'"jobType":"offboarding"'* || "$jobs_response" != *'"requestedBy":"ops@bootstrap-ops.local"'* || "$db_summary" != 'bootstrap-ops|1|1|1|1' ]]; then
+    echo "[test] platform-control runtime state did not expose the expected SaaS lifecycle cycle"
     exit 1
   fi
 }
@@ -3436,7 +3585,7 @@ run_edge_runtime_smoke() {
     exit 1
   fi
 
-  if [[ "$integrations_overview_response" != *'"service":"edge"'* || "$integrations_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$integrations_overview_response" != *'"status":"attention"'* || "$integrations_overview_response" != *'"configuredProviders":1'* || "$integrations_overview_response" != *'"activeInboundProviders":1'* || "$integrations_overview_response" != *'"activeOutboundProviders":1'* || "$integrations_overview_response" != *'"inboundLeads":0'* || "$integrations_overview_response" != *'"workflowDispatches":1'* || "$integrations_overview_response" != *'"businessLinkedEvents":3'* || "$integrations_overview_response" != *'"failedProviderEvents":0'* || "$integrations_overview_response" != *'"deadLetterEvents":1'* || "$integrations_overview_response" != *'"openProviderRisks":5'* || "$integrations_overview_response" != *'"criticalProviderGaps":4'* || "$integrations_overview_response" != *'"contractArtifacts":7'* || "$integrations_overview_response" != *'"integrationReadiness"'* ]]; then
+  if [[ "$integrations_overview_response" != *'"service":"edge"'* || "$integrations_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$integrations_overview_response" != *'"status":"attention"'* || "$integrations_overview_response" != *'"configuredProviders":1'* || "$integrations_overview_response" != *'"activeInboundProviders":1'* || "$integrations_overview_response" != *'"activeOutboundProviders":1'* || "$integrations_overview_response" != *'"inboundLeads":0'* || "$integrations_overview_response" != *'"workflowDispatches":1'* || "$integrations_overview_response" != *'"businessLinkedEvents":3'* || "$integrations_overview_response" != *'"failedProviderEvents":0'* || "$integrations_overview_response" != *'"deadLetterEvents":1'* || "$integrations_overview_response" != *'"openProviderRisks":5'* || "$integrations_overview_response" != *'"criticalProviderGaps":4'* || "$integrations_overview_response" != *'"contractArtifacts":11'* || "$integrations_overview_response" != *'"integrationReadiness"'* ]]; then
     echo "[test] edge integrations cockpit did not aggregate the expected live payload"
     exit 1
   fi
@@ -3446,7 +3595,7 @@ run_edge_runtime_smoke() {
     exit 1
   fi
 
-  if [[ "$platform_reliability_overview_response" != *'"service":"edge"'* || "$platform_reliability_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$platform_reliability_overview_response" != *'"pendingWebhookEvents":0'* || "$platform_reliability_overview_response" != *'"deadLetterEvents":1'* || "$platform_reliability_overview_response" != *'"failedWorkflowExecutions":0'* || "$platform_reliability_overview_response" != *'"criticalRecoveryCases":0'* || "$platform_reliability_overview_response" != *'"failedPaymentAttempts":2'* || "$platform_reliability_overview_response" != *'"webhookForwardingRateBps":3333'* || "$platform_reliability_overview_response" != *'"workflowSuccessRateBps":10000'* || "$platform_reliability_overview_response" != *'"billingRecoveryRateBps":10000'* || "$platform_reliability_overview_response" != *'"openCriticalRisks":1'* || "$platform_reliability_overview_response" != *'"platformReliability"'* || "$hardening_overview_response" != *'"service":"edge"'* || "$hardening_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$hardening_overview_response" != *'"stableChecks":7'* || "$hardening_overview_response" != *'"attentionChecks":3'* || "$hardening_overview_response" != *'"criticalChecks":1'* || "$hardening_overview_response" != *'"deadLetterEvents":1'* || "$hardening_overview_response" != *'"failedPaymentAttempts":2'* || "$hardening_overview_response" != *'"criticalProviderGaps":4'* || "$hardening_overview_response" != *'"httpSpecs":4'* || "$hardening_overview_response" != *'"latestBenchmarkStatus":"stable"'* || "$hardening_overview_response" != *'"backupRestoreValidated":true'* || "$hardening_overview_response" != *'"hardeningReview"'* ]]; then
+  if [[ "$platform_reliability_overview_response" != *'"service":"edge"'* || "$platform_reliability_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$platform_reliability_overview_response" != *'"pendingWebhookEvents":0'* || "$platform_reliability_overview_response" != *'"deadLetterEvents":1'* || "$platform_reliability_overview_response" != *'"failedWorkflowExecutions":0'* || "$platform_reliability_overview_response" != *'"criticalRecoveryCases":0'* || "$platform_reliability_overview_response" != *'"failedPaymentAttempts":2'* || "$platform_reliability_overview_response" != *'"webhookForwardingRateBps":3333'* || "$platform_reliability_overview_response" != *'"workflowSuccessRateBps":10000'* || "$platform_reliability_overview_response" != *'"billingRecoveryRateBps":10000'* || "$platform_reliability_overview_response" != *'"openCriticalRisks":1'* || "$platform_reliability_overview_response" != *'"platformReliability"'* || "$hardening_overview_response" != *'"service":"edge"'* || "$hardening_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$hardening_overview_response" != *'"stableChecks":7'* || "$hardening_overview_response" != *'"attentionChecks":3'* || "$hardening_overview_response" != *'"criticalChecks":1'* || "$hardening_overview_response" != *'"deadLetterEvents":1'* || "$hardening_overview_response" != *'"failedPaymentAttempts":2'* || "$hardening_overview_response" != *'"criticalProviderGaps":4'* || "$hardening_overview_response" != *'"httpSpecs":7'* || "$hardening_overview_response" != *'"latestBenchmarkStatus":"stable"'* || "$hardening_overview_response" != *'"backupRestoreValidated":true'* || "$hardening_overview_response" != *'"hardeningReview"'* ]]; then
     echo "[test] edge platform reliability cockpit did not aggregate the expected live payload"
     exit 1
   fi
@@ -3482,6 +3631,8 @@ run_smoke() {
   export FINANCE_HTTP_PORT="${FINANCE_HTTP_PORT_SMOKE:-18092}"
   export DOCUMENTS_HTTP_PORT="${DOCUMENTS_HTTP_PORT_SMOKE:-18093}"
   export RENTALS_HTTP_PORT="${RENTALS_HTTP_PORT_SMOKE:-18096}"
+  export CATALOG_HTTP_PORT="${CATALOG_HTTP_PORT_SMOKE:-18097}"
+  export PLATFORM_CONTROL_HTTP_PORT="${PLATFORM_CONTROL_HTTP_PORT_SMOKE:-18098}"
   bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
   "${COMPOSE_CMD[@]}" ps
   run_platform_runtime_smoke
@@ -3497,6 +3648,8 @@ run_smoke() {
   run_billing_runtime_smoke
   run_engagement_runtime_smoke
   run_simulation_runtime_smoke
+  run_catalog_runtime_smoke
+  run_platform_control_runtime_smoke
   run_analytics_runtime_smoke
   run_identity_runtime_smoke
   run_edge_runtime_smoke

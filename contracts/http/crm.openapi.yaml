@@ -1,0 +1,33 @@
+openapi: 3.1.0
+info:
+  title: ERP CRM API
+  version: 0.2.0
+  description: CRM leads, customers, activity, attachments and commercial intelligence.
+paths:
+  /api/crm/pipeline/config:
+    get:
+      summary: Read tenant pipeline configuration
+      parameters:
+        - in: query
+          name: tenantSlug
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Pipeline configuration
+    put:
+      summary: Upsert tenant pipeline configuration
+      responses:
+        "200":
+          description: Upserted pipeline configuration
+  /api/crm/leads/intelligence/summary:
+    get:
+      summary: Read lead scoring and pipeline intelligence summary
+      parameters:
+        - in: query
+          name: tenantSlug
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lead intelligence summary

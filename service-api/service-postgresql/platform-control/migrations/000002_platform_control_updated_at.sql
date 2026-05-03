@@ -1,0 +1,5 @@
+DROP TRIGGER IF EXISTS trg_platform_control_entitlements_updated_at ON platform_control.entitlements;
+CREATE TRIGGER trg_platform_control_entitlements_updated_at
+BEFORE UPDATE ON platform_control.entitlements
+FOR EACH ROW
+EXECUTE FUNCTION common_set_updated_at();

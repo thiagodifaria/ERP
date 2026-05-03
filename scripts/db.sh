@@ -163,6 +163,8 @@ Usage:
   ./scripts/db.sh migrate documents
   ./scripts/db.sh migrate analytics
   ./scripts/db.sh migrate simulation
+  ./scripts/db.sh migrate catalog
+  ./scripts/db.sh migrate platform-control
   ./scripts/db.sh migrate engagement
   ./scripts/db.sh migrate webhook-hub
   ./scripts/db.sh migrate workflow-control
@@ -185,6 +187,8 @@ Usage:
   ./scripts/db.sh summary documents [tenant-slug]
   ./scripts/db.sh summary analytics [tenant-slug]
   ./scripts/db.sh summary simulation [tenant-slug]
+  ./scripts/db.sh summary catalog [tenant-slug]
+  ./scripts/db.sh summary platform-control [tenant-slug]
   ./scripts/db.sh summary engagement [tenant-slug]
   ./scripts/db.sh summary webhook-hub
   ./scripts/db.sh summary workflow-control [tenant-slug]
@@ -234,6 +238,12 @@ main() {
         simulation)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/simulation/migrations"
           ;;
+        catalog)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/catalog/migrations"
+          ;;
+        platform-control)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/platform-control/migrations"
+          ;;
         engagement)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/migrations"
           ;;
@@ -257,6 +267,8 @@ main() {
           apply_directory "$ROOT_DIR/service-api/service-postgresql/documents/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/analytics/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/simulation/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/catalog/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/platform-control/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/webhook-hub/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/migrations"
@@ -583,6 +595,49 @@ main() {
               tenant.slug,
               (SELECT count(*) FROM simulation.scenario_runs AS scenario WHERE scenario.tenant_id = tenant.id) AS scenarios,
               (SELECT count(*) FROM simulation.load_benchmark_runs AS benchmark WHERE benchmark.tenant_id = tenant.id) AS load_benchmarks
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
+          ;;
+        catalog)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM catalog.categories AS category WHERE category.tenant_id = tenant.id) AS categories,
+              (SELECT count(*) FROM catalog.items AS item WHERE item.tenant_id = tenant.id) AS items,
+              (SELECT count(*) FROM catalog.items AS item WHERE item.tenant_id = tenant.id AND item.item_type = 'product') AS products,
+              (SELECT count(*) FROM catalog.items AS item WHERE item.tenant_id = tenant.id AND item.item_type = 'service') AS services,
+              (SELECT count(*) FROM catalog.items AS item WHERE item.tenant_id = tenant.id AND item.active) AS active_items
+            FROM identity.tenants AS tenant
+            $where_clause
+            ORDER BY tenant.slug;
+          "
+          ;;
+        platform-control)
+          local tenant_slug="${3:-}"
+          local where_clause=""
+
+          if [[ -n "$tenant_slug" ]]; then
+            where_clause="WHERE tenant.slug = '$tenant_slug'"
+          fi
+
+          run_psql_query "
+            SELECT
+              tenant.slug,
+              (SELECT count(*) FROM platform_control.entitlements AS entitlement WHERE entitlement.tenant_id = tenant.id) AS entitlements,
+              (SELECT count(*) FROM platform_control.entitlements AS entitlement WHERE entitlement.tenant_id = tenant.id AND entitlement.enabled) AS enabled_entitlements,
+              (SELECT count(*) FROM platform_control.usage_snapshots AS snapshot WHERE snapshot.tenant_id = tenant.id) AS usage_snapshots,
+              (SELECT count(*) FROM platform_control.lifecycle_jobs AS job WHERE job.tenant_id = tenant.id) AS lifecycle_jobs,
+              (SELECT count(*) FROM platform_control.lifecycle_jobs AS job WHERE job.tenant_id = tenant.id AND job.job_type = 'onboarding') AS onboarding_jobs,
+              (SELECT count(*) FROM platform_control.lifecycle_jobs AS job WHERE job.tenant_id = tenant.id AND job.job_type = 'offboarding') AS offboarding_jobs
             FROM identity.tenants AS tenant
             $where_clause
             ORDER BY tenant.slug;

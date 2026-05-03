@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erp/contracts/events/catalog.item.schema.json",
+  "title": "catalog.item",
+  "type": "object",
+  "required": ["tenantSlug", "publicId", "sku", "itemType", "active"],
+  "properties": {
+    "tenantSlug": { "type": "string" },
+    "publicId": { "type": "string" },
+    "sku": { "type": "string" },
+    "itemType": { "type": "string", "enum": ["product", "service"] },
+    "active": { "type": "boolean" }
+  }
+}

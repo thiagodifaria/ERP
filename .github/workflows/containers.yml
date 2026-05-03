@@ -42,6 +42,10 @@ jobs:
             context: service-api/service-python/analytics
           - image: simulation
             context: service-api/service-python/simulation
+          - image: catalog
+            context: service-api/service-python/catalog
+          - image: platform-control
+            context: service-api/service-python/platform-control
           - image: webhook-hub
             context: service-api/service-rust/webhook-hub
     steps:

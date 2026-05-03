@@ -1,0 +1,101 @@
+openapi: 3.1.0
+info:
+  title: ERP Platform Control API
+  version: 0.1.0
+  description: Tenant capabilities, entitlements, metering and lifecycle operations.
+paths:
+  /api/platform-control/capabilities/catalog:
+    get:
+      summary: List platform capability catalog
+      responses:
+        "200":
+          description: Capability catalog
+  /api/platform-control/tenants/{tenantSlug}/entitlements:
+    get:
+      summary: List tenant entitlements
+      parameters:
+        - in: path
+          name: tenantSlug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Entitlement list
+  /api/platform-control/tenants/{tenantSlug}/entitlements/{capabilityKey}:
+    put:
+      summary: Upsert one entitlement
+      parameters:
+        - in: path
+          name: tenantSlug
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: capabilityKey
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Upserted entitlement
+  /api/platform-control/tenants/{tenantSlug}/metering:
+    get:
+      summary: Read metering snapshots and summary
+      parameters:
+        - in: path
+          name: tenantSlug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Metering summary
+  /api/platform-control/tenants/{tenantSlug}/metering/snapshots:
+    post:
+      summary: Create one usage snapshot
+      parameters:
+        - in: path
+          name: tenantSlug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Created usage snapshot
+  /api/platform-control/tenants/{tenantSlug}/lifecycle/jobs:
+    get:
+      summary: List onboarding and offboarding jobs
+      parameters:
+        - in: path
+          name: tenantSlug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lifecycle jobs
+  /api/platform-control/tenants/{tenantSlug}/lifecycle/onboarding:
+    post:
+      summary: Queue onboarding job
+      parameters:
+        - in: path
+          name: tenantSlug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Queued onboarding job
+  /api/platform-control/tenants/{tenantSlug}/lifecycle/offboarding:
+    post:
+      summary: Queue offboarding job
+      parameters:
+        - in: path
+          name: tenantSlug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Queued offboarding job

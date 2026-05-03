@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erp/contracts/events/platform-control.lifecycle-job.schema.json",
+  "title": "platform-control.lifecycle-job",
+  "type": "object",
+  "required": ["tenantSlug", "publicId", "jobType", "status", "requestedBy"],
+  "properties": {
+    "tenantSlug": { "type": "string" },
+    "publicId": { "type": "string" },
+    "jobType": { "type": "string", "enum": ["onboarding", "offboarding"] },
+    "status": { "type": "string", "enum": ["queued", "running", "completed", "failed", "cancelled"] },
+    "requestedBy": { "type": "string" }
+  }
+}

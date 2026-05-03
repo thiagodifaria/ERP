@@ -158,9 +158,9 @@ def build_contract_catalog() -> dict:
     return {
         "service": "contracts",
         "summary": {
-            "artifacts": 7,
-            "httpSpecs": 4,
-            "eventSchemas": 2,
+            "artifacts": 11,
+            "httpSpecs": 7,
+            "eventSchemas": 4,
             "adrRecorded": True,
             "centralUiReady": True,
         }

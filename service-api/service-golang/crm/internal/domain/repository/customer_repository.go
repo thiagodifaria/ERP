@@ -13,6 +13,7 @@ type TenantRepositorySet struct {
 	LeadRepository              LeadRepository
 	LeadNoteRepository          LeadNoteRepository
 	CustomerRepository          CustomerRepository
+	PipelineConfigRepository    PipelineConfigRepository
 	RelationshipEventRepository RelationshipEventRepository
 	OutboxEventRepository       OutboxEventRepository
 }

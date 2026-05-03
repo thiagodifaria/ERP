@@ -9,6 +9,12 @@ Centralizar os artefatos de integracao do backend em um lugar versionado e previ
 - `contracts/http/`: specs OpenAPI por servico
 - `contracts/events/`: schemas JSON para eventos e payloads compartilhados
 
+## Baseline atual
+
+- specs HTTP publicos ja versionados para servicos centrais como `identity`, `crm`, `sales`, `workflow-control`, `catalog` e `platform-control`
+- schemas de evento para trilhas de workflow, lifecycle de tenant e publicacao de item de catalogo
+- artefatos suficientes para alimentar governanca de integracao, smoke mais forte e uma futura UI agregada de navegacao e teste
+
 ## Regras operacionais
 
 - endpoint publico novo deve nascer com artefato correspondente quando ele fizer parte da superficie de integracao
