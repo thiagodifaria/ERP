@@ -20,7 +20,7 @@ def load_settings() -> Settings:
     return Settings(
         service_name=os.getenv("PLATFORM_CONTROL_SERVICE_NAME", "platform-control"),
         http_port=int(os.getenv("PLATFORM_CONTROL_HTTP_PORT", "8098")),
-        repository_driver=os.getenv("PLATFORM_CONTROL_REPOSITORY_DRIVER", "postgres"),
+        repository_driver=os.getenv("PLATFORM_CONTROL_REPOSITORY_DRIVER", "memory"),
         bootstrap_tenant_slug=os.getenv("PLATFORM_CONTROL_BOOTSTRAP_TENANT_SLUG", "bootstrap-ops"),
         postgres_host=os.getenv("PLATFORM_CONTROL_POSTGRES_HOST", "service-postgresql"),
         postgres_port=int(os.getenv("PLATFORM_CONTROL_POSTGRES_PORT", "5432")),

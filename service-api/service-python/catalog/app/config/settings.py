@@ -20,7 +20,7 @@ def load_settings() -> Settings:
     return Settings(
         service_name=os.getenv("CATALOG_SERVICE_NAME", "catalog"),
         http_port=int(os.getenv("CATALOG_HTTP_PORT", "8097")),
-        repository_driver=os.getenv("CATALOG_REPOSITORY_DRIVER", "postgres"),
+        repository_driver=os.getenv("CATALOG_REPOSITORY_DRIVER", "memory"),
         bootstrap_tenant_slug=os.getenv("CATALOG_BOOTSTRAP_TENANT_SLUG", "bootstrap-ops"),
         postgres_host=os.getenv("CATALOG_POSTGRES_HOST", "service-postgresql"),
         postgres_port=int(os.getenv("CATALOG_POSTGRES_PORT", "5432")),

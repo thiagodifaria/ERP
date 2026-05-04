@@ -4,6 +4,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from app.config.settings import settings
+from app.reports.contract_governance import (
+    FALLBACK_ADRS,
+    FALLBACK_EVENT_SCHEMAS,
+    FALLBACK_HTTP_SPECS,
+)
+from app.reports.repo_root import try_resolve_repo_root
 
 
 def build_adapter_catalog() -> dict:
@@ -235,12 +241,19 @@ def build_webhook_hub_capabilities() -> dict:
 
 
 def build_contract_catalog() -> dict:
-    root = Path(__file__).resolve().parents[5]
-    http_specs = sorted((root / "contracts" / "http").glob("*.yaml"))
-    event_schemas = sorted((root / "contracts" / "events").glob("*.json"))
-    adr_docs = sorted((root / "docs").glob("ADR-*.md"))
-    api_portal_ready = (root / "docs" / "API_PORTAL.md").exists()
-    registry_ready = (root / "contracts" / "registry.json").exists()
+    root = try_resolve_repo_root(Path(__file__))
+    if root is not None:
+        http_specs = [item.name for item in sorted((root / "contracts" / "http").glob("*.yaml"))]
+        event_schemas = [item.name for item in sorted((root / "contracts" / "events").glob("*.json"))]
+        adr_docs = [item.name for item in sorted((root / "docs").glob("ADR-*.md"))]
+        api_portal_ready = (root / "docs" / "API_PORTAL.md").exists()
+        registry_ready = (root / "contracts" / "registry.json").exists()
+    else:
+        http_specs = FALLBACK_HTTP_SPECS
+        event_schemas = FALLBACK_EVENT_SCHEMAS
+        adr_docs = FALLBACK_ADRS
+        api_portal_ready = True
+        registry_ready = True
 
     return {
         "service": "contracts",
@@ -252,8 +265,8 @@ def build_contract_catalog() -> dict:
             "centralUiReady": api_portal_ready,
             "schemaRegistryReady": registry_ready,
         },
-        "httpSpecs": [spec.name for spec in http_specs],
-        "eventSchemas": [schema.name for schema in event_schemas],
+        "httpSpecs": http_specs,
+        "eventSchemas": event_schemas,
     }
 
 
