@@ -7,6 +7,8 @@ Current structure:
 - `http/`: OpenAPI documents for public HTTP surfaces
 - `events/`: JSON Schemas for cross-service event payloads
 - `registry.json`: simple machine-readable artifact index
+- `schema-registry.json`: materialized event schema registry
+- `portal/`: central navigable API portal baseline
 - `../docs/VERSIONAMENTO_CONTRATOS.md`: compatibility and versioning baseline
 
 Current baseline:
@@ -22,4 +24,4 @@ Contract rules:
 - idempotent or async patterns must be documented alongside the HTTP surface
 - cursor pagination and partial success should be explicit whenever the route follows those patterns
 - artifacts here are intended to back future aggregated API UI and schema registry workflows
-- `docs/API_PORTAL.md` documents the next step for a central navigable API portal
+- `contracts/portal/index.html` is the versioned baseline for a central navigable API portal

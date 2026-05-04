@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 import json
+import os
 import uuid
 
 from app.config.settings import settings
@@ -15,6 +16,7 @@ IN_MEMORY_STATE = {
     "job_events": [],
     "quotas": [],
     "blocks": [],
+    "provider_defaults": [],
 }
 
 CAPABILITY_CATALOG = [
@@ -33,6 +35,144 @@ CAPABILITY_CATALOG = [
     {"capabilityKey": "webhook_hub.outbound_webhooks", "module": "webhook-hub", "defaultEnabled": True, "category": "integration"},
 ]
 
+PROVIDER_CATALOG = [
+    {
+        "capabilityKey": "billing.pix",
+        "providerKey": "asaas",
+        "providerType": "payment_gateway",
+        "critical": True,
+        "fallbackAllowed": False,
+        "envKey": "BILLING_ASAAS_API_KEY",
+        "defaultMode": "unconfigured",
+    },
+    {
+        "capabilityKey": "billing.pix",
+        "providerKey": "mercado_pago",
+        "providerType": "payment_gateway",
+        "critical": True,
+        "fallbackAllowed": False,
+        "envKey": "BILLING_MERCADO_PAGO_ACCESS_TOKEN",
+        "defaultMode": "unconfigured",
+    },
+    {
+        "capabilityKey": "billing.pix",
+        "providerKey": "stripe",
+        "providerType": "payment_gateway",
+        "critical": True,
+        "fallbackAllowed": False,
+        "envKey": "BILLING_STRIPE_SECRET_KEY",
+        "defaultMode": "unconfigured",
+    },
+    {
+        "capabilityKey": "engagement.providers.resend",
+        "providerKey": "resend",
+        "providerType": "transactional_email",
+        "critical": False,
+        "fallbackAllowed": True,
+        "envKey": "ENGAGEMENT_RESEND_API_KEY",
+        "defaultMode": "fallback",
+    },
+    {
+        "capabilityKey": "engagement.providers.whatsapp_cloud",
+        "providerKey": "whatsapp_cloud",
+        "providerType": "messaging",
+        "critical": False,
+        "fallbackAllowed": True,
+        "envKey": "ENGAGEMENT_WHATSAPP_ACCESS_TOKEN",
+        "defaultMode": "fallback",
+    },
+    {
+        "capabilityKey": "engagement.providers.meta_ads",
+        "providerKey": "meta_ads",
+        "providerType": "ads",
+        "critical": False,
+        "fallbackAllowed": True,
+        "envKey": "ENGAGEMENT_META_ADS_ACCESS_TOKEN",
+        "defaultMode": "fallback",
+    },
+    {
+        "capabilityKey": "documents.external_storage",
+        "providerKey": "local",
+        "providerType": "storage",
+        "critical": False,
+        "fallbackAllowed": True,
+        "envKey": None,
+        "defaultMode": "manual",
+    },
+    {
+        "capabilityKey": "documents.external_storage",
+        "providerKey": "s3_compatible",
+        "providerType": "storage",
+        "critical": False,
+        "fallbackAllowed": True,
+        "envKey": "DOCUMENTS_STORAGE_BUCKET",
+        "defaultMode": "fallback",
+    },
+    {
+        "capabilityKey": "documents.external_storage",
+        "providerKey": "cloudflare_r2",
+        "providerType": "storage",
+        "critical": False,
+        "fallbackAllowed": True,
+        "envKey": "DOCUMENTS_R2_ACCOUNT_ID",
+        "defaultMode": "fallback",
+    },
+    {
+        "capabilityKey": "documents.digital_signature",
+        "providerKey": "local",
+        "providerType": "digital_signature",
+        "critical": False,
+        "fallbackAllowed": True,
+        "envKey": None,
+        "defaultMode": "fallback",
+    },
+    {
+        "capabilityKey": "documents.digital_signature",
+        "providerKey": "clicksign",
+        "providerType": "digital_signature",
+        "critical": False,
+        "fallbackAllowed": True,
+        "envKey": "DOCUMENTS_CLICKSIGN_API_KEY",
+        "defaultMode": "fallback",
+    },
+    {
+        "capabilityKey": "documents.digital_signature",
+        "providerKey": "docusign",
+        "providerType": "digital_signature",
+        "critical": False,
+        "fallbackAllowed": True,
+        "envKey": "DOCUMENTS_DOCUSIGN_ACCESS_TOKEN",
+        "defaultMode": "fallback",
+    },
+    {
+        "capabilityKey": "crm.cnpj_enrichment",
+        "providerKey": "receita_ws",
+        "providerType": "enrichment",
+        "critical": False,
+        "fallbackAllowed": True,
+        "envKey": "CRM_CNPJ_PROVIDER_TOKEN",
+        "defaultMode": "fallback",
+    },
+    {
+        "capabilityKey": "crm.cnpj_enrichment",
+        "providerKey": "conecta",
+        "providerType": "enrichment",
+        "critical": False,
+        "fallbackAllowed": True,
+        "envKey": "CRM_CONECTA_CNPJ_API_KEY",
+        "defaultMode": "fallback",
+    },
+    {
+        "capabilityKey": "webhook_hub.outbound_webhooks",
+        "providerKey": "tenant_outbound",
+        "providerType": "outbound_webhook",
+        "critical": True,
+        "fallbackAllowed": False,
+        "envKey": "WEBHOOK_HUB_OUTBOUND_SIGNING_SECRET",
+        "defaultMode": "unconfigured",
+    },
+]
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -43,6 +183,65 @@ def _tenant_slug(value: str | None) -> str:
     if normalized == "":
         raise ValueError("tenant_slug_required")
     return normalized
+
+
+def _is_env_configured(env_key: str | None) -> bool:
+    if env_key is None:
+        return False
+    return (os.getenv(env_key, "").strip()) != ""
+
+
+def _provider_catalog_item(capability_key: str, provider_key: str) -> dict:
+    for item in PROVIDER_CATALOG:
+        if item["capabilityKey"] == capability_key and item["providerKey"] == provider_key:
+            return item
+    raise ValueError("provider_catalog_item_not_found")
+
+
+def _build_provider_default_template(capability_key: str) -> dict | None:
+    candidates = [item for item in PROVIDER_CATALOG if item["capabilityKey"] == capability_key]
+    if not candidates:
+        return None
+
+    def sort_key(item: dict) -> tuple[int, int, str]:
+        priority = {
+            "manual": 0,
+            "fallback": 1,
+            "configured": 2,
+            "unconfigured": 3,
+            "disabled": 4,
+        }.get(item["defaultMode"], 9)
+        env_priority = 0 if _is_env_configured(item.get("envKey")) else 1
+        return (env_priority, priority, item["providerKey"])
+
+    selected = min(candidates, key=sort_key)
+    configured = _is_env_configured(selected.get("envKey"))
+    mode = "configured" if configured else selected["defaultMode"]
+
+    return {
+        "publicId": str(uuid.uuid4()),
+        "capabilityKey": selected["capabilityKey"],
+        "providerKey": selected["providerKey"],
+        "providerType": selected["providerType"],
+        "mode": mode,
+        "critical": selected["critical"],
+        "fallbackAllowed": selected["fallbackAllowed"],
+        "envKey": selected["envKey"],
+        "source": "template-default",
+        "configured": configured or mode in {"manual", "fallback"},
+        "metadata": {
+            "activation": "env",
+            "supportsFallback": selected["fallbackAllowed"],
+        },
+        "updatedAt": utc_now(),
+    }
+
+
+def _merge_provider_defaults(records: list[dict]) -> list[dict]:
+    merged = {item["capabilityKey"]: item for item in records}
+    for capability in sorted({item["capabilityKey"] for item in PROVIDER_CATALOG}):
+        merged.setdefault(capability, _build_provider_default_template(capability))
+    return [item for _, item in sorted(merged.items(), key=lambda entry: entry[0])]
 
 
 def _find_tenant_id(cursor, tenant_slug: str) -> int:
@@ -87,6 +286,159 @@ def _paginate(records: list[dict], cursor: str | None, limit: int, cursor_field:
 
 def list_capability_catalog() -> list[dict]:
     return CAPABILITY_CATALOG
+
+
+def list_provider_catalog() -> list[dict]:
+    catalog = []
+    for item in PROVIDER_CATALOG:
+        configured = _is_env_configured(item.get("envKey"))
+        mode = "configured" if configured else item["defaultMode"]
+        catalog.append(
+            {
+                "capabilityKey": item["capabilityKey"],
+                "providerKey": item["providerKey"],
+                "providerType": item["providerType"],
+                "critical": item["critical"],
+                "fallbackAllowed": item["fallbackAllowed"],
+                "envKey": item["envKey"],
+                "mode": mode,
+                "status": "ready" if configured else mode,
+                "configured": configured or mode in {"manual", "fallback"},
+            }
+        )
+    return sorted(catalog, key=lambda entry: (entry["capabilityKey"], entry["providerKey"]))
+
+
+def list_provider_defaults(tenant_slug: str) -> list[dict]:
+    slug = _tenant_slug(tenant_slug)
+    if settings.repository_driver != "postgres":
+        records = [item for item in IN_MEMORY_STATE["provider_defaults"] if item["tenantSlug"] == slug]
+        return _merge_provider_defaults(records)
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT provider.public_id, provider.capability_key, provider.provider_key, provider.provider_type,
+                       provider.mode, provider.critical, provider.fallback_allowed, provider.env_key,
+                       provider.source, provider.configured, provider.metadata_json, provider.updated_at
+                FROM platform_control.provider_defaults AS provider
+                JOIN identity.tenants AS tenant ON tenant.id = provider.tenant_id
+                WHERE tenant.slug = %s
+                ORDER BY provider.capability_key
+                """,
+                (slug,),
+            )
+            rows = [
+                {
+                    "publicId": row["public_id"],
+                    "tenantSlug": slug,
+                    "capabilityKey": row["capability_key"],
+                    "providerKey": row["provider_key"],
+                    "providerType": row["provider_type"],
+                    "mode": row["mode"],
+                    "critical": row["critical"],
+                    "fallbackAllowed": row["fallback_allowed"],
+                    "envKey": row["env_key"],
+                    "source": row["source"],
+                    "configured": row["configured"],
+                    "metadata": row["metadata_json"] or {},
+                    "updatedAt": row["updated_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                }
+                for row in cursor.fetchall()
+            ]
+            return _merge_provider_defaults(rows)
+
+
+def upsert_provider_default(tenant_slug: str, capability_key: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    normalized_capability = capability_key.strip()
+    provider_key = str(payload.get("providerKey") or "").strip()
+    if normalized_capability == "":
+        raise ValueError("capability_key_required")
+    if provider_key == "":
+        raise ValueError("provider_key_required")
+
+    catalog_item = _provider_catalog_item(normalized_capability, provider_key)
+    configured = _is_env_configured(catalog_item.get("envKey"))
+    requested_mode = str(payload.get("mode") or catalog_item["defaultMode"]).strip() or catalog_item["defaultMode"]
+    if requested_mode not in {"configured", "fallback", "manual", "unconfigured", "disabled"}:
+        raise ValueError("provider_mode_invalid")
+    if requested_mode == "configured" and not configured:
+        raise ValueError("provider_env_missing")
+
+    provider_default = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "capabilityKey": normalized_capability,
+        "providerKey": provider_key,
+        "providerType": catalog_item["providerType"],
+        "mode": requested_mode if not configured else "configured",
+        "critical": catalog_item["critical"],
+        "fallbackAllowed": catalog_item["fallbackAllowed"],
+        "envKey": catalog_item["envKey"],
+        "source": str(payload.get("source") or "tenant-default").strip() or "tenant-default",
+        "configured": configured or requested_mode in {"manual", "fallback"},
+        "metadata": payload.get("metadata") or {"activation": "env", "supportsFallback": catalog_item["fallbackAllowed"]},
+        "updatedAt": utc_now(),
+    }
+
+    if settings.repository_driver != "postgres":
+        existing = next(
+            (item for item in IN_MEMORY_STATE["provider_defaults"] if item["tenantSlug"] == slug and item["capabilityKey"] == normalized_capability),
+            None,
+        )
+        if existing is not None:
+            existing.update(provider_default)
+            provider_default["publicId"] = existing["publicId"]
+            return existing
+        IN_MEMORY_STATE["provider_defaults"].append(provider_default)
+        return provider_default
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            tenant_id = _find_tenant_id(cursor, slug)
+            cursor.execute(
+                """
+                INSERT INTO platform_control.provider_defaults (
+                  tenant_id, public_id, capability_key, provider_key, provider_type, mode,
+                  critical, fallback_allowed, env_key, source, configured, metadata_json
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s::jsonb)
+                ON CONFLICT (tenant_id, capability_key)
+                DO UPDATE SET
+                  provider_key = EXCLUDED.provider_key,
+                  provider_type = EXCLUDED.provider_type,
+                  mode = EXCLUDED.mode,
+                  critical = EXCLUDED.critical,
+                  fallback_allowed = EXCLUDED.fallback_allowed,
+                  env_key = EXCLUDED.env_key,
+                  source = EXCLUDED.source,
+                  configured = EXCLUDED.configured,
+                  metadata_json = EXCLUDED.metadata_json,
+                  updated_at = NOW()
+                RETURNING public_id, updated_at
+                """,
+                (
+                    tenant_id,
+                    provider_default["publicId"],
+                    normalized_capability,
+                    provider_key,
+                    provider_default["providerType"],
+                    provider_default["mode"],
+                    provider_default["critical"],
+                    provider_default["fallbackAllowed"],
+                    provider_default["envKey"],
+                    provider_default["source"],
+                    provider_default["configured"],
+                    json.dumps(provider_default["metadata"]),
+                ),
+            )
+            row = cursor.fetchone()
+            connection.commit()
+            provider_default["publicId"] = row["public_id"]
+            provider_default["updatedAt"] = row["updated_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            return provider_default
 
 
 def list_entitlements(tenant_slug: str) -> list[dict]:
@@ -565,6 +917,110 @@ def build_usage_summary(tenant_slug: str) -> dict:
     }
 
 
+def build_lifecycle_readiness(tenant_slug: str) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    entitlements = list_entitlements(slug)
+    quotas = list_quotas(slug)
+    blocks = list_blocks(slug)
+    provider_defaults = list_provider_defaults(slug)
+
+    enabled_entitlements = [item for item in entitlements if item["enabled"]]
+    active_blocks = [item for item in blocks if item["active"]]
+    critical_unconfigured = [
+        item for item in provider_defaults if item["critical"] and item["mode"] in {"unconfigured", "disabled"}
+    ]
+    attention_quotas = [item for item in quotas if item.get("enforcementMode") == "hard"]
+
+    status = "stable"
+    if critical_unconfigured or active_blocks:
+        status = "attention"
+    if len(critical_unconfigured) > 1:
+        status = "critical"
+
+    return {
+        "tenantSlug": slug,
+        "generatedAt": utc_now(),
+        "providers": {
+            "total": len(provider_defaults),
+            "configured": sum(1 for item in provider_defaults if item["mode"] == "configured"),
+            "fallback": sum(1 for item in provider_defaults if item["mode"] == "fallback"),
+            "manual": sum(1 for item in provider_defaults if item["mode"] == "manual"),
+            "criticalUnconfigured": len(critical_unconfigured),
+            "items": provider_defaults,
+        },
+        "entitlements": {
+            "total": len(entitlements),
+            "enabled": len(enabled_entitlements),
+        },
+        "quotas": {
+            "total": len(quotas),
+            "hardEnforcement": len(attention_quotas),
+        },
+        "blocks": {
+            "active": len(active_blocks),
+            "items": active_blocks,
+        },
+        "readiness": {
+            "status": status,
+            "onboardingReady": len(critical_unconfigured) == 0,
+            "offboardingReady": True,
+            "providerDefaultsReady": len(provider_defaults) > 0,
+            "missingCriticalProviders": [item["capabilityKey"] for item in critical_unconfigured],
+        },
+    }
+
+
+def build_lifecycle_preview(tenant_slug: str, job_type: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    readiness = build_lifecycle_readiness(slug)
+    lifecycle_payload = payload.get("payload") or {}
+
+    if job_type == "onboarding":
+        steps = [
+            {"key": "seed-tenant", "status": "ready", "summary": "Bootstrap de tenant e catalogos basicos."},
+            {"key": "apply-entitlements", "status": "ready", "summary": "Aplicar entitlements e limites operacionais."},
+            {
+                "key": "configure-providers",
+                "status": "ready" if readiness["readiness"]["onboardingReady"] else "attention",
+                "summary": "Aplicar defaults de provider e validar credenciais criticas.",
+            },
+            {
+                "key": "seed",
+                "status": "ready",
+                "summary": f"Seed opcional selecionado: {lifecycle_payload.get('seed', 'none')}.",
+            },
+        ]
+    else:
+        steps = [
+            {"key": "export-data", "status": "ready", "summary": "Preparar exportacao de dados e artefatos."},
+            {"key": "revoke-access", "status": "ready", "summary": "Revogar acessos e providers configurados."},
+            {
+                "key": "retention-plan",
+                "status": "ready",
+                "summary": f"Plano de retencao: {lifecycle_payload.get('mode', 'retention-default')}.",
+            },
+            {"key": "purge-controls", "status": "ready", "summary": "Aplicar purge seletivo conforme governanca."},
+        ]
+
+    return {
+        "tenantSlug": slug,
+        "jobType": job_type,
+        "generatedAt": utc_now(),
+        "steps": steps,
+        "readiness": readiness["readiness"],
+        "providers": {
+            "recommendedDefaults": [
+                {
+                    "capabilityKey": item["capabilityKey"],
+                    "providerKey": item["providerKey"],
+                    "mode": item["mode"],
+                }
+                for item in readiness["providers"]["items"]
+            ],
+        },
+    }
+
+
 def create_lifecycle_job(tenant_slug: str, job_type: str, payload: dict, idempotency_key: str | None = None) -> dict:
     slug = _tenant_slug(tenant_slug)
     requested_by = (payload.get("requestedBy") or "").strip()
@@ -574,6 +1030,11 @@ def create_lifecycle_job(tenant_slug: str, job_type: str, payload: dict, idempot
         raise ValueError("lifecycle_job_type_invalid")
 
     normalized_idempotency_key = (idempotency_key or "").strip() or None
+    preview = build_lifecycle_preview(slug, job_type, payload)
+    job_payload = {
+        "input": payload.get("payload") or {},
+        "preview": preview,
+    }
     if settings.repository_driver != "postgres":
         if normalized_idempotency_key is not None:
             existing = next(
@@ -594,7 +1055,7 @@ def create_lifecycle_job(tenant_slug: str, job_type: str, payload: dict, idempot
             "status": "queued",
             "requestedBy": requested_by,
             "idempotencyKey": normalized_idempotency_key,
-            "payload": payload.get("payload") or {},
+            "payload": job_payload,
             "createdAt": utc_now(),
             "startedAt": None,
             "completedAt": None,
@@ -632,7 +1093,7 @@ def create_lifecycle_job(tenant_slug: str, job_type: str, payload: dict, idempot
                 VALUES (%s, %s, %s, 'queued', %s, %s::jsonb, %s)
                 RETURNING created_at
                 """,
-                (tenant_id, public_id, job_type, requested_by, json.dumps(payload.get("payload") or {}), normalized_idempotency_key),
+                (tenant_id, public_id, job_type, requested_by, json.dumps(job_payload), normalized_idempotency_key),
             )
             created_row = cursor.fetchone()
             cursor.execute(

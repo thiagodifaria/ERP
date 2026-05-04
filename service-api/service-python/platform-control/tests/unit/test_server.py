@@ -14,6 +14,24 @@ def test_capability_catalog_returns_saas_capabilities() -> None:
     assert any(item["capabilityKey"] == "documents.digital_signature" for item in payload)
 
 
+def test_provider_defaults_and_readiness_expose_tenant_provider_governance() -> None:
+    catalog_response = client.get("/api/platform-control/providers/catalog")
+    put_response = client.put(
+        "/api/platform-control/tenants/bootstrap-ops/provider-defaults/documents.digital_signature",
+        json={"providerKey": "local", "mode": "fallback", "source": "tenant-bootstrap"},
+    )
+    list_response = client.get("/api/platform-control/tenants/bootstrap-ops/provider-defaults")
+    readiness_response = client.get("/api/platform-control/tenants/bootstrap-ops/lifecycle/readiness")
+
+    assert catalog_response.status_code == 200
+    assert put_response.status_code == 200
+    assert list_response.status_code == 200
+    assert readiness_response.status_code == 200
+    assert any(item["capabilityKey"] == "documents.digital_signature" for item in catalog_response.json())
+    assert any(item["capabilityKey"] == "documents.digital_signature" for item in list_response.json()["items"])
+    assert readiness_response.json()["providers"]["total"] >= 1
+
+
 def test_entitlements_bulk_returns_partial_success_shape() -> None:
     response = client.post(
         "/api/platform-control/tenants/bootstrap-ops/entitlements/bulk",
@@ -34,6 +52,10 @@ def test_entitlements_bulk_returns_partial_success_shape() -> None:
 
 
 def test_lifecycle_onboarding_returns_accepted_and_location() -> None:
+    preview_response = client.post(
+        "/api/platform-control/tenants/bootstrap-ops/lifecycle/onboarding/preview",
+        json={"requestedBy": "ops@bootstrap-ops.local", "payload": {"seed": "starter"}},
+    )
     response = client.post(
         "/api/platform-control/tenants/bootstrap-ops/lifecycle/onboarding",
         json={"requestedBy": "ops@bootstrap-ops.local", "payload": {"seed": "starter"}},
@@ -41,10 +63,14 @@ def test_lifecycle_onboarding_returns_accepted_and_location() -> None:
     )
     payload = response.json()
 
+    assert preview_response.status_code == 200
+    assert preview_response.json()["jobType"] == "onboarding"
+    assert len(preview_response.json()["steps"]) >= 3
     assert response.status_code == 202
     assert response.headers["location"].endswith(payload["publicId"])
     assert payload["status"] == "queued"
     assert payload["idempotencyKey"] == "onboarding-bootstrap-ops-1"
+    assert "preview" in payload["payload"]
 
 
 def test_quota_and_usage_summary_routes_return_operational_payload() -> None:

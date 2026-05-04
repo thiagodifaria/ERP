@@ -1,0 +1,5 @@
+DROP TRIGGER IF EXISTS trg_platform_control_provider_defaults_updated_at ON platform_control.provider_defaults;
+CREATE TRIGGER trg_platform_control_provider_defaults_updated_at
+BEFORE UPDATE ON platform_control.provider_defaults
+FOR EACH ROW
+EXECUTE FUNCTION common_set_updated_at();

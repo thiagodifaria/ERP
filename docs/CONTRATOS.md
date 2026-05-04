@@ -9,6 +9,8 @@ Centralizar os artefatos de integracao do backend em um lugar versionado e previ
 - `contracts/http/`: specs OpenAPI por servico
 - `contracts/events/`: schemas JSON para eventos e payloads compartilhados
 - `contracts/registry.json`: indice simples para agregacao automatica
+- `contracts/schema-registry.json`: registry materializado dos schemas de evento
+- `contracts/portal/index.html`: baseline navegavel da superficie HTTP e dos schemas
 - `docs/VERSIONAMENTO_CONTRATOS.md`: baseline de compatibilidade e versionamento
 
 ## Baseline atual
@@ -26,7 +28,7 @@ Centralizar os artefatos de integracao do backend em um lugar versionado e previ
 - operacoes longas devem convergir para padrao `202 Accepted`, polling e callback conforme a maturidade do servico
 - listagens novas devem preferir cursor pagination quando o volume esperado justificar
 - operacoes em lote devem explicitar `results`, `errors` e `summary` quando houver `partial success`
-- `docs/API_PORTAL.md` registra o caminho base para a UI central de navegacao e teste
+- `docs/API_PORTAL.md` registra a diretriz e `contracts/portal/index.html` materializa o baseline versionado da UI central de navegacao e teste
 
 ## Proximo passo natural
 

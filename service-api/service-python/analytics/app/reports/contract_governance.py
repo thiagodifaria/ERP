@@ -45,8 +45,8 @@ def build_contract_governance() -> dict:
         http_specs = [item.name for item in sorted((root / "contracts" / "http").glob("*.yaml"))]
         event_schemas = [item.name for item in sorted((root / "contracts" / "events").glob("*.json"))]
         adrs = [item.name for item in sorted((root / "docs").glob("ADR-*.md"))]
-        api_portal_ready = (root / "docs" / "API_PORTAL.md").exists()
-        registry_ready = (root / "contracts" / "registry.json").exists()
+        api_portal_ready = (root / "contracts" / "portal" / "index.html").exists()
+        registry_ready = (root / "contracts" / "registry.json").exists() and (root / "contracts" / "schema-registry.json").exists()
     else:
         http_specs = FALLBACK_HTTP_SPECS
         event_schemas = FALLBACK_EVENT_SCHEMAS

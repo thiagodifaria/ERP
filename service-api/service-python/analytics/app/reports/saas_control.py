@@ -17,8 +17,15 @@ def build_saas_control(tenant_slug: str | None = None) -> dict:
             "metering": {"trackedMetrics": 4, "totalQuantity": 4096},
             "blocks": {"active": 0},
             "lifecycle": {"queued": 1, "running": 0, "completed": 2, "failed": 0},
+            "providers": {"defaults": 6, "criticalUnconfigured": 0},
             "pricing": {"flat": 1, "hybrid": 1, "usage": 1},
-            "readiness": {"status": "stable", "onboardingReady": True, "offboardingReady": True, "usageBasedBillingReady": True},
+            "readiness": {
+                "status": "stable",
+                "onboardingReady": True,
+                "offboardingReady": True,
+                "usageBasedBillingReady": True,
+                "providerDefaultsReady": True,
+            },
         }
 
     slug = tenant_slug or "bootstrap-ops"
@@ -92,6 +99,19 @@ def build_saas_control(tenant_slug: str | None = None) -> dict:
             cursor.execute(
                 """
                 SELECT
+                  count(*) AS defaults_total,
+                  count(*) FILTER (WHERE critical = TRUE AND mode IN ('unconfigured', 'disabled')) AS critical_unconfigured
+                FROM platform_control.provider_defaults AS provider
+                JOIN identity.tenants AS tenant ON tenant.id = provider.tenant_id
+                WHERE tenant.slug = %s
+                """,
+                (slug,),
+            )
+            providers = cursor.fetchone() or {}
+
+            cursor.execute(
+                """
+                SELECT
                   count(*) FILTER (WHERE pricing_model = 'flat') AS flat_total,
                   count(*) FILTER (WHERE pricing_model = 'hybrid') AS hybrid_total,
                   count(*) FILTER (WHERE pricing_model = 'usage') AS usage_total
@@ -128,6 +148,10 @@ def build_saas_control(tenant_slug: str | None = None) -> dict:
             "completed": int(lifecycle.get("completed", 0) or 0),
             "failed": int(lifecycle.get("failed", 0) or 0),
         },
+        "providers": {
+            "defaults": int(providers.get("defaults_total", 0) or 0),
+            "criticalUnconfigured": int(providers.get("critical_unconfigured", 0) or 0),
+        },
         "pricing": {
             "flat": int(pricing.get("flat_total", 0) or 0),
             "hybrid": int(pricing.get("hybrid_total", 0) or 0),
@@ -138,5 +162,6 @@ def build_saas_control(tenant_slug: str | None = None) -> dict:
             "onboardingReady": True,
             "offboardingReady": True,
             "usageBasedBillingReady": int(pricing.get("usage_total", 0) or 0) > 0 or int(pricing.get("hybrid_total", 0) or 0) > 0,
+            "providerDefaultsReady": int(providers.get("defaults_total", 0) or 0) > 0,
         },
     }

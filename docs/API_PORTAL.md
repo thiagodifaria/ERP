@@ -21,6 +21,12 @@ Servir como base para uma UI central de navegacao, teste e descoberta da API com
 - operacoes em lote devem expor contrato de `partial success`
 - contratos novos devem entrar no `registry.json` no mesmo commit da feature
 
+## Estado atual
+
+- `contracts/portal/index.html` ja materializa a base navegavel do portal central
+- `contracts/schema-registry.json` ja materializa o registry de schemas de evento
+- `contracts/registry.json` continua como indice de agregacao e descoberta
+
 ## Proximo passo natural
 
-Consumir o `registry.json` em uma UI agregadora com Swagger UI, Redoc, Scalar ou portal proprio, cobrindo toda a superficie HTTP ja versionada do monorepo.
+Evoluir a UI central para consumo dinamico dos artefatos com Swagger UI, Redoc, Scalar ou portal proprio mais rico, mantendo `contracts/portal/index.html` como baseline versionado e pronto para integracao.

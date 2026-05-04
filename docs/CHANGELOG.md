@@ -1,5 +1,8 @@
 # CHANGELOG
 
+- `v0.9.9`: [UPDATE 04/05/2026 - 17:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `platform-control` passou a cobrir governanca de provider defaults por tenant, `lifecycle readiness`, `preview` de onboarding/offboarding e persistencia relacional dedicada para o plano SaaS por capability externa.
+- `v0.9.9`: [UPDATE 04/05/2026 - 17:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] A trilha contratual foi materializada com `contracts/schema-registry.json`, `contracts/portal/index.html`, registry expandido e validacao automatica de cobertura no fluxo `contract` do monorepo.
+- `v0.9.9`: [UPDATE 04/05/2026 - 17:19 BELO HORIZONTE, MINAS GERAIS, BRAZIL] O `smoke` e os relatórios de `analytics` foram alinhados ao baseline novo de adapters, portal central e schema registry, eliminando a regressao que ainda validava contagens antigas de artefatos contratuais e capabilities configuradas.
 - `v0.9.9`: [UPDATE 04/05/2026 - 11:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `platform-control` amadurecido como plano SaaS real, com quotas, tenant blocks, metering resumido, bulk com `partial success`, jobs de lifecycle auditaveis, `Idempotency-Key` e `202 Accepted`.
 - `v0.9.9`: [UPDATE 04/05/2026 - 11:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `documents` ganhou capability registry de assinatura digital com fallback seguro, e `crm` ganhou capability registry e lookup de enriquecimento de CNPJ para preparar adapters externos de forma limpa.
 - `v0.9.9`: [UPDATE 04/05/2026 - 11:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Governanca contratual fortalecida com novos artefatos OpenAPI para `analytics` e `edge`, specs ampliadas para `catalog`, `platform-control`, `crm` e `documents`, schemas adicionais, `contracts/registry.json` e `docs/API_PORTAL.md`.

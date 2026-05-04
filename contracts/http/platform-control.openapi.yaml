@@ -10,6 +10,12 @@ paths:
       responses:
         "200":
           description: Capability catalog
+  /api/platform-control/providers/catalog:
+    get:
+      summary: List provider capability catalog and environment posture
+      responses:
+        "200":
+          description: Provider catalog
   /api/platform-control/tenants/{tenantSlug}/entitlements:
     get:
       summary: List tenant entitlements with cursor pagination
@@ -45,6 +51,18 @@ paths:
       responses:
         "200":
           description: Bulk entitlement result
+  /api/platform-control/tenants/{tenantSlug}/provider-defaults:
+    get:
+      summary: List provider defaults selected for one tenant
+      responses:
+        "200":
+          description: Provider defaults
+  /api/platform-control/tenants/{tenantSlug}/provider-defaults/{capabilityKey}:
+    put:
+      summary: Upsert provider default for one tenant capability
+      responses:
+        "200":
+          description: Provider default
   /api/platform-control/tenants/{tenantSlug}/quotas:
     get:
       summary: List quotas by tenant
@@ -93,6 +111,12 @@ paths:
       responses:
         "200":
           description: Usage summary
+  /api/platform-control/tenants/{tenantSlug}/lifecycle/readiness:
+    get:
+      summary: Read tenant lifecycle readiness and provider posture
+      responses:
+        "200":
+          description: Lifecycle readiness
   /api/platform-control/tenants/{tenantSlug}/lifecycle/jobs:
     get:
       summary: List onboarding and offboarding jobs with cursor pagination
@@ -105,12 +129,24 @@ paths:
       responses:
         "200":
           description: Lifecycle job detail
+  /api/platform-control/tenants/{tenantSlug}/lifecycle/onboarding/preview:
+    post:
+      summary: Preview onboarding plan, provider defaults and lifecycle readiness
+      responses:
+        "200":
+          description: Onboarding preview
   /api/platform-control/tenants/{tenantSlug}/lifecycle/onboarding:
     post:
       summary: Queue onboarding job with Idempotency-Key and 202 Accepted
       responses:
         "202":
           description: Queued onboarding job
+  /api/platform-control/tenants/{tenantSlug}/lifecycle/offboarding/preview:
+    post:
+      summary: Preview offboarding plan, retention posture and lifecycle readiness
+      responses:
+        "200":
+          description: Offboarding preview
   /api/platform-control/tenants/{tenantSlug}/lifecycle/offboarding:
     post:
       summary: Queue offboarding job with Idempotency-Key and 202 Accepted

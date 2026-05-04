@@ -6,6 +6,8 @@ from fastapi.responses import JSONResponse
 from app.config.settings import settings
 from app.infrastructure.postgres import postgres_ready
 from app.runtime import (
+    build_lifecycle_preview,
+    build_lifecycle_readiness,
     build_usage_summary,
     bulk_upsert_entitlements,
     bulk_upsert_quotas,
@@ -17,10 +19,13 @@ from app.runtime import (
     list_entitlements_page,
     list_lifecycle_jobs_page,
     list_metering_page,
+    list_provider_catalog,
+    list_provider_defaults,
     list_quotas,
     transition_lifecycle_job,
     upsert_block,
     upsert_entitlement,
+    upsert_provider_default,
     upsert_quota,
 )
 
@@ -44,7 +49,9 @@ def details() -> dict:
         {"name": "capability-registry", "status": "ready"},
         {"name": "entitlements", "status": "ready"},
         {"name": "metering", "status": "ready"},
+        {"name": "provider-defaults", "status": "ready"},
         {"name": "tenant-lifecycle", "status": "ready"},
+        {"name": "lifecycle-readiness", "status": "ready"},
         {"name": "quotas", "status": "ready"},
         {"name": "tenant-blocks", "status": "ready"},
         {"name": "idempotency", "status": "ready"},
@@ -58,6 +65,11 @@ def details() -> dict:
 @app.get("/api/platform-control/capabilities/catalog")
 def get_catalog() -> list[dict]:
     return list_capability_catalog()
+
+
+@app.get("/api/platform-control/providers/catalog")
+def get_provider_catalog() -> list[dict]:
+    return list_provider_catalog()
 
 
 @app.get("/api/platform-control/tenants/{tenant_slug}/entitlements")
@@ -76,6 +88,19 @@ def put_entitlement(tenant_slug: str, capability_key: str, payload: dict) -> dic
 @app.post("/api/platform-control/tenants/{tenant_slug}/entitlements/bulk")
 def post_bulk_entitlements(tenant_slug: str, payload: dict) -> dict:
     return bulk_upsert_entitlements(tenant_slug, payload)
+
+
+@app.get("/api/platform-control/tenants/{tenant_slug}/provider-defaults")
+def provider_defaults(tenant_slug: str) -> dict:
+    return {"tenantSlug": tenant_slug, "items": list_provider_defaults(tenant_slug)}
+
+
+@app.put("/api/platform-control/tenants/{tenant_slug}/provider-defaults/{capability_key}")
+def put_provider_default(tenant_slug: str, capability_key: str, payload: dict) -> dict:
+    try:
+        return upsert_provider_default(tenant_slug, capability_key, payload)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"code": str(error), "message": "Provider default payload is invalid."}) from error
 
 
 @app.get("/api/platform-control/tenants/{tenant_slug}/quotas")
@@ -127,6 +152,11 @@ def usage_summary(tenant_slug: str) -> dict:
     return build_usage_summary(tenant_slug)
 
 
+@app.get("/api/platform-control/tenants/{tenant_slug}/lifecycle/readiness")
+def lifecycle_readiness(tenant_slug: str) -> dict:
+    return build_lifecycle_readiness(tenant_slug)
+
+
 @app.get("/api/platform-control/tenants/{tenant_slug}/lifecycle/jobs")
 def lifecycle_jobs(tenant_slug: str, cursor: str | None = None, limit: int = 50) -> dict:
     return list_lifecycle_jobs_page(tenant_slug, cursor, limit)
@@ -155,9 +185,19 @@ def onboarding(tenant_slug: str, payload: dict, idempotency_key: str | None = He
     return _queue_lifecycle_job(tenant_slug, "onboarding", payload, idempotency_key)
 
 
+@app.post("/api/platform-control/tenants/{tenant_slug}/lifecycle/onboarding/preview")
+def onboarding_preview(tenant_slug: str, payload: dict) -> dict:
+    return build_lifecycle_preview(tenant_slug, "onboarding", payload)
+
+
 @app.post("/api/platform-control/tenants/{tenant_slug}/lifecycle/offboarding")
 def offboarding(tenant_slug: str, payload: dict, idempotency_key: str | None = Header(default=None, alias="Idempotency-Key")) -> JSONResponse:
     return _queue_lifecycle_job(tenant_slug, "offboarding", payload, idempotency_key)
+
+
+@app.post("/api/platform-control/tenants/{tenant_slug}/lifecycle/offboarding/preview")
+def offboarding_preview(tenant_slug: str, payload: dict) -> dict:
+    return build_lifecycle_preview(tenant_slug, "offboarding", payload)
 
 
 def _transition_lifecycle_job(tenant_slug: str, public_id: str, action: str, payload: dict) -> dict:

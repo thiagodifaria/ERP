@@ -1,0 +1,53 @@
+{
+  "version": "0.1.0",
+  "schemas": [
+    {
+      "key": "catalog.item",
+      "path": "contracts/events/catalog.item.schema.json",
+      "format": "json-schema",
+      "domain": "catalog"
+    },
+    {
+      "key": "crm.cnpj-enrichment",
+      "path": "contracts/events/crm.cnpj-enrichment.schema.json",
+      "format": "json-schema",
+      "domain": "crm"
+    },
+    {
+      "key": "documents.signing-request",
+      "path": "contracts/events/documents.signing-request.schema.json",
+      "format": "json-schema",
+      "domain": "documents"
+    },
+    {
+      "key": "engagement.provider-event",
+      "path": "contracts/events/engagement.provider-event.schema.json",
+      "format": "json-schema",
+      "domain": "engagement"
+    },
+    {
+      "key": "platform-control.lifecycle-job",
+      "path": "contracts/events/platform-control.lifecycle-job.schema.json",
+      "format": "json-schema",
+      "domain": "platform-control"
+    },
+    {
+      "key": "platform-control.quota",
+      "path": "contracts/events/platform-control.quota.schema.json",
+      "format": "json-schema",
+      "domain": "platform-control"
+    },
+    {
+      "key": "webhook-hub.inbound-event",
+      "path": "contracts/events/webhook-hub.inbound-event.schema.json",
+      "format": "json-schema",
+      "domain": "webhook-hub"
+    },
+    {
+      "key": "webhook-hub.outbound-delivery",
+      "path": "contracts/events/webhook-hub.outbound-delivery.schema.json",
+      "format": "json-schema",
+      "domain": "webhook-hub"
+    }
+  ]
+}

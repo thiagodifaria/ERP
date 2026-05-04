@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ERP API Portal</title>
+  <style>
+    :root {
+      --bg: #f6f1e8;
+      --surface: #fffaf2;
+      --ink: #18222f;
+      --muted: #5c6570;
+      --line: #d8ccb6;
+      --accent: #0f766e;
+      --accent-2: #9a3412;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #fff7ed 0%, var(--bg) 45%, #efe6d8 100%);
+      color: var(--ink);
+    }
+    .shell {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 40px 24px 64px;
+    }
+    .hero {
+      background: linear-gradient(135deg, rgba(15,118,110,0.12), rgba(154,52,18,0.08));
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+    h1, h2 { margin: 0 0 12px; }
+    p { color: var(--muted); line-height: 1.6; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 18px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 20px;
+    }
+    .kicker {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    li + li { margin-top: 10px; }
+    a {
+      color: var(--accent-2);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    a:hover { text-decoration: underline; }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 13px;
+      color: var(--muted);
+      background: rgba(255,255,255,0.72);
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="kicker">ERP Integration Portal</div>
+      <h1>Central contract and API navigation surface</h1>
+      <p>
+        This portal is the central entrypoint for HTTP contracts, event schemas and governance
+        artifacts of the ERP platform. It is intentionally static and versioned with the monorepo,
+        so contract discovery stays aligned with the same commit that shipped the code.
+      </p>
+      <div class="meta">
+        <span class="pill">OpenAPI per service</span>
+        <span class="pill">Schema registry materialized</span>
+        <span class="pill">Versioned governance docs</span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <div class="kicker">HTTP</div>
+        <h2>Service specifications</h2>
+        <ul>
+          <li><a href="../http/analytics.openapi.yaml">analytics.openapi.yaml</a></li>
+          <li><a href="../http/billing.openapi.yaml">billing.openapi.yaml</a></li>
+          <li><a href="../http/catalog.openapi.yaml">catalog.openapi.yaml</a></li>
+          <li><a href="../http/crm.openapi.yaml">crm.openapi.yaml</a></li>
+          <li><a href="../http/documents.openapi.yaml">documents.openapi.yaml</a></li>
+          <li><a href="../http/edge.openapi.yaml">edge.openapi.yaml</a></li>
+          <li><a href="../http/engagement.openapi.yaml">engagement.openapi.yaml</a></li>
+          <li><a href="../http/finance.openapi.yaml">finance.openapi.yaml</a></li>
+          <li><a href="../http/identity.openapi.yaml">identity.openapi.yaml</a></li>
+          <li><a href="../http/platform-control.openapi.yaml">platform-control.openapi.yaml</a></li>
+          <li><a href="../http/rentals.openapi.yaml">rentals.openapi.yaml</a></li>
+          <li><a href="../http/sales.openapi.yaml">sales.openapi.yaml</a></li>
+          <li><a href="../http/simulation.openapi.yaml">simulation.openapi.yaml</a></li>
+          <li><a href="../http/webhook-hub.openapi.yaml">webhook-hub.openapi.yaml</a></li>
+          <li><a href="../http/workflow-control.openapi.yaml">workflow-control.openapi.yaml</a></li>
+          <li><a href="../http/workflow-runtime.openapi.yaml">workflow-runtime.openapi.yaml</a></li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="kicker">Events</div>
+        <h2>Schema registry</h2>
+        <ul>
+          <li><a href="../events/catalog.item.schema.json">catalog.item.schema.json</a></li>
+          <li><a href="../events/crm.cnpj-enrichment.schema.json">crm.cnpj-enrichment.schema.json</a></li>
+          <li><a href="../events/documents.signing-request.schema.json">documents.signing-request.schema.json</a></li>
+          <li><a href="../events/engagement.provider-event.schema.json">engagement.provider-event.schema.json</a></li>
+          <li><a href="../events/platform-control.lifecycle-job.schema.json">platform-control.lifecycle-job.schema.json</a></li>
+          <li><a href="../events/platform-control.quota.schema.json">platform-control.quota.schema.json</a></li>
+          <li><a href="../events/webhook-hub.inbound-event.schema.json">webhook-hub.inbound-event.schema.json</a></li>
+          <li><a href="../events/webhook-hub.outbound-delivery.schema.json">webhook-hub.outbound-delivery.schema.json</a></li>
+          <li><a href="../schema-registry.json">schema-registry.json</a></li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="kicker">Governance</div>
+        <h2>Reference documents</h2>
+        <ul>
+          <li><a href="../../docs/API_PORTAL.md">API_PORTAL.md</a></li>
+          <li><a href="../../docs/CONTRATOS.md">CONTRATOS.md</a></li>
+          <li><a href="../../docs/VERSIONAMENTO_CONTRATOS.md">VERSIONAMENTO_CONTRATOS.md</a></li>
+          <li><a href="../../docs/ADR-001-http-interno-vs-grpc.md">ADR-001-http-interno-vs-grpc.md</a></li>
+          <li><a href="../registry.json">registry.json</a></li>
+        </ul>
+      </article>
+    </section>
+  </main>
+</body>
+</html>

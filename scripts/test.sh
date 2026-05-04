@@ -241,6 +241,65 @@ run_dotnet_contract() {
     dotnet test tests/Identity.ContractTests/Identity.ContractTests.csproj -c Release
 }
 
+run_contract_registry_checks() {
+  python3 - "$ROOT_DIR" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+registry_path = root / "contracts" / "registry.json"
+schema_registry_path = root / "contracts" / "schema-registry.json"
+portal_path = root / "contracts" / "portal" / "index.html"
+
+registry = json.loads(registry_path.read_text(encoding="utf-8"))
+schema_registry = json.loads(schema_registry_path.read_text(encoding="utf-8"))
+
+errors: list[str] = []
+
+def check_entries(group: str, base: Path) -> None:
+    listed = sorted(registry[group])
+    actual = sorted(path.name for path in base.iterdir() if path.is_file())
+    if listed != actual:
+        errors.append(f"{group} registry mismatch: listed={listed} actual={actual}")
+    for item in listed:
+        if not (base / item).is_file():
+            errors.append(f"{group} missing artifact: {item}")
+
+check_entries("http", root / "contracts" / "http")
+check_entries("events", root / "contracts" / "events")
+
+for doc_path in registry["docs"]:
+    if not (root / doc_path).is_file():
+        errors.append(f"doc missing from registry: {doc_path}")
+
+if registry.get("portal") != "contracts/portal/index.html":
+    errors.append("registry portal path is not normalized")
+if registry.get("schemaRegistry") != "contracts/schema-registry.json":
+    errors.append("registry schemaRegistry path is not normalized")
+if not portal_path.is_file():
+    errors.append("portal html not found")
+if not schema_registry_path.is_file():
+    errors.append("schema registry not found")
+
+event_paths = {f"contracts/events/{name}" for name in registry["events"]}
+for item in schema_registry.get("schemas", []):
+    path = item.get("path", "")
+    if path not in event_paths:
+        errors.append(f"schema registry references unknown event artifact: {path}")
+
+if len(schema_registry.get("schemas", [])) != len(registry["events"]):
+    errors.append("schema registry count does not match contracts/events count")
+
+if errors:
+    for error in errors:
+        print(f"[contract] {error}")
+    sys.exit(1)
+
+print("[contract] registry, schema registry and portal validated")
+PY
+}
+
 run_go_contract() {
   docker run --rm \
     -v "$ROOT_DIR/service-api/service-golang/crm:/workspace" \
@@ -2699,7 +2758,7 @@ run_analytics_runtime_smoke() {
     exit 1
   fi
 
-  if [[ "$integration_readiness_response" != *'"tenantSlug":"bootstrap-ops"'* || "$integration_readiness_response" != *'"dataSource":"postgresql"'* || "$integration_readiness_response" != *'"configured":1'* || "$integration_readiness_response" != *'"activeInboundProviders":1'* || "$integration_readiness_response" != *'"activeOutboundProviders":1'* || "$integration_readiness_response" != *'"fallbackEnabled":false'* || "$integration_readiness_response" != *'"contractArtifacts":11'* || "$integration_readiness_response" != *'"criticalUnconfiguredCapabilities":4'* || "$integration_readiness_response" != *'"inboundLeads":0'* || "$integration_readiness_response" != *'"workflowDispatches":1'* || "$integration_readiness_response" != *'"responsesTracked":1'* || "$integration_readiness_response" != *'"conversionsTracked":0'* || "$integration_readiness_response" != *'"processedProviderEvents":3'* || "$integration_readiness_response" != *'"failedProviderEvents":0'* || "$integration_readiness_response" != *'"businessEntityLinkedEvents":3'* || "$integration_readiness_response" != *'"pendingEvents":0'* || "$integration_readiness_response" != *'"deadLetterEvents":1'* || "$integration_readiness_response" != *'"status":"attention"'* || "$integration_readiness_response" != *'"leadIntakeReady":false'* || "$integration_readiness_response" != *'"workflowDispatchReady":true'* || "$integration_readiness_response" != *'"callbackTraceabilityReady":true'* || "$integration_readiness_response" != *'"businessEntityLinkageReady":true'* || "$integration_readiness_response" != *'"externalAdaptersPrepared":false'* || "$integration_readiness_response" != *'"openProviderRisks":5'* || "$adapter_catalog_response" != *'"configuredCapabilities":1'* || "$adapter_catalog_response" != *'"fallbackCapabilities":6'* || "$adapter_catalog_response" != *'"criticalUnconfiguredCapabilities":4'* ]]; then
+  if [[ "$integration_readiness_response" != *'"tenantSlug":"bootstrap-ops"'* || "$integration_readiness_response" != *'"dataSource":"postgresql"'* || "$integration_readiness_response" != *'"configured":1'* || "$integration_readiness_response" != *'"activeInboundProviders":1'* || "$integration_readiness_response" != *'"activeOutboundProviders":1'* || "$integration_readiness_response" != *'"fallbackEnabled":false'* || "$integration_readiness_response" != *'"contractArtifacts":27'* || "$integration_readiness_response" != *'"criticalUnconfiguredCapabilities":4'* || "$integration_readiness_response" != *'"inboundLeads":0'* || "$integration_readiness_response" != *'"workflowDispatches":1'* || "$integration_readiness_response" != *'"responsesTracked":1'* || "$integration_readiness_response" != *'"conversionsTracked":0'* || "$integration_readiness_response" != *'"processedProviderEvents":3'* || "$integration_readiness_response" != *'"failedProviderEvents":0'* || "$integration_readiness_response" != *'"businessEntityLinkedEvents":3'* || "$integration_readiness_response" != *'"pendingEvents":0'* || "$integration_readiness_response" != *'"deadLetterEvents":1'* || "$integration_readiness_response" != *'"status":"attention"'* || "$integration_readiness_response" != *'"leadIntakeReady":false'* || "$integration_readiness_response" != *'"workflowDispatchReady":true'* || "$integration_readiness_response" != *'"callbackTraceabilityReady":true'* || "$integration_readiness_response" != *'"businessEntityLinkageReady":true'* || "$integration_readiness_response" != *'"externalAdaptersPrepared":false'* || "$integration_readiness_response" != *'"openProviderRisks":5'* || "$adapter_catalog_response" != *'"configuredCapabilities":3'* || "$adapter_catalog_response" != *'"fallbackCapabilities":10'* || "$adapter_catalog_response" != *'"criticalUnconfiguredCapabilities":4'* ]]; then
     echo "[test] analytics integration readiness report did not expose the expected payload"
     exit 1
   fi
@@ -2832,9 +2891,12 @@ run_catalog_runtime_smoke() {
 run_platform_control_runtime_smoke() {
   local base_url="http://localhost:${PLATFORM_CONTROL_HTTP_PORT:-8098}"
   local catalog_response
+  local provider_catalog_response
   local entitlement_response
   local entitlements_bulk_response
   local entitlements_response
+  local provider_default_response
+  local provider_defaults_response
   local quota_response
   local quotas_bulk_response
   local quotas_response
@@ -2843,7 +2905,10 @@ run_platform_control_runtime_smoke() {
   local blocks_response
   local metering_create_response
   local metering_response
+  local lifecycle_readiness_response
+  local onboarding_preview_response
   local onboarding_response
+  local offboarding_preview_response
   local offboarding_response
   local jobs_response
   local onboarding_public_id
@@ -2856,9 +2921,12 @@ run_platform_control_runtime_smoke() {
   wait_for_http_ready "$base_url/health/ready"
 
   catalog_response="$(curl -fsS "$base_url/api/platform-control/capabilities/catalog")"
+  provider_catalog_response="$(curl -fsS "$base_url/api/platform-control/providers/catalog")"
   entitlement_response="$(curl -fsS -X PUT -H "Content-Type: application/json" -d '{"enabled":true,"planCode":"growth","limitValue":2500,"source":"billing-plan"}' "$base_url/api/platform-control/tenants/bootstrap-ops/entitlements/catalog.items")"
   entitlements_bulk_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"items":[{"capabilityKey":"documents.digital_signature","enabled":true,"planCode":"growth","limitValue":100,"source":"ops"},{"enabled":false}]}' "$base_url/api/platform-control/tenants/bootstrap-ops/entitlements/bulk")"
   entitlements_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/entitlements")"
+  provider_default_response="$(curl -fsS -X PUT -H "Content-Type: application/json" -d '{"providerKey":"local","mode":"fallback","source":"tenant-bootstrap"}' "$base_url/api/platform-control/tenants/bootstrap-ops/provider-defaults/documents.digital_signature")"
+  provider_defaults_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/provider-defaults")"
   quota_response="$(curl -fsS -X PUT -H "Content-Type: application/json" -d '{"metricUnit":"bytes","limitValue":2097152,"enforcementMode":"soft","source":"plan"}' "$base_url/api/platform-control/tenants/bootstrap-ops/quotas/documents.storage_bytes")"
   quotas_bulk_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"items":[{"metricKey":"workflows.executions","metricUnit":"runs","limitValue":500,"enforcementMode":"hard","source":"plan"},{"limitValue":10}]}' "$base_url/api/platform-control/tenants/bootstrap-ops/quotas/bulk")"
   quotas_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/quotas")"
@@ -2867,8 +2935,11 @@ run_platform_control_runtime_smoke() {
   metering_create_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"metricKey":"documents.storage_bytes","metricUnit":"bytes","quantity":1048576,"source":"documents"}' "$base_url/api/platform-control/tenants/bootstrap-ops/metering/snapshots")"
   metering_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/metering")"
   usage_summary_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/usage-summary")"
+  lifecycle_readiness_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/readiness")"
+  onboarding_preview_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"requestedBy":"ops@bootstrap-ops.local","payload":{"seed":"saas-growth"}}' "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/onboarding/preview")"
   onboarding_response="$(curl -fsS -X POST -H "Content-Type: application/json" -H "Idempotency-Key: onboarding-bootstrap-ops-smoke" -d '{"requestedBy":"ops@bootstrap-ops.local","payload":{"seed":"saas-growth"}}' "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/onboarding")"
   onboarding_public_id="$(printf '%s' "$onboarding_response" | extract_json_field "publicId")"
+  offboarding_preview_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"requestedBy":"ops@bootstrap-ops.local","payload":{"mode":"export-only"}}' "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/offboarding/preview")"
   offboarding_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"requestedBy":"ops@bootstrap-ops.local","payload":{"mode":"export-only"}}' "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/offboarding")"
   job_start_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"summary":"Smoke start."}' "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/jobs/$onboarding_public_id/start")"
   job_complete_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"summary":"Smoke complete."}' "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/jobs/$onboarding_public_id/complete")"
@@ -2878,6 +2949,7 @@ run_platform_control_runtime_smoke() {
       SELECT
         tenant.slug || '|' ||
         (SELECT count(*) FROM platform_control.entitlements AS entitlement WHERE entitlement.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM platform_control.provider_defaults AS provider WHERE provider.tenant_id = tenant.id) || '|' ||
         (SELECT count(*) FROM platform_control.quotas AS quota WHERE quota.tenant_id = tenant.id) || '|' ||
         (SELECT count(*) FROM platform_control.tenant_blocks AS block WHERE block.tenant_id = tenant.id) || '|' ||
         (SELECT count(*) FROM platform_control.usage_snapshots AS snapshot WHERE snapshot.tenant_id = tenant.id) || '|' ||
@@ -2890,9 +2962,12 @@ run_platform_control_runtime_smoke() {
     ")"
 
   echo "[test] platform-control catalog => $catalog_response"
+  echo "[test] platform-control provider catalog => $provider_catalog_response"
   echo "[test] platform-control entitlement => $entitlement_response"
   echo "[test] platform-control entitlements bulk => $entitlements_bulk_response"
   echo "[test] platform-control entitlements => $entitlements_response"
+  echo "[test] platform-control provider default => $provider_default_response"
+  echo "[test] platform-control provider defaults => $provider_defaults_response"
   echo "[test] platform-control quota => $quota_response"
   echo "[test] platform-control quotas bulk => $quotas_bulk_response"
   echo "[test] platform-control quotas => $quotas_response"
@@ -2901,7 +2976,10 @@ run_platform_control_runtime_smoke() {
   echo "[test] platform-control metering create => $metering_create_response"
   echo "[test] platform-control metering => $metering_response"
   echo "[test] platform-control usage summary => $usage_summary_response"
+  echo "[test] platform-control lifecycle readiness => $lifecycle_readiness_response"
+  echo "[test] platform-control onboarding preview => $onboarding_preview_response"
   echo "[test] platform-control onboarding => $onboarding_response"
+  echo "[test] platform-control offboarding preview => $offboarding_preview_response"
   echo "[test] platform-control offboarding => $offboarding_response"
   echo "[test] platform-control job start => $job_start_response"
   echo "[test] platform-control job complete => $job_complete_response"
@@ -2909,7 +2987,7 @@ run_platform_control_runtime_smoke() {
   echo "[test] platform-control job detail => $job_detail_response"
   echo "[test] platform-control db summary => $db_summary"
 
-  if [[ "$catalog_response" != *'"capabilityKey":"documents.digital_signature"'* || "$entitlement_response" != *'"planCode":"growth"'* || "$entitlements_bulk_response" != *'"partialSuccess":true'* || "$entitlements_response" != *'"pageInfo"'* || "$quota_response" != *'"metricKey":"documents.storage_bytes"'* || "$quotas_bulk_response" != *'"partialSuccess":true'* || "$quotas_response" != *'"workflows.executions"'* || "$block_response" != *'"blockKey":"collections_hard_stop"'* || "$blocks_response" != *'"active":true'* || "$metering_create_response" != *'"metricKey":"documents.storage_bytes"'* || "$metering_response" != *'"pageInfo"'* || "$usage_summary_response" != *'"limitValue":2097152'* || "$onboarding_response" != *'"jobType":"onboarding"'* || "$onboarding_response" != *'"idempotencyKey":"onboarding-bootstrap-ops-smoke"'* || "$offboarding_response" != *'"jobType":"offboarding"'* || "$job_start_response" != *'"status":"running"'* || "$job_complete_response" != *'"status":"completed"'* || "$jobs_response" != *'"requestedBy":"ops@bootstrap-ops.local"'* || "$job_detail_response" != *'"events"'* || "$db_summary" != 'bootstrap-ops|2|2|1|1|1|4' ]]; then
+  if [[ "$catalog_response" != *'"capabilityKey":"documents.digital_signature"'* || "$provider_catalog_response" != *'"capabilityKey":"billing.pix"'* || "$entitlement_response" != *'"planCode":"growth"'* || "$entitlements_bulk_response" != *'"partialSuccess":true'* || "$entitlements_response" != *'"pageInfo"'* || "$provider_default_response" != *'"providerKey":"local"'* || "$provider_defaults_response" != *'"capabilityKey":"documents.digital_signature"'* || "$quota_response" != *'"metricKey":"documents.storage_bytes"'* || "$quotas_bulk_response" != *'"partialSuccess":true'* || "$quotas_response" != *'"workflows.executions"'* || "$block_response" != *'"blockKey":"collections_hard_stop"'* || "$blocks_response" != *'"active":true'* || "$metering_create_response" != *'"metricKey":"documents.storage_bytes"'* || "$metering_response" != *'"pageInfo"'* || "$usage_summary_response" != *'"limitValue":2097152'* || "$lifecycle_readiness_response" != *'"providerDefaultsReady":true'* || "$onboarding_preview_response" != *'"jobType":"onboarding"'* || "$onboarding_preview_response" != *'"steps"'* || "$onboarding_response" != *'"jobType":"onboarding"'* || "$onboarding_response" != *'"idempotencyKey":"onboarding-bootstrap-ops-smoke"'* || "$onboarding_response" != *'"preview"'* || "$offboarding_preview_response" != *'"jobType":"offboarding"'* || "$offboarding_response" != *'"jobType":"offboarding"'* || "$job_start_response" != *'"status":"running"'* || "$job_complete_response" != *'"status":"completed"'* || "$jobs_response" != *'"requestedBy":"ops@bootstrap-ops.local"'* || "$job_detail_response" != *'"events"'* || "$db_summary" != 'bootstrap-ops|2|1|2|1|1|1|1|4' ]]; then
     echo "[test] platform-control runtime state did not expose the expected SaaS lifecycle cycle"
     exit 1
   fi
@@ -3836,6 +3914,7 @@ main() {
       run_dotnet_integration
       ;;
     contract)
+      run_contract_registry_checks
       run_typescript_contract
       run_go_contract
       run_dotnet_contract
@@ -3874,6 +3953,7 @@ main() {
       run_python_unit
       run_dotnet_build
       run_dotnet_integration
+      run_contract_registry_checks
       run_typescript_contract
       run_go_contract
       run_dotnet_contract
