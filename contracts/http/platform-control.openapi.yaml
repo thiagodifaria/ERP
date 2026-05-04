@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: ERP Platform Control API
-  version: 0.1.0
-  description: Tenant capabilities, entitlements, metering and lifecycle operations.
+  version: 0.2.0
+  description: Tenant capabilities, entitlements, quotas, metering, lifecycle jobs and SaaS governance.
 paths:
   /api/platform-control/capabilities/catalog:
     get:
@@ -12,7 +12,7 @@ paths:
           description: Capability catalog
   /api/platform-control/tenants/{tenantSlug}/entitlements:
     get:
-      summary: List tenant entitlements
+      summary: List tenant entitlements with cursor pagination
       parameters:
         - in: path
           name: tenantSlug
@@ -21,7 +21,7 @@ paths:
             type: string
       responses:
         "200":
-          description: Entitlement list
+          description: Paginated entitlement list
   /api/platform-control/tenants/{tenantSlug}/entitlements/{capabilityKey}:
     put:
       summary: Upsert one entitlement
@@ -39,63 +39,105 @@ paths:
       responses:
         "200":
           description: Upserted entitlement
+  /api/platform-control/tenants/{tenantSlug}/entitlements/bulk:
+    post:
+      summary: Bulk upsert entitlements with partial success
+      responses:
+        "200":
+          description: Bulk entitlement result
+  /api/platform-control/tenants/{tenantSlug}/quotas:
+    get:
+      summary: List quotas by tenant
+      responses:
+        "200":
+          description: Quota list
+  /api/platform-control/tenants/{tenantSlug}/quotas/{metricKey}:
+    put:
+      summary: Upsert one quota
+      responses:
+        "200":
+          description: Upserted quota
+  /api/platform-control/tenants/{tenantSlug}/quotas/bulk:
+    post:
+      summary: Bulk upsert quotas with partial success
+      responses:
+        "200":
+          description: Bulk quota result
+  /api/platform-control/tenants/{tenantSlug}/blocks:
+    get:
+      summary: List tenant blocks
+      responses:
+        "200":
+          description: Block list
+  /api/platform-control/tenants/{tenantSlug}/blocks/{blockKey}:
+    put:
+      summary: Upsert tenant block
+      responses:
+        "200":
+          description: Upserted tenant block
   /api/platform-control/tenants/{tenantSlug}/metering:
     get:
-      summary: Read metering snapshots and summary
-      parameters:
-        - in: path
-          name: tenantSlug
-          required: true
-          schema:
-            type: string
+      summary: Read metering snapshots and summary with cursor pagination
       responses:
         "200":
           description: Metering summary
   /api/platform-control/tenants/{tenantSlug}/metering/snapshots:
     post:
       summary: Create one usage snapshot
-      parameters:
-        - in: path
-          name: tenantSlug
-          required: true
-          schema:
-            type: string
       responses:
         "200":
           description: Created usage snapshot
+  /api/platform-control/tenants/{tenantSlug}/usage-summary:
+    get:
+      summary: Read quota and metering utilization summary
+      responses:
+        "200":
+          description: Usage summary
   /api/platform-control/tenants/{tenantSlug}/lifecycle/jobs:
     get:
-      summary: List onboarding and offboarding jobs
-      parameters:
-        - in: path
-          name: tenantSlug
-          required: true
-          schema:
-            type: string
+      summary: List onboarding and offboarding jobs with cursor pagination
       responses:
         "200":
           description: Lifecycle jobs
-  /api/platform-control/tenants/{tenantSlug}/lifecycle/onboarding:
-    post:
-      summary: Queue onboarding job
-      parameters:
-        - in: path
-          name: tenantSlug
-          required: true
-          schema:
-            type: string
+  /api/platform-control/tenants/{tenantSlug}/lifecycle/jobs/{publicId}:
+    get:
+      summary: Read one lifecycle job with audit events
       responses:
         "200":
+          description: Lifecycle job detail
+  /api/platform-control/tenants/{tenantSlug}/lifecycle/onboarding:
+    post:
+      summary: Queue onboarding job with Idempotency-Key and 202 Accepted
+      responses:
+        "202":
           description: Queued onboarding job
   /api/platform-control/tenants/{tenantSlug}/lifecycle/offboarding:
     post:
-      summary: Queue offboarding job
-      parameters:
-        - in: path
-          name: tenantSlug
-          required: true
-          schema:
-            type: string
+      summary: Queue offboarding job with Idempotency-Key and 202 Accepted
+      responses:
+        "202":
+          description: Queued offboarding job
+  /api/platform-control/tenants/{tenantSlug}/lifecycle/jobs/{publicId}/start:
+    post:
+      summary: Transition lifecycle job to running
       responses:
         "200":
-          description: Queued offboarding job
+          description: Updated lifecycle job
+  /api/platform-control/tenants/{tenantSlug}/lifecycle/jobs/{publicId}/complete:
+    post:
+      summary: Transition lifecycle job to completed
+      responses:
+        "200":
+          description: Updated lifecycle job
+  /api/platform-control/tenants/{tenantSlug}/lifecycle/jobs/{publicId}/fail:
+    post:
+      summary: Transition lifecycle job to failed
+      responses:
+        "200":
+          description: Updated lifecycle job
+  /api/platform-control/tenants/{tenantSlug}/lifecycle/jobs/{publicId}/cancel:
+    post:
+      summary: Transition lifecycle job to cancelled
+      responses:
+        "200":
+          description: Updated lifecycle job

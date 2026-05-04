@@ -79,16 +79,16 @@ func (reader integrationsReader) GetJSON(_ context.Context, requestURL string, t
 				"activeOutboundProviders": 2,
 			},
 			"flows": map[string]any{
-				"inboundLeads":            1,
-				"workflowDispatches":      1,
+				"inboundLeads":               1,
+				"workflowDispatches":         1,
 				"businessEntityLinkedEvents": 3,
-				"failedProviderEvents":    1,
+				"failedProviderEvents":       1,
 			},
 			"webhookHub": map[string]any{"deadLetterEvents": 1},
 			"capabilityRegistry": map[string]any{
 				"summary": map[string]any{
 					"criticalUnconfiguredCapabilities": 1,
-					"contractArtifacts":               7,
+					"contractArtifacts":                7,
 				},
 			},
 			"readiness": map[string]any{

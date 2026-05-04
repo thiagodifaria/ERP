@@ -17,11 +17,11 @@ type EngagementExecutiveSummary struct {
 }
 
 type EngagementOverviewResponse struct {
-	Service              string                    `json:"service"`
-	TenantSlug           string                    `json:"tenantSlug"`
-	GeneratedAt          string                    `json:"generatedAt"`
+	Service              string                     `json:"service"`
+	TenantSlug           string                     `json:"tenantSlug"`
+	GeneratedAt          string                     `json:"generatedAt"`
 	ExecutiveSummary     EngagementExecutiveSummary `json:"executiveSummary"`
-	ServicePulse         map[string]any            `json:"servicePulse"`
-	Tenant360            map[string]any            `json:"tenant360"`
-	EngagementOperations map[string]any            `json:"engagementOperations"`
+	ServicePulse         map[string]any             `json:"servicePulse"`
+	Tenant360            map[string]any             `json:"tenant360"`
+	EngagementOperations map[string]any             `json:"engagementOperations"`
 }

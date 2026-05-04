@@ -1,0 +1,30 @@
+openapi: 3.1.0
+info:
+  title: ERP Edge API
+  version: 0.1.0
+  description: Aggregated operational cockpits for tenants, contracts and SaaS control.
+paths:
+  /api/edge/ops/integrations-overview:
+    get:
+      summary: Read executive integrations cockpit
+      responses:
+        "200":
+          description: Integrations overview
+  /api/edge/ops/saas-overview:
+    get:
+      summary: Read executive SaaS cockpit
+      responses:
+        "200":
+          description: SaaS overview
+  /api/edge/ops/contracts-overview:
+    get:
+      summary: Read executive contracts cockpit
+      responses:
+        "200":
+          description: Contracts overview
+  /api/edge/ops/hardening-overview:
+    get:
+      summary: Read executive hardening cockpit
+      responses:
+        "200":
+          description: Hardening overview

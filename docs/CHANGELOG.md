@@ -1,5 +1,8 @@
 # CHANGELOG
 
+- `v0.9.9`: [UPDATE 04/05/2026 - 11:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `platform-control` amadurecido como plano SaaS real, com quotas, tenant blocks, metering resumido, bulk com `partial success`, jobs de lifecycle auditaveis, `Idempotency-Key` e `202 Accepted`.
+- `v0.9.9`: [UPDATE 04/05/2026 - 11:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] `documents` ganhou capability registry de assinatura digital com fallback seguro, e `crm` ganhou capability registry e lookup de enriquecimento de CNPJ para preparar adapters externos de forma limpa.
+- `v0.9.9`: [UPDATE 04/05/2026 - 11:56 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Governanca contratual fortalecida com novos artefatos OpenAPI para `analytics` e `edge`, specs ampliadas para `catalog`, `platform-control`, `crm` e `documents`, schemas adicionais, `contracts/registry.json` e `docs/API_PORTAL.md`.
 - `v0.0.0`: Criacao do repositorio.
 - `v0.0.1`: [UPDATE 31/03/2026 - 01:11 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Estrutura base da Fase 0 criada com `service-api`, `infra`, `docs`, `scripts`, `tests`, arquivos raiz do monorepo e documentacao inicial.
 - `v0.0.1`: [UPDATE 31/03/2026 - 01:11 BELO HORIZONTE, MINAS GERAIS, BRAZIL] Politica local definida para manter materiais internos e notas operacionais fora de versionamento.

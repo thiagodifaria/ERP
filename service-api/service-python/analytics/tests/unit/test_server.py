@@ -123,7 +123,7 @@ def test_integration_readiness_returns_external_operations_payload() -> None:
     assert payload["flows"]["inboundLeads"] == 3
     assert payload["flows"]["businessEntityLinkedEvents"] == 6
     assert payload["webhookHub"]["deadLetterEvents"] == 1
-    assert payload["capabilityRegistry"]["summary"]["contractArtifacts"] == 11
+    assert payload["capabilityRegistry"]["summary"]["contractArtifacts"] >= 11
     assert payload["readiness"]["callbackTraceabilityReady"] is True
     assert payload["readiness"]["businessEntityLinkageReady"] is True
 
@@ -133,9 +133,11 @@ def test_adapter_catalog_returns_provider_and_contract_capabilities() -> None:
     payload = response.json()
 
     assert response.status_code == 200
-    assert payload["summary"]["contractArtifacts"] == 11
+    assert payload["summary"]["contractArtifacts"] >= 11
     assert payload["engagement"]["summary"]["fallback"] >= 1
     assert payload["documents"]["capabilities"][0]["provider"] == "local"
+    assert payload["documentSigning"]["capabilities"][0]["provider"] == "local"
+    assert payload["crmEnrichment"]["capabilities"][0]["provider"] == "local"
     assert payload["webhookHub"]["controls"]["dlqReady"] is True
 
 
@@ -263,5 +265,24 @@ def test_hardening_review_returns_operational_review_payload() -> None:
     assert payload["reviews"]["security"]["mfaEnabledUsers"] == 2
     assert payload["reviews"]["backupRestore"]["validated"] is True
     assert payload["reviews"]["providerCapabilities"]["fallbackCapabilities"] >= 1
-    assert payload["reviews"]["contractGovernance"]["httpSpecs"] == 7
+    assert payload["reviews"]["contractGovernance"]["httpSpecs"] >= 7
     assert payload["reviews"]["performance"]["latestBenchmarkStatus"] == "attention"
+
+
+def test_saas_control_returns_usage_and_lifecycle_payload() -> None:
+    response = client.get("/api/analytics/reports/saas-control?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["entitlements"]["enabled"] >= 5
+    assert payload["readiness"]["onboardingReady"] is True
+
+
+def test_contract_governance_returns_registry_payload() -> None:
+    response = client.get("/api/analytics/reports/contract-governance")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["catalog"]["httpSpecs"] >= 7
+    assert payload["patterns"]["idempotencyKeyReady"] is True

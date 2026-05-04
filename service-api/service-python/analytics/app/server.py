@@ -19,10 +19,12 @@ from app.reports.pipeline_summary import build_pipeline_summary
 from app.reports.platform_reliability import build_platform_reliability
 from app.reports.rental_operations import build_rental_operations
 from app.reports.revenue_operations import build_revenue_operations
+from app.reports.saas_control import build_saas_control
 from app.reports.sales_journey import build_sales_journey
 from app.reports.service_pulse import build_service_pulse
 from app.reports.tenant_360 import build_tenant_360
 from app.reports.workflow_definition_health import build_workflow_definition_health
+from app.reports.contract_governance import build_contract_governance
 
 
 app = FastAPI(title=settings.service_name)
@@ -154,3 +156,13 @@ def platform_reliability(tenant_slug: str | None = None) -> dict:
 @app.get("/api/analytics/reports/hardening-review")
 def hardening_review(tenant_slug: str | None = None) -> dict:
     return build_hardening_review(tenant_slug)
+
+
+@app.get("/api/analytics/reports/saas-control")
+def saas_control(tenant_slug: str | None = None) -> dict:
+    return build_saas_control(tenant_slug)
+
+
+@app.get("/api/analytics/reports/contract-governance")
+def contract_governance() -> dict:
+    return build_contract_governance()

@@ -12,6 +12,34 @@ paths:
       responses:
         '200':
           description: Readiness payload
+  /api/documents/signing/capabilities:
+    get:
+      summary: List digital signature capabilities
+      responses:
+        '200':
+          description: Signing capability catalog
+  /api/documents/signing/capabilities/{provider}:
+    get:
+      summary: Read one signing capability
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Signing capability detail
+        '404':
+          description: Signing capability not found
+  /api/documents/signing/requests:
+    post:
+      summary: Queue one digital signature request
+      requestBody:
+        required: true
+      responses:
+        '201':
+          description: Signing request created
   /api/documents/storage/capabilities:
     get:
       summary: List storage capability registry

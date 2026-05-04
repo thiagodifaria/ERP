@@ -82,7 +82,7 @@ func (reader documentsOverviewReader) GetJSON(_ context.Context, requestURL stri
 			"tenantSlug": "bootstrap-ops",
 			"services": map[string]any{
 				"documents": map[string]any{
-					"attachmentsTotal":       6,
+					"attachmentsTotal":        6,
 					"completedUploadSessions": 1,
 				},
 			},
@@ -91,7 +91,7 @@ func (reader documentsOverviewReader) GetJSON(_ context.Context, requestURL stri
 		payload = map[string]any{
 			"tenantSlug": "bootstrap-ops",
 			"documents": map[string]any{
-				"attachments":          6,
+				"attachments":           6,
 				"restrictedAttachments": 2,
 			},
 		}

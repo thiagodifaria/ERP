@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erp://contracts/events/crm.cnpj-enrichment.schema.json",
+  "title": "CRM CNPJ Enrichment Lookup",
+  "type": "object",
+  "required": ["cnpj"],
+  "properties": {
+    "cnpj": {"type": "string"},
+    "companyName": {"type": "string"}
+  }
+}

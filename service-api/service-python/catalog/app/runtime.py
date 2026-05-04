@@ -33,10 +33,41 @@ def _find_tenant_id(cursor, tenant_slug: str) -> int:
     return int(row["id"])
 
 
+def _normalize_limit(limit: int | None, fallback: int = 50) -> int:
+    if limit is None or limit <= 0:
+        return fallback
+    return min(limit, 100)
+
+
+def _paginate(records: list[dict], cursor: str | None, limit: int, cursor_field: str = "publicId") -> dict:
+    page_limit = _normalize_limit(limit)
+    start_index = 0
+    if cursor:
+        for index, record in enumerate(records):
+            if str(record.get(cursor_field, "")) == cursor:
+                start_index = index + 1
+                break
+    items = records[start_index : start_index + page_limit]
+    next_cursor = None
+    if start_index + page_limit < len(records) and items:
+        next_cursor = str(items[-1].get(cursor_field, ""))
+    return {
+        "items": items,
+        "pageInfo": {
+            "cursor": cursor,
+            "limit": page_limit,
+            "returned": len(items),
+            "nextCursor": next_cursor,
+            "hasMore": next_cursor is not None,
+        },
+    }
+
+
 def list_categories(tenant_slug: str | None = None) -> list[dict]:
     slug = _tenant_slug(tenant_slug)
     if settings.repository_driver != "postgres":
-        return [category for category in IN_MEMORY_STATE["categories"] if category["tenantSlug"] == slug]
+        records = [category for category in IN_MEMORY_STATE["categories"] if category["tenantSlug"] == slug]
+        return sorted(records, key=lambda item: item["name"])
 
     with connect() as connection:
         with connection.cursor() as cursor:
@@ -61,6 +92,12 @@ def list_categories(tenant_slug: str | None = None) -> list[dict]:
                 }
                 for row in cursor.fetchall()
             ]
+
+
+def list_categories_page(tenant_slug: str | None = None, cursor: str | None = None, limit: int = 50) -> dict:
+    payload = _paginate(list_categories(tenant_slug), cursor, limit)
+    payload["tenantSlug"] = _tenant_slug(tenant_slug)
+    return payload
 
 
 def create_category(payload: dict) -> dict:
@@ -111,7 +148,7 @@ def list_items(tenant_slug: str | None = None, item_type: str | None = None, act
             items = [item for item in items if item["itemType"] == normalized_item_type]
         if active is not None:
             items = [item for item in items if item["active"] is active]
-        return items
+        return sorted(items, key=lambda item: item["name"])
 
     clauses = ["tenant.slug = %s"]
     params: list[object] = [slug]
@@ -138,6 +175,12 @@ def list_items(tenant_slug: str | None = None, item_type: str | None = None, act
                 params,
             )
             return [_map_item_row(row, slug) for row in cursor.fetchall()]
+
+
+def list_items_page(tenant_slug: str | None = None, item_type: str | None = None, active: bool | None = None, cursor: str | None = None, limit: int = 50) -> dict:
+    payload = _paginate(list_items(tenant_slug, item_type, active), cursor, limit)
+    payload["tenantSlug"] = _tenant_slug(tenant_slug)
+    return payload
 
 
 def get_item(public_id: str, tenant_slug: str | None = None) -> dict | None:
@@ -258,6 +301,29 @@ def create_item(payload: dict) -> dict:
             return item
 
 
+def bulk_create_items(payload: dict) -> dict:
+    items = payload.get("items") or []
+    results: list[dict] = []
+    errors: list[dict] = []
+    for index, item in enumerate(items):
+        try:
+            results.append(create_item(item))
+        except ValueError as error:
+            errors.append({"index": index, "code": str(error), "message": "Catalog item payload is invalid."})
+
+    return {
+        "tenantSlug": _tenant_slug(payload.get("tenantSlug")),
+        "results": results,
+        "errors": errors,
+        "summary": {
+            "requested": len(items),
+            "succeeded": len(results),
+            "failed": len(errors),
+            "partialSuccess": len(results) > 0 and len(errors) > 0,
+        },
+    }
+
+
 def update_item(public_id: str, payload: dict) -> dict | None:
     current = get_item(public_id, payload.get("tenantSlug"))
     if current is None:
@@ -312,6 +378,8 @@ def capability_catalog() -> dict:
         "supportsVersioning": True,
         "supportsActivation": True,
         "supportsCategories": True,
+        "supportsCursorPagination": True,
+        "supportsBulk": True,
         "repositoryDriver": settings.repository_driver,
     }
 
@@ -319,7 +387,11 @@ def capability_catalog() -> dict:
 def _map_item_row(row: dict, tenant_slug: str) -> dict:
     category = None
     if row.get("category_public_id") is not None:
-        category = {"publicId": row["category_public_id"], "name": row["category_name"]}
+        category = {
+            "publicId": row["category_public_id"],
+            "name": row["category_name"],
+        }
+
     return {
         "publicId": row["public_id"],
         "tenantSlug": tenant_slug,

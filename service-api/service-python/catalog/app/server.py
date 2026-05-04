@@ -4,7 +4,18 @@ from fastapi import FastAPI, HTTPException
 
 from app.config.settings import settings
 from app.infrastructure.postgres import postgres_ready
-from app.runtime import capability_catalog, create_category, create_item, get_item, list_categories, list_items, update_item
+from app.runtime import (
+    bulk_create_items,
+    capability_catalog,
+    create_category,
+    create_item,
+    get_item,
+    list_categories,
+    list_categories_page,
+    list_items,
+    list_items_page,
+    update_item,
+)
 
 
 app = FastAPI(title=settings.service_name)
@@ -38,6 +49,11 @@ def categories(tenant_slug: str | None = None) -> list[dict]:
     return list_categories(tenant_slug)
 
 
+@app.get("/api/catalog/categories/page")
+def categories_page(tenant_slug: str | None = None, cursor: str | None = None, limit: int = 50) -> dict:
+    return list_categories_page(tenant_slug, cursor, limit)
+
+
 @app.post("/api/catalog/categories")
 def post_category(payload: dict) -> dict:
     try:
@@ -51,6 +67,11 @@ def items(tenant_slug: str | None = None, item_type: str | None = None, active: 
     return list_items(tenant_slug, item_type, active)
 
 
+@app.get("/api/catalog/items/page")
+def items_page(tenant_slug: str | None = None, item_type: str | None = None, active: bool | None = None, cursor: str | None = None, limit: int = 50) -> dict:
+    return list_items_page(tenant_slug, item_type, active, cursor, limit)
+
+
 @app.post("/api/catalog/items")
 def post_item(payload: dict) -> dict:
     try:
@@ -58,6 +79,11 @@ def post_item(payload: dict) -> dict:
     except ValueError as error:
         status_code = 404 if str(error) == "catalog_category_not_found" else 400
         raise HTTPException(status_code=status_code, detail={"code": str(error), "message": "Catalog item payload is invalid."}) from error
+
+
+@app.post("/api/catalog/items/bulk")
+def post_items_bulk(payload: dict) -> dict:
+    return bulk_create_items(payload)
 
 
 @app.get("/api/catalog/items/{public_id}")

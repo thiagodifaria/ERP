@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: ERP Catalog API
-  version: 0.1.0
-  description: Product and service catalog with categories, activation and versioned items.
+  version: 0.2.0
+  description: Product and service catalog with categories, activation, versioned items, cursor pagination and bulk creation.
 paths:
   /api/catalog/capabilities:
     get:
@@ -13,11 +13,6 @@ paths:
   /api/catalog/categories:
     get:
       summary: List categories by tenant
-      parameters:
-        - in: query
-          name: tenant_slug
-          schema:
-            type: string
       responses:
         "200":
           description: Category list
@@ -26,18 +21,15 @@ paths:
       responses:
         "200":
           description: Created category
+  /api/catalog/categories/page:
+    get:
+      summary: Cursor-based category listing
+      responses:
+        "200":
+          description: Paginated category list
   /api/catalog/items:
     get:
       summary: List catalog items
-      parameters:
-        - in: query
-          name: tenant_slug
-          schema:
-            type: string
-        - in: query
-          name: item_type
-          schema:
-            type: string
       responses:
         "200":
           description: Catalog item list
@@ -46,15 +38,21 @@ paths:
       responses:
         "200":
           description: Created catalog item
+  /api/catalog/items/page:
+    get:
+      summary: Cursor-based item listing
+      responses:
+        "200":
+          description: Paginated catalog item list
+  /api/catalog/items/bulk:
+    post:
+      summary: Bulk create catalog items with partial success
+      responses:
+        "200":
+          description: Bulk item result
   /api/catalog/items/{publicId}:
     get:
       summary: Read one catalog item
-      parameters:
-        - in: path
-          name: publicId
-          required: true
-          schema:
-            type: string
       responses:
         "200":
           description: Catalog item detail
@@ -62,12 +60,6 @@ paths:
           description: Catalog item not found
     patch:
       summary: Update active state, price and attributes
-      parameters:
-        - in: path
-          name: publicId
-          required: true
-          schema:
-            type: string
       responses:
         "200":
           description: Updated catalog item

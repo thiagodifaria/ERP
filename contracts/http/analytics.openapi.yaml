@@ -1,0 +1,36 @@
+openapi: 3.1.0
+info:
+  title: ERP Analytics API
+  version: 0.1.0
+  description: Executive reports, adapter catalog, SaaS control and contract governance.
+paths:
+  /api/analytics/reports/adapter-catalog:
+    get:
+      summary: Read external adapter capability catalog
+      responses:
+        "200":
+          description: Adapter catalog report
+  /api/analytics/reports/integration-readiness:
+    get:
+      summary: Read external integration readiness
+      responses:
+        "200":
+          description: Integration readiness report
+  /api/analytics/reports/saas-control:
+    get:
+      summary: Read SaaS control posture by tenant
+      responses:
+        "200":
+          description: SaaS control report
+  /api/analytics/reports/contract-governance:
+    get:
+      summary: Read contract governance posture
+      responses:
+        "200":
+          description: Contract governance report
+  /api/analytics/reports/hardening-review:
+    get:
+      summary: Read hardening review
+      responses:
+        "200":
+          description: Hardening report

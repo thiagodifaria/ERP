@@ -552,7 +552,7 @@ run_identity_database_smoke() {
         (SELECT COALESCE(MAX(version.version_number), 0) FROM workflow_control.workflow_definition_versions AS version WHERE version.tenant_id = tenant.id)
       FROM identity.tenants AS tenant
       WHERE tenant.slug = '$smoke_slug';
-    ")" 
+    ")"
 
   echo "[test] workflow-control db smoke => $workflow_control_summary"
 
@@ -2775,10 +2775,13 @@ run_catalog_runtime_smoke() {
   local base_url="http://localhost:${CATALOG_HTTP_PORT:-8097}"
   local capabilities_response
   local category_response
+  local categories_page_response
   local item_response
+  local bulk_response
   local detail_response
   local update_response
   local list_response
+  local items_page_response
   local db_summary
   local created_public_id
   local category_public_id
@@ -2789,11 +2792,14 @@ run_catalog_runtime_smoke() {
   capabilities_response="$(curl -fsS "$base_url/api/catalog/capabilities")"
   category_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"tenantSlug":"bootstrap-ops","key":"software","name":"Software"}' "$base_url/api/catalog/categories")"
   category_public_id="$(printf '%s' "$category_response" | extract_json_field "publicId")"
+  categories_page_response="$(curl -fsS "$base_url/api/catalog/categories/page?tenant_slug=bootstrap-ops&limit=10")"
   item_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d "{\"tenantSlug\":\"bootstrap-ops\",\"categoryPublicId\":\"$category_public_id\",\"sku\":\"ERP-SAAS-001\",\"name\":\"ERP SaaS Suite\",\"itemType\":\"service\",\"unitCode\":\"seat\",\"priceBaseCents\":19900,\"attributes\":{\"billingMode\":\"monthly\"}}" "$base_url/api/catalog/items")"
   created_public_id="$(printf '%s' "$item_response" | extract_json_field "publicId")"
+  bulk_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"tenantSlug":"bootstrap-ops","items":[{"tenantSlug":"bootstrap-ops","sku":"ERP-SAAS-002","name":"ERP Retainer","itemType":"service","unitCode":"seat","priceBaseCents":9900},{"tenantSlug":"bootstrap-ops","name":"Broken","itemType":"invalid","unitCode":"seat"}]}' "$base_url/api/catalog/items/bulk")"
   detail_response="$(curl -fsS "$base_url/api/catalog/items/$created_public_id?tenant_slug=bootstrap-ops")"
   update_response="$(curl -fsS -X PATCH -H "Content-Type: application/json" -d '{"tenantSlug":"bootstrap-ops","priceBaseCents":24900,"active":false,"attributes":{"billingMode":"annual"}}' "$base_url/api/catalog/items/$created_public_id")"
   list_response="$(curl -fsS "$base_url/api/catalog/items?tenant_slug=bootstrap-ops&item_type=service")"
+  items_page_response="$(curl -fsS "$base_url/api/catalog/items/page?tenant_slug=bootstrap-ops&item_type=service&limit=10")"
   db_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql psql -U "$DB_USER" -d "$DB_NAME" -At -c "
       SELECT
         tenant.slug || '|' ||
@@ -2808,13 +2814,16 @@ run_catalog_runtime_smoke() {
 
   echo "[test] catalog capabilities => $capabilities_response"
   echo "[test] catalog category => $category_response"
+  echo "[test] catalog categories page => $categories_page_response"
   echo "[test] catalog create => $item_response"
+  echo "[test] catalog bulk => $bulk_response"
   echo "[test] catalog detail => $detail_response"
   echo "[test] catalog update => $update_response"
   echo "[test] catalog list => $list_response"
+  echo "[test] catalog items page => $items_page_response"
   echo "[test] catalog db summary => $db_summary"
 
-  if [[ "$capabilities_response" != *'"supportsCategories":true'* || "$category_response" != *'"key":"software"'* || -z "$created_public_id" || "$item_response" != *'"sku":"ERP-SAAS-001"'* || "$detail_response" != *'"itemType":"service"'* || "$update_response" != *'"priceBaseCents":24900'* || "$update_response" != *'"active":false'* || "$list_response" != *'"billingMode":"annual"'* || "$db_summary" != 'bootstrap-ops|1|1|1|1' ]]; then
+  if [[ "$capabilities_response" != *'"supportsCursorPagination":true'* || "$capabilities_response" != *'"supportsBulk":true'* || "$category_response" != *'"key":"software"'* || "$categories_page_response" != *'"pageInfo"'* || -z "$created_public_id" || "$item_response" != *'"sku":"ERP-SAAS-001"'* || "$bulk_response" != *'"partialSuccess":true'* || "$detail_response" != *'"itemType":"service"'* || "$update_response" != *'"priceBaseCents":24900'* || "$update_response" != *'"active":false'* || "$list_response" != *'"billingMode":"annual"'* || "$items_page_response" != *'"pageInfo"'* || "$db_summary" != 'bootstrap-ops|1|2|2|1' ]]; then
     echo "[test] catalog runtime state did not expose the expected product catalog cycle"
     exit 1
   fi
@@ -2824,12 +2833,23 @@ run_platform_control_runtime_smoke() {
   local base_url="http://localhost:${PLATFORM_CONTROL_HTTP_PORT:-8098}"
   local catalog_response
   local entitlement_response
+  local entitlements_bulk_response
   local entitlements_response
+  local quota_response
+  local quotas_bulk_response
+  local quotas_response
+  local usage_summary_response
+  local block_response
+  local blocks_response
   local metering_create_response
   local metering_response
   local onboarding_response
   local offboarding_response
   local jobs_response
+  local onboarding_public_id
+  local job_start_response
+  local job_complete_response
+  local job_detail_response
   local db_summary
 
   "${COMPOSE_CMD[@]}" up -d --build platform-control
@@ -2837,19 +2857,33 @@ run_platform_control_runtime_smoke() {
 
   catalog_response="$(curl -fsS "$base_url/api/platform-control/capabilities/catalog")"
   entitlement_response="$(curl -fsS -X PUT -H "Content-Type: application/json" -d '{"enabled":true,"planCode":"growth","limitValue":2500,"source":"billing-plan"}' "$base_url/api/platform-control/tenants/bootstrap-ops/entitlements/catalog.items")"
+  entitlements_bulk_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"items":[{"capabilityKey":"documents.digital_signature","enabled":true,"planCode":"growth","limitValue":100,"source":"ops"},{"enabled":false}]}' "$base_url/api/platform-control/tenants/bootstrap-ops/entitlements/bulk")"
   entitlements_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/entitlements")"
+  quota_response="$(curl -fsS -X PUT -H "Content-Type: application/json" -d '{"metricUnit":"bytes","limitValue":2097152,"enforcementMode":"soft","source":"plan"}' "$base_url/api/platform-control/tenants/bootstrap-ops/quotas/documents.storage_bytes")"
+  quotas_bulk_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"items":[{"metricKey":"workflows.executions","metricUnit":"runs","limitValue":500,"enforcementMode":"hard","source":"plan"},{"limitValue":10}]}' "$base_url/api/platform-control/tenants/bootstrap-ops/quotas/bulk")"
+  quotas_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/quotas")"
+  block_response="$(curl -fsS -X PUT -H "Content-Type: application/json" -d '{"active":true,"reason":"manual review","scope":"tenant","source":"ops"}' "$base_url/api/platform-control/tenants/bootstrap-ops/blocks/collections_hard_stop")"
+  blocks_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/blocks")"
   metering_create_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"metricKey":"documents.storage_bytes","metricUnit":"bytes","quantity":1048576,"source":"documents"}' "$base_url/api/platform-control/tenants/bootstrap-ops/metering/snapshots")"
   metering_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/metering")"
-  onboarding_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"requestedBy":"ops@bootstrap-ops.local","payload":{"seed":"saas-growth"}}' "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/onboarding")"
+  usage_summary_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/usage-summary")"
+  onboarding_response="$(curl -fsS -X POST -H "Content-Type: application/json" -H "Idempotency-Key: onboarding-bootstrap-ops-smoke" -d '{"requestedBy":"ops@bootstrap-ops.local","payload":{"seed":"saas-growth"}}' "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/onboarding")"
+  onboarding_public_id="$(printf '%s' "$onboarding_response" | extract_json_field "publicId")"
   offboarding_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"requestedBy":"ops@bootstrap-ops.local","payload":{"mode":"export-only"}}' "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/offboarding")"
+  job_start_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"summary":"Smoke start."}' "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/jobs/$onboarding_public_id/start")"
+  job_complete_response="$(curl -fsS -X POST -H "Content-Type: application/json" -d '{"summary":"Smoke complete."}' "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/jobs/$onboarding_public_id/complete")"
   jobs_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/jobs")"
+  job_detail_response="$(curl -fsS "$base_url/api/platform-control/tenants/bootstrap-ops/lifecycle/jobs/$onboarding_public_id")"
   db_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql psql -U "$DB_USER" -d "$DB_NAME" -At -c "
       SELECT
         tenant.slug || '|' ||
         (SELECT count(*) FROM platform_control.entitlements AS entitlement WHERE entitlement.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM platform_control.quotas AS quota WHERE quota.tenant_id = tenant.id) || '|' ||
+        (SELECT count(*) FROM platform_control.tenant_blocks AS block WHERE block.tenant_id = tenant.id) || '|' ||
         (SELECT count(*) FROM platform_control.usage_snapshots AS snapshot WHERE snapshot.tenant_id = tenant.id) || '|' ||
         (SELECT count(*) FROM platform_control.lifecycle_jobs AS job WHERE job.tenant_id = tenant.id AND job.job_type = 'onboarding') || '|' ||
-        (SELECT count(*) FROM platform_control.lifecycle_jobs AS job WHERE job.tenant_id = tenant.id AND job.job_type = 'offboarding')
+        (SELECT count(*) FROM platform_control.lifecycle_jobs AS job WHERE job.tenant_id = tenant.id AND job.job_type = 'offboarding') || '|' ||
+        (SELECT count(*) FROM platform_control.lifecycle_job_events AS event JOIN platform_control.lifecycle_jobs AS job ON job.id = event.job_id WHERE job.tenant_id = tenant.id)
       FROM identity.tenants AS tenant
       WHERE tenant.slug = 'bootstrap-ops'
       LIMIT 1;
@@ -2857,15 +2891,25 @@ run_platform_control_runtime_smoke() {
 
   echo "[test] platform-control catalog => $catalog_response"
   echo "[test] platform-control entitlement => $entitlement_response"
+  echo "[test] platform-control entitlements bulk => $entitlements_bulk_response"
   echo "[test] platform-control entitlements => $entitlements_response"
+  echo "[test] platform-control quota => $quota_response"
+  echo "[test] platform-control quotas bulk => $quotas_bulk_response"
+  echo "[test] platform-control quotas => $quotas_response"
+  echo "[test] platform-control block => $block_response"
+  echo "[test] platform-control blocks => $blocks_response"
   echo "[test] platform-control metering create => $metering_create_response"
   echo "[test] platform-control metering => $metering_response"
+  echo "[test] platform-control usage summary => $usage_summary_response"
   echo "[test] platform-control onboarding => $onboarding_response"
   echo "[test] platform-control offboarding => $offboarding_response"
+  echo "[test] platform-control job start => $job_start_response"
+  echo "[test] platform-control job complete => $job_complete_response"
   echo "[test] platform-control jobs => $jobs_response"
+  echo "[test] platform-control job detail => $job_detail_response"
   echo "[test] platform-control db summary => $db_summary"
 
-  if [[ "$catalog_response" != *'"capabilityKey":"catalog.items"'* || "$entitlement_response" != *'"planCode":"growth"'* || "$entitlements_response" != *'"capabilityKey":"catalog.items"'* || "$metering_create_response" != *'"metricKey":"documents.storage_bytes"'* || "$metering_response" != *'"totalQuantity":1048576'* || "$onboarding_response" != *'"jobType":"onboarding"'* || "$offboarding_response" != *'"jobType":"offboarding"'* || "$jobs_response" != *'"requestedBy":"ops@bootstrap-ops.local"'* || "$db_summary" != 'bootstrap-ops|1|1|1|1' ]]; then
+  if [[ "$catalog_response" != *'"capabilityKey":"documents.digital_signature"'* || "$entitlement_response" != *'"planCode":"growth"'* || "$entitlements_bulk_response" != *'"partialSuccess":true'* || "$entitlements_response" != *'"pageInfo"'* || "$quota_response" != *'"metricKey":"documents.storage_bytes"'* || "$quotas_bulk_response" != *'"partialSuccess":true'* || "$quotas_response" != *'"workflows.executions"'* || "$block_response" != *'"blockKey":"collections_hard_stop"'* || "$blocks_response" != *'"active":true'* || "$metering_create_response" != *'"metricKey":"documents.storage_bytes"'* || "$metering_response" != *'"pageInfo"'* || "$usage_summary_response" != *'"limitValue":2097152'* || "$onboarding_response" != *'"jobType":"onboarding"'* || "$onboarding_response" != *'"idempotencyKey":"onboarding-bootstrap-ops-smoke"'* || "$offboarding_response" != *'"jobType":"offboarding"'* || "$job_start_response" != *'"status":"running"'* || "$job_complete_response" != *'"status":"completed"'* || "$jobs_response" != *'"requestedBy":"ops@bootstrap-ops.local"'* || "$job_detail_response" != *'"events"'* || "$db_summary" != 'bootstrap-ops|2|2|1|1|1|4' ]]; then
     echo "[test] platform-control runtime state did not expose the expected SaaS lifecycle cycle"
     exit 1
   fi

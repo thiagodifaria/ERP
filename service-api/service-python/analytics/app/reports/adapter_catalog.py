@@ -1,6 +1,7 @@
 """Catalogo executivo de adapters externos e contracts compartilhados."""
 
 from datetime import datetime, timezone
+from pathlib import Path
 
 from app.config.settings import settings
 
@@ -9,12 +10,29 @@ def build_adapter_catalog() -> dict:
     engagement = build_engagement_capabilities()
     billing = build_billing_capabilities()
     documents = build_document_storage_capabilities()
+    signing = build_document_signing_capabilities()
+    enrichment = build_enrichment_capabilities()
     webhook_hub = build_webhook_hub_capabilities()
     contracts = build_contract_catalog()
 
-    configured = engagement["summary"]["configured"] + billing["summary"]["configured"] + documents["summary"]["configured"]
-    fallback = engagement["summary"]["fallback"] + billing["summary"]["fallback"] + documents["summary"]["fallback"]
-    critical_unconfigured = billing["summary"]["criticalUnconfigured"] + webhook_hub["summary"]["criticalUnconfigured"]
+    configured = (
+        engagement["summary"]["configured"]
+        + billing["summary"]["configured"]
+        + documents["summary"]["configured"]
+        + signing["summary"]["configured"]
+        + enrichment["summary"]["configured"]
+    )
+    fallback = (
+        engagement["summary"]["fallback"]
+        + billing["summary"]["fallback"]
+        + documents["summary"]["fallback"]
+        + signing["summary"]["fallback"]
+        + enrichment["summary"]["fallback"]
+    )
+    critical_unconfigured = (
+        billing["summary"]["criticalUnconfigured"]
+        + webhook_hub["summary"]["criticalUnconfigured"]
+    )
 
     return {
         "generatedAt": datetime.now(timezone.utc).isoformat(),
@@ -27,6 +45,8 @@ def build_adapter_catalog() -> dict:
         "engagement": engagement,
         "billing": billing,
         "documents": documents,
+        "documentSigning": signing,
+        "crmEnrichment": enrichment,
         "webhookHub": webhook_hub,
         "contracts": contracts,
     }
@@ -136,6 +156,66 @@ def build_document_storage_capabilities() -> dict:
     return summarize_capabilities("documents", storage)
 
 
+def build_document_signing_capabilities() -> dict:
+    capabilities = [
+        capability(
+            provider="local",
+            scope="digital_signature",
+            configured=True,
+            credential_key=None,
+            fallback_viable=True,
+            critical=False,
+        ),
+        capability(
+            provider="clicksign",
+            scope="digital_signature",
+            configured=bool(settings.documents_clicksign_api_key.strip()),
+            credential_key="DOCUMENTS_CLICKSIGN_API_KEY",
+            fallback_viable=True,
+            critical=False,
+        ),
+        capability(
+            provider="docusign",
+            scope="digital_signature",
+            configured=bool(settings.documents_docusign_access_token.strip()),
+            credential_key="DOCUMENTS_DOCUSIGN_ACCESS_TOKEN",
+            fallback_viable=True,
+            critical=False,
+        ),
+    ]
+    return summarize_capabilities("document-signing", capabilities)
+
+
+def build_enrichment_capabilities() -> dict:
+    capabilities = [
+        capability(
+            provider="local",
+            scope="cnpj_enrichment",
+            configured=True,
+            credential_key=None,
+            fallback_viable=True,
+            critical=False,
+        ),
+        capability(
+            provider="receita_ws",
+            scope="cnpj_enrichment",
+            configured=bool(settings.crm_cnpj_provider_token.strip()),
+            credential_key="CRM_CNPJ_PROVIDER_TOKEN",
+            fallback_viable=True,
+            critical=False,
+        ),
+        capability(
+            provider="conecta_gov",
+            scope="cnpj_enrichment",
+            configured=bool(settings.crm_conecta_cnpj_api_key.strip()),
+            credential_key="CRM_CONECTA_CNPJ_API_KEY",
+            fallback_viable=True,
+            critical=False,
+        ),
+    ]
+    return summarize_capabilities("crm-enrichment", capabilities)
+
+
 def build_webhook_hub_capabilities() -> dict:
     outbound_signing_ready = bool(settings.webhook_hub_outbound_signing_secret.strip())
 
@@ -155,15 +235,25 @@ def build_webhook_hub_capabilities() -> dict:
 
 
 def build_contract_catalog() -> dict:
+    root = Path(__file__).resolve().parents[5]
+    http_specs = sorted((root / "contracts" / "http").glob("*.yaml"))
+    event_schemas = sorted((root / "contracts" / "events").glob("*.json"))
+    adr_docs = sorted((root / "docs").glob("ADR-*.md"))
+    api_portal_ready = (root / "docs" / "API_PORTAL.md").exists()
+    registry_ready = (root / "contracts" / "registry.json").exists()
+
     return {
         "service": "contracts",
         "summary": {
-            "artifacts": 11,
-            "httpSpecs": 7,
-            "eventSchemas": 4,
-            "adrRecorded": True,
-            "centralUiReady": True,
-        }
+            "artifacts": len(http_specs) + len(event_schemas) + len(adr_docs) + int(api_portal_ready) + int(registry_ready),
+            "httpSpecs": len(http_specs),
+            "eventSchemas": len(event_schemas),
+            "adrRecorded": len(adr_docs) > 0,
+            "centralUiReady": api_portal_ready,
+            "schemaRegistryReady": registry_ready,
+        },
+        "httpSpecs": [spec.name for spec in http_specs],
+        "eventSchemas": [schema.name for schema in event_schemas],
     }
 
 

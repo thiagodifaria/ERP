@@ -11,7 +11,7 @@ type HardeningExecutiveSummary struct {
 	LatestBenchmarkStatus  string `json:"latestBenchmarkStatus"`
 	BackupRestoreValidated bool   `json:"backupRestoreValidated"`
 	CriticalProviderGaps   int    `json:"criticalProviderGaps"`
-	HttpSpecs             int    `json:"httpSpecs"`
+	HttpSpecs              int    `json:"httpSpecs"`
 }
 
 type HardeningOverviewResponse struct {

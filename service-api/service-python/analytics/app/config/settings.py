@@ -28,6 +28,10 @@ class Settings:
     documents_storage_endpoint: str = os.getenv("DOCUMENTS_STORAGE_ENDPOINT", "")
     documents_r2_account_id: str = os.getenv("DOCUMENTS_R2_ACCOUNT_ID", "")
     documents_r2_bucket: str = os.getenv("DOCUMENTS_R2_BUCKET", "")
+    documents_clicksign_api_key: str = os.getenv("DOCUMENTS_CLICKSIGN_API_KEY", "")
+    documents_docusign_access_token: str = os.getenv("DOCUMENTS_DOCUSIGN_ACCESS_TOKEN", "")
+    crm_cnpj_provider_token: str = os.getenv("CRM_CNPJ_PROVIDER_TOKEN", "")
+    crm_conecta_cnpj_api_key: str = os.getenv("CRM_CONECTA_CNPJ_API_KEY", "")
     webhook_hub_outbound_signing_secret: str = os.getenv("WEBHOOK_HUB_OUTBOUND_SIGNING_SECRET", "")
 
 

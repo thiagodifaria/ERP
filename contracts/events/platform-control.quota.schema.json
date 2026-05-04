@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erp://contracts/events/platform-control.quota.schema.json",
+  "title": "Platform Control Quota",
+  "type": "object",
+  "required": ["tenantSlug", "metricKey", "metricUnit", "limitValue", "enforcementMode"],
+  "properties": {
+    "tenantSlug": {"type": "string"},
+    "metricKey": {"type": "string"},
+    "metricUnit": {"type": "string"},
+    "limitValue": {"type": "integer"},
+    "enforcementMode": {"type": "string", "enum": ["soft", "hard"]},
+    "source": {"type": "string"}
+  }
+}

@@ -8,11 +8,12 @@ Centralizar os artefatos de integracao do backend em um lugar versionado e previ
 
 - `contracts/http/`: specs OpenAPI por servico
 - `contracts/events/`: schemas JSON para eventos e payloads compartilhados
+- `contracts/registry.json`: indice simples para agregacao automatica
 
 ## Baseline atual
 
-- specs HTTP publicos ja versionados para servicos centrais como `identity`, `crm`, `sales`, `workflow-control`, `catalog` e `platform-control`
-- schemas de evento para trilhas de workflow, lifecycle de tenant e publicacao de item de catalogo
+- specs HTTP publicos ja versionados para servicos centrais como `crm`, `documents`, `engagement`, `catalog`, `platform-control`, `analytics` e `edge`
+- schemas de evento para trilhas de workflow, lifecycle de tenant, quotas, assinatura documental, enriquecimento de CNPJ e publicacao de item de catalogo
 - artefatos suficientes para alimentar governanca de integracao, smoke mais forte e uma futura UI agregada de navegacao e teste
 
 ## Regras operacionais
@@ -23,6 +24,7 @@ Centralizar os artefatos de integracao do backend em um lugar versionado e previ
 - operacoes sensiveis devem aceitar `Idempotency-Key` por header ou contrato equivalente quando isso fizer sentido
 - operacoes longas devem convergir para padrao `202 Accepted`, polling e callback conforme a maturidade do servico
 - listagens novas devem preferir cursor pagination quando o volume esperado justificar
+- `docs/API_PORTAL.md` registra o caminho base para a UI central de navegacao e teste
 
 ## Proximo passo natural
 

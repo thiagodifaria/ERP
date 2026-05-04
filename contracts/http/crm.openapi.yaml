@@ -4,6 +4,18 @@ info:
   version: 0.2.0
   description: CRM leads, customers, activity, attachments and commercial intelligence.
 paths:
+  /api/crm/enrichment/cnpj/capabilities:
+    get:
+      summary: Read CNPJ enrichment provider capabilities
+      responses:
+        "200":
+          description: Provider capability catalog
+  /api/crm/enrichment/cnpj/lookup:
+    post:
+      summary: Lookup and enrich one CNPJ through provider contract
+      responses:
+        "200":
+          description: Enriched company profile
   /api/crm/pipeline/config:
     get:
       summary: Read tenant pipeline configuration

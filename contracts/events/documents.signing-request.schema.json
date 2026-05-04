@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erp://contracts/events/documents.signing-request.schema.json",
+  "title": "Documents Signing Request",
+  "type": "object",
+  "required": ["tenantSlug", "attachmentPublicId", "provider", "requestedBy", "signers"],
+  "properties": {
+    "tenantSlug": {"type": "string"},
+    "attachmentPublicId": {"type": "string", "format": "uuid"},
+    "provider": {"type": "string"},
+    "requestedBy": {"type": "string"},
+    "signers": {"type": "array", "items": {"type": "string"}},
+    "documentKind": {"type": "string"},
+    "relatedAggregate": {"type": "string"},
+    "relatedAggregatePublicId": {"type": "string"}
+  }
+}

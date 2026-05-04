@@ -33,6 +33,8 @@ Initial scope:
 - every relevant mutation now appends traceable history and prepares pending integration events
 - initial attachments now flow through the `documents` service for leads and customers
 - smoke coverage now validates history, outbox and attachment contracts in live PostgreSQL runtime
+- pipeline intelligence now includes configuration by tenant
+- CNPJ enrichment capability registry and lookup contract for external adapters
 
 Public routes:
 
@@ -58,6 +60,11 @@ Public routes:
 - `GET /api/crm/customers/{publicId}/attachments`
 - `POST /api/crm/customers/{publicId}/attachments`
 - `GET /api/crm/outbox/pending`
+- `GET /api/crm/pipeline/config`
+- `PUT /api/crm/pipeline/config`
+- `GET /api/crm/leads/intelligence/summary`
+- `GET /api/crm/enrichment/cnpj/capabilities`
+- `POST /api/crm/enrichment/cnpj/lookup`
 
 Query conventions:
 
@@ -66,3 +73,4 @@ Query conventions:
 - when `tenantSlug` is omitted, the service falls back to the configured bootstrap tenant
 - history and outbox routes stay tenant-scoped the same way as the read/write CRM routes
 - attachments are proxied to `documents`, preserving tenant and aggregate ownership contracts
+- enrichment routes keep providers behind an internal contract, preserving safe fallback when no external credential is configured

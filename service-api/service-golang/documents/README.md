@@ -8,6 +8,7 @@ Initial scope:
 - attachment metadata registry for tenant-owned aggregates
 - generic owner references such as `crm.lead` and `crm.customer`
 - repository driver selection between memory and PostgreSQL
+- digital signature capability registry with local fallback and provider posture
 - first public routes for listing and creating attachment references
 - upload sessions for storage adapters and deferred attachment completion
 - tenant-aware filtering by `tenantSlug`, `ownerType` and `ownerPublicId`
@@ -24,6 +25,9 @@ Public routes:
 - `GET /health/details`
 - `GET /api/documents/storage/capabilities`
 - `GET /api/documents/storage/capabilities/{provider}`
+- `GET /api/documents/signing/capabilities`
+- `GET /api/documents/signing/capabilities/{provider}`
+- `POST /api/documents/signing/requests`
 - `GET /api/documents/attachments`
 - `POST /api/documents/attachments`
 - `GET /api/documents/attachments/{publicId}`
@@ -48,3 +52,5 @@ Query and payload conventions:
 - `POST /api/documents/upload-sessions` opens a tenant-aware upload session with storage key, expiration and completion URL
 - `POST /api/documents/upload-sessions/{publicId}/complete` finalizes the session and materializes the attachment metadata with file size and checksum
 - `GET /api/documents/storage/capabilities` exposes local, S3-compatible and R2 capability posture, including fallback state for environments without a paid provider
+- `GET /api/documents/signing/capabilities` exposes local, Clicksign and DocuSign posture with safe fallback when no paid provider is configured
+- `POST /api/documents/signing/requests` queues a provider-backed or local-simulated signing flow for attachments linked to sales, rentals or any other aggregate

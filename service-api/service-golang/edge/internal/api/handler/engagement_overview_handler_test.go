@@ -90,10 +90,10 @@ func (reader engagementOverviewReader) GetJSON(_ context.Context, requestURL str
 			"tenantSlug": "bootstrap-ops",
 			"services": map[string]any{
 				"engagement": map[string]any{
-					"campaignsTotal":      2,
-					"templatesTotal":      2,
-					"deliveriesTotal":     4,
-					"failedDeliveries":    1,
+					"campaignsTotal":       2,
+					"templatesTotal":       2,
+					"deliveriesTotal":      4,
+					"failedDeliveries":     1,
 					"convertedTouchpoints": 1,
 				},
 			},

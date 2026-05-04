@@ -15,11 +15,11 @@ type DocumentsExecutiveSummary struct {
 }
 
 type DocumentsOverviewResponse struct {
-	Service             string                    `json:"service"`
-	TenantSlug          string                    `json:"tenantSlug"`
-	GeneratedAt         string                    `json:"generatedAt"`
-	ExecutiveSummary    DocumentsExecutiveSummary `json:"executiveSummary"`
-	ServicePulse        map[string]any            `json:"servicePulse"`
-	Tenant360           map[string]any            `json:"tenant360"`
-	DocumentGovernance  map[string]any            `json:"documentGovernance"`
+	Service            string                    `json:"service"`
+	TenantSlug         string                    `json:"tenantSlug"`
+	GeneratedAt        string                    `json:"generatedAt"`
+	ExecutiveSummary   DocumentsExecutiveSummary `json:"executiveSummary"`
+	ServicePulse       map[string]any            `json:"servicePulse"`
+	Tenant360          map[string]any            `json:"tenant360"`
+	DocumentGovernance map[string]any            `json:"documentGovernance"`
 }

@@ -24,12 +24,16 @@ func NewRouter(logger *telemetry.Logger, attachmentRepository repository.Attachm
 func NewRouterWithRuntime(logger *telemetry.Logger, attachmentRepository repository.AttachmentRepository, uploadSessionRepository repository.UploadSessionRepository, cfg config.Config) http.Handler {
 	mux := http.NewServeMux()
 	attachmentHandler := NewAttachmentHandler(attachmentRepository, uploadSessionRepository, cfg.AccessTokenSecret)
+	signingHandler := NewSigningHandler(attachmentRepository, cfg)
 
 	mux.HandleFunc("/health/live", Live)
 	mux.HandleFunc("/health/ready", Ready)
 	mux.HandleFunc("/health/details", DetailsForRuntime(cfg.RepositoryDriver, cfg))
 	mux.HandleFunc("GET /api/documents/storage/capabilities", StorageCapabilitiesForRuntime(cfg))
 	mux.HandleFunc("GET /api/documents/storage/capabilities/{provider}", StorageCapabilitiesForRuntime(cfg))
+	mux.HandleFunc("GET /api/documents/signing/capabilities", SigningCapabilitiesForRuntime(cfg))
+	mux.HandleFunc("GET /api/documents/signing/capabilities/{provider}", SigningCapabilitiesForRuntime(cfg))
+	mux.HandleFunc("POST /api/documents/signing/requests", signingHandler.CreateRequest)
 	mux.HandleFunc("GET /api/documents/attachments", attachmentHandler.List)
 	mux.HandleFunc("POST /api/documents/attachments", attachmentHandler.Create)
 	mux.HandleFunc("GET /api/documents/attachments/{publicId}", attachmentHandler.Get)

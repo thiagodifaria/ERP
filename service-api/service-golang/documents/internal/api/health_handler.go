@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/config"
 	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/api/dto"
+	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/config"
 )
 
 func Live(writer http.ResponseWriter, _ *http.Request) {
@@ -72,6 +72,7 @@ func buildStorageCapabilities(cfg config.Config) []dto.StorageCapabilityResponse
 
 func DetailsForRuntime(repositoryDriver string, cfg config.Config) http.HandlerFunc {
 	capabilities := buildStorageCapabilities(cfg)
+	signingCapabilities := buildSigningCapabilities(cfg)
 
 	return func(writer http.ResponseWriter, _ *http.Request) {
 		writer.Header().Set("Content-Type", "application/json")
@@ -86,10 +87,16 @@ func DetailsForRuntime(repositoryDriver string, cfg config.Config) http.HandlerF
 				Status: capability.Status,
 			})
 		}
+		for _, capability := range signingCapabilities {
+			dependencies = append(dependencies, dto.DependencyResponse{
+				Name:   "signing:" + capability.Provider,
+				Status: capability.Status,
+			})
+		}
 
 		_ = json.NewEncoder(writer).Encode(dto.ReadinessResponse{
-			Service: "documents",
-			Status:  "ready",
+			Service:      "documents",
+			Status:       "ready",
 			Dependencies: dependencies,
 		})
 	}
