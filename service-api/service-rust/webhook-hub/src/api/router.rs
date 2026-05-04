@@ -41,6 +41,10 @@ fn build_router_with_state(state: WebhookHubState) -> Router {
         .route("/health/ready", get(ready))
         .route("/health/details", get(details))
         .route("/api/webhook-hub/capabilities", get(get_capabilities))
+        .route("/api/webhook-hub/outbound-endpoints", get(list_outbound_endpoints).post(create_outbound_endpoint))
+        .route("/api/webhook-hub/outbound-endpoints/:public_id", get(get_outbound_endpoint_by_public_id))
+        .route("/api/webhook-hub/outbound-endpoints/:public_id/deliveries", get(list_outbound_deliveries).post(create_outbound_delivery))
+        .route("/api/webhook-hub/outbound-endpoints/:public_id/deliveries/:delivery_public_id/dead-letter", post(dead_letter_outbound_delivery))
         .route("/api/webhook-hub/events", get(list_events).post(create_event))
         .route("/api/webhook-hub/events/summary", get(get_event_summary))
         .route("/api/webhook-hub/events/dead-letter", get(list_dead_letter_events))
@@ -71,6 +75,149 @@ async fn details(State(state): State<WebhookHubState>) -> Json<ReadinessResponse
 
 async fn get_capabilities(State(state): State<WebhookHubState>) -> Json<WebhookHubCapabilitiesResponse> {
     Json(state.capabilities())
+}
+
+async fn list_outbound_endpoints(
+    State(state): State<WebhookHubState>,
+    Query(filters): Query<ListOutboundEndpointsQuery>,
+) -> Result<Json<Vec<OutboundEndpoint>>, (StatusCode, Json<ErrorResponse>)> {
+    let endpoints = state
+        .list_outbound_endpoints(filters.tenant_slug, filters.status)
+        .await
+        .map_err(internal_storage_error)?;
+    Ok(Json(endpoints))
+}
+
+async fn create_outbound_endpoint(
+    State(state): State<WebhookHubState>,
+    Json(payload): Json<CreateOutboundEndpointRequest>,
+) -> Result<(StatusCode, Json<OutboundEndpoint>), (StatusCode, Json<ErrorResponse>)> {
+    if payload.tenant_slug.trim().is_empty()
+        || payload.event_type.trim().is_empty()
+        || payload.target_url.trim().is_empty()
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse::new(
+                "outbound_endpoint_payload_invalid",
+                "Outbound endpoint payload is invalid.",
+            )),
+        ));
+    }
+
+    let endpoint = state
+        .create_outbound_endpoint(payload)
+        .await
+        .map_err(|_| internal_storage_error(StorageError))?;
+    Ok((StatusCode::CREATED, Json(endpoint)))
+}
+
+async fn get_outbound_endpoint_by_public_id(
+    State(state): State<WebhookHubState>,
+    Path(public_id): Path<String>,
+) -> Result<Json<OutboundEndpoint>, (StatusCode, Json<ErrorResponse>)> {
+    match state
+        .find_outbound_endpoint_by_public_id(&public_id)
+        .await
+        .map_err(internal_storage_error)?
+    {
+        Some(endpoint) => Ok(Json(endpoint)),
+        None => Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse::new(
+                "outbound_endpoint_not_found",
+                "Outbound endpoint was not found.",
+            )),
+        )),
+    }
+}
+
+async fn list_outbound_deliveries(
+    State(state): State<WebhookHubState>,
+    Path(public_id): Path<String>,
+) -> Result<Json<Vec<OutboundDelivery>>, (StatusCode, Json<ErrorResponse>)> {
+    match state
+        .list_outbound_deliveries(&public_id)
+        .await
+        .map_err(internal_storage_error)?
+    {
+        Some(deliveries) => Ok(Json(deliveries)),
+        None => Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse::new(
+                "outbound_endpoint_not_found",
+                "Outbound endpoint was not found.",
+            )),
+        )),
+    }
+}
+
+async fn create_outbound_delivery(
+    State(state): State<WebhookHubState>,
+    Path(public_id): Path<String>,
+    Json(payload): Json<CreateOutboundDeliveryRequest>,
+) -> Result<(StatusCode, Json<OutboundDelivery>), (StatusCode, Json<ErrorResponse>)> {
+    if payload.status.trim().is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ErrorResponse::new(
+                "outbound_delivery_payload_invalid",
+                "Outbound delivery payload is invalid.",
+            )),
+        ));
+    }
+
+    match state
+        .create_outbound_delivery(&public_id, payload)
+        .await
+        .map_err(|error| match error {
+            TransitionError::NotFound => (
+                StatusCode::NOT_FOUND,
+                Json(ErrorResponse::new(
+                    "outbound_endpoint_not_found",
+                    "Outbound endpoint was not found.",
+                )),
+            ),
+            TransitionError::InvalidTransition => (
+                StatusCode::CONFLICT,
+                Json(ErrorResponse::new(
+                    "outbound_delivery_status_invalid",
+                    "Outbound delivery status is invalid.",
+                )),
+            ),
+            TransitionError::Storage => internal_storage_error(StorageError),
+        }) {
+        Ok(delivery) => Ok((StatusCode::CREATED, Json(delivery))),
+        Err(error) => Err(error),
+    }
+}
+
+async fn dead_letter_outbound_delivery(
+    State(state): State<WebhookHubState>,
+    Path((public_id, delivery_public_id)): Path<(String, String)>,
+    Json(payload): Json<MoveToDeadLetterRequest>,
+) -> Result<Json<OutboundDelivery>, (StatusCode, Json<ErrorResponse>)> {
+    match state
+        .move_outbound_delivery_to_dead_letter(&public_id, &delivery_public_id, payload.error_code, payload.error_message)
+        .await
+    {
+        Ok(delivery) => Ok(Json(delivery)),
+        Err(TransitionError::NotFound) => Err((
+            StatusCode::NOT_FOUND,
+            Json(ErrorResponse::new(
+                "outbound_delivery_not_found",
+                "Outbound delivery was not found.",
+            )),
+        )),
+        Err(TransitionError::InvalidTransition) => Err((
+            StatusCode::CONFLICT,
+            Json(ErrorResponse::new(
+                "outbound_delivery_transition_invalid",
+                "Outbound delivery cannot transition from the current status.",
+            )),
+        )),
+        Err(TransitionError::Storage) => Err(internal_storage_error(StorageError)),
+    }
 }
 
 async fn list_events(
@@ -354,6 +501,8 @@ enum StorageBackend {
 struct MemoryStorage {
     next_id: AtomicU64,
     events: RwLock<Vec<WebhookEvent>>,
+    outbound_endpoints: RwLock<Vec<OutboundEndpoint>>,
+    outbound_deliveries: RwLock<Vec<OutboundDelivery>>,
 }
 
 #[derive(Clone)]
@@ -417,8 +566,388 @@ impl WebhookHubState {
                 },
                 supports_retries: true,
                 supports_dlq: true,
+                supports_tenant_endpoints: true,
+                supports_delivery_log: true,
                 credential_key: "WEBHOOK_HUB_OUTBOUND_SIGNING_SECRET".to_string(),
             },
+        }
+    }
+
+    async fn list_outbound_endpoints(
+        &self,
+        tenant_slug: Option<String>,
+        status: Option<String>,
+    ) -> Result<Vec<OutboundEndpoint>, StorageError> {
+        match &self.storage {
+            StorageBackend::Memory(memory) => {
+                let tenant_slug = tenant_slug.map(|value| value.trim().to_lowercase());
+                let status = status.map(|value| value.trim().to_lowercase());
+                Ok(memory
+                    .outbound_endpoints
+                    .read()
+                    .await
+                    .iter()
+                    .filter(|endpoint| {
+                        if let Some(filter) = &tenant_slug {
+                            if &endpoint.tenant_slug != filter {
+                                return false;
+                            }
+                        }
+
+                        if let Some(filter) = &status {
+                            if &endpoint.status != filter {
+                                return false;
+                            }
+                        }
+
+                        true
+                    })
+                    .cloned()
+                    .collect())
+            }
+            StorageBackend::Postgres(postgres) => {
+                let tenant_slug = tenant_slug.map(|value| value.trim().to_lowercase());
+                let status = status.map(|value| value.trim().to_lowercase());
+                let rows = postgres
+                    .client
+                    .query(
+                        "
+                        SELECT endpoint.id, endpoint.public_id, tenant.slug AS tenant_slug, endpoint.event_type, endpoint.target_url,
+                               endpoint.signing_mode, endpoint.secret_hint, endpoint.retry_policy, endpoint.active,
+                               endpoint.dlq_enabled, endpoint.created_at, endpoint.updated_at
+                        FROM webhook_hub.outbound_endpoints AS endpoint
+                        INNER JOIN identity.tenants AS tenant ON tenant.id = endpoint.tenant_id
+                        WHERE ($1::text IS NULL OR tenant.slug = $1)
+                          AND ($2::text IS NULL OR CASE WHEN endpoint.active THEN 'active' ELSE 'disabled' END = $2)
+                        ORDER BY endpoint.id ASC;
+                        ",
+                        &[&tenant_slug, &status],
+                    )
+                    .await
+                    .map_err(|_| StorageError)?;
+
+                Ok(rows.into_iter().map(map_row_to_outbound_endpoint).collect())
+            }
+        }
+    }
+
+    async fn create_outbound_endpoint(
+        &self,
+        payload: CreateOutboundEndpointRequest,
+    ) -> Result<OutboundEndpoint, StorageError> {
+        let tenant_slug = payload.tenant_slug.trim().to_lowercase();
+        let event_type = payload.event_type.trim().to_lowercase();
+        let target_url = payload.target_url.trim().to_string();
+        let signing_mode = normalize_signing_mode(Some(payload.signing_mode.as_deref().unwrap_or("hmac_sha256")));
+        let retry_policy = normalize_retry_policy(Some(payload.retry_policy.as_deref().unwrap_or("exponential")));
+        let secret_hint = payload.secret_hint.unwrap_or_default().trim().to_string();
+
+        match &self.storage {
+            StorageBackend::Memory(memory) => {
+                let now = Utc::now().to_rfc3339();
+                let endpoint = OutboundEndpoint {
+                    id: memory.next_id.fetch_add(1, Ordering::SeqCst) + 1,
+                    public_id: Uuid::new_v4().to_string(),
+                    tenant_slug,
+                    event_type,
+                    target_url,
+                    signing_mode,
+                    secret_hint,
+                    retry_policy,
+                    status: if payload.active.unwrap_or(true) { "active".to_string() } else { "disabled".to_string() },
+                    dlq_enabled: payload.dlq_enabled.unwrap_or(true),
+                    created_at: now.clone(),
+                    updated_at: now,
+                };
+                memory.outbound_endpoints.write().await.push(endpoint.clone());
+                Ok(endpoint)
+            }
+            StorageBackend::Postgres(postgres) => {
+                let tenant_row = postgres
+                    .client
+                    .query_opt("SELECT id FROM identity.tenants WHERE slug = $1", &[&tenant_slug])
+                    .await
+                    .map_err(|_| StorageError)?;
+                let Some(tenant_row) = tenant_row else {
+                    return Err(StorageError);
+                };
+                let tenant_id = tenant_row.get::<_, i64>("id");
+                let public_id = Uuid::new_v4();
+                let row = postgres
+                    .client
+                    .query_one(
+                        "
+                        INSERT INTO webhook_hub.outbound_endpoints (
+                          tenant_id, public_id, event_type, target_url, signing_mode, secret_hint, retry_policy, active, dlq_enabled
+                        )
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                        RETURNING id, public_id, event_type, target_url, signing_mode, secret_hint, retry_policy, active, dlq_enabled, created_at, updated_at;
+                        ",
+                        &[&tenant_id, &public_id, &event_type, &target_url, &signing_mode, &secret_hint, &retry_policy, &payload.active.unwrap_or(true), &payload.dlq_enabled.unwrap_or(true)],
+                    )
+                    .await
+                    .map_err(|_| StorageError)?;
+
+                Ok(OutboundEndpoint {
+                    id: row.get::<_, i64>("id") as u64,
+                    public_id: row.get::<_, Uuid>("public_id").to_string(),
+                    tenant_slug,
+                    event_type: row.get("event_type"),
+                    target_url: row.get("target_url"),
+                    signing_mode: row.get("signing_mode"),
+                    secret_hint: row.get("secret_hint"),
+                    retry_policy: row.get("retry_policy"),
+                    status: if row.get::<_, bool>("active") { "active".to_string() } else { "disabled".to_string() },
+                    dlq_enabled: row.get("dlq_enabled"),
+                    created_at: row.get::<_, chrono::DateTime<Utc>>("created_at").to_rfc3339(),
+                    updated_at: row.get::<_, chrono::DateTime<Utc>>("updated_at").to_rfc3339(),
+                })
+            }
+        }
+    }
+
+    async fn find_outbound_endpoint_by_public_id(&self, public_id: &str) -> Result<Option<OutboundEndpoint>, StorageError> {
+        match &self.storage {
+            StorageBackend::Memory(memory) => Ok(memory
+                .outbound_endpoints
+                .read()
+                .await
+                .iter()
+                .find(|endpoint| endpoint.public_id == public_id)
+                .cloned()),
+            StorageBackend::Postgres(postgres) => {
+                let Ok(public_id) = Uuid::parse_str(public_id) else {
+                    return Ok(None);
+                };
+                let row = postgres
+                    .client
+                    .query_opt(
+                        "
+                        SELECT endpoint.id, endpoint.public_id, tenant.slug AS tenant_slug, endpoint.event_type, endpoint.target_url,
+                               endpoint.signing_mode, endpoint.secret_hint, endpoint.retry_policy, endpoint.active,
+                               endpoint.dlq_enabled, endpoint.created_at, endpoint.updated_at
+                        FROM webhook_hub.outbound_endpoints AS endpoint
+                        INNER JOIN identity.tenants AS tenant ON tenant.id = endpoint.tenant_id
+                        WHERE endpoint.public_id = $1;
+                        ",
+                        &[&public_id],
+                    )
+                    .await
+                    .map_err(|_| StorageError)?;
+                Ok(row.map(map_row_to_outbound_endpoint))
+            }
+        }
+    }
+
+    async fn list_outbound_deliveries(&self, endpoint_public_id: &str) -> Result<Option<Vec<OutboundDelivery>>, StorageError> {
+        match &self.storage {
+            StorageBackend::Memory(memory) => {
+                if memory
+                    .outbound_endpoints
+                    .read()
+                    .await
+                    .iter()
+                    .all(|endpoint| endpoint.public_id != endpoint_public_id)
+                {
+                    return Ok(None);
+                }
+
+                Ok(Some(
+                    memory
+                        .outbound_deliveries
+                        .read()
+                        .await
+                        .iter()
+                        .filter(|delivery| delivery.outbound_endpoint_public_id == endpoint_public_id)
+                        .cloned()
+                        .collect(),
+                ))
+            }
+            StorageBackend::Postgres(postgres) => {
+                let Ok(endpoint_public_id) = Uuid::parse_str(endpoint_public_id) else {
+                    return Ok(None);
+                };
+                let rows = postgres
+                    .client
+                    .query(
+                        "
+                        SELECT delivery.id, delivery.public_id, endpoint.public_id AS endpoint_public_id, delivery.webhook_event_public_id,
+                               delivery.status, delivery.attempt_number, delivery.response_code, delivery.last_error_code,
+                               delivery.last_error_message, delivery.delivered_at, delivery.dead_lettered_at, delivery.created_at
+                        FROM webhook_hub.outbound_deliveries AS delivery
+                        INNER JOIN webhook_hub.outbound_endpoints AS endpoint
+                          ON endpoint.id = delivery.outbound_endpoint_id
+                        WHERE endpoint.public_id = $1
+                        ORDER BY delivery.id ASC;
+                        ",
+                        &[&endpoint_public_id],
+                    )
+                    .await
+                    .map_err(|_| StorageError)?;
+
+                if rows.is_empty() && self.find_outbound_endpoint_by_public_id(&endpoint_public_id.to_string()).await?.is_none() {
+                    return Ok(None);
+                }
+
+                Ok(Some(rows.into_iter().map(map_row_to_outbound_delivery).collect()))
+            }
+        }
+    }
+
+    async fn create_outbound_delivery(
+        &self,
+        endpoint_public_id: &str,
+        payload: CreateOutboundDeliveryRequest,
+    ) -> Result<OutboundDelivery, TransitionError> {
+        let status = normalize_outbound_delivery_status(Some(payload.status.as_str()));
+        if status.is_empty() {
+            return Err(TransitionError::InvalidTransition);
+        }
+
+        match &self.storage {
+            StorageBackend::Memory(memory) => {
+                if memory
+                    .outbound_endpoints
+                    .read()
+                    .await
+                    .iter()
+                    .all(|endpoint| endpoint.public_id != endpoint_public_id)
+                {
+                    return Err(TransitionError::NotFound);
+                }
+                let delivery = OutboundDelivery {
+                    id: memory.next_id.fetch_add(1, Ordering::SeqCst) + 1,
+                    public_id: Uuid::new_v4().to_string(),
+                    outbound_endpoint_public_id: endpoint_public_id.to_string(),
+                    webhook_event_public_id: payload.webhook_event_public_id.map(|value| value.trim().to_string()).filter(|value| !value.is_empty()),
+                    status,
+                    attempt_number: payload.attempt_number.unwrap_or(1),
+                    response_code: payload.response_code,
+                    last_error_code: None,
+                    last_error_message: payload.last_error_message.map(|value| value.trim().to_string()).filter(|value| !value.is_empty()),
+                    delivered_at: payload.delivered_at.map(|value| value.trim().to_string()).filter(|value| !value.is_empty()),
+                    dead_lettered_at: None,
+                    created_at: Utc::now().to_rfc3339(),
+                };
+                memory.outbound_deliveries.write().await.push(delivery.clone());
+                Ok(delivery)
+            }
+            StorageBackend::Postgres(postgres) => {
+                let Ok(endpoint_public_id) = Uuid::parse_str(endpoint_public_id) else {
+                    return Err(TransitionError::NotFound);
+                };
+                let endpoint_row = postgres
+                    .client
+                    .query_opt("SELECT id FROM webhook_hub.outbound_endpoints WHERE public_id = $1", &[&endpoint_public_id])
+                    .await
+                    .map_err(|_| TransitionError::Storage)?;
+                let Some(endpoint_row) = endpoint_row else {
+                    return Err(TransitionError::NotFound);
+                };
+                let endpoint_id = endpoint_row.get::<_, i64>("id");
+                let public_id = Uuid::new_v4();
+                let webhook_event_public_id = payload
+                    .webhook_event_public_id
+                    .as_deref()
+                    .and_then(|value| Uuid::parse_str(value).ok());
+                let delivered_at = payload
+                    .delivered_at
+                    .as_deref()
+                    .and_then(|value| chrono::DateTime::parse_from_rfc3339(value).ok())
+                    .map(|value| value.with_timezone(&Utc));
+                let row = postgres
+                    .client
+                    .query_one(
+                        "
+                        INSERT INTO webhook_hub.outbound_deliveries (
+                          outbound_endpoint_id, public_id, webhook_event_public_id, status, attempt_number, response_code, last_error_message, delivered_at
+                        )
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+                        RETURNING id, public_id, webhook_event_public_id, status, attempt_number, response_code,
+                                  last_error_code, last_error_message, delivered_at, dead_lettered_at, created_at;
+                        ",
+                        &[&endpoint_id, &public_id, &webhook_event_public_id, &status, &payload.attempt_number.unwrap_or(1), &payload.response_code, &payload.last_error_message, &delivered_at],
+                    )
+                    .await
+                    .map_err(|_| TransitionError::Storage)?;
+                Ok(map_row_to_outbound_delivery_with_endpoint_public_id(row, endpoint_public_id.to_string()))
+            }
+        }
+    }
+
+    async fn move_outbound_delivery_to_dead_letter(
+        &self,
+        endpoint_public_id: &str,
+        delivery_public_id: &str,
+        error_code: Option<String>,
+        error_message: Option<String>,
+    ) -> Result<OutboundDelivery, TransitionError> {
+        match &self.storage {
+            StorageBackend::Memory(memory) => {
+                let mut deliveries = memory.outbound_deliveries.write().await;
+                let delivery = deliveries
+                    .iter_mut()
+                    .find(|item| item.outbound_endpoint_public_id == endpoint_public_id && item.public_id == delivery_public_id)
+                    .ok_or(TransitionError::NotFound)?;
+                if delivery.status == "dead_letter" {
+                    return Err(TransitionError::InvalidTransition);
+                }
+                delivery.status = "dead_letter".to_string();
+                delivery.last_error_code = error_code.map(|value| value.trim().to_lowercase()).filter(|value| !value.is_empty());
+                delivery.last_error_message = error_message.map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
+                delivery.dead_lettered_at = Some(Utc::now().to_rfc3339());
+                Ok(delivery.clone())
+            }
+            StorageBackend::Postgres(postgres) => {
+                let Ok(endpoint_public_id) = Uuid::parse_str(endpoint_public_id) else {
+                    return Err(TransitionError::NotFound);
+                };
+                let Ok(delivery_public_id) = Uuid::parse_str(delivery_public_id) else {
+                    return Err(TransitionError::NotFound);
+                };
+                let row = postgres
+                    .client
+                    .query_opt(
+                        "
+                        SELECT delivery.id
+                        FROM webhook_hub.outbound_deliveries AS delivery
+                        INNER JOIN webhook_hub.outbound_endpoints AS endpoint
+                          ON endpoint.id = delivery.outbound_endpoint_id
+                        WHERE endpoint.public_id = $1
+                          AND delivery.public_id = $2
+                          AND delivery.status <> 'dead_letter'
+                        FOR UPDATE;
+                        ",
+                        &[&endpoint_public_id, &delivery_public_id],
+                    )
+                    .await
+                    .map_err(|_| TransitionError::Storage)?;
+                let Some(row) = row else {
+                    return Err(TransitionError::NotFound);
+                };
+                let delivery_id = row.get::<_, i64>("id");
+                let normalized_error_code = error_code.map(|value| value.trim().to_lowercase()).filter(|value| !value.is_empty());
+                let normalized_error_message = error_message.map(|value| value.trim().to_string()).filter(|value| !value.is_empty());
+                let dead_lettered_at = Utc::now();
+                let row = postgres
+                    .client
+                    .query_one(
+                        "
+                        UPDATE webhook_hub.outbound_deliveries
+                        SET status = 'dead_letter',
+                            last_error_code = $2,
+                            last_error_message = $3,
+                            dead_lettered_at = $4
+                        WHERE id = $1
+                        RETURNING id, public_id, webhook_event_public_id, status, attempt_number, response_code,
+                                  last_error_code, last_error_message, delivered_at, dead_lettered_at, created_at;
+                        ",
+                        &[&delivery_id, &normalized_error_code, &normalized_error_message, &dead_lettered_at],
+                    )
+                    .await
+                    .map_err(|_| TransitionError::Storage)?;
+                Ok(map_row_to_outbound_delivery_with_endpoint_public_id(row, endpoint_public_id.to_string()))
+            }
         }
     }
 
@@ -1042,6 +1571,8 @@ struct OutboundWebhookCapability {
     status: String,
     supports_retries: bool,
     supports_dlq: bool,
+    supports_tenant_endpoints: bool,
+    supports_delivery_log: bool,
     credential_key: String,
 }
 
@@ -1075,6 +1606,38 @@ struct WebhookEvent {
 }
 
 #[derive(Clone, serde::Serialize)]
+struct OutboundEndpoint {
+    id: u64,
+    public_id: String,
+    tenant_slug: String,
+    event_type: String,
+    target_url: String,
+    signing_mode: String,
+    secret_hint: String,
+    retry_policy: String,
+    status: String,
+    dlq_enabled: bool,
+    created_at: String,
+    updated_at: String,
+}
+
+#[derive(Clone, serde::Serialize)]
+struct OutboundDelivery {
+    id: u64,
+    public_id: String,
+    outbound_endpoint_public_id: String,
+    webhook_event_public_id: Option<String>,
+    status: String,
+    attempt_number: i32,
+    response_code: Option<i32>,
+    last_error_code: Option<String>,
+    last_error_message: Option<String>,
+    delivered_at: Option<String>,
+    dead_lettered_at: Option<String>,
+    created_at: String,
+}
+
+#[derive(Clone, serde::Serialize)]
 struct WebhookEventStatusTransition {
     status: String,
     changed_at: String,
@@ -1097,10 +1660,38 @@ struct CreateWebhookEventRequest {
     payload_summary: Option<String>,
 }
 
+#[derive(serde::Deserialize)]
+struct CreateOutboundEndpointRequest {
+    tenant_slug: String,
+    event_type: String,
+    target_url: String,
+    signing_mode: Option<String>,
+    secret_hint: Option<String>,
+    retry_policy: Option<String>,
+    active: Option<bool>,
+    dlq_enabled: Option<bool>,
+}
+
+#[derive(serde::Deserialize)]
+struct CreateOutboundDeliveryRequest {
+    webhook_event_public_id: Option<String>,
+    status: String,
+    attempt_number: Option<i32>,
+    response_code: Option<i32>,
+    last_error_message: Option<String>,
+    delivered_at: Option<String>,
+}
+
 #[derive(Default, serde::Deserialize)]
 struct ListWebhookEventsQuery {
     provider: Option<String>,
     event_type: Option<String>,
+    status: Option<String>,
+}
+
+#[derive(Default, serde::Deserialize)]
+struct ListOutboundEndpointsQuery {
+    tenant_slug: Option<String>,
     status: Option<String>,
 }
 
@@ -1208,11 +1799,94 @@ async fn map_row_to_webhook_event(
     })
 }
 
+fn map_row_to_outbound_endpoint(row: Row) -> OutboundEndpoint {
+    OutboundEndpoint {
+        id: row.get::<_, i64>("id") as u64,
+        public_id: row.get::<_, Uuid>("public_id").to_string(),
+        tenant_slug: row.get("tenant_slug"),
+        event_type: row.get("event_type"),
+        target_url: row.get("target_url"),
+        signing_mode: row.get("signing_mode"),
+        secret_hint: row.get("secret_hint"),
+        retry_policy: row.get("retry_policy"),
+        status: if row.get::<_, bool>("active") {
+            "active".to_string()
+        } else {
+            "disabled".to_string()
+        },
+        dlq_enabled: row.get("dlq_enabled"),
+        created_at: row.get::<_, chrono::DateTime<Utc>>("created_at").to_rfc3339(),
+        updated_at: row.get::<_, chrono::DateTime<Utc>>("updated_at").to_rfc3339(),
+    }
+}
+
+fn map_row_to_outbound_delivery(row: Row) -> OutboundDelivery {
+    let endpoint_public_id = row
+        .try_get::<_, Uuid>("endpoint_public_id")
+        .map(|value| value.to_string())
+        .unwrap_or_default();
+    map_row_to_outbound_delivery_with_endpoint_public_id(row, endpoint_public_id)
+}
+
+fn map_row_to_outbound_delivery_with_endpoint_public_id(row: Row, endpoint_public_id: String) -> OutboundDelivery {
+    OutboundDelivery {
+        id: row.get::<_, i64>("id") as u64,
+        public_id: row.get::<_, Uuid>("public_id").to_string(),
+        outbound_endpoint_public_id: endpoint_public_id,
+        webhook_event_public_id: row
+            .try_get::<_, Option<Uuid>>("webhook_event_public_id")
+            .ok()
+            .flatten()
+            .map(|value| value.to_string()),
+        status: row.get("status"),
+        attempt_number: row.get("attempt_number"),
+        response_code: row.try_get("response_code").ok().flatten(),
+        last_error_code: row.try_get("last_error_code").ok().flatten(),
+        last_error_message: row.try_get("last_error_message").ok().flatten(),
+        delivered_at: row
+            .try_get::<_, Option<chrono::DateTime<Utc>>>("delivered_at")
+            .ok()
+            .flatten()
+            .map(|value| value.to_rfc3339()),
+        dead_lettered_at: row
+            .try_get::<_, Option<chrono::DateTime<Utc>>>("dead_lettered_at")
+            .ok()
+            .flatten()
+            .map(|value| value.to_rfc3339()),
+        created_at: row.get::<_, chrono::DateTime<Utc>>("created_at").to_rfc3339(),
+    }
+}
+
 fn map_row_to_transition(row: Row) -> WebhookEventStatusTransition {
     WebhookEventStatusTransition::new(
         row.get::<_, String>("status").as_str(),
         row.get::<_, chrono::DateTime<Utc>>("changed_at").to_rfc3339(),
     )
+}
+
+fn normalize_signing_mode(value: Option<&str>) -> String {
+    match value.unwrap_or_default().trim().to_lowercase().as_str() {
+        "none" => "none".to_string(),
+        _ => "hmac_sha256".to_string(),
+    }
+}
+
+fn normalize_retry_policy(value: Option<&str>) -> String {
+    match value.unwrap_or_default().trim().to_lowercase().as_str() {
+        "linear" => "linear".to_string(),
+        "manual" => "manual".to_string(),
+        _ => "exponential".to_string(),
+    }
+}
+
+fn normalize_outbound_delivery_status(value: Option<&str>) -> String {
+    match value.unwrap_or_default().trim().to_lowercase().as_str() {
+        "queued" => "queued".to_string(),
+        "delivered" => "delivered".to_string(),
+        "failed" => "failed".to_string(),
+        "dead_letter" => "dead_letter".to_string(),
+        _ => String::new(),
+    }
 }
 
 #[cfg(test)]

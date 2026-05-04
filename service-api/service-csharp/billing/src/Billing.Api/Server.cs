@@ -78,9 +78,20 @@ public static class Server
         return TypedResults.BadRequest(new ErrorResponse("invalid_plan_interval", "Billing plan interval must be monthly or yearly."));
       }
 
+      var pricingModel = string.IsNullOrWhiteSpace(request.PricingModel)
+        ? "flat"
+        : NormalizePricingModel(request.PricingModel);
+      if (pricingModel.Length == 0)
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_plan_pricing_model", "Billing pricing model must be flat, hybrid or usage."));
+      }
+
       var intervalCount = request.IntervalCount.GetValueOrDefault(1);
       var gracePeriodDays = request.GracePeriodDays.GetValueOrDefault(0);
       var maxRetries = request.MaxRetries.GetValueOrDefault(0);
+      var includedQuantity = request.IncludedQuantity.GetValueOrDefault(0);
+      var overageUnitCents = request.OverageUnitCents.GetValueOrDefault(0);
+      var meterKey = request.MeterKey?.Trim() ?? string.Empty;
 
       if (intervalCount <= 0)
       {
@@ -97,6 +108,29 @@ public static class Server
         return TypedResults.BadRequest(new ErrorResponse("invalid_plan_max_retries", "Billing plan max retries cannot be negative."));
       }
 
+      if (includedQuantity < 0)
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_plan_included_quantity", "Billing plan included quantity cannot be negative."));
+      }
+
+      if (overageUnitCents < 0)
+      {
+        return TypedResults.BadRequest(new ErrorResponse("invalid_plan_overage_amount", "Billing plan overage unit amount cannot be negative."));
+      }
+
+      if (pricingModel is "hybrid" or "usage")
+      {
+        if (meterKey.Length == 0)
+        {
+          return TypedResults.BadRequest(new ErrorResponse("billing_plan_meter_key_required", "Billing usage-based plans require a meter key."));
+        }
+
+        if (pricingModel == "usage" && overageUnitCents <= 0)
+        {
+          return TypedResults.BadRequest(new ErrorResponse("billing_plan_overage_amount_required", "Usage-based plans require a positive overage unit amount."));
+        }
+      }
+
       await using var connection = await dataSource.OpenConnectionAsync();
       await using var transaction = await connection.BeginTransactionAsync();
 
@@ -105,7 +139,21 @@ public static class Server
         return TypedResults.Conflict(new ErrorResponse("billing_plan_conflict", "Billing plan code already exists."));
       }
 
-      var response = await CreatePlan(connection, transaction, code, name, description, request.AmountCents.Value, intervalUnit, intervalCount, gracePeriodDays, maxRetries);
+      var response = await CreatePlan(
+        connection,
+        transaction,
+        code,
+        name,
+        description,
+        request.AmountCents.Value,
+        intervalUnit,
+        intervalCount,
+        gracePeriodDays,
+        maxRetries,
+        pricingModel,
+        meterKey,
+        includedQuantity,
+        overageUnitCents);
       await transaction.CommitAsync();
       return TypedResults.Ok(response);
     });
@@ -133,6 +181,20 @@ public static class Server
       return subscription is null
         ? TypedResults.NotFound(new ErrorResponse("billing_subscription_not_found", "Billing subscription was not found."))
         : TypedResults.Ok(subscription);
+    });
+
+    app.MapGet("/api/billing/subscriptions/{publicId}/usage-pricing", async Task<IResult> (string publicId, string? tenantSlug, NpgsqlDataSource dataSource) =>
+    {
+      if (string.IsNullOrWhiteSpace(tenantSlug))
+      {
+        return TypedResults.BadRequest(new ErrorResponse("tenant_slug_required", "Tenant slug is required."));
+      }
+
+      await using var connection = await dataSource.OpenConnectionAsync();
+      var projection = await BuildUsagePricingProjection(connection, tenantSlug.Trim(), publicId);
+      return projection is null
+        ? TypedResults.NotFound(new ErrorResponse("billing_subscription_not_found", "Billing subscription was not found."))
+        : TypedResults.Ok(projection);
     });
 
     app.MapGet("/api/billing/subscriptions/{publicId}/events", async Task<IResult> (string publicId, string? tenantSlug, NpgsqlDataSource dataSource) =>
@@ -842,6 +904,10 @@ public static class Server
         interval_count,
         grace_period_days,
         max_retries,
+        pricing_model,
+        meter_key,
+        included_quantity,
+        overage_unit_cents,
         active,
         to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
         to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
@@ -868,9 +934,13 @@ public static class Server
         reader.GetInt32(7),
         reader.GetInt32(8),
         reader.GetInt32(9),
-        reader.GetBoolean(10),
+        reader.GetString(10),
         reader.GetString(11),
-        reader.GetString(12)));
+        reader.GetInt64(12),
+        reader.GetInt64(13),
+        reader.GetBoolean(14),
+        reader.GetString(15),
+        reader.GetString(16)));
     }
 
     return response;
@@ -886,7 +956,11 @@ public static class Server
     string intervalUnit,
     int intervalCount,
     int gracePeriodDays,
-    int maxRetries)
+    int maxRetries,
+    string pricingModel,
+    string meterKey,
+    long includedQuantity,
+    long overageUnitCents)
   {
     await using var command = new NpgsqlCommand(
       """
@@ -899,7 +973,11 @@ public static class Server
         interval_unit,
         interval_count,
         grace_period_days,
-        max_retries
+        max_retries,
+        pricing_model,
+        meter_key,
+        included_quantity,
+        overage_unit_cents
       )
       VALUES (
         gen_random_uuid(),
@@ -910,7 +988,11 @@ public static class Server
         $5,
         $6,
         $7,
-        $8
+        $8,
+        $9,
+        $10,
+        $11,
+        $12
       )
       RETURNING
         public_id::text,
@@ -923,6 +1005,10 @@ public static class Server
         interval_count,
         grace_period_days,
         max_retries,
+        pricing_model,
+        meter_key,
+        included_quantity,
+        overage_unit_cents,
         active,
         to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
         to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
@@ -937,6 +1023,10 @@ public static class Server
     command.Parameters.AddWithValue(intervalCount);
     command.Parameters.AddWithValue(gracePeriodDays);
     command.Parameters.AddWithValue(maxRetries);
+    command.Parameters.AddWithValue(pricingModel);
+    command.Parameters.AddWithValue(meterKey);
+    command.Parameters.AddWithValue(includedQuantity);
+    command.Parameters.AddWithValue(overageUnitCents);
 
     await using var reader = await command.ExecuteReaderAsync();
     await reader.ReadAsync();
@@ -951,9 +1041,13 @@ public static class Server
       reader.GetInt32(7),
       reader.GetInt32(8),
       reader.GetInt32(9),
-      reader.GetBoolean(10),
+      reader.GetString(10),
       reader.GetString(11),
-      reader.GetString(12));
+      reader.GetInt64(12),
+      reader.GetInt64(13),
+      reader.GetBoolean(14),
+      reader.GetString(15),
+      reader.GetString(16));
   }
 
   private static async Task<long?> LookupTenantId(NpgsqlConnection connection, NpgsqlTransaction transaction, string tenantSlug)
@@ -1000,6 +1094,10 @@ public static class Server
         interval_count,
         grace_period_days,
         max_retries,
+        pricing_model,
+        meter_key,
+        included_quantity,
+        overage_unit_cents,
         active
       FROM billing.plans
       WHERE public_id = $1::uuid
@@ -1024,7 +1122,11 @@ public static class Server
       reader.GetInt32(5),
       reader.GetInt32(6),
       reader.GetInt32(7),
-      reader.GetBoolean(8));
+      reader.GetString(8),
+      reader.GetString(9),
+      reader.GetInt64(10),
+      reader.GetInt64(11),
+      reader.GetBoolean(12));
   }
 
   private static async Task<IReadOnlyList<SubscriptionResponse>> ListSubscriptions(NpgsqlConnection connection, string tenantSlug, string status)
@@ -3144,11 +3246,94 @@ public static class Server
     };
   }
 
+  private static async Task<UsagePricingProjectionResponse?> BuildUsagePricingProjection(NpgsqlConnection connection, string tenantSlug, string subscriptionPublicId)
+  {
+    await using var command = new NpgsqlCommand(
+      """
+      SELECT
+        subscription.public_id::text,
+        plan.public_id::text,
+        plan.code,
+        plan.pricing_model,
+        plan.meter_key,
+        plan.amount_cents,
+        plan.included_quantity,
+        plan.overage_unit_cents,
+        COALESCE((
+          SELECT SUM(snapshot.quantity)
+          FROM platform_control.usage_snapshots AS snapshot
+          WHERE snapshot.tenant_id = subscription.tenant_id
+            AND snapshot.metric_key = plan.meter_key
+            AND snapshot.captured_at >= subscription.current_period_start::timestamptz
+            AND snapshot.captured_at < (subscription.current_period_end + INTERVAL '1 day')
+        ), 0) AS usage_quantity
+      FROM billing.subscriptions AS subscription
+      INNER JOIN identity.tenants AS tenant
+        ON tenant.id = subscription.tenant_id
+      INNER JOIN billing.plans AS plan
+        ON plan.id = subscription.plan_id
+      WHERE tenant.slug = $1
+        AND subscription.public_id = $2::uuid
+      LIMIT 1
+      """,
+      connection);
+    command.Parameters.AddWithValue(tenantSlug);
+    command.Parameters.AddWithValue(subscriptionPublicId);
+
+    await using var reader = await command.ExecuteReaderAsync();
+    if (!await reader.ReadAsync())
+    {
+      return null;
+    }
+
+    var pricingModel = reader.GetString(3);
+    var meterKey = reader.GetString(4);
+    var baseAmountCents = reader.GetInt64(5);
+    var includedQuantity = reader.GetInt64(6);
+    var overageUnitCents = reader.GetInt64(7);
+    var usageQuantity = ConvertToInt64(reader.GetValue(8));
+    var billableQuantity = pricingModel switch
+    {
+      "usage" => Math.Max(usageQuantity, 0),
+      "hybrid" => Math.Max(usageQuantity - includedQuantity, 0),
+      _ => 0
+    };
+    var projectedAmountCents = pricingModel switch
+    {
+      "usage" => billableQuantity * overageUnitCents,
+      "hybrid" => baseAmountCents + (billableQuantity * overageUnitCents),
+      _ => baseAmountCents
+    };
+
+    return new UsagePricingProjectionResponse(
+      reader.GetString(0),
+      tenantSlug,
+      reader.GetString(1),
+      reader.GetString(2),
+      pricingModel,
+      meterKey,
+      baseAmountCents,
+      includedQuantity,
+      overageUnitCents,
+      usageQuantity,
+      billableQuantity,
+      projectedAmountCents);
+  }
+
   private static string NormalizeIntervalUnit(string? value)
     => value?.Trim().ToLowerInvariant() switch
     {
       "monthly" => "monthly",
       "yearly" => "yearly",
+      _ => string.Empty
+    };
+
+  private static string NormalizePricingModel(string? value)
+    => value?.Trim().ToLowerInvariant() switch
+    {
+      "flat" => "flat",
+      "hybrid" => "hybrid",
+      "usage" => "usage",
       _ => string.Empty
     };
 
@@ -3301,6 +3486,10 @@ public sealed record PlanResponse(
   int IntervalCount,
   int GracePeriodDays,
   int MaxRetries,
+  string PricingModel,
+  string MeterKey,
+  long IncludedQuantity,
+  long OverageUnitCents,
   bool Active,
   string CreatedAt,
   string UpdatedAt);
@@ -3412,6 +3601,19 @@ public sealed record RecoveryActionResponse(
   string PromisedPaymentDate,
   string Notes,
   string CreatedAt);
+public sealed record UsagePricingProjectionResponse(
+  string SubscriptionPublicId,
+  string TenantSlug,
+  string PlanPublicId,
+  string PlanCode,
+  string PricingModel,
+  string MeterKey,
+  long BaseAmountCents,
+  long IncludedQuantity,
+  long OverageUnitCents,
+  long UsageQuantity,
+  long BillableQuantity,
+  long ProjectedAmountCents);
 
 public sealed record CreatePlanRequest(
   string? Code,
@@ -3421,7 +3623,11 @@ public sealed record CreatePlanRequest(
   string? IntervalUnit,
   int? IntervalCount,
   int? GracePeriodDays,
-  int? MaxRetries);
+  int? MaxRetries,
+  string? PricingModel,
+  string? MeterKey,
+  long? IncludedQuantity,
+  long? OverageUnitCents);
 public sealed record CreateSubscriptionRequest(string? TenantSlug, string? PlanPublicId, string? ExternalReference, string? StartedOn);
 public sealed record SubscriptionStatusRequest(string? TenantSlug, string? Reason, string? EffectiveAt);
 public sealed record CreateInvoiceRequest(string? TenantSlug, string? Number, long? AmountCents, string? DueDate);
@@ -3479,6 +3685,10 @@ internal sealed record InternalPlan(
   int IntervalCount,
   int GracePeriodDays,
   int MaxRetries,
+  string PricingModel,
+  string MeterKey,
+  long IncludedQuantity,
+  long OverageUnitCents,
   bool Active);
 internal sealed record InternalSubscription(
   long Id,

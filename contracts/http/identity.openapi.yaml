@@ -1,0 +1,41 @@
+openapi: 3.1.0
+info:
+  title: ERP Identity API
+  version: 0.5.0
+  description: Tenancy, access, sessions, invitations and tenant-scoped identity governance.
+paths:
+  /api/identity/tenants:
+    get:
+      summary: List tenants
+      responses:
+        "200":
+          description: Tenant list
+    post:
+      summary: Create tenant
+      responses:
+        "200":
+          description: Created tenant
+  /api/identity/tenants/{slug}/snapshot:
+    get:
+      summary: Read one tenant snapshot
+      responses:
+        "200":
+          description: Tenant snapshot
+  /api/identity/sessions/login:
+    post:
+      summary: Authenticate identity session
+      responses:
+        "200":
+          description: Session payload
+  /api/identity/sessions/refresh:
+    post:
+      summary: Refresh identity session
+      responses:
+        "200":
+          description: Refreshed session payload
+  /api/identity/invitations:
+    post:
+      summary: Create invitation
+      responses:
+        "200":
+          description: Created invitation

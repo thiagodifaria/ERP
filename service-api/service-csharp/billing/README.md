@@ -5,6 +5,7 @@ The billing service owns ERP subscription charging, invoice collection lifecycle
 Current scope:
 
 - plans
+- flat, hybrid and usage-based pricing per plan
 - subscriptions
 - subscription invoices
 - payment attempts with idempotency keys
@@ -29,6 +30,7 @@ Public routes:
 - `GET /api/billing/subscriptions`
 - `POST /api/billing/subscriptions`
 - `GET /api/billing/subscriptions/{publicId}`
+- `GET /api/billing/subscriptions/{publicId}/usage-pricing`
 - `GET /api/billing/subscriptions/{publicId}/events`
 - `POST /api/billing/subscriptions/{publicId}/suspend`
 - `POST /api/billing/subscriptions/{publicId}/reactivate`

@@ -1,0 +1,36 @@
+openapi: 3.1.0
+info:
+  title: ERP Finance API
+  version: 0.4.0
+  description: Receivables, commission holds, cash control and cross-domain financial activity.
+paths:
+  /api/finance/receivable-projections:
+    get:
+      summary: List receivable projections
+      responses:
+        "200":
+          description: Projection list
+  /api/finance/receivable-projections/sync:
+    post:
+      summary: Sync projections from sales and rentals
+      responses:
+        "200":
+          description: Sync result
+  /api/finance/commission-holds:
+    get:
+      summary: List commission holds
+      responses:
+        "200":
+          description: Commission hold list
+  /api/finance/commission-holds/{publicId}/release:
+    post:
+      summary: Release one commission hold
+      responses:
+        "200":
+          description: Released commission hold
+  /api/finance/activity:
+    get:
+      summary: List finance operational activity
+      responses:
+        "200":
+          description: Activity ledger

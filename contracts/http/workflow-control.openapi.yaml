@@ -1,0 +1,46 @@
+openapi: 3.1.0
+info:
+  title: ERP Workflow Control API
+  version: 0.6.0
+  description: Workflow definition catalog, status, publication and action snapshots.
+paths:
+  /api/workflow-control/definitions:
+    get:
+      summary: List workflow definitions
+      responses:
+        "200":
+          description: Definition list
+    post:
+      summary: Create workflow definition
+      responses:
+        "200":
+          description: Created definition
+  /api/workflow-control/definitions/{key}:
+    get:
+      summary: Read one workflow definition
+      responses:
+        "200":
+          description: Definition detail
+    patch:
+      summary: Update one workflow definition
+      responses:
+        "200":
+          description: Updated definition
+  /api/workflow-control/definitions/{key}/status:
+    patch:
+      summary: Update workflow definition status
+      responses:
+        "200":
+          description: Updated workflow definition status
+  /api/workflow-control/capabilities/triggers:
+    get:
+      summary: List workflow trigger catalog
+      responses:
+        "200":
+          description: Trigger catalog
+  /api/workflow-control/capabilities/actions:
+    get:
+      summary: List workflow action catalog
+      responses:
+        "200":
+          description: Action catalog

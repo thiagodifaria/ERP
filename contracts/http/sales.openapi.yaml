@@ -1,0 +1,40 @@
+openapi: 3.1.0
+info:
+  title: ERP Sales API
+  version: 0.7.0
+  description: Opportunities, proposals, sales, invoices and commercial lifecycle control.
+paths:
+  /api/sales/opportunities:
+    get:
+      summary: List opportunities
+      responses:
+        "200":
+          description: Opportunity list
+    post:
+      summary: Create opportunity
+      responses:
+        "200":
+          description: Created opportunity
+  /api/sales/proposals:
+    get:
+      summary: List proposals
+      responses:
+        "200":
+          description: Proposal list
+    post:
+      summary: Create proposal
+      responses:
+        "200":
+          description: Created proposal
+  /api/sales/sales:
+    get:
+      summary: List sales
+      responses:
+        "200":
+          description: Sale list
+  /api/sales/invoices:
+    get:
+      summary: List commercial invoices
+      responses:
+        "200":
+          description: Invoice list

@@ -34,7 +34,7 @@ paths:
           description: Gateway not found
   /api/billing/plans:
     get:
-      summary: List billing plans
+      summary: List billing plans including flat, hybrid and usage-based pricing
       responses:
         '200':
           description: Plan list
@@ -58,6 +58,19 @@ paths:
       responses:
         '200':
           description: Subscription created
+  /api/billing/subscriptions/{publicId}/usage-pricing:
+    get:
+      summary: Project usage-based charge for one subscription
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Usage-based billing projection
   /api/billing/invoices/{publicId}/attempts:
     post:
       summary: Create payment attempt with idempotency support

@@ -14,6 +14,7 @@ Initial scope:
 - operational lifecycle summary by provider and status
 - dead-letter queue governance with retry metadata
 - outbound webhook signing capability registry
+- tenant outbound endpoints with delivery log and dead-letter governance
 - room for signature validation, normalization and deduplication
 
 Public routes:
@@ -22,6 +23,12 @@ Public routes:
 - `GET /health/ready`
 - `GET /health/details`
 - `GET /api/webhook-hub/capabilities`
+- `GET /api/webhook-hub/outbound-endpoints`
+- `POST /api/webhook-hub/outbound-endpoints`
+- `GET /api/webhook-hub/outbound-endpoints/{publicId}`
+- `GET /api/webhook-hub/outbound-endpoints/{publicId}/deliveries`
+- `POST /api/webhook-hub/outbound-endpoints/{publicId}/deliveries`
+- `POST /api/webhook-hub/outbound-endpoints/{publicId}/deliveries/{deliveryPublicId}/dead-letter`
 - `GET /api/webhook-hub/events`
 - `GET /api/webhook-hub/events/summary`
 - `GET /api/webhook-hub/events/{publicId}`

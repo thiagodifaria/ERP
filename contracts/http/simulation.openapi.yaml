@@ -1,0 +1,23 @@
+openapi: 3.1.0
+info:
+  title: ERP Simulation API
+  version: 0.7.0
+  description: Scenario simulation, load benchmark and cost estimation runtime.
+paths:
+  /api/simulation/scenarios:
+    get:
+      summary: List scenarios
+      responses:
+        "200":
+          description: Scenario list
+    post:
+      summary: Create scenario run
+      responses:
+        "200":
+          description: Scenario result
+  /api/simulation/benchmarks/load:
+    post:
+      summary: Execute one load benchmark run
+      responses:
+        "200":
+          description: Benchmark result

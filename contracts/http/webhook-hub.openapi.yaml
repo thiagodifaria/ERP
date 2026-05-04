@@ -12,6 +12,50 @@ paths:
       responses:
         '200':
           description: Readiness payload
+  /api/webhook-hub/capabilities:
+    get:
+      summary: Read outbound webhook capability posture
+      responses:
+        '200':
+          description: Capability payload
+  /api/webhook-hub/outbound-endpoints:
+    get:
+      summary: List tenant outbound endpoints
+      responses:
+        '200':
+          description: Outbound endpoint list
+    post:
+      summary: Register one tenant outbound endpoint
+      requestBody:
+        required: true
+      responses:
+        '201':
+          description: Outbound endpoint created
+  /api/webhook-hub/outbound-endpoints/{publicId}:
+    get:
+      summary: Read one tenant outbound endpoint
+      responses:
+        '200':
+          description: Outbound endpoint detail
+  /api/webhook-hub/outbound-endpoints/{publicId}/deliveries:
+    get:
+      summary: List outbound delivery log for one endpoint
+      responses:
+        '200':
+          description: Outbound delivery log
+    post:
+      summary: Register one outbound delivery attempt
+      requestBody:
+        required: true
+      responses:
+        '201':
+          description: Outbound delivery created
+  /api/webhook-hub/outbound-endpoints/{publicId}/deliveries/{deliveryPublicId}/dead-letter:
+    post:
+      summary: Move one outbound delivery to dead letter
+      responses:
+        '200':
+          description: Outbound delivery dead-lettered
   /api/webhook-hub/events:
     get:
       summary: List inbound webhook events

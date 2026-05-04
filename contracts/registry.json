@@ -7,8 +7,15 @@
     "documents.openapi.yaml",
     "edge.openapi.yaml",
     "engagement.openapi.yaml",
+    "finance.openapi.yaml",
+    "identity.openapi.yaml",
     "platform-control.openapi.yaml",
-    "webhook-hub.openapi.yaml"
+    "rentals.openapi.yaml",
+    "sales.openapi.yaml",
+    "simulation.openapi.yaml",
+    "webhook-hub.openapi.yaml",
+    "workflow-control.openapi.yaml",
+    "workflow-runtime.openapi.yaml"
   ],
   "events": [
     "catalog.item.schema.json",
@@ -17,6 +24,13 @@
     "engagement.provider-event.schema.json",
     "platform-control.lifecycle-job.schema.json",
     "platform-control.quota.schema.json",
-    "webhook-hub.inbound-event.schema.json"
+    "webhook-hub.inbound-event.schema.json",
+    "webhook-hub.outbound-delivery.schema.json"
+  ],
+  "docs": [
+    "docs/API_PORTAL.md",
+    "docs/ADR-001-http-interno-vs-grpc.md",
+    "docs/CONTRATOS.md",
+    "docs/VERSIONAMENTO_CONTRATOS.md"
   ]
 }

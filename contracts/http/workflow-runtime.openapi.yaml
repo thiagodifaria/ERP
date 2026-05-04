@@ -1,0 +1,41 @@
+openapi: 3.1.0
+info:
+  title: ERP Workflow Runtime API
+  version: 0.6.0
+  description: Workflow execution runtime with action snapshots, retries, delays and compensations.
+paths:
+  /api/workflow-runtime/executions:
+    get:
+      summary: List workflow executions
+      responses:
+        "200":
+          description: Execution list
+    post:
+      summary: Create workflow execution
+      responses:
+        "200":
+          description: Created execution
+  /api/workflow-runtime/executions/{publicId}:
+    get:
+      summary: Read one workflow execution
+      responses:
+        "200":
+          description: Execution detail
+  /api/workflow-runtime/executions/{publicId}/actions:
+    get:
+      summary: List execution action snapshots
+      responses:
+        "200":
+          description: Execution actions
+  /api/workflow-runtime/executions/{publicId}/advance:
+    post:
+      summary: Advance one workflow execution
+      responses:
+        "200":
+          description: Advanced execution
+  /api/workflow-runtime/capabilities:
+    get:
+      summary: List runtime capabilities
+      responses:
+        "200":
+          description: Runtime capability catalog

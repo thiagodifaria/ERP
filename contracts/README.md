@@ -7,11 +7,12 @@ Current structure:
 - `http/`: OpenAPI documents for public HTTP surfaces
 - `events/`: JSON Schemas for cross-service event payloads
 - `registry.json`: simple machine-readable artifact index
+- `../docs/VERSIONAMENTO_CONTRATOS.md`: compatibility and versioning baseline
 
 Current baseline:
 
-- HTTP specs for `analytics`, `edge`, `crm`, `documents`, `engagement`, `catalog`, `platform-control` and shared operational surfaces
-- Event schemas for workflow, platform lifecycle, quotas, CNPJ enrichment, document signing and catalog item publication contracts
+- HTTP specs for `analytics`, `billing`, `catalog`, `crm`, `documents`, `edge`, `engagement`, `finance`, `identity`, `platform-control`, `rentals`, `sales`, `simulation`, `webhook-hub`, `workflow-control` and `workflow-runtime`
+- Event schemas for inbound and outbound webhooks, platform lifecycle, quotas, CNPJ enrichment, document signing and catalog item publication contracts
 
 Contract rules:
 
@@ -19,5 +20,6 @@ Contract rules:
 - public route changes should update the matching OpenAPI file
 - cross-service event changes should update the matching schema
 - idempotent or async patterns must be documented alongside the HTTP surface
+- cursor pagination and partial success should be explicit whenever the route follows those patterns
 - artifacts here are intended to back future aggregated API UI and schema registry workflows
 - `docs/API_PORTAL.md` documents the next step for a central navigable API portal

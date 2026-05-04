@@ -1,0 +1,29 @@
+openapi: 3.1.0
+info:
+  title: ERP Rentals API
+  version: 0.8.0
+  description: Rental contracts, recurring charges, adjustments, rescission and attachment linkage.
+paths:
+  /api/rentals/contracts:
+    get:
+      summary: List rental contracts
+      responses:
+        "200":
+          description: Contract list
+    post:
+      summary: Create rental contract
+      responses:
+        "200":
+          description: Created contract
+  /api/rentals/contracts/{publicId}/charges:
+    get:
+      summary: List contract charges
+      responses:
+        "200":
+          description: Charge list
+  /api/rentals/contracts/{publicId}/charges/{chargePublicId}/status:
+    patch:
+      summary: Update charge status
+      responses:
+        "200":
+          description: Updated charge
