@@ -69,9 +69,16 @@ func buildRelationshipExecutiveSummary(payload map[string]any) dto.RelationshipE
 		HotLeads:              readMapInt(payload, "scoring", "hot"),
 		PipelineConfigs:       readMapInt(payload, "pipeline", "configs"),
 		PipelineStages:        readMapInt(payload, "pipeline", "stages"),
+		TerritoryRules:        readMapInt(payload, "territories", "rules"),
+		ApprovalPolicies:      readMapInt(payload, "approvals", "policies"),
+		ConversationThreads:   readMapInt(payload, "conversations", "threads"),
 		OpenSupportCases:      readMapInt(payload, "support", "openCases"),
 		OverdueSupportCases:   readMapInt(payload, "support", "overdueCases"),
+		SLATrackedCases:       readMapInt(payload, "support", "slaTrackedCases"),
+		BulkImportsReady:      readMapBool(payload, "bulkOperations", "importsReady"),
+		BulkExportsReady:      readMapBool(payload, "bulkOperations", "exportsReady"),
 		WeightedPipelineCents: readMapInt(payload, "forecast", "weightedPipelineCents"),
 		BookedRevenueCents:    readMapInt(payload, "forecast", "bookedRevenueCents"),
+		ForecastConfidence:    readMapString(payload, "forecast", "confidence"),
 	}
 }

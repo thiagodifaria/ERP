@@ -7,6 +7,7 @@ Contexto de catalogo para produtos e servicos do ERP.
 - categorias por tenant
 - itens de catalogo com SKU, unidade, preco base, tipo e atributos
 - ativacao e desativacao de itens
+- historico versionado de itens para governanca de preco e atributos
 - leitura por `publicId`
 - paginação por cursor para categorias e itens
 - criação em lote com `partial success`
@@ -25,4 +26,5 @@ Contexto de catalogo para produtos e servicos do ERP.
 - `POST /api/catalog/items`
 - `POST /api/catalog/items/bulk`
 - `GET /api/catalog/items/{publicId}`
+- `GET /api/catalog/items/{publicId}/versions`
 - `PATCH /api/catalog/items/{publicId}`

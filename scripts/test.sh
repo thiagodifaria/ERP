@@ -684,6 +684,34 @@ wait_for_prometheus_probe_success() {
   done
 }
 
+post_until_http_200() {
+  local url="$1"
+  local attempts="${2:-5}"
+  local sleep_seconds="${3:-1}"
+  local response=""
+  local attempt=0
+
+  while [[ "$attempt" -lt "$attempts" ]]; do
+    response="$(curl -sS -X POST "$url" -w ' HTTP_STATUS:%{http_code}')"
+
+    if [[ "$response" == *'HTTP_STATUS:200' ]]; then
+      printf '%s' "${response% HTTP_STATUS:200}"
+      return 0
+    fi
+
+    if [[ "$response" != *'HTTP_STATUS:409'* ]]; then
+      echo "[test] unexpected non-200 response while waiting for runtime transition: $response"
+      exit 1
+    fi
+
+    attempt=$((attempt + 1))
+    sleep "$sleep_seconds"
+  done
+
+  echo "[test] timed out waiting for runtime transition to succeed: $response"
+  exit 1
+}
+
 compute_totp() {
   local secret="$1"
 
@@ -2268,8 +2296,7 @@ run_workflow_runtime_smoke() {
   advance_task_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/advance")"
   waiting_response="$(curl -sS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/advance" -w ' HTTP_STATUS:%{http_code}')"
   waiting_conflict_response="$(curl -sS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/advance" -w ' HTTP_STATUS:%{http_code}')"
-  sleep 2
-  release_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/advance")"
+  release_response="$(post_until_http_200 "$base_url/api/workflow-runtime/executions/$created_public_id/advance" 5 1)"
   complete_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$created_public_id/advance")"
   transitions_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/$created_public_id/transitions")"
   actions_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/$created_public_id/actions")"
@@ -2297,8 +2324,7 @@ run_workflow_runtime_smoke() {
   retry_start_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/start")"
   retry_advance_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/advance")"
   retry_waiting_response="$(curl -sS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/advance" -w ' HTTP_STATUS:%{http_code}')"
-  sleep 2
-  retry_release_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/advance")"
+  retry_release_response="$(post_until_http_200 "$base_url/api/workflow-runtime/executions/$fail_public_id/advance" 5 1)"
   retry_complete_response="$(curl -fsS -X POST "$base_url/api/workflow-runtime/executions/$fail_public_id/advance")"
   retry_transitions_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/$fail_public_id/transitions")"
   retry_actions_response="$(curl -fsS "$base_url/api/workflow-runtime/executions/$fail_public_id/actions")"
@@ -2815,7 +2841,7 @@ run_analytics_runtime_smoke() {
     exit 1
   fi
 
-  if [[ "$engagement_operations_response" != *'"tenantSlug":"bootstrap-ops"'* || "$engagement_operations_response" != *'"dataSource":"postgresql"'* || "$engagement_operations_response" != *'"budgetCents":178000'* || "$engagement_operations_response" != *'"templates":{"total":2'* || "$engagement_operations_response" != *'"active":2'* || "$engagement_operations_response" != *'"touchpoints":{"total":3'* || "$engagement_operations_response" != *'"responded":2'* || "$engagement_operations_response" != *'"converted":1'* || "$engagement_operations_response" != *'"workflowDispatched":3'* || "$engagement_operations_response" != *'"businessLinked":2'* || "$engagement_operations_response" != *'"deliveries":{"total":3'* || "$engagement_operations_response" != *'"delivered":3'* || "$engagement_operations_response" != *'"failed":0'* || "$engagement_operations_response" != *'"deliveryRate":1.0'* || "$engagement_operations_response" != *'"resend":2'* || "$engagement_operations_response" != *'"manual":1'* || "$engagement_operations_response" != *'"templateLinked":3'* || "$engagement_operations_response" != *'"activeProviders":2'* || "$engagement_operations_response" != *'"providers":{"total":3'* || "$engagement_operations_response" != *'"inboundEvents":2'* || "$engagement_operations_response" != *'"outboundEvents":1'* || "$engagement_operations_response" != *'"workflowDispatches":1'* || "$engagement_operations_response" != *'"responsesTracked":1'* || "$engagement_operations_response" != *'"businessLinkedEvents":3'* || "$engagement_operations_response" != *'"businessEntityLinkedTouchpoints":2'* || "$engagement_operations_response" != *'"businessEntityLinkedEvents":3'* ]]; then
+  if [[ "$engagement_operations_response" != *'"tenantSlug":"bootstrap-ops"'* || "$engagement_operations_response" != *'"dataSource":"postgresql"'* || "$engagement_operations_response" != *'"budgetCents":178000'* || "$engagement_operations_response" != *'"templates":{"total":2'* || "$engagement_operations_response" != *'"active":2'* || "$engagement_operations_response" != *'"touchpoints":{"total":3'* || "$engagement_operations_response" != *'"responded":2'* || "$engagement_operations_response" != *'"converted":1'* || "$engagement_operations_response" != *'"workflowDispatched":3'* || "$engagement_operations_response" != *'"businessLinked":3'* || "$engagement_operations_response" != *'"deliveries":{"total":3'* || "$engagement_operations_response" != *'"delivered":3'* || "$engagement_operations_response" != *'"failed":0'* || "$engagement_operations_response" != *'"deliveryRate":1.0'* || "$engagement_operations_response" != *'"resend":2'* || "$engagement_operations_response" != *'"manual":1'* || "$engagement_operations_response" != *'"templateLinked":3'* || "$engagement_operations_response" != *'"activeProviders":2'* || "$engagement_operations_response" != *'"providers":{"total":3'* || "$engagement_operations_response" != *'"inboundEvents":2'* || "$engagement_operations_response" != *'"outboundEvents":1'* || "$engagement_operations_response" != *'"workflowDispatches":1'* || "$engagement_operations_response" != *'"responsesTracked":1'* || "$engagement_operations_response" != *'"businessLinkedEvents":3'* || "$engagement_operations_response" != *'"businessEntityLinkedTouchpoints":3'* || "$engagement_operations_response" != *'"businessEntityLinkedEvents":3'* ]]; then
     echo "[test] analytics engagement operations report did not expose the expected payload"
     exit 1
   fi
@@ -4020,7 +4046,7 @@ run_edge_runtime_smoke() {
     exit 1
   fi
 
-  if [[ "$engagement_overview_response" != *'"service":"edge"'* || "$engagement_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$engagement_overview_response" != *'"status":"stable"'* || "$engagement_overview_response" != *'"campaigns":3'* || "$engagement_overview_response" != *'"activeCampaigns":2'* || "$engagement_overview_response" != *'"templates":2'* || "$engagement_overview_response" != *'"deliveries":3'* || "$engagement_overview_response" != *'"deliveredDeliveries":3'* || "$engagement_overview_response" != *'"failedDeliveries":0'* || "$engagement_overview_response" != *'"convertedTouchpoints":1'* || "$engagement_overview_response" != *'"businessLinked":2'* || "$engagement_overview_response" != *'"providerLinkedEvents":3'* || "$engagement_overview_response" != *'"deliveryRate":1'* || "$engagement_overview_response" != *'"engagementOperations"'* ]]; then
+  if [[ "$engagement_overview_response" != *'"service":"edge"'* || "$engagement_overview_response" != *'"tenantSlug":"bootstrap-ops"'* || "$engagement_overview_response" != *'"status":"stable"'* || "$engagement_overview_response" != *'"campaigns":3'* || "$engagement_overview_response" != *'"activeCampaigns":2'* || "$engagement_overview_response" != *'"templates":2'* || "$engagement_overview_response" != *'"deliveries":3'* || "$engagement_overview_response" != *'"deliveredDeliveries":3'* || "$engagement_overview_response" != *'"failedDeliveries":0'* || "$engagement_overview_response" != *'"convertedTouchpoints":1'* || "$engagement_overview_response" != *'"businessLinked":3'* || "$engagement_overview_response" != *'"providerLinkedEvents":3'* || "$engagement_overview_response" != *'"deliveryRate":1'* || "$engagement_overview_response" != *'"engagementOperations"'* ]]; then
     echo "[test] edge engagement cockpit did not aggregate the expected live payload"
     exit 1
   fi

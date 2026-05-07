@@ -55,3 +55,30 @@ def test_categories_page_returns_cursor_shape() -> None:
     assert response.status_code == 200
     assert payload["tenantSlug"] == "bootstrap-ops"
     assert payload["pageInfo"]["returned"] >= 1
+
+
+def test_item_versions_return_history_shape() -> None:
+    created = client.post(
+        "/api/catalog/items",
+        json={
+            "tenantSlug": "bootstrap-ops",
+            "sku": "ERP-VERSIONS-001",
+            "name": "Catalog Versioned Item",
+            "itemType": "service",
+            "unitCode": "license",
+            "priceBaseCents": 19900,
+        },
+    ).json()
+
+    client.patch(
+        f"/api/catalog/items/{created['publicId']}",
+        json={"tenantSlug": "bootstrap-ops", "priceBaseCents": 24900},
+    )
+
+    response = client.get(f"/api/catalog/items/{created['publicId']}/versions?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["itemPublicId"] == created["publicId"]
+    assert len(payload["items"]) >= 2
+    assert payload["items"][0]["versionNumber"] >= payload["items"][1]["versionNumber"]

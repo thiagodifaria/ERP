@@ -305,7 +305,13 @@ def test_relationship_intelligence_returns_pipeline_and_forecast_payload() -> No
     assert response.status_code == 200
     assert payload["tenantSlug"] == "bootstrap-ops"
     assert payload["pipeline"]["configs"] == 1
+    assert payload["territories"]["rules"] == 1
+    assert payload["approvals"]["policies"] == 1
+    assert payload["conversations"]["threads"] == 4
+    assert payload["bulkOperations"]["partialSuccessTracking"] is True
     assert payload["forecast"]["confidence"] == "attention"
+    assert payload["forecast"]["scenarioCount"] == 2
+    assert payload["readiness"]["bulkReady"] is True
 
 
 def test_compliance_control_returns_fiscal_and_privacy_payload() -> None:

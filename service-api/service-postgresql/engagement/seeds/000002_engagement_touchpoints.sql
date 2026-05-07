@@ -6,6 +6,11 @@ INSERT INTO engagement.touchpoints (
   campaign_id,
   public_id,
   lead_public_id,
+  thread_public_id,
+  participant_kind,
+  participant_public_id,
+  business_entity_type,
+  business_entity_public_id,
   channel,
   contact_value,
   source,
@@ -24,6 +29,11 @@ SELECT
     WHEN 'smoke-identity-bootstrap' THEN '00000000-0000-0000-0000-00000000e301'::uuid
     ELSE gen_random_uuid()
   END,
+  lead.public_id,
+  lead.public_id,
+  'crm.lead',
+  lead.public_id,
+  'crm.lead',
   lead.public_id,
   'whatsapp',
   concat('+5531', lpad((tenant.id + 999999999)::text, 10, '0')),

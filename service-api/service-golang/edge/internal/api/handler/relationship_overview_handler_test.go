@@ -30,6 +30,12 @@ func TestRelationshipOverviewReturnsExecutiveCockpit(t *testing.T) {
 	if response.ExecutiveSummary.AverageLeadScore != 68 || response.ExecutiveSummary.PipelineConfigs != 1 {
 		t.Fatalf("unexpected executive summary payload: %+v", response.ExecutiveSummary)
 	}
+	if response.ExecutiveSummary.TerritoryRules != 1 || response.ExecutiveSummary.ApprovalPolicies != 1 {
+		t.Fatalf("expected territory and approval metrics in executive summary: %+v", response.ExecutiveSummary)
+	}
+	if response.ExecutiveSummary.ConversationThreads != 4 || response.ExecutiveSummary.ForecastConfidence != "attention" {
+		t.Fatalf("expected conversation and forecast details in executive summary: %+v", response.ExecutiveSummary)
+	}
 }
 
 type relationshipOverviewReader struct{}
@@ -44,8 +50,12 @@ func (reader relationshipOverviewReader) GetJSON(_ context.Context, requestURL s
 			"readiness": map[string]any{"status": "attention"},
 			"scoring": map[string]any{"average": 68, "hot": 3},
 			"pipeline": map[string]any{"configs": 1, "stages": 5},
-			"support": map[string]any{"openCases": 3, "overdueCases": 1},
-			"forecast": map[string]any{"weightedPipelineCents": 2314000, "bookedRevenueCents": 1775000},
+			"territories": map[string]any{"rules": 1},
+			"approvals": map[string]any{"policies": 1},
+			"support": map[string]any{"openCases": 3, "overdueCases": 1, "slaTrackedCases": 3},
+			"conversations": map[string]any{"threads": 4},
+			"bulkOperations": map[string]any{"importsReady": true, "exportsReady": true},
+			"forecast": map[string]any{"weightedPipelineCents": 2314000, "bookedRevenueCents": 1775000, "confidence": "attention"},
 		}
 	default:
 		payload = map[string]any{"tenantSlug": "bootstrap-ops"}

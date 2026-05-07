@@ -65,3 +65,9 @@ paths:
           description: Updated catalog item
         "404":
           description: Catalog item not found
+  /api/catalog/items/{publicId}/versions:
+    get:
+      summary: Read catalog item version history
+      responses:
+        "200":
+          description: Catalog item version history

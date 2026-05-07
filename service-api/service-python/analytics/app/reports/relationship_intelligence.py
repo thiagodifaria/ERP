@@ -14,11 +14,13 @@ def build_relationship_intelligence(tenant_slug: str | None = None) -> dict:
             "generatedAt": datetime.now(timezone.utc).isoformat(),
             "scoring": {"average": 68, "hot": 3, "warm": 4, "cold": 2},
             "pipeline": {"configs": 1, "stages": 5, "autoScoring": True, "territoryRules": 1, "approvalPolicies": 1},
-            "support": {"openCases": 3, "overdueCases": 1},
+            "support": {"openCases": 3, "overdueCases": 1, "slaTrackedCases": 3},
             "conversations": {"threads": 4, "participants": 4, "channels": 3},
-            "bulkOperations": {"importsReady": True, "exportsReady": True},
-            "forecast": {"bookedRevenueCents": 1775000, "weightedPipelineCents": 2314000, "confidence": "attention"},
-            "readiness": {"status": "attention", "slaReady": True, "forecastReady": True, "relationshipSignalsReady": True},
+            "bulkOperations": {"importsReady": True, "exportsReady": True, "partialSuccessTracking": True},
+            "approvals": {"policies": 1, "auditReady": True},
+            "territories": {"rules": 1, "assignmentReady": True},
+            "forecast": {"bookedRevenueCents": 1775000, "weightedPipelineCents": 2314000, "confidence": "attention", "scenarioCount": 2},
+            "readiness": {"status": "attention", "slaReady": True, "forecastReady": True, "relationshipSignalsReady": True, "bulkReady": True},
         }
 
     with connect() as connection:
@@ -69,6 +71,7 @@ def build_relationship_intelligence(tenant_slug: str | None = None) -> dict:
         "support": {
             "openCases": int(row.get("support_open", 0) or 0),
             "overdueCases": int(row.get("support_overdue", 0) or 0),
+            "slaTrackedCases": int(row.get("support_open", 0) or 0),
         },
         "conversations": {
             "threads": int(row.get("conversation_threads", 0) or 0),
@@ -78,16 +81,27 @@ def build_relationship_intelligence(tenant_slug: str | None = None) -> dict:
         "bulkOperations": {
             "importsReady": True,
             "exportsReady": True,
+            "partialSuccessTracking": True,
+        },
+        "approvals": {
+            "policies": int(row.get("pipeline_approval_policies", 0) or 0),
+            "auditReady": int(row.get("pipeline_approval_policies", 0) or 0) > 0,
+        },
+        "territories": {
+            "rules": int(row.get("pipeline_territory_rules", 0) or 0),
+            "assignmentReady": int(row.get("pipeline_territory_rules", 0) or 0) > 0,
         },
         "forecast": {
             "bookedRevenueCents": int(row.get("booked_revenue_cents", 0) or 0),
             "weightedPipelineCents": int(row.get("weighted_pipeline_cents", 0) or 0),
             "confidence": confidence,
+            "scenarioCount": 2 if int(row.get("weighted_pipeline_cents", 0) or 0) > 0 else 0,
         },
         "readiness": {
             "status": confidence,
             "slaReady": True,
             "forecastReady": int(row.get("weighted_pipeline_cents", 0) or 0) > 0,
             "relationshipSignalsReady": leads_total > 0,
+            "bulkReady": True,
         },
     }

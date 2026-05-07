@@ -11,6 +11,7 @@ from app.infrastructure.postgres import connect
 IN_MEMORY_STATE = {
     "categories": [],
     "items": [],
+    "itemVersions": [],
 }
 
 
@@ -139,6 +140,69 @@ def create_category(payload: dict) -> dict:
             return category
 
 
+def _append_item_version_in_memory(item: dict, change_summary: str) -> dict:
+    record = {
+        "publicId": str(uuid.uuid4()),
+        "itemPublicId": item["publicId"],
+        "tenantSlug": item["tenantSlug"],
+        "versionNumber": int(item["versionNumber"]),
+        "changeSummary": change_summary,
+        "snapshot": {
+            "sku": item["sku"],
+            "name": item["name"],
+            "itemType": item["itemType"],
+            "unitCode": item["unitCode"],
+            "priceBaseCents": item["priceBaseCents"],
+            "currencyCode": item["currencyCode"],
+            "active": item["active"],
+            "attributes": item["attributes"],
+        },
+        "createdAt": utc_now(),
+    }
+    IN_MEMORY_STATE["itemVersions"].append(record)
+    return record
+
+
+def list_item_versions(public_id: str, tenant_slug: str | None = None) -> list[dict]:
+    slug = _tenant_slug(tenant_slug)
+    if settings.repository_driver != "postgres":
+        records = [
+            record for record in IN_MEMORY_STATE["itemVersions"] if record["tenantSlug"] == slug and record["itemPublicId"] == public_id
+        ]
+        return sorted(records, key=lambda item: item["versionNumber"], reverse=True)
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                  version.version_number,
+                  version.change_summary,
+                  version.snapshot_json,
+                  version.created_at,
+                  item.public_id
+                FROM catalog.item_versions AS version
+                JOIN catalog.items AS item ON item.id = version.item_id
+                JOIN identity.tenants AS tenant ON tenant.id = item.tenant_id
+                WHERE tenant.slug = %s
+                  AND item.public_id = %s
+                ORDER BY version.version_number DESC
+                """,
+                (slug, public_id),
+            )
+            return [
+                {
+                    "itemPublicId": row["public_id"],
+                    "tenantSlug": slug,
+                    "versionNumber": row["version_number"],
+                    "changeSummary": row["change_summary"],
+                    "snapshot": row["snapshot_json"] or {},
+                    "createdAt": row["created_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                }
+                for row in cursor.fetchall()
+            ]
+
+
 def list_items(tenant_slug: str | None = None, item_type: str | None = None, active: bool | None = None) -> list[dict]:
     slug = _tenant_slug(tenant_slug)
     normalized_item_type = (item_type or "").strip().lower()
@@ -246,6 +310,7 @@ def create_item(payload: dict) -> dict:
 
     if settings.repository_driver != "postgres":
         IN_MEMORY_STATE["items"].append(item)
+        _append_item_version_in_memory(item, "initial_version")
         return item
 
     with connect() as connection:
@@ -293,11 +358,35 @@ def create_item(payload: dict) -> dict:
                 ),
             )
             row = cursor.fetchone()
-            connection.commit()
             item["createdAt"] = row["created_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
             item["updatedAt"] = row["updated_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
             if category_id is not None:
                 item["category"] = {"publicId": category_public_id, "name": category_name}
+            cursor.execute(
+                """
+                INSERT INTO catalog.item_versions (item_id, version_number, change_summary, snapshot_json)
+                SELECT item.id, item.version_number, 'initial_version', %s::jsonb
+                FROM catalog.items AS item
+                WHERE item.public_id = %s
+                """,
+                (
+                    json.dumps(
+                        {
+                            "sku": item["sku"],
+                            "name": item["name"],
+                            "itemType": item["itemType"],
+                            "unitCode": item["unitCode"],
+                            "priceBaseCents": item["priceBaseCents"],
+                            "currencyCode": item["currencyCode"],
+                            "active": item["active"],
+                            "attributes": item["attributes"],
+                            "versionNumber": item["versionNumber"],
+                        }
+                    ),
+                    item["publicId"],
+                ),
+            )
+            connection.commit()
             return item
 
 
@@ -342,6 +431,7 @@ def update_item(public_id: str, payload: dict) -> dict | None:
         current["attributes"] = new_attributes
         current["versionNumber"] = int(current["versionNumber"]) + 1
         current["updatedAt"] = utc_now()
+        _append_item_version_in_memory(current, "item_updated")
         return current
 
     with connect() as connection:
@@ -367,8 +457,33 @@ def update_item(public_id: str, payload: dict) -> dict | None:
             row = cursor.fetchone()
             if row is None:
                 return None
+            updated = _map_item_row(row, slug)
+            cursor.execute(
+                """
+                INSERT INTO catalog.item_versions (item_id, version_number, change_summary, snapshot_json)
+                SELECT item.id, item.version_number, 'item_updated', %s::jsonb
+                FROM catalog.items AS item
+                WHERE item.public_id = %s
+                """,
+                (
+                    json.dumps(
+                        {
+                            "sku": updated["sku"],
+                            "name": updated["name"],
+                            "itemType": updated["itemType"],
+                            "unitCode": updated["unitCode"],
+                            "priceBaseCents": updated["priceBaseCents"],
+                            "currencyCode": updated["currencyCode"],
+                            "active": updated["active"],
+                            "attributes": updated["attributes"],
+                            "versionNumber": updated["versionNumber"],
+                        }
+                    ),
+                    public_id,
+                ),
+            )
             connection.commit()
-            return _map_item_row(row, slug)
+            return updated
 
 
 def capability_catalog() -> dict:
@@ -376,6 +491,7 @@ def capability_catalog() -> dict:
         "service": settings.service_name,
         "domains": ["product", "service"],
         "supportsVersioning": True,
+        "supportsVersionHistory": True,
         "supportsActivation": True,
         "supportsCategories": True,
         "supportsCursorPagination": True,

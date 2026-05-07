@@ -10,6 +10,7 @@ from app.runtime import (
     create_category,
     create_item,
     get_item,
+    list_item_versions,
     list_categories,
     list_categories_page,
     list_items,
@@ -92,6 +93,15 @@ def item_detail(public_id: str, tenant_slug: str | None = None) -> dict:
     if item is None:
         raise HTTPException(status_code=404, detail={"code": "catalog_item_not_found", "message": "Catalog item was not found."})
     return item
+
+
+@app.get("/api/catalog/items/{public_id}/versions")
+def item_versions(public_id: str, tenant_slug: str | None = None) -> dict:
+    return {
+        "tenantSlug": tenant_slug or settings.bootstrap_tenant_slug,
+        "itemPublicId": public_id,
+        "items": list_item_versions(public_id, tenant_slug),
+    }
 
 
 @app.patch("/api/catalog/items/{public_id}")
