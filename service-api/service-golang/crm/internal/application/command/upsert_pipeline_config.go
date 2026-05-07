@@ -6,7 +6,15 @@ import (
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/domain/repository"
 )
 
-func UpsertPipelineConfig(factory repository.TenantRepositoryFactory, tenantSlug string, name string, stages []entity.PipelineStage, autoScoring bool) (entity.PipelineConfig, error) {
+func UpsertPipelineConfig(
+	factory repository.TenantRepositoryFactory,
+	tenantSlug string,
+	name string,
+	stages []entity.PipelineStage,
+	autoScoring bool,
+	territoryRules []entity.TerritoryRule,
+	approvalPolicies []entity.ApprovalPolicy,
+) (entity.PipelineConfig, error) {
 	tenantRepositories, err := factory.ForTenant(tenantSlug)
 	if err != nil {
 		return entity.PipelineConfig{}, err
@@ -18,7 +26,7 @@ func UpsertPipelineConfig(factory repository.TenantRepositoryFactory, tenantSlug
 		publicID = current.PublicID
 	}
 
-	config, err := entity.NewPipelineConfig(publicID, name, stages, autoScoring)
+	config, err := entity.NewPipelineConfig(publicID, name, stages, autoScoring, territoryRules, approvalPolicies)
 	if err != nil {
 		return entity.PipelineConfig{}, err
 	}

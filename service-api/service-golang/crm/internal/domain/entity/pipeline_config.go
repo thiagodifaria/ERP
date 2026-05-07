@@ -20,14 +20,36 @@ type PipelineStage struct {
 	RequiresApproval bool   `json:"requiresApproval"`
 }
 
-type PipelineConfig struct {
-	PublicID    string          `json:"publicId"`
-	Name        string          `json:"name"`
-	Stages      []PipelineStage `json:"stages"`
-	AutoScoring bool            `json:"autoScoring"`
+type TerritoryRule struct {
+	Key            string `json:"key"`
+	Name           string `json:"name"`
+	AssignmentMode string `json:"assignmentMode"`
 }
 
-func NewPipelineConfig(publicID string, name string, stages []PipelineStage, autoScoring bool) (PipelineConfig, error) {
+type ApprovalPolicy struct {
+	Key           string `json:"key"`
+	Name          string `json:"name"`
+	ApprovalScope string `json:"approvalScope"`
+	RequiredRole  string `json:"requiredRole"`
+}
+
+type PipelineConfig struct {
+	PublicID         string           `json:"publicId"`
+	Name             string           `json:"name"`
+	Stages           []PipelineStage  `json:"stages"`
+	AutoScoring      bool             `json:"autoScoring"`
+	TerritoryRules   []TerritoryRule  `json:"territoryRules"`
+	ApprovalPolicies []ApprovalPolicy `json:"approvalPolicies"`
+}
+
+func NewPipelineConfig(
+	publicID string,
+	name string,
+	stages []PipelineStage,
+	autoScoring bool,
+	territoryRules []TerritoryRule,
+	approvalPolicies []ApprovalPolicy,
+) (PipelineConfig, error) {
 	normalizedPublicID := strings.TrimSpace(publicID)
 	normalizedName := strings.TrimSpace(name)
 
@@ -60,10 +82,12 @@ func NewPipelineConfig(publicID string, name string, stages []PipelineStage, aut
 	}
 
 	return PipelineConfig{
-		PublicID:    normalizedPublicID,
-		Name:        normalizedName,
-		Stages:      normalizedStages,
-		AutoScoring: autoScoring,
+		PublicID:         normalizedPublicID,
+		Name:             normalizedName,
+		Stages:           normalizedStages,
+		AutoScoring:      autoScoring,
+		TerritoryRules:   normalizeTerritoryRules(territoryRules),
+		ApprovalPolicies: normalizeApprovalPolicies(approvalPolicies),
 	}, nil
 }
 
@@ -78,6 +102,60 @@ func DefaultPipelineConfig() PipelineConfig {
 			{Key: "won", Name: "Won"},
 		},
 		true,
+		[]TerritoryRule{
+			{Key: "default-brazil", Name: "Default Brazil", AssignmentMode: "owner_or_region"},
+		},
+		[]ApprovalPolicy{
+			{Key: "discount-approval", Name: "Discount Approval", ApprovalScope: "discount", RequiredRole: "manager"},
+		},
 	)
 	return config
+}
+
+func normalizeTerritoryRules(rules []TerritoryRule) []TerritoryRule {
+	if len(rules) == 0 {
+		return nil
+	}
+
+	normalized := make([]TerritoryRule, 0, len(rules))
+	for _, rule := range rules {
+		key := strings.ToLower(strings.TrimSpace(rule.Key))
+		name := strings.TrimSpace(rule.Name)
+		mode := strings.ToLower(strings.TrimSpace(rule.AssignmentMode))
+		if key == "" || name == "" || mode == "" {
+			continue
+		}
+		normalized = append(normalized, TerritoryRule{
+			Key:            key,
+			Name:           name,
+			AssignmentMode: mode,
+		})
+	}
+
+	return normalized
+}
+
+func normalizeApprovalPolicies(policies []ApprovalPolicy) []ApprovalPolicy {
+	if len(policies) == 0 {
+		return nil
+	}
+
+	normalized := make([]ApprovalPolicy, 0, len(policies))
+	for _, policy := range policies {
+		key := strings.ToLower(strings.TrimSpace(policy.Key))
+		name := strings.TrimSpace(policy.Name)
+		scope := strings.ToLower(strings.TrimSpace(policy.ApprovalScope))
+		requiredRole := strings.ToLower(strings.TrimSpace(policy.RequiredRole))
+		if key == "" || name == "" || scope == "" || requiredRole == "" {
+			continue
+		}
+		normalized = append(normalized, ApprovalPolicy{
+			Key:           key,
+			Name:          name,
+			ApprovalScope: scope,
+			RequiredRole:  requiredRole,
+		})
+	}
+
+	return normalized
 }

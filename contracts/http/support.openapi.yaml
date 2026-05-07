@@ -1,0 +1,59 @@
+openapi: 3.1.0
+info:
+  title: ERP Support API
+  version: 0.1.0
+  description: Queue-based support cases with SLA, comments and lifecycle history.
+paths:
+  /api/support/capabilities:
+    get:
+      summary: Read support capability catalog
+      responses:
+        "200":
+          description: Support capabilities
+  /api/support/queues:
+    get:
+      summary: List support queues by tenant
+      responses:
+        "200":
+          description: Queue list
+  /api/support/queues/{queueKey}:
+    put:
+      summary: Upsert one support queue
+      responses:
+        "200":
+          description: Upserted queue
+  /api/support/cases:
+    get:
+      summary: List support cases with cursor filters
+      responses:
+        "200":
+          description: Paginated support cases
+    post:
+      summary: Create one support case
+      responses:
+        "201":
+          description: Created support case
+  /api/support/cases/summary:
+    get:
+      summary: Read support case summary
+      responses:
+        "200":
+          description: Support summary
+  /api/support/cases/{publicId}:
+    get:
+      summary: Read one support case
+      responses:
+        "200":
+          description: Support case detail
+  /api/support/cases/{publicId}/status:
+    patch:
+      summary: Transition support case status
+      responses:
+        "200":
+          description: Updated support case
+  /api/support/cases/{publicId}/comments:
+    post:
+      summary: Append comment to support case
+      responses:
+        "200":
+          description: Updated support case with new comment

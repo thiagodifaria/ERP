@@ -26,6 +26,10 @@ func NewServer(cfg config.Config, logger *telemetry.Logger) *http.Server {
 	healthHandler := handler.NewHealthHandler(cfg.ServiceName, checker, dependencies)
 	opsHandler := handler.NewOpsHandler(cfg.ServiceName, checker, dependencies)
 	tenantOverviewHandler := handler.NewTenantOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
+	coreOperationsOverviewHandler := handler.NewCoreOperationsOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
+	relationshipOverviewHandler := handler.NewRelationshipOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
+	complianceOverviewHandler := handler.NewComplianceOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
+	goLiveOverviewHandler := handler.NewGoLiveOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
 	automationOverviewHandler := handler.NewAutomationOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
 	engagementOverviewHandler := handler.NewEngagementOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
 	integrationsOverviewHandler := handler.NewIntegrationsOverviewHandler(cfg.ServiceName, cfg.AnalyticsBaseURL, checker)
@@ -43,7 +47,7 @@ func NewServer(cfg config.Config, logger *telemetry.Logger) *http.Server {
 
 	return &http.Server{
 		Addr:              cfg.HTTPAddress,
-		Handler:           NewRouter(logger, healthHandler, opsHandler, tenantOverviewHandler, automationOverviewHandler, engagementOverviewHandler, integrationsOverviewHandler, documentsOverviewHandler, collectionsOverviewHandler, platformReliabilityOverviewHandler, hardeningOverviewHandler, saasOverviewHandler, contractsOverviewHandler, salesOverviewHandler, revenueOverviewHandler, financeOverviewHandler, rentalsOverviewHandler, cfg.IdentityBaseURL, accessResolver),
+		Handler:           NewRouter(logger, healthHandler, opsHandler, tenantOverviewHandler, coreOperationsOverviewHandler, relationshipOverviewHandler, complianceOverviewHandler, goLiveOverviewHandler, automationOverviewHandler, engagementOverviewHandler, integrationsOverviewHandler, documentsOverviewHandler, collectionsOverviewHandler, platformReliabilityOverviewHandler, hardeningOverviewHandler, saasOverviewHandler, contractsOverviewHandler, salesOverviewHandler, revenueOverviewHandler, financeOverviewHandler, rentalsOverviewHandler, cfg.IdentityBaseURL, accessResolver),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 }

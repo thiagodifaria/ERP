@@ -10,6 +10,9 @@ export type Touchpoint = {
   campaignPublicId: string;
   campaignKey: string;
   leadPublicId: string;
+  threadPublicId: string;
+  participantKind: string;
+  participantPublicId: string;
   businessEntityType: string | null;
   businessEntityPublicId: string | null;
   channel: CampaignChannel;
@@ -30,6 +33,9 @@ export type TouchpointFilters = {
   status?: TouchpointStatus;
   channel?: CampaignChannel;
   leadPublicId?: string;
+  threadPublicId?: string;
+  participantKind?: string;
+  participantPublicId?: string;
   businessEntityType?: string;
   businessEntityPublicId?: string;
 };
@@ -38,6 +44,9 @@ export type CreateTouchpointInput = {
   tenantSlug: string;
   campaignPublicId: string;
   leadPublicId: string;
+  threadPublicId?: string | null;
+  participantKind?: string | null;
+  participantPublicId?: string | null;
   businessEntityType?: string | null;
   businessEntityPublicId?: string | null;
   contactValue: string;
@@ -57,6 +66,8 @@ export type TouchpointSummary = {
   totals: {
     campaigns: number;
     touchpoints: number;
+    threads: number;
+    participants: number;
     workflowConfigured: number;
     workflowDispatched: number;
     businessLinked: number;
@@ -77,6 +88,8 @@ export function buildTouchpointSummary(
   tenantSlug?: string
 ): TouchpointSummary {
   const campaignIds = new Set(touchpoints.map((touchpoint) => touchpoint.campaignPublicId));
+  const threadIds = new Set(touchpoints.map((touchpoint) => touchpoint.threadPublicId));
+  const participantIds = new Set(touchpoints.map((touchpoint) => `${touchpoint.participantKind}:${touchpoint.participantPublicId}`));
   const byStatus = Object.fromEntries(touchpointStatuses.map((status) => [status, 0])) as Record<TouchpointStatus, number>;
   const byChannel = Object.fromEntries(campaignChannels.map((channel) => [channel, 0])) as Record<CampaignChannel, number>;
 
@@ -97,6 +110,8 @@ export function buildTouchpointSummary(
     totals: {
       campaigns: campaignIds.size,
       touchpoints: touchpoints.length,
+      threads: threadIds.size,
+      participants: participantIds.size,
       workflowConfigured: touchpoints.filter((touchpoint) => touchpoint.workflowDefinitionKey !== null).length,
       workflowDispatched: touchpoints.filter((touchpoint) => touchpoint.lastWorkflowRunPublicId !== null).length,
       businessLinked: touchpoints.filter((touchpoint) => touchpoint.businessEntityPublicId !== null).length
@@ -173,4 +188,16 @@ export function ensureBusinessEntityPublicId(value: string | null | undefined): 
   }
 
   return ensurePublicId(value, "business_entity_public_id_invalid");
+}
+
+export function ensureParticipantKind(value: string | null | undefined): string | null {
+  return ensureBusinessEntityType(value);
+}
+
+export function ensureParticipantPublicId(value: string | null | undefined): string | null {
+  if (value == null || value.trim().length === 0) {
+    return null;
+  }
+
+  return ensurePublicId(value, "participant_public_id_invalid");
 }

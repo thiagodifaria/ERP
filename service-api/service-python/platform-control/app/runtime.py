@@ -17,6 +17,8 @@ IN_MEMORY_STATE = {
     "quotas": [],
     "blocks": [],
     "provider_defaults": [],
+    "go_live_rollouts": [],
+    "go_live_events": [],
 }
 
 CAPABILITY_CATALOG = [
@@ -903,12 +905,14 @@ def build_usage_summary(tenant_slug: str) -> dict:
         )
 
     active_blocks = [item for item in blocks if item["active"]]
+    total_quantity = sum(int(item["quantity"]) for item in metrics)
     return {
         "tenantSlug": slug,
         "generatedAt": utc_now(),
         "metrics": metrics,
         "summary": {
             "trackedMetrics": len(metrics),
+            "totalQuantity": total_quantity,
             "activeQuotas": len(quotas),
             "activeBlocks": len(active_blocks),
             "limitReached": sum(1 for item in metrics if item["status"] == "limit_reached"),
@@ -1296,3 +1300,293 @@ def transition_lifecycle_job(tenant_slug: str, public_id: str, action: str, payl
     if job is None:
         raise ValueError("lifecycle_job_not_found")
     return job
+
+
+def build_go_live_readiness(tenant_slug: str) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    lifecycle = build_lifecycle_readiness(slug)
+    usage = build_usage_summary(slug)
+    provider_defaults = list_provider_defaults(slug)
+    blocks = list_blocks(slug)
+
+    critical_unconfigured = sum(1 for item in provider_defaults if item["critical"] and item["mode"] in {"unconfigured", "disabled"})
+    active_blocks = sum(1 for item in blocks if item["active"])
+    tracked_metrics = usage["summary"]["trackedMetrics"]
+    usage_total = usage["summary"]["totalQuantity"]
+
+    status = "stable"
+    risks: list[str] = []
+    if critical_unconfigured > 0:
+        status = "attention"
+        risks.append("critical_providers_unconfigured")
+    if active_blocks > 0:
+        status = "attention"
+        risks.append("tenant_blocks_active")
+    if tracked_metrics == 0:
+        status = "attention"
+        risks.append("adoption_metrics_not_started")
+
+    return {
+        "tenantSlug": slug,
+        "generatedAt": utc_now(),
+        "status": status,
+        "rolloutReady": status == "stable",
+        "metricsObserved": tracked_metrics > 0,
+        "rollbackReady": True,
+        "lifecycleReady": lifecycle["readiness"]["status"] == "stable",
+        "criticalProvidersUnconfigured": critical_unconfigured,
+        "activeBlocks": active_blocks,
+        "adoptionSignals": {
+            "trackedMetrics": tracked_metrics,
+            "totalQuantity": usage_total,
+            "providerDefaults": len(provider_defaults),
+        },
+        "risks": risks,
+    }
+
+
+def create_go_live_rollout(tenant_slug: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    target_env = (payload.get("targetEnv") or "production").strip().lower()
+    wave_key = (payload.get("waveKey") or "wave-1").strip().lower()
+    requested_by = (payload.get("requestedBy") or "").strip()
+    rollback_playbook = (payload.get("rollbackPlaybook") or "docs/OPERACOES.md#rollback").strip()
+    adoption_target_pct = int(payload.get("adoptionTargetPct") or 70)
+    if requested_by == "":
+        raise ValueError("rollout_requested_by_required")
+
+    readiness = build_go_live_readiness(slug)
+    record = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "targetEnv": target_env,
+        "waveKey": wave_key,
+        "requestedBy": requested_by,
+        "status": "planned",
+        "rollbackPlaybook": rollback_playbook,
+        "adoptionTargetPct": adoption_target_pct,
+        "createdAt": utc_now(),
+        "startedAt": None,
+        "completedAt": None,
+        "rolledBackAt": None,
+        "readinessSnapshot": readiness,
+        "events": [],
+    }
+
+    if settings.repository_driver != "postgres":
+        IN_MEMORY_STATE["go_live_rollouts"].append(record)
+        IN_MEMORY_STATE["go_live_events"].append(
+            {
+                "publicId": str(uuid.uuid4()),
+                "rolloutPublicId": record["publicId"],
+                "tenantSlug": slug,
+                "status": "planned",
+                "summary": "Rollout planned.",
+                "createdAt": utc_now(),
+            }
+        )
+        return get_go_live_rollout(slug, record["publicId"]) or record
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            tenant_id = _find_tenant_id(cursor, slug)
+            cursor.execute(
+                """
+                INSERT INTO platform_control.go_live_rollouts (
+                  tenant_id, public_id, target_env, wave_key, status, requested_by, rollback_playbook,
+                  adoption_target_pct, readiness_json
+                )
+                VALUES (%s, %s, %s, %s, 'planned', %s, %s, %s, %s::jsonb)
+                RETURNING created_at
+                """,
+                (tenant_id, record["publicId"], target_env, wave_key, requested_by, rollback_playbook, adoption_target_pct, json.dumps(readiness)),
+            )
+            row = cursor.fetchone()
+            cursor.execute(
+                """
+                INSERT INTO platform_control.go_live_rollout_events (rollout_id, public_id, status, summary)
+                SELECT id, %s, 'planned', 'Rollout planned.'
+                FROM platform_control.go_live_rollouts
+                WHERE public_id = %s
+                """,
+                (str(uuid.uuid4()), record["publicId"]),
+            )
+            connection.commit()
+            record["createdAt"] = row["created_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            return get_go_live_rollout(slug, record["publicId"]) or record
+
+
+def list_go_live_rollouts(tenant_slug: str, cursor: str | None = None, limit: int = 50) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    if settings.repository_driver != "postgres":
+        records = sorted(
+            [item for item in IN_MEMORY_STATE["go_live_rollouts"] if item["tenantSlug"] == slug],
+            key=lambda item: item["createdAt"],
+            reverse=True,
+        )
+        payload = _paginate(records, cursor, limit)
+        payload["tenantSlug"] = slug
+        return payload
+
+    with connect() as connection:
+        with connection.cursor() as cursor_db:
+            cursor_db.execute(
+                """
+                SELECT rollout.public_id
+                FROM platform_control.go_live_rollouts AS rollout
+                JOIN identity.tenants AS tenant ON tenant.id = rollout.tenant_id
+                WHERE tenant.slug = %s
+                ORDER BY rollout.created_at DESC
+                """,
+                (slug,),
+            )
+            records = [get_go_live_rollout(slug, row["public_id"]) for row in cursor_db.fetchall()]
+            payload = _paginate([record for record in records if record is not None], cursor, limit)
+            payload["tenantSlug"] = slug
+            return payload
+
+
+def get_go_live_rollout(tenant_slug: str, public_id: str) -> dict | None:
+    slug = _tenant_slug(tenant_slug)
+    if settings.repository_driver != "postgres":
+        for rollout in IN_MEMORY_STATE["go_live_rollouts"]:
+            if rollout["tenantSlug"] == slug and rollout["publicId"] == public_id:
+                rollout["events"] = [
+                    event for event in IN_MEMORY_STATE["go_live_events"] if event["tenantSlug"] == slug and event["rolloutPublicId"] == public_id
+                ]
+                return rollout
+        return None
+
+    with connect() as connection:
+        with connection.cursor() as cursor_db:
+            cursor_db.execute(
+                """
+                SELECT rollout.public_id,
+                       rollout.target_env,
+                       rollout.wave_key,
+                       rollout.status,
+                       rollout.requested_by,
+                       rollout.rollback_playbook,
+                       rollout.adoption_target_pct,
+                       rollout.readiness_json,
+                       rollout.created_at,
+                       rollout.started_at,
+                       rollout.completed_at,
+                       rollout.rolled_back_at
+                FROM platform_control.go_live_rollouts AS rollout
+                JOIN identity.tenants AS tenant ON tenant.id = rollout.tenant_id
+                WHERE tenant.slug = %s AND rollout.public_id = %s
+                """,
+                (slug, public_id),
+            )
+            row = cursor_db.fetchone()
+            if row is None:
+                return None
+            cursor_db.execute(
+                """
+                SELECT event.public_id, event.status, event.summary, event.created_at
+                FROM platform_control.go_live_rollout_events AS event
+                JOIN platform_control.go_live_rollouts AS rollout ON rollout.id = event.rollout_id
+                WHERE rollout.public_id = %s
+                ORDER BY event.created_at
+                """,
+                (public_id,),
+            )
+            events = [
+                {
+                    "publicId": event["public_id"],
+                    "status": event["status"],
+                    "summary": event["summary"],
+                    "createdAt": event["created_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                }
+                for event in cursor_db.fetchall()
+            ]
+            return {
+                "publicId": row["public_id"],
+                "tenantSlug": slug,
+                "targetEnv": row["target_env"],
+                "waveKey": row["wave_key"],
+                "status": row["status"],
+                "requestedBy": row["requested_by"],
+                "rollbackPlaybook": row["rollback_playbook"],
+                "adoptionTargetPct": int(row["adoption_target_pct"]),
+                "readinessSnapshot": row["readiness_json"] or {},
+                "createdAt": row["created_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "startedAt": None if row["started_at"] is None else row["started_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "completedAt": None if row["completed_at"] is None else row["completed_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "rolledBackAt": None if row["rolled_back_at"] is None else row["rolled_back_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "events": events,
+            }
+
+
+def transition_go_live_rollout(tenant_slug: str, public_id: str, action: str, payload: dict | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    payload = payload or {}
+    transition_map = {
+        "start": ("running", "Rollout started."),
+        "complete": ("completed", "Rollout completed."),
+        "rollback": ("rolled_back", "Rollback executed."),
+    }
+    if action not in transition_map:
+        raise ValueError("rollout_action_invalid")
+    next_status, fallback_summary = transition_map[action]
+    summary = (payload.get("summary") or fallback_summary).strip()
+
+    if settings.repository_driver != "postgres":
+        for rollout in IN_MEMORY_STATE["go_live_rollouts"]:
+            if rollout["tenantSlug"] == slug and rollout["publicId"] == public_id:
+                rollout["status"] = next_status
+                timestamp = utc_now()
+                if action == "start":
+                    rollout["startedAt"] = timestamp
+                elif action == "complete":
+                    rollout["completedAt"] = timestamp
+                elif action == "rollback":
+                    rollout["rolledBackAt"] = timestamp
+                IN_MEMORY_STATE["go_live_events"].append(
+                    {
+                        "publicId": str(uuid.uuid4()),
+                        "rolloutPublicId": public_id,
+                        "tenantSlug": slug,
+                        "status": next_status,
+                        "summary": summary,
+                        "createdAt": timestamp,
+                    }
+                )
+                return get_go_live_rollout(slug, public_id) or rollout
+        raise ValueError("go_live_rollout_not_found")
+
+    with connect() as connection:
+        with connection.cursor() as cursor_db:
+            update_column = {
+                "start": "started_at",
+                "complete": "completed_at",
+                "rollback": "rolled_back_at",
+            }[action]
+            cursor_db.execute(
+                f"""
+                UPDATE platform_control.go_live_rollouts AS rollout
+                SET status = %s, {update_column} = NOW()
+                FROM identity.tenants AS tenant
+                WHERE tenant.id = rollout.tenant_id
+                  AND tenant.slug = %s
+                  AND rollout.public_id = %s
+                RETURNING rollout.id
+                """,
+                (next_status, slug, public_id),
+            )
+            row = cursor_db.fetchone()
+            if row is None:
+                raise ValueError("go_live_rollout_not_found")
+            cursor_db.execute(
+                """
+                INSERT INTO platform_control.go_live_rollout_events (rollout_id, public_id, status, summary)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (row["id"], str(uuid.uuid4()), next_status, summary),
+            )
+            connection.commit()
+            result = get_go_live_rollout(slug, public_id)
+            if result is None:
+                raise ValueError("go_live_rollout_not_found")
+            return result

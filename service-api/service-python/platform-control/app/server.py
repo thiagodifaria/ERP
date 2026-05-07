@@ -6,22 +6,27 @@ from fastapi.responses import JSONResponse
 from app.config.settings import settings
 from app.infrastructure.postgres import postgres_ready
 from app.runtime import (
+    build_go_live_readiness,
     build_lifecycle_preview,
     build_lifecycle_readiness,
     build_usage_summary,
     bulk_upsert_entitlements,
     bulk_upsert_quotas,
+    create_go_live_rollout,
     create_lifecycle_job,
     create_metering_snapshot,
+    get_go_live_rollout,
     get_lifecycle_job,
     list_blocks,
     list_capability_catalog,
     list_entitlements_page,
+    list_go_live_rollouts,
     list_lifecycle_jobs_page,
     list_metering_page,
     list_provider_catalog,
     list_provider_defaults,
     list_quotas,
+    transition_go_live_rollout,
     transition_lifecycle_job,
     upsert_block,
     upsert_entitlement,
@@ -52,6 +57,7 @@ def details() -> dict:
         {"name": "provider-defaults", "status": "ready"},
         {"name": "tenant-lifecycle", "status": "ready"},
         {"name": "lifecycle-readiness", "status": "ready"},
+        {"name": "go-live-control", "status": "ready"},
         {"name": "quotas", "status": "ready"},
         {"name": "tenant-blocks", "status": "ready"},
         {"name": "idempotency", "status": "ready"},
@@ -155,6 +161,56 @@ def usage_summary(tenant_slug: str) -> dict:
 @app.get("/api/platform-control/tenants/{tenant_slug}/lifecycle/readiness")
 def lifecycle_readiness(tenant_slug: str) -> dict:
     return build_lifecycle_readiness(tenant_slug)
+
+
+@app.get("/api/platform-control/tenants/{tenant_slug}/go-live/readiness")
+def go_live_readiness(tenant_slug: str) -> dict:
+    return build_go_live_readiness(tenant_slug)
+
+
+@app.get("/api/platform-control/tenants/{tenant_slug}/go-live/rollouts")
+def go_live_rollouts(tenant_slug: str, cursor: str | None = None, limit: int = 50) -> dict:
+    return list_go_live_rollouts(tenant_slug, cursor, limit)
+
+
+@app.get("/api/platform-control/tenants/{tenant_slug}/go-live/rollouts/{public_id}")
+def go_live_rollout_detail(tenant_slug: str, public_id: str) -> dict:
+    rollout = get_go_live_rollout(tenant_slug, public_id)
+    if rollout is None:
+        raise HTTPException(status_code=404, detail={"code": "go_live_rollout_not_found", "message": "Go-live rollout was not found."})
+    return rollout
+
+
+@app.post("/api/platform-control/tenants/{tenant_slug}/go-live/rollouts")
+def post_go_live_rollout(tenant_slug: str, payload: dict) -> dict:
+    try:
+        return create_go_live_rollout(tenant_slug, payload)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"code": str(error), "message": "Go-live rollout payload is invalid."}) from error
+
+
+def _transition_go_live(tenant_slug: str, public_id: str, action: str, payload: dict | None = None) -> dict:
+    try:
+        return transition_go_live_rollout(tenant_slug, public_id, action, payload or {})
+    except ValueError as error:
+        if str(error) == "go_live_rollout_not_found":
+            raise HTTPException(status_code=404, detail={"code": str(error), "message": "Go-live rollout was not found."}) from error
+        raise HTTPException(status_code=400, detail={"code": str(error), "message": "Go-live rollout transition payload is invalid."}) from error
+
+
+@app.post("/api/platform-control/tenants/{tenant_slug}/go-live/rollouts/{public_id}/start")
+def start_go_live_rollout(tenant_slug: str, public_id: str, payload: dict | None = None) -> dict:
+    return _transition_go_live(tenant_slug, public_id, "start", payload)
+
+
+@app.post("/api/platform-control/tenants/{tenant_slug}/go-live/rollouts/{public_id}/complete")
+def complete_go_live_rollout(tenant_slug: str, public_id: str, payload: dict | None = None) -> dict:
+    return _transition_go_live(tenant_slug, public_id, "complete", payload)
+
+
+@app.post("/api/platform-control/tenants/{tenant_slug}/go-live/rollouts/{public_id}/rollback")
+def rollback_go_live_rollout(tenant_slug: str, public_id: str, payload: dict | None = None) -> dict:
+    return _transition_go_live(tenant_slug, public_id, "rollback", payload)
 
 
 @app.get("/api/platform-control/tenants/{tenant_slug}/lifecycle/jobs")

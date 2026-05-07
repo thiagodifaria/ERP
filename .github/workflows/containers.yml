@@ -46,6 +46,14 @@ jobs:
             context: service-api/service-python/catalog
           - image: platform-control
             context: service-api/service-python/platform-control
+          - image: support
+            context: service-api/service-python/support
+          - image: supplier
+            context: service-api/service-python/supplier
+          - image: notification
+            context: service-api/service-python/notification
+          - image: fiscal
+            context: service-api/service-python/fiscal
           - image: webhook-hub
             context: service-api/service-rust/webhook-hub
     steps:

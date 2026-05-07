@@ -4,6 +4,30 @@ info:
   version: 0.1.0
   description: Aggregated operational cockpits for tenants, contracts and SaaS control.
 paths:
+  /api/edge/ops/core-operations:
+    get:
+      summary: Read executive core product cockpit
+      responses:
+        "200":
+          description: Core operations overview
+  /api/edge/ops/relationship-overview:
+    get:
+      summary: Read executive relationship cockpit
+      responses:
+        "200":
+          description: Relationship overview
+  /api/edge/ops/compliance-overview:
+    get:
+      summary: Read executive compliance cockpit
+      responses:
+        "200":
+          description: Compliance overview
+  /api/edge/ops/go-live-overview:
+    get:
+      summary: Read executive go-live cockpit
+      responses:
+        "200":
+          description: Go-live overview
   /api/edge/ops/integrations-overview:
     get:
       summary: Read executive integrations cockpit

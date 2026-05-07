@@ -3,6 +3,9 @@ import {
   CreateTouchpointInput,
   ensureBusinessEntityPublicId,
   ensureBusinessEntityType,
+  ensureParticipantKind,
+  ensureParticipantPublicId,
+  ensureOptionalPublicId,
   ensurePublicId,
   ensureTouchpointText
 } from "../domain/touchpoint.js";
@@ -30,6 +33,13 @@ export class CreateTouchpoint {
       channel: campaign.channel,
       workflowDefinitionKey: campaign.workflowDefinitionKey,
       leadPublicId: ensurePublicId(input.leadPublicId, "lead_public_id_invalid"),
+      threadPublicId:
+        ensureOptionalPublicId(input.threadPublicId) ?? ensurePublicId(input.leadPublicId, "lead_public_id_invalid"),
+      participantKind: ensureParticipantKind(input.participantKind) ?? ensureBusinessEntityType(input.businessEntityType) ?? "crm.lead",
+      participantPublicId:
+        ensureParticipantPublicId(input.participantPublicId) ??
+        ensureBusinessEntityPublicId(input.businessEntityPublicId) ??
+        ensurePublicId(input.leadPublicId, "lead_public_id_invalid"),
       businessEntityType: ensureBusinessEntityType(input.businessEntityType) ?? "crm.lead",
       businessEntityPublicId: ensureBusinessEntityPublicId(input.businessEntityPublicId) ?? ensurePublicId(input.leadPublicId, "lead_public_id_invalid"),
       contactValue: ensureTouchpointText(input.contactValue, "touchpoint_contact_value_required"),

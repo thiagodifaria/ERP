@@ -286,3 +286,43 @@ def test_contract_governance_returns_registry_payload() -> None:
     assert response.status_code == 200
     assert payload["catalog"]["httpSpecs"] >= 7
     assert payload["patterns"]["idempotencyKeyReady"] is True
+
+
+def test_core_operations_returns_new_product_context_payload() -> None:
+    response = client.get("/api/analytics/reports/core-operations?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["summary"]["catalogItems"] == 12
+    assert payload["support"]["overdue"] == 1
+
+
+def test_relationship_intelligence_returns_pipeline_and_forecast_payload() -> None:
+    response = client.get("/api/analytics/reports/relationship-intelligence?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["pipeline"]["configs"] == 1
+    assert payload["forecast"]["confidence"] == "attention"
+
+
+def test_compliance_control_returns_fiscal_and_privacy_payload() -> None:
+    response = client.get("/api/analytics/reports/compliance-control?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["fiscal"]["documents"] == 4
+    assert payload["readiness"]["fiscalReady"] is True
+
+
+def test_go_live_control_returns_rollout_and_adoption_payload() -> None:
+    response = client.get("/api/analytics/reports/go-live-control?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["rollouts"]["completed"] == 1
+    assert payload["readiness"]["rolloutReady"] is True

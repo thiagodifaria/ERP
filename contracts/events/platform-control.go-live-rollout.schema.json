@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "platform-control.go-live-rollout",
+  "type": "object",
+  "required": ["publicId", "tenantSlug", "targetEnv", "status", "readiness"],
+  "properties": {
+    "publicId": {"type": "string"},
+    "tenantSlug": {"type": "string"},
+    "targetEnv": {"type": "string"},
+    "waveKey": {"type": ["string", "null"]},
+    "status": {"type": "string"},
+    "readiness": {"type": "object"}
+  }
+}

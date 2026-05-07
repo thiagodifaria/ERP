@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "support.case",
+  "type": "object",
+  "required": ["publicId", "tenantSlug", "queueKey", "priority", "status"],
+  "properties": {
+    "publicId": {"type": "string"},
+    "tenantSlug": {"type": "string"},
+    "queueKey": {"type": "string"},
+    "priority": {"type": "string"},
+    "status": {"type": "string"},
+    "ownerUserId": {"type": ["string", "null"]}
+  }
+}

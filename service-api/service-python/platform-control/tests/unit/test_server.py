@@ -109,3 +109,30 @@ def test_lifecycle_job_transitions_append_audit_events() -> None:
     assert detail_response.status_code == 200
     assert detail_payload["status"] == "completed"
     assert len(detail_payload["events"]) >= 3
+
+
+def test_go_live_rollout_flow_returns_readiness_and_history() -> None:
+    readiness_response = client.get("/api/platform-control/tenants/bootstrap-ops/go-live/readiness")
+    create_response = client.post(
+        "/api/platform-control/tenants/bootstrap-ops/go-live/rollouts",
+        json={
+            "requestedBy": "ops@bootstrap-ops.local",
+            "targetEnv": "production",
+            "waveKey": "wave-1",
+            "rollbackPlaybook": "docs/OPERACOES.md#rollback",
+            "adoptionTargetPct": 80,
+        },
+    )
+    rollout_public_id = create_response.json()["publicId"]
+    start_response = client.post(f"/api/platform-control/tenants/bootstrap-ops/go-live/rollouts/{rollout_public_id}/start", json={"summary": "Wave started."})
+    complete_response = client.post(f"/api/platform-control/tenants/bootstrap-ops/go-live/rollouts/{rollout_public_id}/complete", json={"summary": "Wave completed."})
+    detail_response = client.get(f"/api/platform-control/tenants/bootstrap-ops/go-live/rollouts/{rollout_public_id}")
+
+    assert readiness_response.status_code == 200
+    assert create_response.status_code == 200
+    assert start_response.status_code == 200
+    assert complete_response.status_code == 200
+    assert detail_response.status_code == 200
+    assert "rolloutReady" in readiness_response.json()
+    assert detail_response.json()["status"] == "completed"
+    assert len(detail_response.json()["events"]) >= 3

@@ -1,0 +1,46 @@
+openapi: 3.1.0
+info:
+  title: ERP Notification API
+  version: 0.1.0
+  description: Internal notification center, preferences and reusable dispatch shape.
+paths:
+  /api/notification/capabilities:
+    get:
+      summary: Read notification capability catalog
+      responses:
+        "200":
+          description: Notification capabilities
+  /api/notification/preferences/{userPublicId}:
+    get:
+      summary: Read one user notification preference
+      responses:
+        "200":
+          description: Notification preference
+    put:
+      summary: Upsert one user notification preference
+      responses:
+        "200":
+          description: Updated notification preference
+  /api/notification/center:
+    get:
+      summary: List notification center items with cursor filters
+      responses:
+        "200":
+          description: Paginated notifications
+    post:
+      summary: Create one notification center item
+      responses:
+        "201":
+          description: Created notification
+  /api/notification/center/{publicId}/status:
+    patch:
+      summary: Transition notification status
+      responses:
+        "200":
+          description: Updated notification
+  /api/notification/summary:
+    get:
+      summary: Read notification summary
+      responses:
+        "200":
+          description: Notification summary

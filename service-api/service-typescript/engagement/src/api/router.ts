@@ -121,6 +121,7 @@ function handleDomainError(response: ServerResponse, error: unknown): void {
     code === "provider_event_public_id_invalid" ||
     code === "business_entity_type_invalid" ||
     code === "business_entity_public_id_invalid" ||
+    code === "participant_public_id_invalid" ||
     code === "provider_lead_name_required" ||
     code === "provider_lead_email_required" ||
     code === "invalid_json"
@@ -400,6 +401,28 @@ export async function route(request: IncomingMessage, response: ServerResponse):
         status: (params.get("status") ?? undefined) as TouchpointStatus | undefined,
         channel: (params.get("channel") ?? undefined) as CampaignChannel | undefined,
         leadPublicId: params.get("leadPublicId") ?? undefined,
+        threadPublicId: params.get("threadPublicId") ?? undefined,
+        participantKind: params.get("participantKind") ?? undefined,
+        participantPublicId: params.get("participantPublicId") ?? undefined,
+        businessEntityType: params.get("businessEntityType") ?? undefined,
+        businessEntityPublicId: params.get("businessEntityPublicId") ?? undefined
+      })
+    );
+    return;
+  }
+
+  if (request.method === "GET" && request.url?.startsWith("/api/engagement/conversations")) {
+    const params = searchParams(request);
+    json(
+      response,
+      200,
+      await services.listConversations.execute({
+        tenantSlug: params.get("tenantSlug") ?? undefined,
+        channel: (params.get("channel") ?? undefined) as CampaignChannel | undefined,
+        leadPublicId: params.get("leadPublicId") ?? undefined,
+        threadPublicId: params.get("threadPublicId") ?? undefined,
+        participantKind: params.get("participantKind") ?? undefined,
+        participantPublicId: params.get("participantPublicId") ?? undefined,
         businessEntityType: params.get("businessEntityType") ?? undefined,
         businessEntityPublicId: params.get("businessEntityPublicId") ?? undefined
       })
@@ -421,6 +444,9 @@ export async function route(request: IncomingMessage, response: ServerResponse):
           status: (params.get("status") ?? undefined) as TouchpointStatus | undefined,
           channel: (params.get("channel") ?? undefined) as CampaignChannel | undefined,
           leadPublicId: params.get("leadPublicId") ?? undefined,
+          threadPublicId: params.get("threadPublicId") ?? undefined,
+          participantKind: params.get("participantKind") ?? undefined,
+          participantPublicId: params.get("participantPublicId") ?? undefined,
           businessEntityType: params.get("businessEntityType") ?? undefined,
           businessEntityPublicId: params.get("businessEntityPublicId") ?? undefined
         })

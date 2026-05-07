@@ -26,6 +26,24 @@
       "domain": "engagement"
     },
     {
+      "key": "fiscal.consent",
+      "path": "contracts/events/fiscal.consent.schema.json",
+      "format": "json-schema",
+      "domain": "fiscal"
+    },
+    {
+      "key": "fiscal.document-event",
+      "path": "contracts/events/fiscal.document-event.schema.json",
+      "format": "json-schema",
+      "domain": "fiscal"
+    },
+    {
+      "key": "platform-control.go-live-rollout",
+      "path": "contracts/events/platform-control.go-live-rollout.schema.json",
+      "format": "json-schema",
+      "domain": "platform-control"
+    },
+    {
       "key": "platform-control.lifecycle-job",
       "path": "contracts/events/platform-control.lifecycle-job.schema.json",
       "format": "json-schema",
@@ -36,6 +54,12 @@
       "path": "contracts/events/platform-control.quota.schema.json",
       "format": "json-schema",
       "domain": "platform-control"
+    },
+    {
+      "key": "support.case",
+      "path": "contracts/events/support.case.schema.json",
+      "format": "json-schema",
+      "domain": "support"
     },
     {
       "key": "webhook-hub.inbound-event",

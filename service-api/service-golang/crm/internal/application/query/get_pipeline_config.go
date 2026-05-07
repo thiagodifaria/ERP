@@ -14,9 +14,11 @@ func GetPipelineConfig(factory repository.TenantRepositoryFactory, tenantSlug st
 	}
 
 	return map[string]any{
-		"publicId":    config.PublicID,
-		"name":        config.Name,
-		"autoScoring": config.AutoScoring,
-		"stages":      config.Stages,
+		"publicId":         config.PublicID,
+		"name":             config.Name,
+		"autoScoring":      config.AutoScoring,
+		"stages":           config.Stages,
+		"territoryRules":   config.TerritoryRules,
+		"approvalPolicies": config.ApprovalPolicies,
 	}, nil
 }

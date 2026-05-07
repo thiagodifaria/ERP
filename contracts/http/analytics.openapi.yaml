@@ -34,3 +34,27 @@ paths:
       responses:
         "200":
           description: Hardening report
+  /api/analytics/reports/core-operations:
+    get:
+      summary: Read core product operations
+      responses:
+        "200":
+          description: Core operations report
+  /api/analytics/reports/relationship-intelligence:
+    get:
+      summary: Read relationship intelligence
+      responses:
+        "200":
+          description: Relationship intelligence report
+  /api/analytics/reports/compliance-control:
+    get:
+      summary: Read fiscal and privacy compliance control
+      responses:
+        "200":
+          description: Compliance control report
+  /api/analytics/reports/go-live-control:
+    get:
+      summary: Read go-live rollout control
+      responses:
+        "200":
+          description: Go-live control report

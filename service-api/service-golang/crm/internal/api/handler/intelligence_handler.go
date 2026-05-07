@@ -48,7 +48,26 @@ func (handler *IntelligenceHandler) UpsertPipelineConfig(response http.ResponseW
 		})
 	}
 
-	config, err := command.UpsertPipelineConfig(handler.repositories, payload.TenantSlug, payload.Name, stages, payload.AutoScoring)
+	territoryRules := make([]entity.TerritoryRule, 0, len(payload.TerritoryRules))
+	for _, rule := range payload.TerritoryRules {
+		territoryRules = append(territoryRules, entity.TerritoryRule{
+			Key:            rule.Key,
+			Name:           rule.Name,
+			AssignmentMode: rule.AssignmentMode,
+		})
+	}
+
+	approvalPolicies := make([]entity.ApprovalPolicy, 0, len(payload.ApprovalPolicies))
+	for _, policy := range payload.ApprovalPolicies {
+		approvalPolicies = append(approvalPolicies, entity.ApprovalPolicy{
+			Key:           policy.Key,
+			Name:          policy.Name,
+			ApprovalScope: policy.ApprovalScope,
+			RequiredRole:  policy.RequiredRole,
+		})
+	}
+
+	config, err := command.UpsertPipelineConfig(handler.repositories, payload.TenantSlug, payload.Name, stages, payload.AutoScoring, territoryRules, approvalPolicies)
 	if err != nil {
 		writeBadRequest(response, "pipeline_config_invalid", "Pipeline configuration is invalid.")
 		return

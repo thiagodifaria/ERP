@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "fiscal.document-event",
+  "type": "object",
+  "required": ["documentPublicId", "eventType", "tenantSlug", "companyPublicId"],
+  "properties": {
+    "documentPublicId": {"type": "string"},
+    "eventType": {"type": "string"},
+    "tenantSlug": {"type": "string"},
+    "companyPublicId": {"type": "string"},
+    "summary": {"type": "string"},
+    "actor": {"type": "string"}
+  }
+}

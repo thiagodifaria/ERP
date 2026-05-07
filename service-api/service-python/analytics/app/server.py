@@ -6,17 +6,21 @@ from app.config.settings import settings
 from app.reports.adapter_catalog import build_adapter_catalog
 from app.infrastructure.postgres import postgres_ready
 from app.reports.automation_board import build_automation_board
+from app.reports.compliance_control import build_compliance_control
 from app.reports.collections_control import build_collections_control
+from app.reports.core_operations import build_core_operations
 from app.reports.cost_estimator import build_cost_estimator
 from app.reports.document_governance import build_document_governance
 from app.reports.delivery_reliability import build_delivery_reliability
 from app.reports.engagement_operations import build_engagement_operations
 from app.reports.finance_control import build_finance_control
+from app.reports.go_live_control import build_go_live_control
 from app.reports.hardening_review import build_hardening_review
 from app.reports.integration_readiness import build_integration_readiness
 from app.reports.load_benchmark import build_load_benchmark
 from app.reports.pipeline_summary import build_pipeline_summary
 from app.reports.platform_reliability import build_platform_reliability
+from app.reports.relationship_intelligence import build_relationship_intelligence
 from app.reports.rental_operations import build_rental_operations
 from app.reports.revenue_operations import build_revenue_operations
 from app.reports.saas_control import build_saas_control
@@ -166,3 +170,23 @@ def saas_control(tenant_slug: str | None = None) -> dict:
 @app.get("/api/analytics/reports/contract-governance")
 def contract_governance() -> dict:
     return build_contract_governance()
+
+
+@app.get("/api/analytics/reports/core-operations")
+def core_operations(tenant_slug: str | None = None) -> dict:
+    return build_core_operations(tenant_slug)
+
+
+@app.get("/api/analytics/reports/relationship-intelligence")
+def relationship_intelligence(tenant_slug: str | None = None) -> dict:
+    return build_relationship_intelligence(tenant_slug)
+
+
+@app.get("/api/analytics/reports/compliance-control")
+def compliance_control(tenant_slug: str | None = None) -> dict:
+    return build_compliance_control(tenant_slug)
+
+
+@app.get("/api/analytics/reports/go-live-control")
+def go_live_control(tenant_slug: str | None = None) -> dict:
+    return build_go_live_control(tenant_slug)

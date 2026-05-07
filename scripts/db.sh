@@ -165,6 +165,10 @@ Usage:
   ./scripts/db.sh migrate simulation
   ./scripts/db.sh migrate catalog
   ./scripts/db.sh migrate platform-control
+  ./scripts/db.sh migrate support
+  ./scripts/db.sh migrate supplier
+  ./scripts/db.sh migrate notification
+  ./scripts/db.sh migrate fiscal
   ./scripts/db.sh migrate engagement
   ./scripts/db.sh migrate webhook-hub
   ./scripts/db.sh migrate workflow-control
@@ -244,6 +248,18 @@ main() {
         platform-control)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/platform-control/migrations"
           ;;
+        support)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/support/migrations"
+          ;;
+        supplier)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/supplier/migrations"
+          ;;
+        notification)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/notification/migrations"
+          ;;
+        fiscal)
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/fiscal/migrations"
+          ;;
         engagement)
           apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/migrations"
           ;;
@@ -269,6 +285,10 @@ main() {
           apply_directory "$ROOT_DIR/service-api/service-postgresql/simulation/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/catalog/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/platform-control/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/support/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/supplier/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/notification/migrations"
+          apply_directory "$ROOT_DIR/service-api/service-postgresql/fiscal/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/engagement/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/webhook-hub/migrations"
           apply_directory "$ROOT_DIR/service-api/service-postgresql/workflow-control/migrations"

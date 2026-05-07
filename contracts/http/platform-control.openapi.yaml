@@ -177,3 +177,44 @@ paths:
       responses:
         "200":
           description: Updated lifecycle job
+  /api/platform-control/tenants/{tenantSlug}/go-live/readiness:
+    get:
+      summary: Read go-live rollout readiness by tenant
+      responses:
+        "200":
+          description: Go-live readiness
+  /api/platform-control/tenants/{tenantSlug}/go-live/rollouts:
+    get:
+      summary: List go-live rollouts
+      responses:
+        "200":
+          description: Go-live rollouts
+    post:
+      summary: Create one go-live rollout
+      responses:
+        "200":
+          description: Created go-live rollout
+  /api/platform-control/tenants/{tenantSlug}/go-live/rollouts/{publicId}:
+    get:
+      summary: Read one go-live rollout with events
+      responses:
+        "200":
+          description: Go-live rollout detail
+  /api/platform-control/tenants/{tenantSlug}/go-live/rollouts/{publicId}/start:
+    post:
+      summary: Transition go-live rollout to running
+      responses:
+        "200":
+          description: Updated go-live rollout
+  /api/platform-control/tenants/{tenantSlug}/go-live/rollouts/{publicId}/complete:
+    post:
+      summary: Transition go-live rollout to completed
+      responses:
+        "200":
+          description: Updated go-live rollout
+  /api/platform-control/tenants/{tenantSlug}/go-live/rollouts/{publicId}/rollback:
+    post:
+      summary: Roll back one go-live rollout
+      responses:
+        "200":
+          description: Rolled back go-live rollout

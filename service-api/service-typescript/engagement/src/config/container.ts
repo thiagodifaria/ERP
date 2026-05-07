@@ -13,6 +13,7 @@ import { GetTouchpointByPublicId } from "../application/get-touchpoint-by-public
 import { GetTouchpointSummary } from "../application/get-touchpoint-summary.js";
 import { IngestProviderLead } from "../application/ingest-provider-lead.js";
 import { ListCampaigns } from "../application/list-campaigns.js";
+import { ListConversations } from "../application/list-conversations.js";
 import { ListProviderCapabilities } from "../application/list-provider-capabilities.js";
 import { ListProviderEvents } from "../application/list-provider-events.js";
 import { ListTemplates } from "../application/list-templates.js";
@@ -115,6 +116,7 @@ export const repositories = {
 
 export const services = {
   listCampaigns: new ListCampaigns(campaignRepository),
+  listConversations: new ListConversations(touchpointRepository),
   getCampaignByPublicId: new GetCampaignByPublicId(campaignRepository),
   createCampaign: new CreateCampaign(campaignRepository),
   updateCampaignStatus: new UpdateCampaignStatus(campaignRepository),

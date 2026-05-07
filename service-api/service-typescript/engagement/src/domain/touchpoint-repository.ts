@@ -8,6 +8,9 @@ export interface TouchpointRepository {
       campaignKey: string;
       channel: Touchpoint["channel"];
       workflowDefinitionKey: string | null;
+      threadPublicId: string;
+      participantKind: string;
+      participantPublicId: string;
       businessEntityType: string | null;
       businessEntityPublicId: string | null;
     }

@@ -58,6 +58,9 @@ test("touchpoint stream supports creation, status update and summary", async () 
 
   assert.equal(created.status, "queued");
   assert.equal(created.workflowDefinitionKey, "lead-follow-up");
+  assert.equal(created.threadPublicId, "00000000-0000-0000-0000-000000008851");
+  assert.equal(created.participantKind, "crm.lead");
+  assert.equal(created.participantPublicId, "00000000-0000-0000-0000-000000008851");
   assert.equal(created.businessEntityType, "crm.lead");
   assert.equal(created.businessEntityPublicId, "00000000-0000-0000-0000-000000008851");
 
@@ -73,9 +76,15 @@ test("touchpoint stream supports creation, status update and summary", async () 
   const summary = await services.getTouchpointSummary.execute({ tenantSlug: "bootstrap-ops" });
 
   assert.equal(summary.totals.touchpoints, 2);
+  assert.equal(summary.totals.threads, 2);
+  assert.equal(summary.totals.participants, 2);
   assert.equal(summary.totals.workflowDispatched, 2);
   assert.equal(summary.byStatus.converted, 1);
   assert.equal(summary.byChannel.whatsapp, 2);
+
+  const conversations = await services.listConversations.execute({ tenantSlug: "bootstrap-ops" });
+  assert.equal(conversations.length, 2);
+  assert.equal(conversations[0]?.participantKind, "crm.lead");
 });
 
 test("delivery stream supports creation, status update and summary", async () => {

@@ -16,6 +16,10 @@ func NewRouter(
 	healthHandler handler.HealthHandler,
 	opsHandler handler.OpsHandler,
 	tenantOverviewHandler handler.TenantOverviewHandler,
+	coreOperationsOverviewHandler handler.CoreOperationsOverviewHandler,
+	relationshipOverviewHandler handler.RelationshipOverviewHandler,
+	complianceOverviewHandler handler.ComplianceOverviewHandler,
+	goLiveOverviewHandler handler.GoLiveOverviewHandler,
 	automationOverviewHandler handler.AutomationOverviewHandler,
 	engagementOverviewHandler handler.EngagementOverviewHandler,
 	integrationsOverviewHandler handler.IntegrationsOverviewHandler,
@@ -38,6 +42,10 @@ func NewRouter(
 	mux.HandleFunc("/health/details", healthHandler.Details)
 	mux.HandleFunc("/api/edge/ops/health", opsHandler.Health)
 	mux.Handle("/api/edge/ops/tenant-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(tenantOverviewHandler.Overview)))
+	mux.Handle("/api/edge/ops/core-operations", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(coreOperationsOverviewHandler.Overview)))
+	mux.Handle("/api/edge/ops/relationship-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(relationshipOverviewHandler.Overview)))
+	mux.Handle("/api/edge/ops/compliance-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(complianceOverviewHandler.Overview)))
+	mux.Handle("/api/edge/ops/go-live-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(goLiveOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/automation-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(automationOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/engagement-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(engagementOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/integrations-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(integrationsOverviewHandler.Overview)))

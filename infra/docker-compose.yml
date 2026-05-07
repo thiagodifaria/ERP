@@ -466,6 +466,86 @@ services:
     ports:
       - "${PLATFORM_CONTROL_HTTP_PORT}:8098"
 
+  support:
+    build:
+      context: ../service-api/service-python/support
+    container_name: erp-support
+    environment:
+      SUPPORT_HTTP_PORT: "8099"
+      SUPPORT_REPOSITORY_DRIVER: "postgres"
+      SUPPORT_BOOTSTRAP_TENANT_SLUG: "${SUPPORT_BOOTSTRAP_TENANT_SLUG}"
+      SUPPORT_POSTGRES_HOST: "service-postgresql"
+      SUPPORT_POSTGRES_PORT: "5432"
+      ERP_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      ERP_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      ERP_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      SUPPORT_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+    ports:
+      - "${SUPPORT_HTTP_PORT}:8099"
+
+  supplier:
+    build:
+      context: ../service-api/service-python/supplier
+    container_name: erp-supplier
+    environment:
+      SUPPLIER_HTTP_PORT: "8100"
+      SUPPLIER_REPOSITORY_DRIVER: "postgres"
+      SUPPLIER_BOOTSTRAP_TENANT_SLUG: "${SUPPLIER_BOOTSTRAP_TENANT_SLUG}"
+      SUPPLIER_POSTGRES_HOST: "service-postgresql"
+      SUPPLIER_POSTGRES_PORT: "5432"
+      ERP_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      ERP_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      ERP_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      SUPPLIER_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+    ports:
+      - "${SUPPLIER_HTTP_PORT}:8100"
+
+  notification:
+    build:
+      context: ../service-api/service-python/notification
+    container_name: erp-notification
+    environment:
+      NOTIFICATION_HTTP_PORT: "8101"
+      NOTIFICATION_REPOSITORY_DRIVER: "postgres"
+      NOTIFICATION_BOOTSTRAP_TENANT_SLUG: "${NOTIFICATION_BOOTSTRAP_TENANT_SLUG}"
+      NOTIFICATION_POSTGRES_HOST: "service-postgresql"
+      NOTIFICATION_POSTGRES_PORT: "5432"
+      ERP_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      ERP_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      ERP_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      NOTIFICATION_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+    ports:
+      - "${NOTIFICATION_HTTP_PORT}:8101"
+
+  fiscal:
+    build:
+      context: ../service-api/service-python/fiscal
+    container_name: erp-fiscal
+    environment:
+      FISCAL_HTTP_PORT: "8102"
+      FISCAL_REPOSITORY_DRIVER: "postgres"
+      FISCAL_BOOTSTRAP_TENANT_SLUG: "${FISCAL_BOOTSTRAP_TENANT_SLUG}"
+      FISCAL_POSTGRES_HOST: "service-postgresql"
+      FISCAL_POSTGRES_PORT: "5432"
+      ERP_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      ERP_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      ERP_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      FISCAL_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+    ports:
+      - "${FISCAL_HTTP_PORT}:8102"
+
   identity:
     build:
       context: ../service-api/service-csharp/identity

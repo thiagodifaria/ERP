@@ -44,6 +44,33 @@ func (handler LeadHandler) List(writer http.ResponseWriter, request *http.Reques
 	_ = json.NewEncoder(writer).Encode(response)
 }
 
+func (handler LeadHandler) Export(writer http.ResponseWriter, request *http.Request) {
+	bundle, tenantSlug := handler.resolveRepositories(writer, request, "")
+	if bundle.LeadRepository == nil {
+		return
+	}
+
+	leads := query.NewListLeads(bundle.LeadRepository).Execute(query.LeadFilters{
+		Status:      request.URL.Query().Get("status"),
+		Source:      request.URL.Query().Get("source"),
+		OwnerUserID: request.URL.Query().Get("ownerUserId"),
+		Search:      request.URL.Query().Get("q"),
+		Assigned:    request.URL.Query().Get("assigned"),
+	})
+	response := make([]dto.LeadResponse, 0, len(leads))
+	for _, lead := range leads {
+		response = append(response, mapLead(lead))
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(writer).Encode(map[string]any{
+		"tenantSlug": tenantSlug,
+		"exported":   len(response),
+		"items":      response,
+	})
+}
+
 func (handler LeadHandler) Summary(writer http.ResponseWriter, request *http.Request) {
 	bundle, _ := handler.resolveRepositories(writer, request, "")
 	if bundle.LeadRepository == nil {
@@ -120,6 +147,67 @@ func (handler LeadHandler) Create(writer http.ResponseWriter, request *http.Requ
 		writer.WriteHeader(http.StatusCreated)
 		_ = json.NewEncoder(writer).Encode(mapLead(*result.Lead))
 	}
+}
+
+func (handler LeadHandler) BulkCreate(writer http.ResponseWriter, request *http.Request) {
+	var payload dto.BulkLeadImportRequest
+	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+		writeBadRequest(writer, "invalid_json", "Request body is invalid.")
+		return
+	}
+
+	bundle, _ := handler.resolveRepositories(writer, request, payload.TenantSlug)
+	if bundle.LeadRepository == nil {
+		return
+	}
+
+	useCase := command.NewCreateLead(
+		bundle.LeadRepository,
+		bundle.RelationshipEventRepository,
+		bundle.OutboxEventRepository,
+	)
+	results := make([]map[string]any, 0, len(payload.Items))
+	succeeded := 0
+	failed := 0
+
+	for index, item := range payload.Items {
+		result := useCase.Execute(command.CreateLeadInput{
+			Name:        item.Name,
+			Email:       item.Email,
+			Source:      item.Source,
+			OwnerUserID: item.OwnerUserID,
+		})
+		if result.Lead != nil {
+			succeeded++
+			results = append(results, map[string]any{
+				"index":  index,
+				"status": "created",
+				"lead":   mapLead(*result.Lead),
+			})
+			continue
+		}
+
+		failed++
+		results = append(results, map[string]any{
+			"index":     index,
+			"status":    "failed",
+			"errorCode": result.ErrorCode,
+			"message":   result.ErrorText,
+		})
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(writer).Encode(map[string]any{
+		"tenantSlug": payload.TenantSlug,
+		"summary": map[string]any{
+			"requested":      len(payload.Items),
+			"succeeded":      succeeded,
+			"failed":         failed,
+			"partialSuccess": failed > 0,
+		},
+		"items": results,
+	})
 }
 
 func (handler LeadHandler) Convert(writer http.ResponseWriter, request *http.Request) {

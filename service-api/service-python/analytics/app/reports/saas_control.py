@@ -84,10 +84,10 @@ def build_saas_control(tenant_slug: str | None = None) -> dict:
             cursor.execute(
                 """
                 SELECT
-                  count(*) FILTER (WHERE status = 'queued') AS queued,
-                  count(*) FILTER (WHERE status = 'running') AS running,
-                  count(*) FILTER (WHERE status = 'completed') AS completed,
-                  count(*) FILTER (WHERE status = 'failed') AS failed
+                  count(*) FILTER (WHERE job.status = 'queued') AS queued,
+                  count(*) FILTER (WHERE job.status = 'running') AS running,
+                  count(*) FILTER (WHERE job.status = 'completed') AS completed,
+                  count(*) FILTER (WHERE job.status = 'failed') AS failed
                 FROM platform_control.lifecycle_jobs AS job
                 JOIN identity.tenants AS tenant ON tenant.id = job.tenant_id
                 WHERE tenant.slug = %s

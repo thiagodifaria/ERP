@@ -1,0 +1,52 @@
+openapi: 3.1.0
+info:
+  title: ERP Supplier API
+  version: 0.1.0
+  description: Supplier directory, categories and payables-oriented vendor governance.
+paths:
+  /api/supplier/capabilities:
+    get:
+      summary: Read supplier capability catalog
+      responses:
+        "200":
+          description: Supplier capabilities
+  /api/supplier/categories:
+    get:
+      summary: List supplier categories
+      responses:
+        "200":
+          description: Supplier categories
+  /api/supplier/categories/{categoryKey}:
+    put:
+      summary: Upsert one supplier category
+      responses:
+        "200":
+          description: Upserted supplier category
+  /api/supplier/suppliers:
+    get:
+      summary: List suppliers by tenant and status
+      responses:
+        "200":
+          description: Supplier list
+    post:
+      summary: Create one supplier
+      responses:
+        "201":
+          description: Created supplier
+  /api/supplier/suppliers/summary:
+    get:
+      summary: Read supplier summary
+      responses:
+        "200":
+          description: Supplier summary
+  /api/supplier/suppliers/{publicId}:
+    get:
+      summary: Read one supplier
+      responses:
+        "200":
+          description: Supplier detail
+    patch:
+      summary: Update one supplier
+      responses:
+        "200":
+          description: Updated supplier

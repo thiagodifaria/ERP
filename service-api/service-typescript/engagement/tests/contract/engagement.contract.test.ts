@@ -117,12 +117,14 @@ test("touchpoint routes expose list, creation and summary", async () => {
     const createdTouchpoint = (await createResponse.json()) as {
       publicId: string;
       status: string;
+      threadPublicId: string;
       businessEntityType: string;
       businessEntityPublicId: string;
     };
 
     assert.equal(createResponse.status, 201);
     assert.equal(createdTouchpoint.status, "queued");
+    assert.equal(createdTouchpoint.threadPublicId, "00000000-0000-0000-0000-000000008851");
     assert.equal(createdTouchpoint.businessEntityType, "crm.lead");
     assert.equal(createdTouchpoint.businessEntityPublicId, "00000000-0000-0000-0000-000000008851");
 
@@ -142,15 +144,22 @@ test("touchpoint routes expose list, creation and summary", async () => {
 
     const summaryResponse = await fetch(`${baseUrl}/api/engagement/touchpoints/summary?tenantSlug=bootstrap-ops`);
     const summaryPayload = (await summaryResponse.json()) as {
-      totals: { touchpoints: number; workflowDispatched: number; businessLinked: number };
+      totals: { touchpoints: number; threads: number; workflowDispatched: number; businessLinked: number };
       byStatus: { responded: number };
     };
 
     assert.equal(summaryResponse.status, 200);
     assert.equal(summaryPayload.totals.touchpoints, 2);
+    assert.equal(summaryPayload.totals.threads, 2);
     assert.equal(summaryPayload.totals.workflowDispatched, 2);
     assert.equal(summaryPayload.totals.businessLinked, 2);
     assert.equal(summaryPayload.byStatus.responded, 2);
+
+    const conversationsResponse = await fetch(`${baseUrl}/api/engagement/conversations?tenantSlug=bootstrap-ops`);
+    const conversationsPayload = (await conversationsResponse.json()) as Array<{ threadPublicId: string; participantKind: string }>;
+    assert.equal(conversationsResponse.status, 200);
+    assert.equal(conversationsPayload.length, 2);
+    assert.equal(conversationsPayload[0]?.participantKind, "crm.lead");
   });
 });
 

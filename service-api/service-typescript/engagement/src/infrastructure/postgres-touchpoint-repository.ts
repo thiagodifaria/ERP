@@ -18,6 +18,9 @@ type TouchpointRow = {
   campaign_public_id: string;
   campaign_key: string;
   lead_public_id: string;
+  thread_public_id: string;
+  participant_kind: string;
+  participant_public_id: string;
   business_entity_type: string | null;
   business_entity_public_id: string | null;
   channel: Touchpoint["channel"];
@@ -65,6 +68,21 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
       conditions.push(`touchpoint.lead_public_id = $${params.length}::uuid`);
     }
 
+    if (filters.threadPublicId) {
+      params.push(filters.threadPublicId);
+      conditions.push(`touchpoint.thread_public_id = $${params.length}::uuid`);
+    }
+
+    if (filters.participantKind) {
+      params.push(filters.participantKind);
+      conditions.push(`touchpoint.participant_kind = $${params.length}`);
+    }
+
+    if (filters.participantPublicId) {
+      params.push(filters.participantPublicId);
+      conditions.push(`touchpoint.participant_public_id = $${params.length}::uuid`);
+    }
+
     if (filters.businessEntityType) {
       params.push(filters.businessEntityType);
       conditions.push(`touchpoint.business_entity_type = $${params.length}`);
@@ -84,6 +102,9 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
           campaign.public_id::text AS campaign_public_id,
           campaign.key AS campaign_key,
           touchpoint.lead_public_id::text,
+          touchpoint.thread_public_id::text,
+          touchpoint.participant_kind,
+          touchpoint.participant_public_id::text,
           touchpoint.business_entity_type,
           touchpoint.business_entity_public_id::text,
           touchpoint.channel,
@@ -118,6 +139,9 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
           campaign.public_id::text AS campaign_public_id,
           campaign.key AS campaign_key,
           touchpoint.lead_public_id::text,
+          touchpoint.thread_public_id::text,
+          touchpoint.participant_kind,
+          touchpoint.participant_public_id::text,
           touchpoint.business_entity_type,
           touchpoint.business_entity_public_id::text,
           touchpoint.channel,
@@ -147,6 +171,9 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
       campaignKey: string;
       channel: Touchpoint["channel"];
       workflowDefinitionKey: string | null;
+      threadPublicId: string;
+      participantKind: string;
+      participantPublicId: string;
     }
   ): Promise<Touchpoint> {
     const tenantId = await this.resolveTenantId(input.tenantSlug);
@@ -172,6 +199,9 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
           campaign_id,
           public_id,
           lead_public_id,
+          thread_public_id,
+          participant_kind,
+          participant_public_id,
           business_entity_type,
           business_entity_public_id,
           channel,
@@ -187,23 +217,29 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
           $2,
           gen_random_uuid(),
           $3::uuid,
-          $4,
-          $5::uuid,
-          $6,
+          $4::uuid,
+          $5,
+          $6::uuid,
           $7,
-          $8,
-          'queued',
+          $8::uuid,
           $9,
           $10,
-          $11
+          $11,
+          'queued',
+          $12,
+          $13,
+          $14
         )
         RETURNING
           id,
           public_id::text,
-          $12::text AS tenant_slug,
-          $13::text AS campaign_public_id,
-          $14::text AS campaign_key,
+          $15::text AS tenant_slug,
+          $16::text AS campaign_public_id,
+          $17::text AS campaign_key,
           lead_public_id::text,
+          thread_public_id::text,
+          participant_kind,
+          participant_public_id::text,
           business_entity_type,
           business_entity_public_id::text,
           channel,
@@ -221,6 +257,9 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
         tenantId,
         campaignResult.rows[0].id,
         input.leadPublicId,
+        input.threadPublicId,
+        input.participantKind,
+        input.participantPublicId,
         input.businessEntityType,
         input.businessEntityPublicId,
         input.channel,
@@ -259,6 +298,9 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
           campaign.public_id::text AS campaign_public_id,
           campaign.key AS campaign_key,
           touchpoint.lead_public_id::text,
+          touchpoint.thread_public_id::text,
+          touchpoint.participant_kind,
+          touchpoint.participant_public_id::text,
           touchpoint.business_entity_type,
           touchpoint.business_entity_public_id::text,
           touchpoint.channel,
@@ -316,6 +358,9 @@ export class PostgresTouchpointRepository implements TouchpointRepository {
       campaignPublicId: row.campaign_public_id,
       campaignKey: row.campaign_key,
       leadPublicId: row.lead_public_id,
+      threadPublicId: row.thread_public_id,
+      participantKind: row.participant_kind,
+      participantPublicId: row.participant_public_id,
       businessEntityType: row.business_entity_type,
       businessEntityPublicId: row.business_entity_public_id,
       channel: row.channel,
