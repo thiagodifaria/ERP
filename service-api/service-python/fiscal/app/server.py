@@ -6,13 +6,19 @@ from app.config.settings import settings
 from app.infrastructure.postgres import postgres_ready
 from app.runtime import (
     build_compliance_summary,
+    build_privacy_export_package,
+    build_retention_execution,
     cancel_document,
     create_consent,
     create_correction_letter,
     create_document,
     create_invalidation,
     create_privacy_request,
+    execute_privacy_request,
+    execute_retention_execution,
     get_company_profile,
+    get_document,
+    get_privacy_request,
     list_audit_events,
     list_capabilities,
     list_consents,
@@ -79,6 +85,19 @@ def retention_policies(company_public_id: str, tenant_slug: str | None = None) -
     return list_retention_policies(company_public_id, tenant_slug)
 
 
+@app.get("/api/fiscal/companies/{company_public_id}/retention-execution")
+def retention_execution(company_public_id: str, tenant_slug: str | None = None) -> dict:
+    return build_retention_execution(company_public_id, tenant_slug)
+
+
+@app.post("/api/fiscal/companies/{company_public_id}/retention-execution/execute")
+def post_retention_execution(company_public_id: str, payload: dict) -> dict:
+    try:
+        return execute_retention_execution(company_public_id, payload)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"code": str(error), "message": "Retention execution payload is invalid."}) from error
+
+
 @app.put("/api/fiscal/companies/{company_public_id}/retention-policies/{data_domain}")
 def put_retention_policy(company_public_id: str, data_domain: str, payload: dict) -> dict:
     try:
@@ -91,6 +110,14 @@ def put_retention_policy(company_public_id: str, data_domain: str, payload: dict
 @app.get("/api/fiscal/documents")
 def documents(tenant_slug: str | None = None) -> list[dict]:
     return list_documents(tenant_slug)
+
+
+@app.get("/api/fiscal/documents/{public_id}")
+def fiscal_document_detail(public_id: str, tenant_slug: str | None = None) -> dict:
+    payload = get_document(public_id, tenant_slug)
+    if payload is None:
+        raise HTTPException(status_code=404, detail={"code": "fiscal_document_not_found", "message": "Fiscal document was not found."})
+    return payload
 
 
 @app.post("/api/fiscal/documents")
@@ -146,6 +173,33 @@ def post_privacy_request(payload: dict) -> dict:
 @app.get("/api/fiscal/privacy-requests")
 def privacy_requests(tenant_slug: str | None = None) -> list[dict]:
     return list_privacy_requests(tenant_slug)
+
+
+@app.get("/api/fiscal/privacy-requests/{public_id}")
+def privacy_request_detail(public_id: str, tenant_slug: str | None = None) -> dict:
+    payload = get_privacy_request(public_id, tenant_slug)
+    if payload is None:
+        raise HTTPException(status_code=404, detail={"code": "fiscal_privacy_request_not_found", "message": "Privacy request was not found."})
+    return payload
+
+
+@app.get("/api/fiscal/privacy-requests/{public_id}/export-package")
+def privacy_export_package(public_id: str, tenant_slug: str | None = None) -> dict:
+    payload = build_privacy_export_package(public_id, tenant_slug)
+    if payload is None:
+        raise HTTPException(status_code=404, detail={"code": "fiscal_privacy_request_not_found", "message": "Privacy request was not found."})
+    return payload
+
+
+@app.post("/api/fiscal/privacy-requests/{public_id}/execute")
+def post_execute_privacy_request(public_id: str, payload: dict) -> dict:
+    try:
+        result = execute_privacy_request(public_id, payload)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"code": str(error), "message": "Privacy request execution payload is invalid."}) from error
+    if result is None:
+        raise HTTPException(status_code=404, detail={"code": "fiscal_privacy_request_not_found", "message": "Privacy request was not found."})
+    return result
 
 
 @app.patch("/api/fiscal/privacy-requests/{public_id}/status")

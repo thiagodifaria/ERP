@@ -1,0 +1,164 @@
+openapi: 3.1.0
+info:
+  title: ERP Fiscal API
+  version: 0.1.0
+  description: Fiscal profile, document operations, privacy rights and compliance governance.
+paths:
+  /api/fiscal/capabilities:
+    get:
+      summary: Read fiscal capability registry
+      responses:
+        "200":
+          description: Fiscal capabilities
+  /api/fiscal/companies/{companyPublicId}/profile:
+    get:
+      summary: Read fiscal company profile
+      responses:
+        "200":
+          description: Fiscal company profile
+    put:
+      summary: Upsert fiscal company profile
+      responses:
+        "200":
+          description: Upserted fiscal company profile
+  /api/fiscal/companies/{companyPublicId}/retention-policies:
+    get:
+      summary: List retention policies by company
+      responses:
+        "200":
+          description: Retention policies
+  /api/fiscal/companies/{companyPublicId}/retention-execution:
+    get:
+      summary: Read retention execution plan for one company
+      responses:
+        "200":
+          description: Retention execution plan
+  /api/fiscal/companies/{companyPublicId}/retention-execution/execute:
+    post:
+      summary: Execute retention and anonymization plan
+      responses:
+        "200":
+          description: Executed retention plan
+  /api/fiscal/companies/{companyPublicId}/retention-policies/{dataDomain}:
+    put:
+      summary: Upsert retention policy for one data domain
+      responses:
+        "200":
+          description: Upserted retention policy
+  /api/fiscal/documents:
+    get:
+      summary: List fiscal documents
+      responses:
+        "200":
+          description: Fiscal document list
+    post:
+      summary: Issue one fiscal document
+      responses:
+        "201":
+          description: Created fiscal document
+  /api/fiscal/documents/{publicId}:
+    get:
+      summary: Read one fiscal document
+      responses:
+        "200":
+          description: Fiscal document detail
+        "404":
+          description: Fiscal document not found
+  /api/fiscal/documents/{publicId}/cancel:
+    post:
+      summary: Cancel one fiscal document
+      responses:
+        "200":
+          description: Cancelled fiscal document
+  /api/fiscal/documents/{publicId}/correction-letter:
+    post:
+      summary: Register correction letter for one fiscal document
+      responses:
+        "200":
+          description: Corrected fiscal document
+  /api/fiscal/documents/{publicId}/invalidate:
+    post:
+      summary: Register invalidation for one fiscal document
+      responses:
+        "200":
+          description: Invalidated fiscal document
+  /api/fiscal/documents/{publicId}/events:
+    get:
+      summary: List fiscal document audit events
+      responses:
+        "200":
+          description: Fiscal document event list
+  /api/fiscal/privacy-requests:
+    get:
+      summary: List privacy requests
+      responses:
+        "200":
+          description: Privacy requests
+    post:
+      summary: Create privacy request
+      responses:
+        "201":
+          description: Created privacy request
+  /api/fiscal/privacy-requests/{publicId}:
+    get:
+      summary: Read one privacy request
+      responses:
+        "200":
+          description: Privacy request detail
+        "404":
+          description: Privacy request not found
+  /api/fiscal/privacy-requests/{publicId}/export-package:
+    get:
+      summary: Build export package for one privacy request
+      responses:
+        "200":
+          description: Privacy export package
+        "404":
+          description: Privacy request not found
+  /api/fiscal/privacy-requests/{publicId}/execute:
+    post:
+      summary: Execute one privacy request with audit trail
+      responses:
+        "200":
+          description: Executed privacy request
+        "404":
+          description: Privacy request not found
+  /api/fiscal/privacy-requests/{publicId}/status:
+    patch:
+      summary: Transition privacy request lifecycle status
+      responses:
+        "200":
+          description: Updated privacy request
+        "404":
+          description: Privacy request not found
+  /api/fiscal/consents:
+    get:
+      summary: List consent ledger
+      responses:
+        "200":
+          description: Consent list
+    post:
+      summary: Create consent record
+      responses:
+        "201":
+          description: Created consent
+  /api/fiscal/consents/{publicId}:
+    patch:
+      summary: Transition consent status
+      responses:
+        "200":
+          description: Updated consent
+        "404":
+          description: Consent not found
+  /api/fiscal/audit-events:
+    get:
+      summary: List fiscal audit events
+      responses:
+        "200":
+          description: Fiscal audit events
+  /api/fiscal/compliance/summary:
+    get:
+      summary: Read fiscal compliance summary
+      responses:
+        "200":
+          description: Compliance summary

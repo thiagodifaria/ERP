@@ -243,11 +243,11 @@ def build_webhook_hub_capabilities() -> dict:
 def build_contract_catalog() -> dict:
     root = try_resolve_repo_root(Path(__file__))
     if root is not None:
-        http_specs = [item.name for item in sorted((root / "contracts" / "http").glob("*.yaml"))]
-        event_schemas = [item.name for item in sorted((root / "contracts" / "events").glob("*.json"))]
-        adr_docs = [item.name for item in sorted((root / "docs").glob("ADR-*.md"))]
-        api_portal_ready = (root / "contracts" / "portal" / "index.html").exists()
-        registry_ready = (root / "contracts" / "registry.json").exists() and (root / "contracts" / "schema-registry.json").exists()
+        http_specs = [item.name for item in sorted((root / "docs" / "contracts" / "http").glob("*.yaml"))]
+        event_schemas = [item.name for item in sorted((root / "docs" / "contracts" / "events").glob("*.json"))]
+        adr_docs = ["ARQUITETURA.md"] if (root / "docs" / "ARQUITETURA.md").exists() else []
+        api_portal_ready = (root / "docs" / "contracts" / "portal" / "index.html").exists()
+        registry_ready = (root / "docs" / "contracts" / "registry.json").exists() and (root / "docs" / "contracts" / "schema-registry.json").exists()
     else:
         http_specs = FALLBACK_HTTP_SPECS
         event_schemas = FALLBACK_EVENT_SCHEMAS

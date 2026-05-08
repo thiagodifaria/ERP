@@ -2,7 +2,6 @@
 name = "support"
 version = "0.1.0"
 description = "Support service for ERP case management and SLA operations"
-readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
   "fastapi>=0.116.0,<0.117.0",

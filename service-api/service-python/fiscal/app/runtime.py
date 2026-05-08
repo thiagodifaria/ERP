@@ -78,6 +78,73 @@ def _append_document_event(
     return event
 
 
+def _write_audit_event(tenant_slug: str, company_public_id: str, category: str, summary: str, actor: str, payload: dict | None = None) -> dict:
+    if settings.repository_driver != "postgres":
+        return _append_audit_event(tenant_slug, company_public_id, category, summary, actor, payload)
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            tenant_id = _find_tenant_id(cursor, tenant_slug)
+            public_id = str(uuid.uuid4())
+            cursor.execute(
+                """
+                INSERT INTO fiscal.audit_events (tenant_id, public_id, company_public_id, category, summary, actor, payload_json)
+                VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb)
+                """,
+                (tenant_id, public_id, company_public_id, category, summary, actor, json.dumps(payload or {})),
+            )
+            connection.commit()
+            return {
+                "publicId": public_id,
+                "tenantSlug": tenant_slug,
+                "companyPublicId": company_public_id,
+                "category": category,
+                "summary": summary,
+                "actor": actor,
+                "payload": payload or {},
+                "createdAt": utc_now(),
+            }
+
+
+def _write_document_event(
+    tenant_slug: str,
+    company_public_id: str,
+    document_public_id: str,
+    event_type: str,
+    summary: str,
+    actor: str,
+    payload: dict | None = None,
+) -> dict:
+    if settings.repository_driver != "postgres":
+        return _append_document_event(tenant_slug, company_public_id, document_public_id, event_type, summary, actor, payload)
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            tenant_id = _find_tenant_id(cursor, tenant_slug)
+            public_id = str(uuid.uuid4())
+            cursor.execute(
+                """
+                INSERT INTO fiscal.document_events (
+                  tenant_id, public_id, company_public_id, document_public_id, event_type, summary, actor, payload_json
+                )
+                VALUES (%s, %s, %s, %s::uuid, %s, %s, %s, %s::jsonb)
+                """,
+                (tenant_id, public_id, company_public_id, document_public_id, event_type, summary, actor, json.dumps(payload or {})),
+            )
+            connection.commit()
+            return {
+                "publicId": public_id,
+                "tenantSlug": tenant_slug,
+                "companyPublicId": company_public_id,
+                "documentPublicId": document_public_id,
+                "eventType": event_type,
+                "summary": summary,
+                "actor": actor,
+                "payload": payload or {},
+                "createdAt": utc_now(),
+            }
+
+
 def list_capabilities() -> dict:
     focus_nfe_configured = os.getenv("FISCAL_FOCUS_NFE_API_KEY", "").strip() != ""
     enotas_configured = os.getenv("FISCAL_ENOTAS_API_KEY", "").strip() != ""
@@ -461,6 +528,14 @@ def list_documents(tenant_slug: str | None = None) -> list[dict]:
                 }
                 for row in cursor.fetchall()
             ]
+
+
+def get_document(public_id: str, tenant_slug: str | None = None) -> dict | None:
+    slug = _tenant_slug(tenant_slug)
+    for item in list_documents(slug):
+        if item["publicId"] == public_id:
+            return item
+    return None
 
 
 def cancel_document(public_id: str, payload: dict) -> dict | None:
@@ -942,6 +1017,14 @@ def list_privacy_requests(tenant_slug: str | None = None) -> list[dict]:
             ]
 
 
+def get_privacy_request(public_id: str, tenant_slug: str | None = None) -> dict | None:
+    slug = _tenant_slug(tenant_slug)
+    for item in list_privacy_requests(slug):
+        if item["publicId"] == public_id:
+            return item
+    return None
+
+
 def transition_privacy_request(public_id: str, payload: dict) -> dict | None:
     slug = _tenant_slug(payload.get("tenantSlug"))
     status = (payload.get("status") or "").strip().lower()
@@ -1071,6 +1154,240 @@ def list_document_events(tenant_slug: str | None = None, document_public_id: str
                 }
                 for row in cursor.fetchall()
             ]
+
+
+def build_privacy_export_package(public_id: str, tenant_slug: str | None = None) -> dict | None:
+    slug = _tenant_slug(tenant_slug)
+    request = next((item for item in list_privacy_requests(slug) if item["publicId"] == public_id), None)
+    if request is None:
+        return None
+
+    subject_kind = request["subjectKind"]
+    subject_public_id = request["subjectPublicId"]
+    company_public_id = request["companyPublicId"]
+
+    consents = [
+        item
+        for item in list_consents(slug)
+        if item["subjectKind"] == subject_kind and item["subjectPublicId"] == subject_public_id
+    ]
+    documents = [
+        item
+        for item in list_documents(slug)
+        if item.get("customerPublicId") == subject_public_id
+    ]
+    document_events = [
+        event
+        for event in list_document_events(slug)
+        if any(event["documentPublicId"] == document["publicId"] for document in documents)
+    ]
+    audit_events = [
+        event
+        for event in list_audit_events(slug)
+        if event["companyPublicId"] == company_public_id and event["category"] in {"privacy_request", "consent", "fiscal_document"}
+    ]
+
+    return {
+        "publicId": request["publicId"],
+        "tenantSlug": slug,
+        "companyPublicId": company_public_id,
+        "subject": {
+            "kind": subject_kind,
+            "publicId": subject_public_id,
+        },
+        "request": request,
+        "summary": {
+            "consents": len(consents),
+            "documents": len(documents),
+            "documentEvents": len(document_events),
+            "auditEvents": len(audit_events),
+        },
+        "consents": consents,
+        "documents": documents,
+        "documentEvents": document_events,
+        "auditEvents": audit_events,
+        "generatedAt": utc_now(),
+    }
+
+
+def execute_privacy_request(public_id: str, payload: dict) -> dict | None:
+    slug = _tenant_slug(payload.get("tenantSlug"))
+    actor = (payload.get("actor") or "dpo@erp.local").strip()
+    request = next((item for item in list_privacy_requests(slug) if item["publicId"] == public_id), None)
+    if request is None:
+        return None
+
+    subject_kind = request["subjectKind"]
+    subject_public_id = request["subjectPublicId"]
+    company_public_id = request["companyPublicId"]
+    request_type = request["requestType"]
+
+    matching_consents = [
+        item for item in list_consents(slug) if item["subjectKind"] == subject_kind and item["subjectPublicId"] == subject_public_id
+    ]
+    matching_documents = [
+        item for item in list_documents(slug) if item["companyPublicId"] == company_public_id and item.get("customerPublicId") == subject_public_id
+    ]
+
+    export_package = None
+    anonymized_documents = 0
+    revoked_consents = 0
+
+    if request_type in {"access", "portability"}:
+        export_package = build_privacy_export_package(public_id, slug)
+
+    if request_type in {"anonymization", "deletion"}:
+        event_type = "anonymized" if request_type == "anonymization" else "deletion_controlled"
+        event_summary = (
+            "Subject references anonymized in fiscal documents."
+            if request_type == "anonymization"
+            else "Controlled deletion applied to subject references in fiscal documents."
+        )
+        if settings.repository_driver != "postgres":
+            for item in IN_MEMORY_STATE["documents"]:
+                if item["tenantSlug"] == slug and item["companyPublicId"] == company_public_id and item.get("customerPublicId") == subject_public_id:
+                    item["customerPublicId"] = None
+                    anonymized_documents += 1
+                    _write_document_event(slug, company_public_id, item["publicId"], event_type, event_summary, actor, payload)
+        else:
+            with connect() as connection:
+                with connection.cursor() as cursor:
+                    for document in matching_documents:
+                        cursor.execute(
+                            """
+                            UPDATE fiscal.documents AS document
+                            SET customer_public_id = NULL
+                            FROM identity.tenants AS tenant
+                            WHERE tenant.id = document.tenant_id
+                              AND tenant.slug = %s
+                              AND document.public_id = %s::uuid
+                              AND document.customer_public_id IS NOT NULL
+                            """,
+                            (slug, document["publicId"]),
+                        )
+                        anonymized_documents += cursor.rowcount
+                    connection.commit()
+            for document in matching_documents:
+                _write_document_event(slug, company_public_id, document["publicId"], event_type, event_summary, actor, payload)
+
+    if request_type in {"anonymization", "deletion", "consent_revoke"}:
+        for consent in matching_consents:
+            if consent["status"] != "revoked":
+                transition_consent(consent["publicId"], {"tenantSlug": slug, "status": "revoked", "actor": actor})
+                revoked_consents += 1
+
+    updated_request = transition_privacy_request(public_id, {"tenantSlug": slug, "status": "completed", "actor": actor})
+    execution = {
+        "requestType": request_type,
+        "anonymizedDocuments": anonymized_documents,
+        "revokedConsents": revoked_consents,
+        "exportPackageGenerated": export_package is not None,
+        "executedAt": utc_now(),
+    }
+    _write_audit_event(slug, company_public_id, "privacy_request_execution", "Privacy request executed.", actor, execution)
+    return {
+        "request": updated_request,
+        "execution": execution,
+        "exportPackage": export_package,
+    }
+
+
+def build_retention_execution(company_public_id: str, tenant_slug: str | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    policies = list_retention_policies(company_public_id, slug)
+    documents = [item for item in list_documents(slug) if item["companyPublicId"] == company_public_id]
+    privacy_requests = [
+        item
+        for item in list_privacy_requests(slug)
+        if item["companyPublicId"] == company_public_id and item["requestType"] == "anonymization"
+    ]
+
+    document_policy = next((item for item in policies if item["dataDomain"] == "documents"), None)
+    document_actions = []
+    for document in documents:
+        recommended_action = "retain"
+        if document["status"] == "cancelled":
+            recommended_action = "review_for_retention"
+        if any(request["status"] in {"processing", "completed"} for request in privacy_requests):
+            recommended_action = "anonymize_subject_refs"
+        document_actions.append(
+            {
+                "documentPublicId": document["publicId"],
+                "documentKind": document["documentKind"],
+                "status": document["status"],
+                "recommendedAction": recommended_action,
+            }
+        )
+
+    return {
+        "tenantSlug": slug,
+        "companyPublicId": company_public_id,
+        "generatedAt": utc_now(),
+        "policySnapshot": {
+            "totalPolicies": len(policies),
+            "documentsPolicy": document_policy,
+            "anonymizationRequests": len(privacy_requests),
+        },
+        "summary": {
+            "documentsTracked": len(documents),
+            "documentsToReview": sum(1 for item in document_actions if item["recommendedAction"] == "review_for_retention"),
+            "documentsToAnonymize": sum(1 for item in document_actions if item["recommendedAction"] == "anonymize_subject_refs"),
+        },
+        "actions": document_actions,
+    }
+
+
+def execute_retention_execution(company_public_id: str, payload: dict) -> dict:
+    slug = _tenant_slug(payload.get("tenantSlug"))
+    actor = (payload.get("actor") or "compliance@erp.local").strip()
+    plan = build_retention_execution(company_public_id, slug)
+
+    reviewed_documents = 0
+    anonymized_documents = 0
+
+    for action in plan["actions"]:
+        document_public_id = action["documentPublicId"]
+        if action["recommendedAction"] == "review_for_retention":
+            reviewed_documents += 1
+            _write_document_event(slug, company_public_id, document_public_id, "retention_review", "Retention review queued for fiscal document.", actor, payload)
+        elif action["recommendedAction"] == "anonymize_subject_refs":
+            if settings.repository_driver != "postgres":
+                for item in IN_MEMORY_STATE["documents"]:
+                    if item["tenantSlug"] == slug and item["publicId"] == document_public_id and item.get("customerPublicId") is not None:
+                        item["customerPublicId"] = None
+                        anonymized_documents += 1
+            else:
+                with connect() as connection:
+                    with connection.cursor() as cursor:
+                        cursor.execute(
+                            """
+                            UPDATE fiscal.documents AS document
+                            SET customer_public_id = NULL
+                            FROM identity.tenants AS tenant
+                            WHERE tenant.id = document.tenant_id
+                              AND tenant.slug = %s
+                              AND document.public_id = %s::uuid
+                              AND document.customer_public_id IS NOT NULL
+                            """,
+                            (slug, document_public_id),
+                        )
+                        anonymized_documents += cursor.rowcount
+                        connection.commit()
+            _write_document_event(slug, company_public_id, document_public_id, "retention_anonymized", "Retention execution anonymized subject references.", actor, payload)
+
+    execution = {
+        "tenantSlug": slug,
+        "companyPublicId": company_public_id,
+        "executedAt": utc_now(),
+        "summary": {
+            "reviewedDocuments": reviewed_documents,
+            "anonymizedDocuments": anonymized_documents,
+            "trackedDocuments": plan["summary"]["documentsTracked"],
+        },
+        "plan": plan,
+    }
+    _write_audit_event(slug, company_public_id, "retention_execution", "Retention execution applied.", actor, execution["summary"])
+    return execution
 
 
 def build_compliance_summary(tenant_slug: str | None = None) -> dict:

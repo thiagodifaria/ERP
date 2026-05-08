@@ -321,6 +321,9 @@ def test_compliance_control_returns_fiscal_and_privacy_payload() -> None:
     assert response.status_code == 200
     assert payload["tenantSlug"] == "bootstrap-ops"
     assert payload["fiscal"]["documents"] == 4
+    assert "completed" in payload["privacy"]
+    assert "executions" in payload["retention"]
+    assert "sensitiveOperations" in payload["audit"]
     assert payload["readiness"]["fiscalReady"] is True
 
 
@@ -331,4 +334,7 @@ def test_go_live_control_returns_rollout_and_adoption_payload() -> None:
     assert response.status_code == 200
     assert payload["tenantSlug"] == "bootstrap-ops"
     assert payload["rollouts"]["completed"] == 1
+    assert "adoptionPct" in payload["adoption"]
+    assert "recommended" in payload["adjustments"]
+    assert "total" in payload["bottlenecks"]
     assert payload["readiness"]["rolloutReady"] is True

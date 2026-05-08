@@ -483,6 +483,22 @@ def list_entitlements_page(tenant_slug: str, cursor: str | None = None, limit: i
     return payload
 
 
+def list_feature_flags_page(tenant_slug: str, cursor: str | None = None, limit: int = 50) -> dict:
+    capability_map = {item["capabilityKey"]: item for item in CAPABILITY_CATALOG}
+    payload = list_entitlements_page(tenant_slug, cursor, limit)
+    payload["items"] = [
+        {
+            **item,
+            "flagKey": item["capabilityKey"],
+            "module": capability_map.get(item["capabilityKey"], {}).get("module", "unknown"),
+            "category": capability_map.get(item["capabilityKey"], {}).get("category", "unknown"),
+            "defaultEnabled": capability_map.get(item["capabilityKey"], {}).get("defaultEnabled", False),
+        }
+        for item in payload["items"]
+    ]
+    return payload
+
+
 def upsert_entitlement(tenant_slug: str, capability_key: str, payload: dict) -> dict:
     slug = _tenant_slug(tenant_slug)
     normalized_key = capability_key.strip()
@@ -1343,6 +1359,354 @@ def build_go_live_readiness(tenant_slug: str) -> dict:
         },
         "risks": risks,
     }
+
+
+def build_go_live_adoption(tenant_slug: str) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    usage = build_usage_summary(slug)
+    rollouts = list_go_live_rollouts(slug, limit=200)["items"]
+    latest_rollout = rollouts[0] if rollouts else None
+
+    metrics = usage["metrics"]
+    tracked_metrics = usage["summary"]["trackedMetrics"]
+    healthy_metrics = sum(1 for item in metrics if item["status"] == "ok")
+    attention_metrics = sum(1 for item in metrics if item["status"] == "attention")
+    limited_metrics = sum(1 for item in metrics if item["status"] == "limit_reached")
+    observed_usage = usage["summary"]["totalQuantity"]
+
+    if tracked_metrics == 0:
+        adoption_score = 0
+    else:
+        baseline = healthy_metrics / tracked_metrics
+        pressure_penalty = ((attention_metrics * 0.15) + (limited_metrics * 0.35)) / tracked_metrics
+        volume_bonus = 0.15 if observed_usage > 0 else 0.0
+        adoption_score = max(0.0, min(1.0, baseline - pressure_penalty + volume_bonus))
+
+    target_pct = int((latest_rollout or {}).get("adoptionTargetPct") or 70)
+    adoption_pct = int(round(adoption_score * 100))
+    gap_pct = max(target_pct - adoption_pct, 0)
+
+    status = "tracking"
+    if tracked_metrics == 0:
+        status = "not_started"
+    elif adoption_pct >= target_pct:
+        status = "on_track"
+    elif gap_pct <= 15:
+        status = "attention"
+    else:
+        status = "off_track"
+
+    return {
+        "tenantSlug": slug,
+        "generatedAt": utc_now(),
+        "status": status,
+        "adoptionPct": adoption_pct,
+        "targetPct": target_pct,
+        "gapPct": gap_pct,
+        "latestRollout": None
+        if latest_rollout is None
+        else {
+            "publicId": latest_rollout["publicId"],
+            "waveKey": latest_rollout["waveKey"],
+            "status": latest_rollout["status"],
+            "targetEnv": latest_rollout["targetEnv"],
+        },
+        "signals": {
+            "trackedMetrics": tracked_metrics,
+            "healthyMetrics": healthy_metrics,
+            "attentionMetrics": attention_metrics,
+            "limitReachedMetrics": limited_metrics,
+            "observedUsage": observed_usage,
+        },
+    }
+
+
+def build_go_live_bottlenecks(tenant_slug: str) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    readiness = build_go_live_readiness(slug)
+    lifecycle = build_lifecycle_readiness(slug)
+    usage = build_usage_summary(slug)
+
+    bottlenecks: list[dict] = []
+
+    for capability_key in lifecycle["readiness"]["missingCriticalProviders"]:
+        bottlenecks.append(
+            {
+                "category": "provider",
+                "severity": "critical",
+                "code": "critical_provider_missing",
+                "summary": f"Critical provider for {capability_key} is not configured.",
+            }
+        )
+
+    for block in lifecycle["blocks"]["items"]:
+        bottlenecks.append(
+            {
+                "category": "tenant_block",
+                "severity": "critical" if block["scope"] == "tenant" else "attention",
+                "code": "tenant_block_active",
+                "summary": f"Active block {block['blockKey']} is limiting rollout progression.",
+                "metadata": {"scope": block["scope"], "reason": block["reason"]},
+            }
+        )
+
+    for metric in usage["metrics"]:
+        if metric["status"] == "limit_reached":
+            bottlenecks.append(
+                {
+                    "category": "quota",
+                    "severity": "critical",
+                    "code": "quota_limit_reached",
+                    "summary": f"Quota limit reached for {metric['metricKey']}.",
+                    "metadata": {"metricKey": metric["metricKey"], "limitValue": metric["limitValue"], "quantity": metric["quantity"]},
+                }
+            )
+        elif metric["status"] == "attention":
+            bottlenecks.append(
+                {
+                    "category": "quota",
+                    "severity": "attention",
+                    "code": "quota_near_limit",
+                    "summary": f"Quota near limit for {metric['metricKey']}.",
+                    "metadata": {"metricKey": metric["metricKey"], "limitValue": metric["limitValue"], "quantity": metric["quantity"]},
+                }
+            )
+
+    status = "clear"
+    if any(item["severity"] == "critical" for item in bottlenecks):
+        status = "blocked"
+    elif bottlenecks:
+        status = "attention"
+
+    return {
+        "tenantSlug": slug,
+        "generatedAt": utc_now(),
+        "status": status,
+        "summary": {
+            "total": len(bottlenecks),
+            "critical": sum(1 for item in bottlenecks if item["severity"] == "critical"),
+            "attention": sum(1 for item in bottlenecks if item["severity"] == "attention"),
+        },
+        "items": bottlenecks,
+    }
+
+
+def build_go_live_playbook(tenant_slug: str) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    readiness = build_go_live_readiness(slug)
+    adoption = build_go_live_adoption(slug)
+    bottlenecks = build_go_live_bottlenecks(slug)
+    rollouts = list_go_live_rollouts(slug, limit=20)["items"]
+    latest_rollout = rollouts[0] if rollouts else None
+
+    checklist = [
+        {
+            "key": "validate-readiness",
+            "status": "ready" if readiness["rolloutReady"] else "attention",
+            "summary": "Validate providers, quotas and tenant blocks before the wave.",
+        },
+        {
+            "key": "observe-adoption",
+            "status": "ready" if adoption["status"] in {"on_track", "tracking"} else "attention",
+            "summary": "Observe adoption signals, tracked metrics and usage growth after release.",
+        },
+        {
+            "key": "remove-bottlenecks",
+            "status": "ready" if bottlenecks["summary"]["critical"] == 0 else "blocked",
+            "summary": "Resolve critical provider gaps, hard blocks and quota incidents before broad rollout.",
+        },
+        {
+            "key": "rollback",
+            "status": "ready",
+            "summary": (latest_rollout or {}).get("rollbackPlaybook") or "docs/OPERACOES.md#rollback",
+        },
+    ]
+
+    return {
+        "tenantSlug": slug,
+        "generatedAt": utc_now(),
+        "status": "ready" if readiness["rolloutReady"] and bottlenecks["summary"]["critical"] == 0 else "attention",
+        "latestRollout": latest_rollout,
+        "readiness": readiness,
+        "adoption": adoption,
+        "bottlenecks": bottlenecks,
+        "checklist": checklist,
+    }
+
+
+def build_go_live_adjustments(tenant_slug: str) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    usage = build_usage_summary(slug)
+    lifecycle = build_lifecycle_readiness(slug)
+    adoption = build_go_live_adoption(slug)
+
+    quota_map = {item["metricKey"]: item for item in list_quotas(slug)}
+    recommendations: list[dict] = []
+
+    for metric in usage["metrics"]:
+        if metric["status"] in {"attention", "limit_reached"}:
+            current_limit = int(metric["limitValue"] or 0)
+            suggested_limit = current_limit
+            if current_limit > 0:
+                suggested_limit = max(current_limit + 1, int(round(current_limit * 1.25)))
+            recommendations.append(
+                {
+                    "actionType": "increase_quota_limit",
+                    "severity": "critical" if metric["status"] == "limit_reached" else "attention",
+                    "summary": f"Increase quota for {metric['metricKey']} to reduce rollout pressure.",
+                    "applySupported": current_limit > 0,
+                    "payload": {
+                        "metricKey": metric["metricKey"],
+                        "metricUnit": metric["metricUnit"] or quota_map.get(metric["metricKey"], {}).get("metricUnit", ""),
+                        "newLimitValue": suggested_limit,
+                        "enforcementMode": metric["enforcementMode"],
+                    },
+                }
+            )
+
+    for block in lifecycle["blocks"]["items"]:
+        recommendations.append(
+            {
+                "actionType": "disable_block",
+                "severity": "critical" if block["scope"] == "tenant" else "attention",
+                "summary": f"Disable active block {block['blockKey']} before widening rollout.",
+                "applySupported": True,
+                "payload": {
+                    "blockKey": block["blockKey"],
+                    "reason": block["reason"],
+                    "scope": block["scope"],
+                },
+            }
+        )
+
+    provider_defaults = list_provider_defaults(slug)
+    for item in provider_defaults:
+        if item["critical"] and item["mode"] in {"unconfigured", "disabled"} and item["fallbackAllowed"]:
+            recommendations.append(
+                {
+                    "actionType": "set_provider_mode",
+                    "severity": "attention",
+                    "summary": f"Enable safe fallback for {item['capabilityKey']} while provider credentials are unavailable.",
+                    "applySupported": True,
+                    "payload": {
+                        "capabilityKey": item["capabilityKey"],
+                        "providerKey": item["providerKey"],
+                        "mode": "fallback",
+                    },
+                }
+            )
+
+    if adoption["status"] in {"not_started", "off_track"}:
+        recommendations.append(
+            {
+                "actionType": "review_rollout_wave",
+                "severity": "attention",
+                "summary": "Review rollout wave sizing and adoption target before progressing.",
+                "applySupported": False,
+                "payload": {
+                    "targetPct": adoption["targetPct"],
+                    "adoptionPct": adoption["adoptionPct"],
+                    "gapPct": adoption["gapPct"],
+                },
+            }
+        )
+
+    return {
+        "tenantSlug": slug,
+        "generatedAt": utc_now(),
+        "summary": {
+            "recommended": len(recommendations),
+            "applySupported": sum(1 for item in recommendations if item["applySupported"]),
+            "critical": sum(1 for item in recommendations if item["severity"] == "critical"),
+            "attention": sum(1 for item in recommendations if item["severity"] == "attention"),
+        },
+        "items": recommendations,
+    }
+
+
+def apply_go_live_adjustment(tenant_slug: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    action_type = str(payload.get("actionType") or "").strip()
+    actor = str(payload.get("actor") or "ops@erp.local").strip() or "ops@erp.local"
+
+    if action_type == "increase_quota_limit":
+        metric_key = str(payload.get("metricKey") or "").strip()
+        metric_unit = str(payload.get("metricUnit") or "").strip()
+        new_limit_value = int(payload.get("newLimitValue") or 0)
+        if metric_key == "":
+            raise ValueError("metric_key_required")
+        if metric_unit == "":
+            raise ValueError("metric_unit_required")
+        if new_limit_value <= 0:
+            raise ValueError("new_limit_value_required")
+        updated = upsert_quota(
+            slug,
+            metric_key,
+            {
+                "metricUnit": metric_unit,
+                "limitValue": new_limit_value,
+                "enforcementMode": str(payload.get("enforcementMode") or "soft"),
+                "source": "go-live-adjustment",
+            },
+        )
+        return {
+            "tenantSlug": slug,
+            "actionType": action_type,
+            "actor": actor,
+            "appliedAt": utc_now(),
+            "result": updated,
+        }
+
+    if action_type == "disable_block":
+        block_key = str(payload.get("blockKey") or "").strip()
+        if block_key == "":
+            raise ValueError("block_key_required")
+        updated = upsert_block(
+            slug,
+            block_key,
+            {
+                "active": False,
+                "reason": str(payload.get("reason") or "released by go-live adjustment"),
+                "scope": str(payload.get("scope") or "tenant"),
+                "source": "go-live-adjustment",
+            },
+        )
+        return {
+            "tenantSlug": slug,
+            "actionType": action_type,
+            "actor": actor,
+            "appliedAt": utc_now(),
+            "result": updated,
+        }
+
+    if action_type == "set_provider_mode":
+        capability_key = str(payload.get("capabilityKey") or "").strip()
+        provider_key = str(payload.get("providerKey") or "").strip()
+        mode = str(payload.get("mode") or "").strip()
+        if capability_key == "":
+            raise ValueError("capability_key_required")
+        if provider_key == "":
+            raise ValueError("provider_key_required")
+        if mode == "":
+            raise ValueError("provider_mode_invalid")
+        updated = upsert_provider_default(
+            slug,
+            capability_key,
+            {
+                "providerKey": provider_key,
+                "mode": mode,
+                "source": "go-live-adjustment",
+            },
+        )
+        return {
+            "tenantSlug": slug,
+            "actionType": action_type,
+            "actor": actor,
+            "appliedAt": utc_now(),
+            "result": updated,
+        }
+
+    raise ValueError("go_live_adjustment_action_invalid")
 
 
 def create_go_live_rollout(tenant_slug: str, payload: dict) -> dict:

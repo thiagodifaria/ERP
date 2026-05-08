@@ -15,6 +15,50 @@ IN_MEMORY_STATE = {
 }
 
 
+CONSUMER_CONTRACTS = [
+    {
+        "module": "sales",
+        "consumerKey": "sales.catalog_reference",
+        "status": "ready",
+        "mode": "http-contract",
+        "contractPath": "docs/contracts/http/sales.openapi.yaml",
+        "usage": "proposal, opportunity and sale item references",
+    },
+    {
+        "module": "billing",
+        "consumerKey": "billing.catalog_reference",
+        "status": "ready",
+        "mode": "http-contract",
+        "contractPath": "docs/contracts/http/billing.openapi.yaml",
+        "usage": "plan, subscription and usage-based pricing references",
+    },
+    {
+        "module": "finance",
+        "consumerKey": "finance.catalog_reference",
+        "status": "ready",
+        "mode": "http-contract",
+        "contractPath": "docs/contracts/http/finance.openapi.yaml",
+        "usage": "forecast, receivable classification and commission context",
+    },
+    {
+        "module": "documents",
+        "consumerKey": "documents.catalog_reference",
+        "status": "ready",
+        "mode": "http-contract",
+        "contractPath": "docs/contracts/http/documents.openapi.yaml",
+        "usage": "document ownership, attachment classification and retention references",
+    },
+    {
+        "module": "analytics",
+        "consumerKey": "analytics.catalog_reference",
+        "status": "ready",
+        "mode": "read-model",
+        "contractPath": "docs/contracts/http/analytics.openapi.yaml",
+        "usage": "catalog usage, pricing governance and product reporting",
+    },
+]
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
@@ -60,6 +104,17 @@ def _paginate(records: list[dict], cursor: str | None, limit: int, cursor_field:
             "returned": len(items),
             "nextCursor": next_cursor,
             "hasMore": next_cursor is not None,
+        },
+    }
+
+
+def list_consumer_contracts() -> dict:
+    return {
+        "generatedAt": utc_now(),
+        "items": CONSUMER_CONTRACTS,
+        "summary": {
+            "consumers": len(CONSUMER_CONTRACTS),
+            "ready": sum(1 for item in CONSUMER_CONTRACTS if item["status"] == "ready"),
         },
     }
 

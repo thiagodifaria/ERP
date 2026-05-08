@@ -16,6 +16,15 @@ def test_capabilities_returns_catalog_shape() -> None:
     assert "product" in payload["domains"]
 
 
+def test_consumers_registry_returns_cross_context_contracts() -> None:
+    response = client.get("/api/catalog/consumers")
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["summary"]["consumers"] >= 5
+    assert any(item["module"] == "sales" for item in payload["items"])
+    assert any(item["module"] == "analytics" for item in payload["items"])
+
+
 def test_items_bulk_returns_partial_success_shape() -> None:
     response = client.post(
         "/api/catalog/items/bulk",

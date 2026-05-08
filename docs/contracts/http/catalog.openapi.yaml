@@ -1,0 +1,79 @@
+openapi: 3.1.0
+info:
+  title: ERP Catalog API
+  version: 0.2.0
+  description: Product and service catalog with categories, activation, versioned items, cursor pagination and bulk creation.
+paths:
+  /api/catalog/capabilities:
+    get:
+      summary: Read catalog capability posture
+      responses:
+        "200":
+          description: Catalog capability document
+  /api/catalog/consumers:
+    get:
+      summary: Read catalog consumer contracts across core domains
+      responses:
+        "200":
+          description: Catalog consumer contract registry
+  /api/catalog/categories:
+    get:
+      summary: List categories by tenant
+      responses:
+        "200":
+          description: Category list
+    post:
+      summary: Create one category
+      responses:
+        "200":
+          description: Created category
+  /api/catalog/categories/page:
+    get:
+      summary: Cursor-based category listing
+      responses:
+        "200":
+          description: Paginated category list
+  /api/catalog/items:
+    get:
+      summary: List catalog items
+      responses:
+        "200":
+          description: Catalog item list
+    post:
+      summary: Create one catalog item
+      responses:
+        "200":
+          description: Created catalog item
+  /api/catalog/items/page:
+    get:
+      summary: Cursor-based item listing
+      responses:
+        "200":
+          description: Paginated catalog item list
+  /api/catalog/items/bulk:
+    post:
+      summary: Bulk create catalog items with partial success
+      responses:
+        "200":
+          description: Bulk item result
+  /api/catalog/items/{publicId}:
+    get:
+      summary: Read one catalog item
+      responses:
+        "200":
+          description: Catalog item detail
+        "404":
+          description: Catalog item not found
+    patch:
+      summary: Update active state, price and attributes
+      responses:
+        "200":
+          description: Updated catalog item
+        "404":
+          description: Catalog item not found
+  /api/catalog/items/{publicId}/versions:
+    get:
+      summary: Read catalog item version history
+      responses:
+        "200":
+          description: Catalog item version history

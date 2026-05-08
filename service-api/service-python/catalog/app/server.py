@@ -10,6 +10,7 @@ from app.runtime import (
     create_category,
     create_item,
     get_item,
+    list_consumer_contracts,
     list_item_versions,
     list_categories,
     list_categories_page,
@@ -43,6 +44,11 @@ def details() -> dict:
 @app.get("/api/catalog/capabilities")
 def get_capabilities() -> dict:
     return capability_catalog()
+
+
+@app.get("/api/catalog/consumers")
+def consumers() -> dict:
+    return list_consumer_contracts()
 
 
 @app.get("/api/catalog/categories")

@@ -276,9 +276,9 @@ import sys
 from pathlib import Path
 
 root = Path(sys.argv[1])
-registry_path = root / "contracts" / "registry.json"
-schema_registry_path = root / "contracts" / "schema-registry.json"
-portal_path = root / "contracts" / "portal" / "index.html"
+registry_path = root / "docs" / "contracts" / "registry.json"
+schema_registry_path = root / "docs" / "contracts" / "schema-registry.json"
+portal_path = root / "docs" / "contracts" / "portal" / "index.html"
 
 registry = json.loads(registry_path.read_text(encoding="utf-8"))
 schema_registry = json.loads(schema_registry_path.read_text(encoding="utf-8"))
@@ -294,23 +294,23 @@ def check_entries(group: str, base: Path) -> None:
         if not (base / item).is_file():
             errors.append(f"{group} missing artifact: {item}")
 
-check_entries("http", root / "contracts" / "http")
-check_entries("events", root / "contracts" / "events")
+check_entries("http", root / "docs" / "contracts" / "http")
+check_entries("events", root / "docs" / "contracts" / "events")
 
 for doc_path in registry["docs"]:
     if not (root / doc_path).is_file():
         errors.append(f"doc missing from registry: {doc_path}")
 
-if registry.get("portal") != "contracts/portal/index.html":
+if registry.get("portal") != "docs/contracts/portal/index.html":
     errors.append("registry portal path is not normalized")
-if registry.get("schemaRegistry") != "contracts/schema-registry.json":
+if registry.get("schemaRegistry") != "docs/contracts/schema-registry.json":
     errors.append("registry schemaRegistry path is not normalized")
 if not portal_path.is_file():
     errors.append("portal html not found")
 if not schema_registry_path.is_file():
     errors.append("schema registry not found")
 
-event_paths = {f"contracts/events/{name}" for name in registry["events"]}
+event_paths = {f"docs/contracts/events/{name}" for name in registry["events"]}
 for item in schema_registry.get("schemas", []):
     path = item.get("path", "")
     if path not in event_paths:
@@ -533,8 +533,8 @@ run_identity_database_smoke() {
   local sales_summary
   local workflow_control_summary
 
-  bash "$ROOT_DIR/scripts/db.sh" up
-  bash "$ROOT_DIR/scripts/db.sh" migrate all
+  bash "$ROOT_DIR/scripts/build.sh" db up
+  bash "$ROOT_DIR/scripts/build.sh" migrate all
 
   "${COMPOSE_CMD[@]}" exec -T service-postgresql \
     psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" -c "
@@ -547,8 +547,8 @@ run_identity_database_smoke() {
       );
     "
 
-  bash "$ROOT_DIR/scripts/db.sh" seed all
-  bash "$ROOT_DIR/scripts/db.sh" seed all
+  bash "$ROOT_DIR/scripts/build.sh" seed all
+  bash "$ROOT_DIR/scripts/build.sh" seed all
 
   summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
     psql -U "$DB_USER" -d "$DB_NAME" -At -c "
@@ -3327,10 +3327,10 @@ run_performance_runtime_suite() {
   local benchmark_report_response
   local cost_estimator_response
 
-  bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
-  bash "$ROOT_DIR/scripts/db.sh" up
-  bash "$ROOT_DIR/scripts/db.sh" migrate all
-  bash "$ROOT_DIR/scripts/db.sh" seed all
+  bash "$ROOT_DIR/scripts/build.sh" down -v >/dev/null 2>&1 || true
+  bash "$ROOT_DIR/scripts/build.sh" db up
+  bash "$ROOT_DIR/scripts/build.sh" migrate all
+  bash "$ROOT_DIR/scripts/build.sh" seed all
 
   "${COMPOSE_CMD[@]}" up -d --build simulation analytics
   wait_for_http_ready "$simulation_url/health/ready"
@@ -4079,7 +4079,7 @@ run_hardening_suite() {
 }
 
 run_smoke() {
-  trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
+  trap 'bash "$ROOT_DIR/scripts/build.sh" down -v >/dev/null 2>&1 || true' RETURN
   export POSTGRES_PORT="${POSTGRES_PORT_SMOKE:-16432}"
   export REDIS_PORT="${REDIS_PORT_SMOKE:-16379}"
   export KAFKA_PORT="${KAFKA_PORT_SMOKE:-19092}"
@@ -4108,7 +4108,7 @@ run_smoke() {
   export SUPPLIER_HTTP_PORT="${SUPPLIER_HTTP_PORT_SMOKE:-18100}"
   export NOTIFICATION_HTTP_PORT="${NOTIFICATION_HTTP_PORT_SMOKE:-18101}"
   export FISCAL_HTTP_PORT="${FISCAL_HTTP_PORT_SMOKE:-18102}"
-  bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
+  bash "$ROOT_DIR/scripts/build.sh" down -v >/dev/null 2>&1 || true
   "${COMPOSE_CMD[@]}" ps
   run_platform_runtime_smoke
   run_identity_database_smoke
@@ -4140,12 +4140,12 @@ run_backup_restore_suite() {
   local wiped_summary
   local restored_summary
 
-  trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
+  trap 'bash "$ROOT_DIR/scripts/build.sh" down -v >/dev/null 2>&1 || true' RETURN
   export POSTGRES_PORT="${POSTGRES_PORT_BACKUP_RESTORE:-16434}"
-  bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
-  bash "$ROOT_DIR/scripts/db.sh" up
-  bash "$ROOT_DIR/scripts/db.sh" migrate all
-  bash "$ROOT_DIR/scripts/db.sh" seed all
+  bash "$ROOT_DIR/scripts/build.sh" down -v >/dev/null 2>&1 || true
+  bash "$ROOT_DIR/scripts/build.sh" db up
+  bash "$ROOT_DIR/scripts/build.sh" migrate all
+  bash "$ROOT_DIR/scripts/build.sh" seed all
 
   "${COMPOSE_CMD[@]}" exec -T service-postgresql \
     psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" -c "
@@ -4191,7 +4191,7 @@ run_backup_restore_suite() {
     ")"
 
   backup_file="$(mktemp "${TMPDIR:-/tmp}/erp-backup-restore-XXXXXX.sql")"
-  bash "$ROOT_DIR/scripts/db.sh" backup "$backup_file"
+  bash "$ROOT_DIR/scripts/build.sh" backup "$backup_file"
 
   "${COMPOSE_CMD[@]}" exec -T service-postgresql \
     psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" -c "
@@ -4214,7 +4214,7 @@ run_backup_restore_suite() {
       ) AS records;
     ")"
 
-  bash "$ROOT_DIR/scripts/db.sh" restore "$backup_file"
+  bash "$ROOT_DIR/scripts/build.sh" restore "$backup_file"
 
   restored_summary="$("${COMPOSE_CMD[@]}" exec -T service-postgresql \
     psql -U "$DB_USER" -d "$DB_NAME" -At -c "
@@ -4277,7 +4277,7 @@ main() {
       run_dotnet_contract
       ;;
     platform)
-      trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
+      trap 'bash "$ROOT_DIR/scripts/build.sh" down -v >/dev/null 2>&1 || true' RETURN
       export POSTGRES_PORT="${POSTGRES_PORT_PLATFORM:-16432}"
       export REDIS_PORT="${REDIS_PORT_PLATFORM:-16379}"
       export KAFKA_PORT="${KAFKA_PORT_PLATFORM:-19092}"
@@ -4287,14 +4287,14 @@ main() {
       export OPENFGA_HTTP_PORT="${OPENFGA_HTTP_PORT_PLATFORM:-18090}"
       export OPENFGA_GRPC_PORT="${OPENFGA_GRPC_PORT_PLATFORM:-18091}"
       export OPENFGA_PLAYGROUND_PORT="${OPENFGA_PLAYGROUND_PORT_PLATFORM:-13010}"
-      bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true
+      bash "$ROOT_DIR/scripts/build.sh" down -v >/dev/null 2>&1 || true
       run_platform_runtime_smoke
       ;;
     smoke)
       run_smoke
       ;;
     performance)
-      trap 'bash "$ROOT_DIR/scripts/down.sh" -v >/dev/null 2>&1 || true' RETURN
+      trap 'bash "$ROOT_DIR/scripts/build.sh" down -v >/dev/null 2>&1 || true' RETURN
       run_performance_runtime_suite
       ;;
     backup-restore)

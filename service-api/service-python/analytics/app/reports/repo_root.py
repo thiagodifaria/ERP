@@ -11,7 +11,7 @@ def resolve_repo_root(start: Path) -> Path:
         current = current.parent
 
     for candidate in (current, *current.parents):
-        if (candidate / "contracts").is_dir() and (candidate / "docs").is_dir():
+        if (candidate / "docs" / "contracts").is_dir() and (candidate / "docs").is_dir():
             return candidate
 
     raise RuntimeError(f"repo root not found from {start}")

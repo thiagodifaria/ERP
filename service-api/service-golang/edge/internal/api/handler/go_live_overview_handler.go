@@ -71,6 +71,9 @@ func buildGoLiveExecutiveSummary(payload map[string]any) dto.GoLiveExecutiveSumm
 		RolledBackRollouts: readMapInt(payload, "rollouts", "rolledBack"),
 		TrackedMetrics:     readMapInt(payload, "adoption", "trackedMetrics"),
 		TotalQuantity:      readMapInt(payload, "adoption", "totalQuantity"),
+		AdoptionPct:        readMapInt(payload, "adoption", "adoptionPct"),
+		PendingAdjustments: readMapInt(payload, "adjustments", "recommended"),
+		CriticalBottlenecks: readMapInt(payload, "bottlenecks", "critical"),
 		RolloutReady:       readMapBool(payload, "readiness", "rolloutReady"),
 		MetricsObserved:    readMapBool(payload, "readiness", "metricsObserved"),
 	}

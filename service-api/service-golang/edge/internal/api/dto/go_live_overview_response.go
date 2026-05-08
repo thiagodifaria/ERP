@@ -8,6 +8,9 @@ type GoLiveExecutiveSummary struct {
 	RolledBackRollouts int   `json:"rolledBackRollouts"`
 	TrackedMetrics    int    `json:"trackedMetrics"`
 	TotalQuantity     int    `json:"totalQuantity"`
+	AdoptionPct       int    `json:"adoptionPct"`
+	PendingAdjustments int   `json:"pendingAdjustments"`
+	CriticalBottlenecks int  `json:"criticalBottlenecks"`
 	RolloutReady      bool   `json:"rolloutReady"`
 	MetricsObserved   bool   `json:"metricsObserved"`
 }

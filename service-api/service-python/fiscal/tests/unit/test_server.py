@@ -46,6 +46,7 @@ def test_fiscal_profile_document_and_privacy_flow() -> None:
         },
     )
     document_public_id = document_response.json()["publicId"]
+    detail_response = client.get(f"/api/fiscal/documents/{document_public_id}?tenant_slug=bootstrap-ops")
     correction_response = client.post(
         f"/api/fiscal/documents/{document_public_id}/correction-letter",
         json={
@@ -84,6 +85,7 @@ def test_fiscal_profile_document_and_privacy_flow() -> None:
         },
     )
     privacy_public_id = privacy_response.json()["publicId"]
+    privacy_detail_response = client.get(f"/api/fiscal/privacy-requests/{privacy_public_id}?tenant_slug=bootstrap-ops")
     privacy_transition_response = client.patch(
         f"/api/fiscal/privacy-requests/{privacy_public_id}/status",
         json={"tenantSlug": "bootstrap-ops", "status": "processing", "actor": "dpo@erp.local"},
@@ -95,25 +97,48 @@ def test_fiscal_profile_document_and_privacy_flow() -> None:
     )
     events_response = client.get(f"/api/fiscal/documents/{document_public_id}/events?tenant_slug=bootstrap-ops")
     summary_response = client.get("/api/fiscal/compliance/summary?tenant_slug=bootstrap-ops")
+    export_response = client.get(f"/api/fiscal/privacy-requests/{privacy_public_id}/export-package?tenant_slug=bootstrap-ops")
+    retention_execution_response = client.get("/api/fiscal/companies/company-001/retention-execution?tenant_slug=bootstrap-ops")
+    execute_privacy_response = client.post(
+        f"/api/fiscal/privacy-requests/{privacy_public_id}/execute",
+        json={"tenantSlug": "bootstrap-ops", "actor": "dpo@erp.local"},
+    )
+    execute_retention_response = client.post(
+        "/api/fiscal/companies/company-001/retention-execution/execute",
+        json={"tenantSlug": "bootstrap-ops", "actor": "compliance@erp.local"},
+    )
 
     assert profile_response.status_code == 200
     assert retention_response.status_code == 200
     assert document_response.status_code == 200
+    assert detail_response.status_code == 200
     assert correction_response.status_code == 200
     assert cancel_response.status_code == 200
     assert consent_response.status_code == 200
     assert privacy_response.status_code == 200
+    assert privacy_detail_response.status_code == 200
     assert privacy_transition_response.status_code == 200
     assert consent_transition_response.status_code == 200
     assert events_response.status_code == 200
     assert summary_response.status_code == 200
+    assert export_response.status_code == 200
+    assert retention_execution_response.status_code == 200
+    assert execute_privacy_response.status_code == 200
+    assert execute_retention_response.status_code == 200
     assert cancel_response.json()["status"] == "cancelled"
+    assert detail_response.json()["providerKey"] == "local"
     assert privacy_transition_response.json()["status"] == "processing"
+    assert privacy_detail_response.json()["requestType"] == "anonymization"
     assert consent_transition_response.json()["status"] == "revoked"
     assert summary_response.json()["summary"]["fiscalDocuments"] >= 1
     assert summary_response.json()["summary"]["consents"] >= 1
     assert summary_response.json()["summary"]["documentEvents"] >= 2
     assert "providerReady" in summary_response.json()["providers"]
+    assert export_response.json()["summary"]["documents"] >= 1
+    assert retention_execution_response.json()["summary"]["documentsTracked"] >= 1
+    assert execute_privacy_response.json()["request"]["status"] == "completed"
+    assert "execution" in execute_privacy_response.json()
+    assert "summary" in execute_retention_response.json()
 
 
 def test_capabilities_and_audit_routes_return_operational_payload() -> None:

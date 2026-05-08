@@ -6,6 +6,11 @@ from fastapi.responses import JSONResponse
 from app.config.settings import settings
 from app.infrastructure.postgres import postgres_ready
 from app.runtime import (
+    apply_go_live_adjustment,
+    build_go_live_adoption,
+    build_go_live_adjustments,
+    build_go_live_bottlenecks,
+    build_go_live_playbook,
     build_go_live_readiness,
     build_lifecycle_preview,
     build_lifecycle_readiness,
@@ -20,6 +25,7 @@ from app.runtime import (
     list_blocks,
     list_capability_catalog,
     list_entitlements_page,
+    list_feature_flags_page,
     list_go_live_rollouts,
     list_lifecycle_jobs_page,
     list_metering_page,
@@ -83,12 +89,25 @@ def entitlements(tenant_slug: str, cursor: str | None = None, limit: int = 50) -
     return list_entitlements_page(tenant_slug, cursor, limit)
 
 
+@app.get("/api/platform-control/tenants/{tenant_slug}/feature-flags")
+def feature_flags(tenant_slug: str, cursor: str | None = None, limit: int = 50) -> dict:
+    return list_feature_flags_page(tenant_slug, cursor, limit)
+
+
 @app.put("/api/platform-control/tenants/{tenant_slug}/entitlements/{capability_key}")
 def put_entitlement(tenant_slug: str, capability_key: str, payload: dict) -> dict:
     try:
         return upsert_entitlement(tenant_slug, capability_key, payload)
     except ValueError as error:
         raise HTTPException(status_code=400, detail={"code": str(error), "message": "Entitlement payload is invalid."}) from error
+
+
+@app.put("/api/platform-control/tenants/{tenant_slug}/feature-flags/{capability_key}")
+def put_feature_flag(tenant_slug: str, capability_key: str, payload: dict) -> dict:
+    try:
+        return upsert_entitlement(tenant_slug, capability_key, payload)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"code": str(error), "message": "Feature flag payload is invalid."}) from error
 
 
 @app.post("/api/platform-control/tenants/{tenant_slug}/entitlements/bulk")
@@ -166,6 +185,34 @@ def lifecycle_readiness(tenant_slug: str) -> dict:
 @app.get("/api/platform-control/tenants/{tenant_slug}/go-live/readiness")
 def go_live_readiness(tenant_slug: str) -> dict:
     return build_go_live_readiness(tenant_slug)
+
+
+@app.get("/api/platform-control/tenants/{tenant_slug}/go-live/adoption")
+def go_live_adoption(tenant_slug: str) -> dict:
+    return build_go_live_adoption(tenant_slug)
+
+
+@app.get("/api/platform-control/tenants/{tenant_slug}/go-live/bottlenecks")
+def go_live_bottlenecks(tenant_slug: str) -> dict:
+    return build_go_live_bottlenecks(tenant_slug)
+
+
+@app.get("/api/platform-control/tenants/{tenant_slug}/go-live/playbook")
+def go_live_playbook(tenant_slug: str) -> dict:
+    return build_go_live_playbook(tenant_slug)
+
+
+@app.get("/api/platform-control/tenants/{tenant_slug}/go-live/adjustments")
+def go_live_adjustments(tenant_slug: str) -> dict:
+    return build_go_live_adjustments(tenant_slug)
+
+
+@app.post("/api/platform-control/tenants/{tenant_slug}/go-live/adjustments/apply")
+def post_go_live_adjustment(tenant_slug: str, payload: dict) -> dict:
+    try:
+        return apply_go_live_adjustment(tenant_slug, payload)
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail={"code": str(error), "message": "Go-live adjustment payload is invalid."}) from error
 
 
 @app.get("/api/platform-control/tenants/{tenant_slug}/go-live/rollouts")
