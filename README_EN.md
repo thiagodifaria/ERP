@@ -20,7 +20,7 @@ This README gives a complete but compact view of the project. Topic-specific det
 ## Project Shape
 
 - 20 HTTP services with OpenAPI contracts.
-- 201 versioned HTTP endpoints.
+- 206 versioned HTTP endpoints.
 - 12 versioned event schemas.
 - Contracts under `docs/contracts/`.
 - Container runtime through `infra/docker-compose.yml`.

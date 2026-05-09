@@ -158,6 +158,8 @@ Padrao esperado:
 - registrar erro normalizado quando falhar;
 - permitir requeue apenas quando semanticamente seguro.
 
+No baseline atual, callbacks de provider do `engagement` usam `externalEventId` como chave de replay por tenant e provider. Um reenvio do mesmo evento retorna o `provider_event` ja processado, sem duplicar touchpoint, delivery ou efeito de callback.
+
 ## Retry e Dead-letter
 
 Retry deve ser usado para falha temporaria. Dead-letter deve ser usado quando o evento nao pode ser processado com seguranca naquele momento.
@@ -192,7 +194,7 @@ Toda integracao externa deve considerar:
 - autorizacao do destino;
 - erro sem vazamento de informacao sensivel.
 
-Nesta fase, nem todos esses pontos estao fechados como produto final em todos os modulos. A documentacao registra o padrao desejado para que novas integracoes nao aumentem a divida.
+O fechamento atual cobre os pontos centrais de integracao do monorepo: capability/readiness por provider, ledger de callbacks em `engagement`, DLQ/requeue em `webhook-hub`, gateways de cobranca em `billing`, storage/assinatura em `documents`, enrichment em `crm`, governanca fiscal em `fiscal` e postura por tenant em `platform-control`.
 
 ## Integracao com Workflows
 

@@ -32,6 +32,12 @@ paths:
       responses:
         "201":
           description: Created notification
+  /api/notification/center/bulk:
+    post:
+      summary: Bulk create notification center items with partial success
+      responses:
+        "200":
+          description: Bulk notification result
   /api/notification/center/{publicId}/status:
     patch:
       summary: Transition notification status

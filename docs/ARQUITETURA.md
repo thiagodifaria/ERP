@@ -9,7 +9,7 @@ A arquitetura atual e uma plataforma backend-first, multi-tenant e poliglota, co
 ## Numeros de Referencia
 
 - 20 servicos HTTP com contrato OpenAPI.
-- 201 endpoints HTTP versionados.
+- 206 endpoints HTTP versionados.
 - 12 schemas de evento versionados.
 - Contratos em `docs/contracts/`.
 - Runtime local em `infra/docker-compose.yml`.
@@ -88,6 +88,28 @@ client / client-api
 
 Contratos ficam em `docs/contracts/` porque sao artefatos de governanca e interoperabilidade. Eles nao pertencem a `infra/`, pois nao sao infraestrutura de runtime, e nao pertencem a um unico diretorio de servico, pois tambem orientam consumidores, smoke, console tecnico e revisao de compatibilidade.
 
+### Decisao: HTTP Interno Antes de gRPC
+
+O padrao oficial do projeto, no baseline atual, e usar HTTP versionado com OpenAPI para a superficie interna/publica entre servicos e consumidores tecnicos.
+
+Essa decisao acompanha a realidade do ERP: o monorepo e poliglota, com servicos em Go, .NET, Elixir, TypeScript, Python e Rust. A plataforma precisa de contratos navegaveis, testes simples em ambiente local, onboarding rapido e uma forma objetiva de expor a API completa no `client-web/client-api`.
+
+gRPC continua sendo uma opcao tecnica valida para comunicacao interna de alto volume, streaming ou contratos binarios fortemente tipados entre servicos controlados. Mesmo assim, o custo operacional de introduzir gRPC em todos os contextos agora seria maior que o ganho imediato.
+
+Consequencias praticas:
+
+- cada servico com superficie publica mantem OpenAPI em `docs/contracts/http/`;
+- endpoint novo relevante nasce com contrato ou atualiza contrato existente;
+- mudanca de contrato deve ser compativel ou explicitamente versionada;
+- operacoes longas usam `202 Accepted`, recurso de job/rollout/execution e endpoint de leitura;
+- mutacoes sensiveis usam `Idempotency-Key` quando houver risco de duplicidade;
+- eventos compartilhados continuam em JSON Schema dentro de `docs/contracts/events/`;
+- `client-web/client-api` pode gerar catalogo navegavel a partir dos contratos HTTP;
+- `./scripts/test.sh contract` valida registry, schema registry e portal;
+- consumidores humanos e assistidos por LLM conseguem inspecionar contratos sem tooling especifico de gRPC.
+
+A decisao deve ser reavaliada quando houver streaming real entre servicos, gargalo comprovado de chamadas internas de altissimo volume, necessidade concreta de contrato binario entre dois servicos controlados ou requisito de multiplexacao/performance que o HTTP atual nao resolva bem.
+
 ## Comunicacao Entre Contextos
 
 - HTTP versionado e usado para superficie publica e consumo sincronico.
@@ -128,7 +150,7 @@ O repositorio e unico para facilitar evolucao coordenada, smoke local e governan
 - runtime do servico;
 - suite de testes que valida aquela superficie.
 
-Essa escolha evita o custo de varios repositorios nesta fase e ainda preserva disciplina de arquitetura distribuida.
+Essa escolha evita o custo de varios repositorios no momento atual e ainda preserva disciplina de arquitetura distribuida.
 
 ### Poliglotismo orientado por dominio
 

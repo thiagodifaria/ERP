@@ -20,7 +20,7 @@ Este README traz uma visao completa, mas compacta. Os detalhes especificos ficam
 ## Estado Atual
 
 - 20 servicos HTTP com contratos OpenAPI.
-- 201 endpoints HTTP versionados.
+- 206 endpoints HTTP versionados.
 - 12 schemas de evento versionados.
 - Contratos em `docs/contracts/`.
 - Runtime em `infra/docker-compose.yml`.

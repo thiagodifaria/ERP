@@ -1,9 +1,9 @@
 import { CampaignRepository } from "../domain/campaign-repository.js";
-import { ensurePublicId, ensureTouchpointText } from "../domain/touchpoint.js";
+import { ensurePublicId, ensureTouchpointText, Touchpoint } from "../domain/touchpoint.js";
 import { ProviderEventRepository } from "../domain/provider-event-repository.js";
-import { ensureProvider } from "../domain/provider-event.js";
+import { ensureProvider, ProviderEvent } from "../domain/provider-event.js";
 import { TouchpointRepository } from "../domain/touchpoint-repository.js";
-import { CrmGateway } from "../infrastructure/crm-gateway.js";
+import { CrmGateway, CrmLeadRecord } from "../infrastructure/crm-gateway.js";
 
 export type IngestProviderLeadInput = {
   tenantSlug: string;
@@ -24,7 +24,7 @@ export class IngestProviderLead {
     private readonly crmGateway: CrmGateway
   ) {}
 
-  async execute(input: IngestProviderLeadInput) {
+  async execute(input: IngestProviderLeadInput): Promise<{ lead: CrmLeadRecord; touchpoint: Touchpoint | null; providerEvent: ProviderEvent }> {
     const tenantSlug = ensureTouchpointText(input.tenantSlug, "tenant_slug_required");
     const provider = ensureProvider(input.provider);
     const name = ensureTouchpointText(input.name, "provider_lead_name_required");
@@ -36,7 +36,25 @@ export class IngestProviderLead {
     if (externalEventId.length > 0) {
       const existing = await this.providerEvents.findByProviderAndExternalEventId(tenantSlug, provider, externalEventId);
       if (existing !== null) {
-        throw new Error("provider_event_conflict");
+        const touchpoint = existing.touchpointPublicId ? await this.touchpoints.getByPublicId(existing.touchpointPublicId) : null;
+        const leadPublicId = existing.leadPublicId ?? existing.businessEntityPublicId;
+        if (leadPublicId === null) {
+          throw new Error("provider_event_replay_invalid");
+        }
+        const lead = {
+          publicId: leadPublicId,
+          name: "",
+          email: "",
+          source: provider,
+          status: "captured",
+          ownerUserId: ""
+        };
+
+        return {
+          lead,
+          touchpoint,
+          providerEvent: existing
+        };
       }
     }
 

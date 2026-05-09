@@ -114,16 +114,38 @@ def test_lifecycle_job_transitions_append_audit_events() -> None:
     ).json()
     job_public_id = created["publicId"]
 
+    invalid_complete_response = client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/lifecycle/jobs/{job_public_id}/complete",
+        json={"summary": "Cannot complete before start."},
+    )
     start_response = client.post(f"/api/platform-control/tenants/bootstrap-ops/lifecycle/jobs/{job_public_id}/start", json={"summary": "Started."})
     complete_response = client.post(f"/api/platform-control/tenants/bootstrap-ops/lifecycle/jobs/{job_public_id}/complete", json={"summary": "Completed."})
     detail_response = client.get(f"/api/platform-control/tenants/bootstrap-ops/lifecycle/jobs/{job_public_id}")
     detail_payload = detail_response.json()
 
+    assert invalid_complete_response.status_code == 400
+    assert invalid_complete_response.json()["detail"]["code"] == "lifecycle_job_transition_invalid"
     assert start_response.status_code == 200
     assert complete_response.status_code == 200
     assert detail_response.status_code == 200
     assert detail_payload["status"] == "completed"
     assert len(detail_payload["events"]) >= 3
+
+
+def test_lifecycle_job_can_cancel_from_queue() -> None:
+    created = client.post(
+        "/api/platform-control/tenants/bootstrap-ops/lifecycle/onboarding",
+        json={"requestedBy": "ops@bootstrap-ops.local", "payload": {"seed": "starter"}},
+    ).json()
+
+    cancel_response = client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/lifecycle/jobs/{created['publicId']}/cancel",
+        json={"summary": "Cancelled before execution."},
+    )
+
+    assert cancel_response.status_code == 200
+    assert cancel_response.json()["status"] == "cancelled"
+    assert any(event["status"] == "cancelled" for event in cancel_response.json()["events"])
 
 
 def test_go_live_rollout_flow_returns_readiness_and_history() -> None:
@@ -223,3 +245,38 @@ def test_go_live_adjustments_can_apply_quota_and_block_changes() -> None:
     assert block_apply_response.status_code == 200
     assert quota_apply_response.json()["result"]["limitValue"] == 20
     assert block_apply_response.json()["result"]["active"] is False
+
+
+def test_go_live_rollout_rejects_invalid_transition_and_supports_rollback() -> None:
+    create_response = client.post(
+        "/api/platform-control/tenants/bootstrap-ops/go-live/rollouts",
+        json={
+            "requestedBy": "ops@bootstrap-ops.local",
+            "targetEnv": "production",
+            "waveKey": "wave-rollback",
+            "rollbackPlaybook": "docs/OPERACOES.md#rollback",
+            "adoptionTargetPct": 75,
+        },
+    )
+    rollout_public_id = create_response.json()["publicId"]
+
+    invalid_complete_response = client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/go-live/rollouts/{rollout_public_id}/complete",
+        json={"summary": "Cannot complete before start."},
+    )
+    start_response = client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/go-live/rollouts/{rollout_public_id}/start",
+        json={"summary": "Wave started."},
+    )
+    rollback_response = client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/go-live/rollouts/{rollout_public_id}/rollback",
+        json={"summary": "Rollback executed from controlled wave."},
+    )
+
+    assert create_response.status_code == 200
+    assert invalid_complete_response.status_code == 400
+    assert invalid_complete_response.json()["detail"]["code"] == "go_live_rollout_transition_invalid"
+    assert start_response.status_code == 200
+    assert rollback_response.status_code == 200
+    assert rollback_response.json()["status"] == "rolled_back"
+    assert any(event["status"] == "rolled_back" for event in rollback_response.json()["events"])

@@ -125,7 +125,7 @@ Esse ciclo evita que contrato vire documentacao atrasada.
 
 ## Politica de Versao
 
-Enquanto o projeto esta em fase de consolidacao interna, os contratos usam versoes de artefato e changelog do repositorio. Quando houver consumidor externo real, mudancas breaking devem ser tratadas com uma destas estrategias:
+Enquanto o projeto esta em consolidacao interna, os contratos usam versoes de artefato e changelog do repositorio. Quando houver consumidor externo real, mudancas breaking devem ser tratadas com uma destas estrategias:
 
 - criar nova versao de endpoint;
 - aceitar os dois formatos por janela de migracao;

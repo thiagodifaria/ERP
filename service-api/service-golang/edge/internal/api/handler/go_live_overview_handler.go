@@ -64,17 +64,19 @@ func (handler GoLiveOverviewHandler) Overview(writer http.ResponseWriter, reques
 
 func buildGoLiveExecutiveSummary(payload map[string]any) dto.GoLiveExecutiveSummary {
 	return dto.GoLiveExecutiveSummary{
-		Status:             readMapString(payload, "readiness", "status"),
-		PlannedRollouts:    readMapInt(payload, "rollouts", "planned"),
-		RunningRollouts:    readMapInt(payload, "rollouts", "running"),
-		CompletedRollouts:  readMapInt(payload, "rollouts", "completed"),
-		RolledBackRollouts: readMapInt(payload, "rollouts", "rolledBack"),
-		TrackedMetrics:     readMapInt(payload, "adoption", "trackedMetrics"),
-		TotalQuantity:      readMapInt(payload, "adoption", "totalQuantity"),
-		AdoptionPct:        readMapInt(payload, "adoption", "adoptionPct"),
-		PendingAdjustments: readMapInt(payload, "adjustments", "recommended"),
+		Status:              readMapString(payload, "readiness", "status"),
+		PlannedRollouts:     readMapInt(payload, "rollouts", "planned"),
+		RunningRollouts:     readMapInt(payload, "rollouts", "running"),
+		CompletedRollouts:   readMapInt(payload, "rollouts", "completed"),
+		RolledBackRollouts:  readMapInt(payload, "rollouts", "rolledBack"),
+		TrackedMetrics:      readMapInt(payload, "adoption", "trackedMetrics"),
+		TotalQuantity:       readMapInt(payload, "adoption", "totalQuantity"),
+		AdoptionPct:         readMapInt(payload, "adoption", "adoptionPct"),
+		PendingAdjustments:  readMapInt(payload, "adjustments", "recommended"),
 		CriticalBottlenecks: readMapInt(payload, "bottlenecks", "critical"),
-		RolloutReady:       readMapBool(payload, "readiness", "rolloutReady"),
-		MetricsObserved:    readMapBool(payload, "readiness", "metricsObserved"),
+		RolloutReady:        readMapBool(payload, "readiness", "rolloutReady"),
+		RollbackReady:       readMapBool(payload, "readiness", "rollbackReady"),
+		MetricsObserved:     readMapBool(payload, "readiness", "metricsObserved"),
+		AcceptanceReady:     readMapBool(payload, "releaseControls", "acceptanceReady"),
 	}
 }

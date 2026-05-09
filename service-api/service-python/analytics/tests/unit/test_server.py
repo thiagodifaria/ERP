@@ -267,6 +267,9 @@ def test_hardening_review_returns_operational_review_payload() -> None:
     assert payload["reviews"]["providerCapabilities"]["fallbackCapabilities"] >= 1
     assert payload["reviews"]["contractGovernance"]["httpSpecs"] >= 7
     assert payload["reviews"]["performance"]["latestBenchmarkStatus"] == "attention"
+    assert payload["reviews"]["operationalRunbooks"]["acceptanceReady"] is True
+    assert "backup-restore" in payload["reviews"]["operationalRunbooks"]["testSuites"]
+    assert "permissions" in payload["reviews"]["operationalRunbooks"]["coveredAreas"]
 
 
 def test_saas_control_returns_usage_and_lifecycle_payload() -> None:
@@ -338,3 +341,7 @@ def test_go_live_control_returns_rollout_and_adoption_payload() -> None:
     assert "recommended" in payload["adjustments"]
     assert "total" in payload["bottlenecks"]
     assert payload["readiness"]["rolloutReady"] is True
+    assert payload["readiness"]["rollbackReady"] is True
+    assert payload["releaseControls"]["acceptanceReady"] is True
+    assert "rollback" in payload["releaseControls"]["controls"]
+    assert "hardening" in payload["releaseControls"]["testSuites"]

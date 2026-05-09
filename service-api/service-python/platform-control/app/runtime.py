@@ -1256,6 +1256,12 @@ def transition_lifecycle_job(tenant_slug: str, public_id: str, action: str, payl
         "fail": ("failed", "Job execution failed."),
         "cancel": ("cancelled", "Job execution cancelled."),
     }
+    allowed_statuses = {
+        "start": {"queued"},
+        "complete": {"running"},
+        "fail": {"running"},
+        "cancel": {"queued", "running"},
+    }
     if action not in action_map:
         raise ValueError("lifecycle_action_invalid")
 
@@ -1267,6 +1273,8 @@ def transition_lifecycle_job(tenant_slug: str, public_id: str, action: str, payl
         job = next((item for item in IN_MEMORY_STATE["jobs"] if item["tenantSlug"] == slug and item["publicId"] == public_id), None)
         if job is None:
             raise ValueError("lifecycle_job_not_found")
+        if job["status"] not in allowed_statuses[action]:
+            raise ValueError("lifecycle_job_transition_invalid")
         job["status"] = next_status
         now = utc_now()
         if next_status == "running":
@@ -1285,6 +1293,21 @@ def transition_lifecycle_job(tenant_slug: str, public_id: str, action: str, payl
         with connection.cursor() as cursor:
             cursor.execute(
                 """
+                SELECT job.id, job.status
+                FROM identity.tenants AS tenant
+                JOIN platform_control.lifecycle_jobs AS job ON tenant.id = job.tenant_id
+                WHERE tenant.slug = %s
+                  AND job.public_id = %s
+                """,
+                (slug, public_id),
+            )
+            row = cursor.fetchone()
+            if row is None:
+                raise ValueError("lifecycle_job_not_found")
+            if row["status"] not in allowed_statuses[action]:
+                raise ValueError("lifecycle_job_transition_invalid")
+            cursor.execute(
+                """
                 UPDATE platform_control.lifecycle_jobs AS job
                 SET status = %s,
                     started_at = CASE WHEN %s = 'running' THEN NOW() ELSE job.started_at END,
@@ -1292,23 +1315,20 @@ def transition_lifecycle_job(tenant_slug: str, public_id: str, action: str, payl
                     failed_at = CASE WHEN %s = 'failed' THEN NOW() ELSE job.failed_at END,
                     cancelled_at = CASE WHEN %s = 'cancelled' THEN NOW() ELSE job.cancelled_at END,
                     failure_reason = CASE WHEN %s = 'failed' THEN %s ELSE job.failure_reason END
-                FROM identity.tenants AS tenant
-                WHERE tenant.id = job.tenant_id
-                  AND tenant.slug = %s
-                  AND job.public_id = %s
+                WHERE job.id = %s
                 RETURNING job.id
                 """,
-                (next_status, next_status, next_status, next_status, next_status, next_status, failure_reason, slug, public_id),
+                (next_status, next_status, next_status, next_status, next_status, next_status, failure_reason, row["id"]),
             )
-            row = cursor.fetchone()
-            if row is None:
+            updated = cursor.fetchone()
+            if updated is None:
                 raise ValueError("lifecycle_job_not_found")
             cursor.execute(
                 """
                 INSERT INTO platform_control.lifecycle_job_events (job_id, public_id, status, summary)
                 VALUES (%s, %s, %s, %s)
                 """,
-                (row["id"], str(uuid.uuid4()), next_status, summary),
+                (updated["id"], str(uuid.uuid4()), next_status, summary),
             )
             connection.commit()
 
@@ -1891,6 +1911,11 @@ def transition_go_live_rollout(tenant_slug: str, public_id: str, action: str, pa
         "complete": ("completed", "Rollout completed."),
         "rollback": ("rolled_back", "Rollback executed."),
     }
+    allowed_statuses = {
+        "start": {"planned"},
+        "complete": {"running"},
+        "rollback": {"running", "completed"},
+    }
     if action not in transition_map:
         raise ValueError("rollout_action_invalid")
     next_status, fallback_summary = transition_map[action]
@@ -1899,6 +1924,8 @@ def transition_go_live_rollout(tenant_slug: str, public_id: str, action: str, pa
     if settings.repository_driver != "postgres":
         for rollout in IN_MEMORY_STATE["go_live_rollouts"]:
             if rollout["tenantSlug"] == slug and rollout["publicId"] == public_id:
+                if rollout["status"] not in allowed_statuses[action]:
+                    raise ValueError("go_live_rollout_transition_invalid")
                 rollout["status"] = next_status
                 timestamp = utc_now()
                 if action == "start":
@@ -1922,6 +1949,21 @@ def transition_go_live_rollout(tenant_slug: str, public_id: str, action: str, pa
 
     with connect() as connection:
         with connection.cursor() as cursor_db:
+            cursor_db.execute(
+                """
+                SELECT rollout.id, rollout.status
+                FROM identity.tenants AS tenant
+                JOIN platform_control.go_live_rollouts AS rollout ON tenant.id = rollout.tenant_id
+                WHERE tenant.slug = %s
+                  AND rollout.public_id = %s
+                """,
+                (slug, public_id),
+            )
+            row = cursor_db.fetchone()
+            if row is None:
+                raise ValueError("go_live_rollout_not_found")
+            if row["status"] not in allowed_statuses[action]:
+                raise ValueError("go_live_rollout_transition_invalid")
             update_column = {
                 "start": "started_at",
                 "complete": "completed_at",
@@ -1929,19 +1971,12 @@ def transition_go_live_rollout(tenant_slug: str, public_id: str, action: str, pa
             }[action]
             cursor_db.execute(
                 f"""
-                UPDATE platform_control.go_live_rollouts AS rollout
+                UPDATE platform_control.go_live_rollouts
                 SET status = %s, {update_column} = NOW()
-                FROM identity.tenants AS tenant
-                WHERE tenant.id = rollout.tenant_id
-                  AND tenant.slug = %s
-                  AND rollout.public_id = %s
-                RETURNING rollout.id
+                WHERE id = %s
                 """,
-                (next_status, slug, public_id),
+                (next_status, row["id"]),
             )
-            row = cursor_db.fetchone()
-            if row is None:
-                raise ValueError("go_live_rollout_not_found")
             cursor_db.execute(
                 """
                 INSERT INTO platform_control.go_live_rollout_events (rollout_id, public_id, status, summary)

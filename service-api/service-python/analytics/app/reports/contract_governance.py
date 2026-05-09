@@ -36,7 +36,11 @@ FALLBACK_EVENT_SCHEMAS = [
     "webhook-hub.outbound-delivery.schema.json",
 ]
 
-FALLBACK_ADRS = ["ARQUITETURA.md"]
+FALLBACK_DECISION_DOCS = ["ARQUITETURA.md"]
+
+
+def resolve_architecture_decision_docs(root: Path) -> list[str]:
+    return ["ARQUITETURA.md"] if (root / "docs" / "ARQUITETURA.md").exists() else []
 
 
 def build_contract_governance() -> dict:
@@ -44,13 +48,13 @@ def build_contract_governance() -> dict:
     if root is not None:
         http_specs = [item.name for item in sorted((root / "docs" / "contracts" / "http").glob("*.yaml"))]
         event_schemas = [item.name for item in sorted((root / "docs" / "contracts" / "events").glob("*.json"))]
-        adrs = ["ARQUITETURA.md"] if (root / "docs" / "ARQUITETURA.md").exists() else []
+        decision_docs = resolve_architecture_decision_docs(root)
         api_portal_ready = (root / "docs" / "contracts" / "portal" / "index.html").exists()
         registry_ready = (root / "docs" / "contracts" / "registry.json").exists() and (root / "docs" / "contracts" / "schema-registry.json").exists()
     else:
         http_specs = FALLBACK_HTTP_SPECS
         event_schemas = FALLBACK_EVENT_SCHEMAS
-        adrs = FALLBACK_ADRS
+        decision_docs = FALLBACK_DECISION_DOCS
         api_portal_ready = True
         registry_ready = True
 
@@ -59,7 +63,7 @@ def build_contract_governance() -> dict:
         "catalog": {
             "httpSpecs": len(http_specs),
             "eventSchemas": len(event_schemas),
-            "adrs": len(adrs),
+            "adrs": len(decision_docs),
             "apiPortalReady": api_portal_ready,
             "schemaRegistryReady": registry_ready,
         },
@@ -72,7 +76,7 @@ def build_contract_governance() -> dict:
         "artifacts": {
             "http": http_specs,
             "events": event_schemas,
-            "adrs": adrs,
+            "adrs": decision_docs,
         },
         "readiness": {
             "status": "stable" if api_portal_ready and registry_ready else "attention",

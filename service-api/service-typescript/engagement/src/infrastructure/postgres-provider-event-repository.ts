@@ -179,88 +179,103 @@ export class PostgresProviderEventRepository implements ProviderEventRepository 
   async create(input: CreateProviderEventInput): Promise<ProviderEvent> {
     const normalized = ensureProviderEventInput(input);
     const tenantId = await this.resolveTenantId(normalized.tenantSlug);
+    const existing = normalized.externalEventId
+      ? await this.findByProviderAndExternalEventId(normalized.tenantSlug, normalized.provider, normalized.externalEventId)
+      : null;
 
-    if (normalized.externalEventId && (await this.findByProviderAndExternalEventId(normalized.tenantSlug, normalized.provider, normalized.externalEventId)) !== null) {
-      throw new Error("provider_event_conflict");
+    if (existing !== null) {
+      return existing;
     }
 
-    const result = await this.pool.query<ProviderEventRow>(
-      `
-        INSERT INTO engagement.provider_events (
-          tenant_id,
-          public_id,
-          provider,
-          event_type,
-          direction,
-          external_event_id,
-          lead_public_id,
-          business_entity_type,
-          business_entity_public_id,
-          touchpoint_public_id,
-          delivery_public_id,
-          workflow_run_public_id,
-          status,
-          payload_summary,
-          response_summary,
-          processed_at
-        )
-        VALUES (
-          $1,
-          gen_random_uuid(),
-          $2,
-          $3,
-          $4,
-          NULLIF($5, ''),
-          CASE WHEN $6 = '' THEN NULL ELSE $6::uuid END,
-          NULLIF($7, ''),
-          CASE WHEN $8 = '' THEN NULL ELSE $8::uuid END,
-          CASE WHEN $9 = '' THEN NULL ELSE $9::uuid END,
-          CASE WHEN $10 = '' THEN NULL ELSE $10::uuid END,
-          CASE WHEN $11 = '' THEN NULL ELSE $11::uuid END,
-          $12,
-          $13,
-          $14,
-          CASE WHEN $15 = '' THEN NULL ELSE $15::timestamptz END
-        )
-        RETURNING
-          id,
-          public_id::text,
-          $16::text AS tenant_slug,
-          provider,
-          event_type,
-          direction,
-          COALESCE(external_event_id, '') AS external_event_id,
-          COALESCE(lead_public_id::text, '') AS lead_public_id,
-          COALESCE(business_entity_type, '') AS business_entity_type,
-          COALESCE(business_entity_public_id::text, '') AS business_entity_public_id,
-          COALESCE(touchpoint_public_id::text, '') AS touchpoint_public_id,
-          COALESCE(delivery_public_id::text, '') AS delivery_public_id,
-          COALESCE(workflow_run_public_id::text, '') AS workflow_run_public_id,
-          status,
-          payload_summary,
-          response_summary,
-          created_at,
-          processed_at
-      `,
-      [
-        tenantId,
-        normalized.provider,
-        normalized.eventType,
-        normalized.direction,
-        normalized.externalEventId ?? "",
-        normalized.leadPublicId ?? "",
-        normalized.businessEntityType ?? "",
-        normalized.businessEntityPublicId ?? "",
-        normalized.touchpointPublicId ?? "",
-        normalized.deliveryPublicId ?? "",
-        normalized.workflowRunPublicId ?? "",
-        normalized.status,
-        normalized.payloadSummary,
-        normalized.responseSummary,
-        normalized.processedAt ?? "",
-        normalized.tenantSlug
-      ]
-    );
+    let result: pg.QueryResult<ProviderEventRow>;
+    try {
+      result = await this.pool.query<ProviderEventRow>(
+        `
+          INSERT INTO engagement.provider_events (
+            tenant_id,
+            public_id,
+            provider,
+            event_type,
+            direction,
+            external_event_id,
+            lead_public_id,
+            business_entity_type,
+            business_entity_public_id,
+            touchpoint_public_id,
+            delivery_public_id,
+            workflow_run_public_id,
+            status,
+            payload_summary,
+            response_summary,
+            processed_at
+          )
+          VALUES (
+            $1,
+            gen_random_uuid(),
+            $2,
+            $3,
+            $4,
+            NULLIF($5, ''),
+            CASE WHEN $6 = '' THEN NULL ELSE $6::uuid END,
+            NULLIF($7, ''),
+            CASE WHEN $8 = '' THEN NULL ELSE $8::uuid END,
+            CASE WHEN $9 = '' THEN NULL ELSE $9::uuid END,
+            CASE WHEN $10 = '' THEN NULL ELSE $10::uuid END,
+            CASE WHEN $11 = '' THEN NULL ELSE $11::uuid END,
+            $12,
+            $13,
+            $14,
+            CASE WHEN $15 = '' THEN NULL ELSE $15::timestamptz END
+          )
+          RETURNING
+            id,
+            public_id::text,
+            $16::text AS tenant_slug,
+            provider,
+            event_type,
+            direction,
+            COALESCE(external_event_id, '') AS external_event_id,
+            COALESCE(lead_public_id::text, '') AS lead_public_id,
+            COALESCE(business_entity_type, '') AS business_entity_type,
+            COALESCE(business_entity_public_id::text, '') AS business_entity_public_id,
+            COALESCE(touchpoint_public_id::text, '') AS touchpoint_public_id,
+            COALESCE(delivery_public_id::text, '') AS delivery_public_id,
+            COALESCE(workflow_run_public_id::text, '') AS workflow_run_public_id,
+            status,
+            payload_summary,
+            response_summary,
+            created_at,
+            processed_at
+        `,
+        [
+          tenantId,
+          normalized.provider,
+          normalized.eventType,
+          normalized.direction,
+          normalized.externalEventId ?? "",
+          normalized.leadPublicId ?? "",
+          normalized.businessEntityType ?? "",
+          normalized.businessEntityPublicId ?? "",
+          normalized.touchpointPublicId ?? "",
+          normalized.deliveryPublicId ?? "",
+          normalized.workflowRunPublicId ?? "",
+          normalized.status,
+          normalized.payloadSummary,
+          normalized.responseSummary,
+          normalized.processedAt ?? "",
+          normalized.tenantSlug
+        ]
+      );
+    } catch (error) {
+      if (normalized.externalEventId && isUniqueViolation(error)) {
+        const replay = await this.findByProviderAndExternalEventId(normalized.tenantSlug, normalized.provider, normalized.externalEventId);
+        if (replay !== null) {
+          return replay;
+        }
+      }
+
+      throw error;
+    }
 
     return this.mapRow(result.rows[0]);
   }
@@ -317,4 +332,8 @@ export class PostgresProviderEventRepository implements ProviderEventRepository 
       processedAt: row.processed_at ? row.processed_at.toISOString() : null
     };
   }
+}
+
+function isUniqueViolation(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && (error as { code?: string }).code === "23505";
 }

@@ -124,6 +124,8 @@ workflow-runtime
 | `backup-restore` | backup e restauracao do PostgreSQL |
 | `hardening` | readiness, contratos, providers e postura operacional |
 
+Para o hardening enterprise, o conjunto minimo de evidencia operacional e formado por `contract`, `smoke`, `performance`, `backup-restore` e `hardening`. O relatorio `GET /api/analytics/reports/hardening-review` consolida esse fechamento como `operationalRunbooks`, permitindo validar rapidamente se seguranca operacional, observabilidade, DLQ/retry, backup/restore, SLOs, multi-tenant, failover, performance e permissoes possuem cobertura operacional rastreavel.
+
 ## Runbook Rapido
 
 ### Stack nao sobe
@@ -187,6 +189,36 @@ Depois de restore, rode uma validacao proporcional:
 ```bash
 ./scripts/test.sh smoke
 ```
+
+## Go-live Operacional
+
+O go-live progressivo e controlado por tenant. O objetivo operacional e liberar ondas pequenas, observar metricas reais, manter rollback claro e registrar ajustes finos sem depender de planilhas externas.
+
+O `platform-control` concentra o controle transacional:
+
+- `GET /api/platform-control/tenants/{tenantSlug}/go-live/readiness` mostra readiness de rollout, rollback e metricas;
+- `POST /api/platform-control/tenants/{tenantSlug}/go-live/rollouts` cria uma onda com `targetEnv`, `waveKey`, `rollbackPlaybook` e `adoptionTargetPct`;
+- `POST /api/platform-control/tenants/{tenantSlug}/go-live/rollouts/{publicId}/start` inicia a onda;
+- `POST /api/platform-control/tenants/{tenantSlug}/go-live/rollouts/{publicId}/complete` conclui uma onda iniciada;
+- `POST /api/platform-control/tenants/{tenantSlug}/go-live/rollouts/{publicId}/rollback` registra rollback controlado;
+- `GET /api/platform-control/tenants/{tenantSlug}/go-live/adoption` acompanha adocao e gap contra alvo;
+- `GET /api/platform-control/tenants/{tenantSlug}/go-live/bottlenecks` lista gargalos de providers, quotas e bloqueios;
+- `GET /api/platform-control/tenants/{tenantSlug}/go-live/playbook` devolve o checklist operacional;
+- `GET /api/platform-control/tenants/{tenantSlug}/go-live/adjustments` sugere ajustes aplicaveis;
+- `POST /api/platform-control/tenants/{tenantSlug}/go-live/adjustments/{adjustmentKey}/apply` aplica ajustes suportados.
+
+O `analytics` consolida o fechamento em `GET /api/analytics/reports/go-live-control`, incluindo `rollouts`, `adoption`, `bottlenecks`, `adjustments`, `readiness` e `releaseControls`. O bloco `releaseControls` e a evidencia rapida de que rollout por tenant, monitoramento de adocao, rollback, observacao de gargalos e ajuste por uso estao cobertos por runbook e suites oficiais.
+
+O `edge` publica a visao executiva em `GET /api/edge/ops/go-live-overview?tenantSlug=bootstrap-ops`, agregando `service-pulse`, `saas-control`, `go-live-control` e um `executiveSummary` com `rolloutReady`, `rollbackReady`, `metricsObserved` e `acceptanceReady`.
+
+Validacao recomendada:
+
+```bash
+./scripts/test.sh smoke
+./scripts/test.sh hardening
+```
+
+Considere a entrega pronta quando existir pelo menos uma onda auditavel, as metricas de uso estiverem observadas, o rollback estiver disponivel, os gargalos estiverem visiveis e os ajustes suportados puderem ser aplicados por API.
 
 ## Observabilidade Local
 

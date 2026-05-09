@@ -190,8 +190,19 @@ test("provider flows support inbound lead ingestion, workflow dispatch and callb
     workflowRunPublicId: "00000000-0000-0000-0000-000000000450",
     leadPublicId: inbound.lead.publicId
   });
+  const replay = await services.registerProviderEvent.execute({
+    tenantSlug: "bootstrap-ops",
+    provider: "resend",
+    eventType: "delivery.responded",
+    externalEventId: "resend-event-001",
+    touchpointPublicId: dispatch.touchpoint.publicId,
+    deliveryPublicId: dispatch.delivery.publicId,
+    workflowRunPublicId: "00000000-0000-0000-0000-000000000450",
+    leadPublicId: inbound.lead.publicId
+  });
 
   assert.equal(callback.status, "processed");
+  assert.equal(replay.publicId, callback.publicId);
   const detail = await services.getProviderEventByPublicId.execute(callback.publicId);
   assert.equal(detail?.publicId, callback.publicId);
   assert.equal(detail?.eventType, "delivery.responded");

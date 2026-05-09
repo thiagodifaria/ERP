@@ -5,9 +5,10 @@ from pathlib import Path
 
 from app.config.settings import settings
 from app.reports.contract_governance import (
-    FALLBACK_ADRS,
+    FALLBACK_DECISION_DOCS,
     FALLBACK_EVENT_SCHEMAS,
     FALLBACK_HTTP_SPECS,
+    resolve_architecture_decision_docs,
 )
 from app.reports.repo_root import try_resolve_repo_root
 
@@ -245,23 +246,23 @@ def build_contract_catalog() -> dict:
     if root is not None:
         http_specs = [item.name for item in sorted((root / "docs" / "contracts" / "http").glob("*.yaml"))]
         event_schemas = [item.name for item in sorted((root / "docs" / "contracts" / "events").glob("*.json"))]
-        adr_docs = ["ARQUITETURA.md"] if (root / "docs" / "ARQUITETURA.md").exists() else []
+        decision_docs = resolve_architecture_decision_docs(root)
         api_portal_ready = (root / "docs" / "contracts" / "portal" / "index.html").exists()
         registry_ready = (root / "docs" / "contracts" / "registry.json").exists() and (root / "docs" / "contracts" / "schema-registry.json").exists()
     else:
         http_specs = FALLBACK_HTTP_SPECS
         event_schemas = FALLBACK_EVENT_SCHEMAS
-        adr_docs = FALLBACK_ADRS
+        decision_docs = FALLBACK_DECISION_DOCS
         api_portal_ready = True
         registry_ready = True
 
     return {
         "service": "contracts",
         "summary": {
-            "artifacts": len(http_specs) + len(event_schemas) + len(adr_docs) + int(api_portal_ready) + int(registry_ready),
+            "artifacts": len(http_specs) + len(event_schemas) + len(decision_docs) + int(api_portal_ready) + int(registry_ready),
             "httpSpecs": len(http_specs),
             "eventSchemas": len(event_schemas),
-            "adrRecorded": len(adr_docs) > 0,
+            "adrRecorded": len(decision_docs) > 0,
             "centralUiReady": api_portal_ready,
             "schemaRegistryReady": registry_ready,
         },

@@ -27,10 +27,10 @@ func TestGoLiveOverviewReturnsExecutiveCockpit(t *testing.T) {
 		t.Fatalf("unexpected decode error: %v", err)
 	}
 
-	if !response.ExecutiveSummary.RolloutReady || response.ExecutiveSummary.CompletedRollouts != 1 {
+	if !response.ExecutiveSummary.RolloutReady || !response.ExecutiveSummary.RollbackReady || response.ExecutiveSummary.CompletedRollouts != 1 {
 		t.Fatalf("unexpected executive summary payload: %+v", response.ExecutiveSummary)
 	}
-	if response.ExecutiveSummary.AdoptionPct != 84 || response.ExecutiveSummary.PendingAdjustments != 1 {
+	if response.ExecutiveSummary.AdoptionPct != 84 || response.ExecutiveSummary.PendingAdjustments != 1 || !response.ExecutiveSummary.AcceptanceReady {
 		t.Fatalf("unexpected go-live adjustments payload: %+v", response.ExecutiveSummary)
 	}
 }
@@ -42,11 +42,12 @@ func (reader goLiveOverviewReader) GetJSON(_ context.Context, requestURL string,
 	switch {
 	case strings.Contains(requestURL, "/go-live-control"):
 		payload = map[string]any{
-			"readiness": map[string]any{"status": "stable", "rolloutReady": true, "metricsObserved": true},
-			"rollouts": map[string]any{"planned": 0, "running": 0, "completed": 1, "rolledBack": 0},
-			"adoption": map[string]any{"trackedMetrics": 4, "totalQuantity": 4096, "adoptionPct": 84},
-			"adjustments": map[string]any{"recommended": 1},
-			"bottlenecks": map[string]any{"critical": 0},
+			"readiness":       map[string]any{"status": "stable", "rolloutReady": true, "rollbackReady": true, "metricsObserved": true},
+			"rollouts":        map[string]any{"planned": 0, "running": 0, "completed": 1, "rolledBack": 0},
+			"adoption":        map[string]any{"trackedMetrics": 4, "totalQuantity": 4096, "adoptionPct": 84},
+			"adjustments":     map[string]any{"recommended": 1},
+			"bottlenecks":     map[string]any{"critical": 0},
+			"releaseControls": map[string]any{"acceptanceReady": true},
 		}
 	default:
 		payload = map[string]any{"tenantSlug": "bootstrap-ops"}

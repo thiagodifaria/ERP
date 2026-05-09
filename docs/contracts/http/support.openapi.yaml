@@ -33,6 +33,18 @@ paths:
       responses:
         "201":
           description: Created support case
+  /api/support/cases/export:
+    get:
+      summary: Export support cases with filters
+      responses:
+        "200":
+          description: Exported support cases
+  /api/support/cases/bulk:
+    post:
+      summary: Bulk create support cases with partial success
+      responses:
+        "200":
+          description: Bulk support case result
   /api/support/cases/summary:
     get:
       summary: Read support case summary

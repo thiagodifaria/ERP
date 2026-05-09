@@ -130,7 +130,7 @@ export const services: ServiceContract[] = [
     "version": "0.1.0",
     "description": "Internal notification center, preferences and reusable dispatch shape.",
     "contractFile": "docs/contracts/http/notification.openapi.yaml",
-    "endpointCount": 7
+    "endpointCount": 8
   },
   {
     "slug": "platform-control",
@@ -175,7 +175,7 @@ export const services: ServiceContract[] = [
     "version": "0.1.0",
     "description": "Supplier directory, categories and payables-oriented vendor governance.",
     "contractFile": "docs/contracts/http/supplier.openapi.yaml",
-    "endpointCount": 8
+    "endpointCount": 10
   },
   {
     "slug": "support",
@@ -184,7 +184,7 @@ export const services: ServiceContract[] = [
     "version": "0.1.0",
     "description": "Queue-based support cases with SLA, comments and lifecycle history.",
     "contractFile": "docs/contracts/http/support.openapi.yaml",
-    "endpointCount": 9
+    "endpointCount": 11
   },
   {
     "slug": "webhook-hub",
@@ -1878,6 +1878,18 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
+    "id": "notification:POST:/api/notification/center/bulk",
+    "service": "notification",
+    "method": "POST",
+    "path": "/api/notification/center/bulk",
+    "tag": "Notification",
+    "description": "Bulk create notification center items with partial success",
+    "summary": "Bulk create notification center items with partial success",
+    "source": "docs/contracts/http/notification.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
     "id": "notification:PATCH:/api/notification/center/{publicId}/status",
     "service": "notification",
     "method": "PATCH",
@@ -2877,6 +2889,30 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
+    "id": "supplier:GET:/api/supplier/suppliers/export",
+    "service": "supplier",
+    "method": "GET",
+    "path": "/api/supplier/suppliers/export",
+    "tag": "Supplier",
+    "description": "Export suppliers by tenant and status",
+    "summary": "Export suppliers by tenant and status",
+    "source": "docs/contracts/http/supplier.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "supplier:POST:/api/supplier/suppliers/bulk",
+    "service": "supplier",
+    "method": "POST",
+    "path": "/api/supplier/suppliers/bulk",
+    "tag": "Supplier",
+    "description": "Bulk create suppliers with partial success",
+    "summary": "Bulk create suppliers with partial success",
+    "source": "docs/contracts/http/supplier.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
     "id": "supplier:GET:/api/supplier/suppliers/summary",
     "service": "supplier",
     "method": "GET",
@@ -3010,6 +3046,30 @@ export const endpoints: EndpointContract[] = [
     "tag": "Support",
     "description": "Create one support case",
     "summary": "Create one support case",
+    "source": "docs/contracts/http/support.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "support:GET:/api/support/cases/export",
+    "service": "support",
+    "method": "GET",
+    "path": "/api/support/cases/export",
+    "tag": "Support",
+    "description": "Export support cases with filters",
+    "summary": "Export support cases with filters",
+    "source": "docs/contracts/http/support.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "support:POST:/api/support/cases/bulk",
+    "service": "support",
+    "method": "POST",
+    "path": "/api/support/cases/bulk",
+    "tag": "Support",
+    "description": "Bulk create support cases with partial success",
+    "summary": "Bulk create support cases with partial success",
     "source": "docs/contracts/http/support.openapi.yaml",
     "hasBody": true,
     "pathParams": []

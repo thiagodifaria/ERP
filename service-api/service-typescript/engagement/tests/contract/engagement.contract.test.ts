@@ -310,6 +310,25 @@ test("provider routes expose callback detail and traceability", async () => {
     assert.equal(callbackPayload.eventType, "delivery.responded");
     assert.equal(callbackPayload.status, "processed");
 
+    const replayResponse = await fetch(`${baseUrl}/api/engagement/providers/resend/events`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        tenantSlug: "bootstrap-ops",
+        eventType: "delivery.responded",
+        externalEventId: "contract-provider-event-001",
+        touchpointPublicId: touchpointPayload.publicId,
+        deliveryPublicId: deliveryPayload.publicId,
+        workflowRunPublicId: "00000000-0000-0000-0000-000000000455",
+        leadPublicId: "00000000-0000-0000-0000-000000008851"
+      })
+    });
+    const replayPayload = (await replayResponse.json()) as { publicId: string; eventType: string; status: string };
+
+    assert.equal(replayResponse.status, 201);
+    assert.equal(replayPayload.publicId, callbackPayload.publicId);
+    assert.equal(replayPayload.status, "processed");
+
     const detailResponse = await fetch(`${baseUrl}/api/engagement/provider-events/${callbackPayload.publicId}`);
     const detailPayload = (await detailResponse.json()) as {
       publicId: string;

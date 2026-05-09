@@ -58,9 +58,12 @@ export class InMemoryProviderEventRepository implements ProviderEventRepository 
 
   async create(input: CreateProviderEventInput): Promise<ProviderEvent> {
     const normalized = ensureProviderEventInput(input);
+    const existing = normalized.externalEventId
+      ? await this.findByProviderAndExternalEventId(normalized.tenantSlug, normalized.provider, normalized.externalEventId)
+      : null;
 
-    if (normalized.externalEventId && (await this.findByProviderAndExternalEventId(normalized.tenantSlug, normalized.provider, normalized.externalEventId)) !== null) {
-      throw new Error("provider_event_conflict");
+    if (existing !== null) {
+      return existing;
     }
 
     const createdAt = new Date().toISOString();

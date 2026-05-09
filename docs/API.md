@@ -28,13 +28,13 @@ Use este arquivo para entender como chamar e evoluir a API. Para ownership dos s
 | `finance` | `docs/contracts/http/finance.openapi.yaml` | 5 | recebiveis e atividade financeira |
 | `fiscal` | `docs/contracts/http/fiscal.openapi.yaml` | 25 | fiscal, retencao, privacidade e auditoria |
 | `identity` | `docs/contracts/http/identity.openapi.yaml` | 6 | tenants, sessoes e convites |
-| `notification` | `docs/contracts/http/notification.openapi.yaml` | 7 | preferencias e central de notificacoes |
+| `notification` | `docs/contracts/http/notification.openapi.yaml` | 8 | preferencias e central de notificacoes |
 | `platform-control` | `docs/contracts/http/platform-control.openapi.yaml` | 40 | capabilities, quotas, lifecycle e go-live |
 | `rentals` | `docs/contracts/http/rentals.openapi.yaml` | 4 | contratos recorrentes e cobrancas |
 | `sales` | `docs/contracts/http/sales.openapi.yaml` | 6 | oportunidades, propostas e vendas |
 | `simulation` | `docs/contracts/http/simulation.openapi.yaml` | 3 | cenarios e benchmarks |
-| `supplier` | `docs/contracts/http/supplier.openapi.yaml` | 8 | categorias e fornecedores |
-| `support` | `docs/contracts/http/support.openapi.yaml` | 9 | filas, casos e comentarios |
+| `supplier` | `docs/contracts/http/supplier.openapi.yaml` | 10 | categorias e fornecedores |
+| `support` | `docs/contracts/http/support.openapi.yaml` | 11 | filas, casos e comentarios |
 | `webhook-hub` | `docs/contracts/http/webhook-hub.openapi.yaml` | 13 | inbound/outbound webhooks e DLQ |
 | `workflow-control` | `docs/contracts/http/workflow-control.openapi.yaml` | 7 | definicoes e catalogos de workflow |
 | `workflow-runtime` | `docs/contracts/http/workflow-runtime.openapi.yaml` | 6 | execucoes e actions |

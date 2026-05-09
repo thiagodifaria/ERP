@@ -33,6 +33,18 @@ paths:
       responses:
         "201":
           description: Created supplier
+  /api/supplier/suppliers/export:
+    get:
+      summary: Export suppliers by tenant and status
+      responses:
+        "200":
+          description: Exported suppliers
+  /api/supplier/suppliers/bulk:
+    post:
+      summary: Bulk create suppliers with partial success
+      responses:
+        "200":
+          description: Bulk supplier result
   /api/supplier/suppliers/summary:
     get:
       summary: Read supplier summary

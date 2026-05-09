@@ -22,7 +22,7 @@ This repository is a polyglot, container-first backend platform. The root README
 | Item | Value |
 |------|-------|
 | HTTP services with OpenAPI contracts | 20 |
-| Versioned HTTP endpoints | 201 |
+| Versioned HTTP endpoints | 206 |
 | Event schemas | 12 |
 | Contract catalog | `docs/contracts/` |
 | Runtime command | `./scripts/build.sh` |

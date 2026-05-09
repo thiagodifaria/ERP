@@ -42,7 +42,7 @@ export class RegisterProviderEvent {
     if (externalEventId.length > 0) {
       const existing = await this.providerEvents.findByProviderAndExternalEventId(tenantSlug, provider, externalEventId);
       if (existing !== null) {
-        throw new Error("provider_event_conflict");
+        return existing;
       }
     }
 

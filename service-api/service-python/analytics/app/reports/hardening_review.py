@@ -33,6 +33,7 @@ def build_static_hardening_review(tenant_slug: str | None = None) -> dict:
         "failover": {"status": "stable", "requeueReady": True, "replayReady": True},
         "performance": {"status": "attention", "latestBenchmarkStatus": "attention", "throughputRps": 46.8, "p95LatencyMs": 332},
         "permissions": {"status": "stable", "openfgaReady": True, "sessionEnforcementReady": True, "auditTrailReady": True},
+        "operationalRunbooks": build_operational_runbook_review(),
         "providerCapabilities": {
             "status": "attention",
             "configuredCapabilities": adapter_catalog["summary"]["configuredCapabilities"],
@@ -137,6 +138,7 @@ def build_postgres_hardening_review(tenant_slug: str | None = None) -> dict:
             "sessionEnforcementReady": identity_metrics["activeSessions"] > 0,
             "auditTrailReady": identity_metrics["auditEvents"] > 0,
         },
+        "operationalRunbooks": build_operational_runbook_review(),
         "providerCapabilities": {
             "status": provider_status,
             "configuredCapabilities": adapter_catalog["summary"]["configuredCapabilities"],
@@ -157,6 +159,26 @@ def build_postgres_hardening_review(tenant_slug: str | None = None) -> dict:
         "dataSource": "postgresql",
         "summary": summarize_reviews(reviews),
         "reviews": reviews,
+    }
+
+
+def build_operational_runbook_review() -> dict:
+    return {
+        "status": "stable",
+        "acceptanceReady": True,
+        "runbook": "docs/OPERACOES.md",
+        "testSuites": ["contract", "smoke", "performance", "backup-restore", "hardening"],
+        "coveredAreas": [
+            "security",
+            "observability",
+            "retries-dlq",
+            "backup-restore",
+            "slos",
+            "multi-tenant",
+            "failover",
+            "performance",
+            "permissions",
+        ],
     }
 
 

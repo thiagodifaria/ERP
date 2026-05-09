@@ -1,5 +1,5 @@
 -- Vincula o usuario owner padrao ao time Core do tenant.
--- O objetivo e manter banco e bootstrap HTTP alinhados durante a fase inicial.
+-- O objetivo e manter banco e bootstrap HTTP alinhados durante o bootstrap inicial.
 
 INSERT INTO identity.team_memberships (tenant_id, team_id, user_id)
 SELECT

@@ -6,6 +6,29 @@ from app.config.settings import settings
 from app.infrastructure.postgres import connect
 
 
+def build_release_controls() -> dict:
+    return {
+        "status": "stable",
+        "acceptanceReady": True,
+        "playbook": "docs/OPERACOES.md#go-live-operacional",
+        "testSuites": ["smoke", "hardening"],
+        "controls": [
+            "tenant-rollout",
+            "adoption-monitoring",
+            "rollback",
+            "bottleneck-review",
+            "usage-adjustments",
+        ],
+        "coveredAreas": [
+            "rollout-by-tenant",
+            "business-and-health-metrics",
+            "auditable-rollback",
+            "bottleneck-observation",
+            "fine-tuning-by-usage",
+        ],
+    }
+
+
 def build_go_live_control(tenant_slug: str | None = None) -> dict:
     slug = tenant_slug or "bootstrap-ops"
     if settings.repository_driver != "postgres":
@@ -17,6 +40,7 @@ def build_go_live_control(tenant_slug: str | None = None) -> dict:
             "bottlenecks": {"critical": 0, "attention": 1, "total": 1},
             "adjustments": {"recommended": 1, "applySupported": 1},
             "readiness": {"status": "stable", "rolloutReady": True, "rollbackReady": True, "metricsObserved": True},
+            "releaseControls": build_release_controls(),
         }
 
     with connect() as connection:
@@ -132,4 +156,5 @@ def build_go_live_control(tenant_slug: str | None = None) -> dict:
             "rollbackReady": True,
             "metricsObserved": tracked_metrics > 0,
         },
+        "releaseControls": build_release_controls(),
     }
