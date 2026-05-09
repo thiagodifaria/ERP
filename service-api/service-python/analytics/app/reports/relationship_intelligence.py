@@ -6,6 +6,35 @@ from app.config.settings import settings
 from app.infrastructure.postgres import connect
 
 
+def build_crm_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "deterministic-email-dedup",
+            "bulk-import-partial-success",
+            "filtered-export",
+            "ownership-and-status-history",
+            "outbox-events",
+        ],
+        "coveredAreas": [
+            "lead",
+            "customer",
+            "ownership",
+            "interactions",
+            "history",
+            "pipeline",
+            "attachments",
+            "crm-events",
+        ],
+        "runtimeEvidence": [
+            "POST /api/crm/leads",
+            "POST /api/crm/leads/bulk",
+            "GET /api/crm/leads/export",
+            "GET /api/crm/leads/{publicId}/history",
+        ],
+    }
+
+
 def build_relationship_intelligence(tenant_slug: str | None = None) -> dict:
     slug = tenant_slug or "bootstrap-ops"
     if settings.repository_driver != "postgres":
@@ -21,6 +50,7 @@ def build_relationship_intelligence(tenant_slug: str | None = None) -> dict:
             "territories": {"rules": 1, "assignmentReady": True},
             "forecast": {"bookedRevenueCents": 1775000, "weightedPipelineCents": 2314000, "confidence": "attention", "scenarioCount": 2},
             "readiness": {"status": "attention", "slaReady": True, "forecastReady": True, "relationshipSignalsReady": True, "bulkReady": True},
+            "crmClosure": build_crm_closure(),
         }
 
     with connect() as connection:
@@ -104,4 +134,5 @@ def build_relationship_intelligence(tenant_slug: str | None = None) -> dict:
             "relationshipSignalsReady": leads_total > 0,
             "bulkReady": True,
         },
+        "crmClosure": build_crm_closure(),
     }

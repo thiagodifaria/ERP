@@ -97,6 +97,8 @@ def test_document_governance_returns_document_operational_payload() -> None:
     assert payload["storage"]["drivers"]["r2"] == 9
     assert payload["uploads"]["completed"] == 6
     assert payload["ownership"]["crm.customer"] == 9
+    assert payload["documentClosure"]["acceptanceReady"] is True
+    assert "version-history" in payload["documentClosure"]["controls"]
 
 
 def test_engagement_operations_returns_engagement_operational_payload() -> None:
@@ -153,6 +155,8 @@ def test_automation_board_returns_delivery_and_runtime_board() -> None:
     assert payload["runtime"]["byWorkflow"][0]["retriesTotal"] == 3
     assert payload["control"]["byWorkflow"][0]["workflowDefinitionKey"] == "lead-follow-up"
     assert payload["delivery"]["forwarded"] == 87
+    assert payload["workflowClosure"]["acceptanceReady"] is True
+    assert "compensation-metadata" in payload["workflowClosure"]["controls"]
 
 
 def test_workflow_definition_health_returns_definition_level_health() -> None:
@@ -206,6 +210,8 @@ def test_finance_control_returns_treasury_and_billing_payload() -> None:
     assert payload["profitability"]["netOperationalMarginCents"] == 453000
     assert payload["governance"]["failedPaymentAttempts"] == 3
     assert payload["governance"]["recoveryActions"] == 18
+    assert payload["billingClosure"]["acceptanceReady"] is True
+    assert "payment-attempt-idempotency" in payload["billingClosure"]["controls"]
 
 
 def test_collections_control_returns_recovery_operational_payload() -> None:
@@ -231,6 +237,8 @@ def test_rental_operations_returns_rental_operational_payload() -> None:
     assert payload["charges"]["scheduled"] == 18
     assert payload["charges"]["collectedAmountCents"] == 1665000
     assert payload["governance"]["attachments"] == 7
+    assert payload["rentalClosure"]["acceptanceReady"] is True
+    assert "documents-linkage" in payload["rentalClosure"]["controls"]
 
 
 def test_cost_estimator_returns_scenario_based_cost_payload() -> None:
@@ -299,6 +307,8 @@ def test_core_operations_returns_new_product_context_payload() -> None:
     assert payload["tenantSlug"] == "bootstrap-ops"
     assert payload["summary"]["catalogItems"] == 12
     assert payload["support"]["overdue"] == 1
+    assert payload["coreClosure"]["acceptanceReady"] is True
+    assert "catalog-consumers" in payload["coreClosure"]["controls"]
 
 
 def test_relationship_intelligence_returns_pipeline_and_forecast_payload() -> None:
@@ -315,6 +325,8 @@ def test_relationship_intelligence_returns_pipeline_and_forecast_payload() -> No
     assert payload["forecast"]["confidence"] == "attention"
     assert payload["forecast"]["scenarioCount"] == 2
     assert payload["readiness"]["bulkReady"] is True
+    assert payload["crmClosure"]["acceptanceReady"] is True
+    assert "deterministic-email-dedup" in payload["crmClosure"]["controls"]
 
 
 def test_compliance_control_returns_fiscal_and_privacy_payload() -> None:

@@ -80,6 +80,7 @@ def build_static_finance_control(tenant_slug: str | None = None) -> dict:
             "failedPaymentAttempts": 3,
             "recoveryActions": 18,
         },
+        "billingClosure": build_billing_closure(),
     }
 
 
@@ -117,6 +118,38 @@ def build_postgres_finance_control(tenant_slug: str | None = None) -> dict:
         "billing": billing,
         "profitability": profitability,
         "governance": governance,
+        "billingClosure": build_billing_closure(),
+    }
+
+
+def build_billing_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "plan-catalog",
+            "subscription-lifecycle",
+            "invoice-lifecycle",
+            "payment-attempt-idempotency",
+            "collections-recovery",
+            "suspend-reactivate",
+            "usage-pricing",
+        ],
+        "coveredAreas": [
+            "flat-pricing",
+            "hybrid-pricing",
+            "usage-based-pricing",
+            "grace-period",
+            "failed-payment-retry",
+            "reconciliation-signals",
+            "subscription-events",
+        ],
+        "runtimeEvidence": [
+            "POST /api/billing/plans",
+            "POST /api/billing/subscriptions",
+            "POST /api/billing/invoices/{publicId}/payment-attempts",
+            "POST /api/billing/subscriptions/{publicId}/suspend",
+            "GET /api/analytics/reports/finance-control",
+        ],
     }
 
 

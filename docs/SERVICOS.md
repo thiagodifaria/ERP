@@ -151,25 +151,25 @@ Esta tabela nao promete producao final; ela ajuda a entender o papel atual de ca
 | Servico | Estado atual | Proximo cuidado natural |
 |---------|--------------|-------------------------|
 | `identity` | base de tenancy/acesso estabelecida | endurecer autorizacao por rota e claims |
-| `crm` | relacao comercial e pipeline operacional | ampliar fluxos de import/export e deduplicacao |
+| `crm` | relacao comercial, pipeline, deduplicacao por email, bulk/import, export filtrado, historico e outbox operacional | aprofundar scoring preditivo, forecast e enriquecimento externo real |
 | `sales` | operacao comercial basica integrada | aprofundar estados comerciais e aprovacao |
-| `billing` | recorrencia e cobranca estruturadas | integrar gateways reais com fallback controlado |
+| `billing` | recorrencia, cobranca, pricing flat/hybrid/usage, idempotencia de tentativas, recovery e suspend/reactivate operacionais | integrar gateways reais com fallback controlado e conciliacao externa |
 | `finance` | consolidacao financeira operacional | ampliar reconciliacao e fechamento |
-| `documents` | metadata, assinatura e versoes | ligar storage real e politicas de retencao |
+| `documents` | metadata, upload sessions, assinatura, versoes, retencao, arquivamento e links seguros operacionais | ligar storage real e varredura automatica de retencao |
 | `fiscal` | compliance fiscal/privacidade amplo | validar provider fiscal real e regras por regime |
 | `platform-control` | governanca SaaS avancada | endurecer lifecycle real e auditoria por ator |
 | `analytics` | reports executivos e hardening | persistir read models quando necessario |
 | `edge` | cockpits consolidados | garantir auth, cache e resiliencia por dependencia |
-| `workflow-control` | definicao e catalogos | versionamento e validacao visual de fluxos |
-| `workflow-runtime` | execucao duravel | robustez de retry/wait em cenarios longos |
+| `workflow-control` | definicoes, catalogos, versionamento, publish/restore, ledger e diagnostico por workflow operacionais | melhorar autoria visual de fluxos e simulacao antes de publicar |
+| `workflow-runtime` | execucao duravel, transicoes, delays, retries, capacidades e compensacoes basicas operacionais | ampliar observabilidade de execucoes longas e cargas concorrentes |
 | `engagement` | callbacks e provider events | adapters externos reais por canal |
 | `webhook-hub` | inbound/outbound e DLQ | assinatura, retry policy e seguranca de endpoint |
-| `catalog` | itens, versoes e consumers | relacao com pricing e disponibilidade |
-| `support` | casos e filas | SLA real e automacoes |
-| `supplier` | diretorio e categorias | procurement workflow |
-| `notification` | preferencias e central | canais externos e templates |
+| `catalog` | itens, versoes imutaveis, consumers, contratos de consumo e governanca de produto operacionais | aprofundar disponibilidade, pricing e politicas comerciais |
+| `support` | casos, filas, SLA e exportacao/bulk operacionais | automacoes de atendimento e escalonamento |
+| `supplier` | diretorio, categorias, exportacao/bulk e contratos administrativos operacionais | procurement workflow e avaliacao continua |
+| `notification` | preferencias, central, severidade e bulk operacional | canais externos e templates |
 | `simulation` | cenarios e benchmark | alimentar planejamento com dados reais |
-| `rentals` | contratos e charges | reajuste e encerramento mais completos |
+| `rentals` | contratos, charges, reajustes, encerramento, historico, outbox e anexos operacionais | regras avancadas de reajuste e integracao contabil/fiscal |
 
 ## Checklist Para Novo Servico
 

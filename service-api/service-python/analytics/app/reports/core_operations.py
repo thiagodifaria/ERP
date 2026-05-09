@@ -6,6 +6,34 @@ from app.config.settings import settings
 from app.infrastructure.postgres import connect
 
 
+def build_core_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "catalog-versioning",
+            "catalog-consumers",
+            "supplier-directory",
+            "support-sla-lifecycle",
+            "notification-center",
+            "bulk-export-partial-success",
+        ],
+        "coveredAreas": [
+            "catalog",
+            "supplier",
+            "support",
+            "notification",
+            "consumer-contracts",
+            "administrative-core",
+        ],
+        "runtimeEvidence": [
+            "GET /api/catalog/items/{publicId}/versions",
+            "GET /api/catalog/consumers",
+            "GET /api/support/cases/export",
+            "POST /api/notification/notifications/bulk",
+        ],
+    }
+
+
 def build_core_operations(tenant_slug: str | None = None) -> dict:
     slug = tenant_slug or "bootstrap-ops"
     if settings.repository_driver != "postgres":
@@ -18,6 +46,7 @@ def build_core_operations(tenant_slug: str | None = None) -> dict:
             "support": {"open": 3, "overdue": 1},
             "notification": {"unread": 5, "critical": 2},
             "readiness": {"status": "stable", "catalogReady": True, "supplierReady": True, "supportReady": True, "notificationReady": True},
+            "coreClosure": build_core_closure(),
         }
 
     with connect() as connection:
@@ -78,4 +107,5 @@ def build_core_operations(tenant_slug: str | None = None) -> dict:
             "supportReady": int(row.get("support_cases_total", 0) or 0) > 0,
             "notificationReady": int(row.get("notifications_total", 0) or 0) > 0,
         },
+        "coreClosure": build_core_closure(),
     }

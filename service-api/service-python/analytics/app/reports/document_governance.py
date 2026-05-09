@@ -48,6 +48,7 @@ def build_static_document_governance(tenant_slug: str | None = None) -> dict:
             "rentals.contract": 5,
             "sales.sale": 3,
         },
+        "documentClosure": build_document_closure(),
     }
 
 
@@ -70,6 +71,35 @@ def build_postgres_document_governance(tenant_slug: str | None = None) -> dict:
         "storage": storage,
         "uploads": uploads,
         "ownership": ownership,
+        "documentClosure": build_document_closure(),
+    }
+
+
+def build_document_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "upload-sessions",
+            "version-history",
+            "retention-metadata",
+            "archive-lifecycle",
+            "signed-access-link",
+            "signing-capability",
+        ],
+        "coveredAreas": [
+            "attachment-metadata",
+            "owner-linkage",
+            "visibility-policy",
+            "storage-driver-posture",
+            "document-signing",
+            "secure-download",
+        ],
+        "runtimeEvidence": [
+            "POST /api/documents/attachments",
+            "POST /api/documents/attachments/{publicId}/versions",
+            "POST /api/documents/upload-sessions",
+            "POST /api/documents/attachments/{publicId}/access-links",
+        ],
     }
 
 

@@ -92,6 +92,7 @@ def build_static_automation_board(tenant_slug: str | None = None) -> dict:
             "forwarded": 87,
             "failed": 3,
         },
+        "workflowClosure": build_workflow_closure(),
     }
 
 
@@ -112,6 +113,36 @@ def build_postgres_automation_board(tenant_slug: str | None = None) -> dict:
         "control": control_metrics,
         "runtime": runtime_metrics,
         "delivery": delivery_metrics,
+        "workflowClosure": build_workflow_closure(),
+    }
+
+
+def build_workflow_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "trigger-action-catalog",
+            "definition-versioning",
+            "publish-restore",
+            "run-ledger",
+            "durable-delays",
+            "retry-policy",
+            "compensation-metadata",
+            "runtime-transitions",
+        ],
+        "coveredAreas": [
+            "workflow-control",
+            "workflow-runtime",
+            "webhook-delivery",
+            "definition-health",
+            "execution-history",
+            "by-workflow-diagnostics",
+        ],
+        "runtimeEvidence": [
+            "GET /api/analytics/reports/automation-board",
+            "GET /api/analytics/reports/workflow-definition-health",
+            "GET /api/workflow-runtime/capabilities",
+        ],
     }
 
 

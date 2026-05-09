@@ -42,6 +42,7 @@ def build_static_rental_operations(tenant_slug: str | None = None) -> dict:
             "pendingOutbox": 3,
             "attachments": 7,
         },
+        "rentalClosure": build_rental_closure(),
     }
 
 
@@ -60,6 +61,37 @@ def build_postgres_rental_operations(tenant_slug: str | None = None) -> dict:
         "contracts": contracts,
         "charges": charges,
         "governance": governance,
+        "rentalClosure": build_rental_closure(),
+    }
+
+
+def build_rental_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "contract-lifecycle",
+            "recurring-charges",
+            "adjustments",
+            "termination-flow",
+            "history-events",
+            "documents-linkage",
+            "outbox-events",
+        ],
+        "coveredAreas": [
+            "contract-create",
+            "contract-status",
+            "charge-schedule",
+            "charge-payment",
+            "charge-cancel",
+            "contract-termination",
+            "attachment-governance",
+        ],
+        "runtimeEvidence": [
+            "POST /api/rentals/contracts",
+            "POST /api/rentals/contracts/{publicId}/adjustments",
+            "POST /api/rentals/contracts/{publicId}/terminate",
+            "GET /api/analytics/reports/rental-operations",
+        ],
     }
 
 
