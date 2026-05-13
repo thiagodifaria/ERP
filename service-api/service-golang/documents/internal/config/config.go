@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 )
 
 type Config struct {
@@ -33,7 +34,7 @@ func Load() Config {
 		HTTPAddress:         envOrDefault("DOCUMENTS_HTTP_ADDRESS", ":8086"),
 		RepositoryDriver:    envOrDefault("DOCUMENTS_REPOSITORY_DRIVER", "memory"),
 		BootstrapTenantSlug: envOrDefault("DOCUMENTS_BOOTSTRAP_TENANT_SLUG", "bootstrap-ops"),
-		AccessTokenSecret:   envOrDefault("DOCUMENTS_ACCESS_TOKEN_SECRET", "documents-local-secret"),
+		AccessTokenSecret:   resolveAccessTokenSecret(),
 		StorageDriver:       envOrDefault("DOCUMENTS_STORAGE_DRIVER", "local"),
 		StorageBucket:       envOrDefault("DOCUMENTS_STORAGE_BUCKET", ""),
 		StorageEndpoint:     envOrDefault("DOCUMENTS_STORAGE_ENDPOINT", ""),
@@ -70,4 +71,18 @@ func envOrDefault(key string, fallback string) string {
 	}
 
 	return value
+}
+
+func resolveAccessTokenSecret() string {
+	value := strings.TrimSpace(os.Getenv("DOCUMENTS_ACCESS_TOKEN_SECRET"))
+	if value != "" {
+		return value
+	}
+
+	environment := strings.ToLower(strings.TrimSpace(os.Getenv("ERP_ENV")))
+	if environment == "" || environment == "local" || environment == "dev" || environment == "development" || environment == "test" {
+		return "documents-local-secret"
+	}
+
+	panic("DOCUMENTS_ACCESS_TOKEN_SECRET is required outside local/test environments")
 }

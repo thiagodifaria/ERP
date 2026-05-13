@@ -80,6 +80,7 @@ def build_static_finance_control(tenant_slug: str | None = None) -> dict:
             "failedPaymentAttempts": 3,
             "recoveryActions": 18,
         },
+        "financeClosure": build_finance_closure(),
         "billingClosure": build_billing_closure(),
     }
 
@@ -118,7 +119,42 @@ def build_postgres_finance_control(tenant_slug: str | None = None) -> dict:
         "billing": billing,
         "profitability": profitability,
         "governance": governance,
+        "financeClosure": build_finance_closure(),
         "billingClosure": build_billing_closure(),
+    }
+
+
+def build_finance_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "sales-outbox-sync",
+            "receivable-lifecycle",
+            "idempotent-settlement",
+            "commission-release-block",
+            "payable-lifecycle",
+            "cash-account-ledger",
+            "treasury-sync",
+            "period-closure",
+            "activity-audit",
+        ],
+        "coveredAreas": [
+            "receivables",
+            "payables",
+            "commissions",
+            "costs",
+            "cash-movements",
+            "treasury",
+            "financial-close",
+            "operational-reporting",
+        ],
+        "runtimeEvidence": [
+            "POST /api/finance/operations/sync",
+            "POST /api/finance/receivables/{publicId}/settlements",
+            "POST /api/finance/treasury/sync",
+            "POST /api/finance/period-closures",
+            "GET /api/analytics/reports/finance-control",
+        ],
     }
 
 

@@ -14,6 +14,12 @@
       "domain": "crm"
     },
     {
+      "key": "crm.outbox-event",
+      "path": "docs/contracts/events/crm.outbox-event.schema.json",
+      "format": "json-schema",
+      "domain": "crm"
+    },
+    {
       "key": "documents.signing-request",
       "path": "docs/contracts/events/documents.signing-request.schema.json",
       "format": "json-schema",
@@ -54,6 +60,12 @@
       "path": "docs/contracts/events/platform-control.quota.schema.json",
       "format": "json-schema",
       "domain": "platform-control"
+    },
+    {
+      "key": "sales.outbox-event",
+      "path": "docs/contracts/events/sales.outbox-event.schema.json",
+      "format": "json-schema",
+      "domain": "sales"
     },
     {
       "key": "support.case",

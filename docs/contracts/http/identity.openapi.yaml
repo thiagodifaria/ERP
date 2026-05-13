@@ -1,41 +1,506 @@
 openapi: 3.1.0
 info:
   title: ERP Identity API
-  version: 0.5.0
-  description: Tenancy, access, sessions, invitations and tenant-scoped identity governance.
+  version: 0.9.0
+  description: Tenancy, access, sessions, invitations, MFA, recovery and tenant-scoped identity governance.
+security:
+  - bearerAuth: []
 paths:
-  /api/identity/tenants:
-    get:
-      summary: List tenants
-      responses:
-        "200":
-          description: Tenant list
+  /api/identity/invites/{inviteToken}/accept:
     post:
-      summary: Create tenant
+      summary: Create or execute identity invites inviteToken accept
+      parameters:
+        - in: path
+          name: inviteToken
+          required: true
+          schema:
+            type: string
       responses:
         "200":
-          description: Created tenant
-  /api/identity/tenants/{slug}/snapshot:
-    get:
-      summary: Read one tenant snapshot
+          description: Operation result
+  /api/identity/password-recovery:
+    post:
+      summary: Create or execute identity password recovery
       responses:
         "200":
-          description: Tenant snapshot
+          description: Operation result
+  /api/identity/password-recovery/{resetToken}/complete:
+    post:
+      summary: Create or execute identity password recovery resetToken complete
+      parameters:
+        - in: path
+          name: resetToken
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
   /api/identity/sessions/login:
     post:
-      summary: Authenticate identity session
+      summary: Create or execute identity sessions login
       responses:
         "200":
-          description: Session payload
+          description: Operation result
+  /api/identity/sessions/logout:
+    post:
+      summary: Create or execute identity sessions logout
+      responses:
+        "200":
+          description: Operation result
   /api/identity/sessions/refresh:
     post:
-      summary: Refresh identity session
+      summary: Create or execute identity sessions refresh
       responses:
         "200":
-          description: Refreshed session payload
-  /api/identity/invitations:
+          description: Operation result
+  /api/identity/tenants:
+    get:
+      summary: Read identity tenants
+      responses:
+        "200":
+          description: Operation result
     post:
-      summary: Create invitation
+      summary: Create or execute identity tenants
       responses:
         "200":
-          description: Created invitation
+          description: Operation result
+  /api/identity/tenants/{slug}:
+    get:
+      summary: Read identity tenants slug
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/access:
+    get:
+      summary: Read identity tenants slug access
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/companies:
+    get:
+      summary: Read identity tenants slug companies
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+    post:
+      summary: Create or execute identity tenants slug companies
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/companies/{companyPublicId}:
+    get:
+      summary: Read identity tenants slug companies companyPublicId
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+    patch:
+      summary: Update identity tenants slug companies companyPublicId
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/invites:
+    get:
+      summary: Read identity tenants slug invites
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+    post:
+      summary: Create or execute identity tenants slug invites
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/invites/{invitePublicId}:
+    get:
+      summary: Read identity tenants slug invites invitePublicId
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/invites/{invitePublicId}/cancel:
+    post:
+      summary: Create or execute identity tenants slug invites invitePublicId cancel
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/invites/{invitePublicId}/resend:
+    post:
+      summary: Create or execute identity tenants slug invites invitePublicId resend
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/roles:
+    get:
+      summary: Read identity tenants slug roles
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/security/audit:
+    get:
+      summary: Read identity tenants slug security audit
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/sessions/{sessionPublicId}:
+    delete:
+      summary: Delete identity tenants slug sessions sessionPublicId
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/snapshot:
+    get:
+      summary: Read identity tenants slug snapshot
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/teams:
+    get:
+      summary: Read identity tenants slug teams
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+    post:
+      summary: Create or execute identity tenants slug teams
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/teams/{teamPublicId}:
+    patch:
+      summary: Update identity tenants slug teams teamPublicId
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/teams/{teamPublicId}/members:
+    get:
+      summary: Read identity tenants slug teams teamPublicId members
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+    post:
+      summary: Create or execute identity tenants slug teams teamPublicId members
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/teams/{teamPublicId}/members/{userPublicId}:
+    delete:
+      summary: Delete identity tenants slug teams teamPublicId members userPublicId
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/users:
+    get:
+      summary: Read identity tenants slug users
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+    post:
+      summary: Create or execute identity tenants slug users
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/users/{userPublicId}:
+    get:
+      summary: Read identity tenants slug users userPublicId
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+    patch:
+      summary: Update identity tenants slug users userPublicId
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/users/{userPublicId}/access:
+    patch:
+      summary: Update identity tenants slug users userPublicId access
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/users/{userPublicId}/mfa:
+    delete:
+      summary: Delete identity tenants slug users userPublicId mfa
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+    get:
+      summary: Read identity tenants slug users userPublicId mfa
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/users/{userPublicId}/mfa/enroll:
+    post:
+      summary: Create or execute identity tenants slug users userPublicId mfa enroll
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/users/{userPublicId}/mfa/verify:
+    post:
+      summary: Create or execute identity tenants slug users userPublicId mfa verify
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/users/{userPublicId}/roles:
+    get:
+      summary: Read identity tenants slug users userPublicId roles
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+    post:
+      summary: Create or execute identity tenants slug users userPublicId roles
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/users/{userPublicId}/roles/{roleCode}:
+    delete:
+      summary: Delete identity tenants slug users userPublicId roles roleCode
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/identity/tenants/{slug}/users/{userPublicId}/sessions:
+    delete:
+      summary: Delete identity tenants slug users userPublicId sessions
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+    get:
+      summary: Read identity tenants slug users userPublicId sessions
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /health/details:
+    get:
+      summary: Read health details
+      responses:
+        "200":
+          description: Operation result
+  /health/live:
+    get:
+      security: []
+      summary: Read health live
+      responses:
+        "200":
+          description: Operation result
+  /health/ready:
+    get:
+      summary: Read health ready
+      responses:
+        "200":
+          description: Operation result
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

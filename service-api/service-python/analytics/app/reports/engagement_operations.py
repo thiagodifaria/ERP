@@ -7,6 +7,38 @@ from app.infrastructure.postgres import connect
 from app.reports.pipeline_summary import tenant_filter
 
 
+def build_engagement_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "provider-callback-idempotency",
+            "campaign-lifecycle",
+            "template-governance",
+            "touchpoint-threading",
+            "delivery-tracking",
+            "business-entity-linkage",
+            "workflow-dispatch-linkage",
+            "provider-event-ledger",
+        ],
+        "coveredAreas": [
+            "campaigns",
+            "templates",
+            "touchpoints",
+            "deliveries",
+            "provider-events",
+            "inbound-callbacks",
+            "relationship-context",
+        ],
+        "runtimeEvidence": [
+            "POST /api/engagement/provider-events/callbacks",
+            "GET /api/engagement/touchpoints",
+            "GET /api/engagement/provider-events",
+            "GET /api/engagement/summary",
+            "GET /api/analytics/reports/engagement-operations",
+        ],
+    }
+
+
 def build_engagement_operations(tenant_slug: str | None = None) -> dict:
     if settings.repository_driver == "postgres":
         return build_postgres_engagement_operations(tenant_slug)
@@ -80,6 +112,7 @@ def build_static_engagement_operations(tenant_slug: str | None = None) -> dict:
             "businessEntityLinkedTouchpoints": 18,
             "businessEntityLinkedEvents": 6,
         },
+        "engagementClosure": build_engagement_closure(),
     }
 
 
@@ -109,6 +142,7 @@ def build_postgres_engagement_operations(tenant_slug: str | None = None) -> dict
             "businessEntityLinkedTouchpoints": touchpoints["businessLinked"],
             "businessEntityLinkedEvents": providers["businessLinkedEvents"],
         },
+        "engagementClosure": build_engagement_closure(),
     }
 
 

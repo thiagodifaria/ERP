@@ -19,27 +19,37 @@ Use este arquivo para entender como chamar e evoluir a API. Para ownership dos s
 | Servico | Arquivo | Endpoints | Base funcional |
 |---------|---------|-----------|----------------|
 | `analytics` | `docs/contracts/http/analytics.openapi.yaml` | 9 | reports operacionais e governanca |
-| `billing` | `docs/contracts/http/billing.openapi.yaml` | 9 | planos, assinaturas e cobranca |
-| `catalog` | `docs/contracts/http/catalog.openapi.yaml` | 12 | categorias, itens e consumidores |
-| `crm` | `docs/contracts/http/crm.openapi.yaml` | 5 | pipeline, leads e enrichment |
-| `documents` | `docs/contracts/http/documents.openapi.yaml` | 10 | anexos, storage e assinatura |
+| `billing` | `docs/contracts/http/billing.openapi.yaml` | 28 | planos, assinaturas e cobranca |
+| `catalog` | `docs/contracts/http/catalog.openapi.yaml` | 9 | categorias, itens e consumidores |
+| `crm` | `docs/contracts/http/crm.openapi.yaml` | 20 | pipeline, leads, customers, historico, anexos e enrichment |
+| `documents` | `docs/contracts/http/documents.openapi.yaml` | 8 | anexos, storage e assinatura |
 | `edge` | `docs/contracts/http/edge.openapi.yaml` | 8 | cockpits cross-service |
 | `engagement` | `docs/contracts/http/engagement.openapi.yaml` | 9 | providers, callbacks e conversas |
-| `finance` | `docs/contracts/http/finance.openapi.yaml` | 5 | recebiveis e atividade financeira |
-| `fiscal` | `docs/contracts/http/fiscal.openapi.yaml` | 25 | fiscal, retencao, privacidade e auditoria |
-| `identity` | `docs/contracts/http/identity.openapi.yaml` | 6 | tenants, sessoes e convites |
-| `notification` | `docs/contracts/http/notification.openapi.yaml` | 8 | preferencias e central de notificacoes |
-| `platform-control` | `docs/contracts/http/platform-control.openapi.yaml` | 40 | capabilities, quotas, lifecycle e go-live |
-| `rentals` | `docs/contracts/http/rentals.openapi.yaml` | 4 | contratos recorrentes e cobrancas |
-| `sales` | `docs/contracts/http/sales.openapi.yaml` | 6 | oportunidades, propostas e vendas |
-| `simulation` | `docs/contracts/http/simulation.openapi.yaml` | 3 | cenarios e benchmarks |
-| `supplier` | `docs/contracts/http/supplier.openapi.yaml` | 10 | categorias e fornecedores |
-| `support` | `docs/contracts/http/support.openapi.yaml` | 11 | filas, casos e comentarios |
-| `webhook-hub` | `docs/contracts/http/webhook-hub.openapi.yaml` | 13 | inbound/outbound webhooks e DLQ |
-| `workflow-control` | `docs/contracts/http/workflow-control.openapi.yaml` | 7 | definicoes e catalogos de workflow |
-| `workflow-runtime` | `docs/contracts/http/workflow-runtime.openapi.yaml` | 6 | execucoes e actions |
+| `finance` | `docs/contracts/http/finance.openapi.yaml` | 22 | recebiveis, comissoes, tesouraria, fechamentos e atividade financeira |
+| `fiscal` | `docs/contracts/http/fiscal.openapi.yaml` | 21 | fiscal, retencao, privacidade e auditoria |
+| `identity` | `docs/contracts/http/identity.openapi.yaml` | 35 | tenants, sessoes e convites |
+| `notification` | `docs/contracts/http/notification.openapi.yaml` | 6 | preferencias e central de notificacoes |
+| `platform-control` | `docs/contracts/http/platform-control.openapi.yaml` | 39 | capabilities, quotas, lifecycle e go-live |
+| `rentals` | `docs/contracts/http/rentals.openapi.yaml` | 9 | contratos recorrentes e cobrancas |
+| `sales` | `docs/contracts/http/sales.openapi.yaml` | 30 | oportunidades, propostas, vendas, invoices e operacoes comerciais |
+| `simulation` | `docs/contracts/http/simulation.openapi.yaml` | 6 | cenarios e benchmarks |
+| `supplier` | `docs/contracts/http/supplier.openapi.yaml` | 8 | categorias e fornecedores |
+| `support` | `docs/contracts/http/support.openapi.yaml` | 10 | filas, casos e comentarios |
+| `webhook-hub` | `docs/contracts/http/webhook-hub.openapi.yaml` | 10 | inbound/outbound webhooks e DLQ |
+| `workflow-control` | `docs/contracts/http/workflow-control.openapi.yaml` | 20 | definicoes, versionamento, runs e eventos de workflow |
+| `workflow-runtime` | `docs/contracts/http/workflow-runtime.openapi.yaml` | 14 | execucoes, timeline, transicoes e actions |
 
 ## Convencoes HTTP
+
+### Seguranca
+
+Todos os contratos OpenAPI declaram `bearerAuth` e `internalServiceToken`. A regra operacional e:
+
+- chamadas de usuario usam token OIDC/JWT;
+- chamadas internas usam service account com audience do destino;
+- health live e capability publica podem declarar excecao explicita;
+- rotas tenant-aware devem receber tenant explicito e validar permissao no servico dono;
+- mutacao sensivel nao deve confiar apenas na rede interna.
 
 ### Health
 
@@ -198,6 +208,7 @@ Padrao conceitual:
 
 ```text
 edge                 http://localhost:${EDGE_HTTP_PORT}
+gateway              http://localhost:${GATEWAY_HTTP_PORT}
 identity             http://localhost:${IDENTITY_HTTP_PORT}
 crm                  http://localhost:${CRM_HTTP_PORT}
 sales                http://localhost:${SALES_HTTP_PORT}
@@ -211,6 +222,8 @@ Para confirmar o estado real:
 ```bash
 ./scripts/build.sh ps
 ```
+
+O gateway local em `infra/gateway/nginx.conf` tambem publica `/gateway/health` e roteia `/api/<servico>/` com cache para leituras, rate limit, timeouts de downstream, correlacao de request e failover passivo por dependencia.
 
 No `client-web/client-api`, chamadas podem passar pelo proxy local do Vite. Isso evita CORS no desenvolvimento e permite testar endpoints de servicos diferentes em uma unica interface.
 

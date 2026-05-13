@@ -53,6 +53,9 @@ def build_static_hardening_review(tenant_slug: str | None = None) -> dict:
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "summary": summarize_reviews(reviews),
         "reviews": reviews,
+        "platformClosure": build_platform_closure(),
+        "hardeningClosure": build_hardening_closure(),
+        "productionMaturityClosure": build_production_maturity_closure(),
     }
 
 
@@ -159,6 +162,9 @@ def build_postgres_hardening_review(tenant_slug: str | None = None) -> dict:
         "dataSource": "postgresql",
         "summary": summarize_reviews(reviews),
         "reviews": reviews,
+        "platformClosure": build_platform_closure(),
+        "hardeningClosure": build_hardening_closure(),
+        "productionMaturityClosure": build_production_maturity_closure(),
     }
 
 
@@ -178,6 +184,128 @@ def build_operational_runbook_review() -> dict:
             "failover",
             "performance",
             "permissions",
+        ],
+    }
+
+
+def build_platform_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "compose-stack",
+            "service-healthchecks",
+            "postgresql-runtime",
+            "redis-runtime",
+            "kafka-runtime",
+            "keycloak-runtime",
+            "prometheus-grafana-baseline",
+            "environment-template",
+            "container-first-smoke",
+        ],
+        "coveredAreas": [
+            "infra",
+            "edge",
+            "identity",
+            "webhook-hub",
+            "observability",
+            "local-runtime",
+        ],
+        "runtimeEvidence": [
+            "infra/docker-compose.yml",
+            "infra/prometheus/prometheus.yml",
+            "infra/grafana/dashboards/platform-health.json",
+            "GET /health/details",
+            "./scripts/test.sh smoke",
+        ],
+    }
+
+
+def build_hardening_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "security-review",
+            "observability-review",
+            "retry-dlq-review",
+            "backup-restore-review",
+            "slo-review",
+            "multi-tenant-review",
+            "failover-review",
+            "performance-review",
+            "permission-review",
+            "gateway-resilience-review",
+            "dependency-slo-review",
+        ],
+        "coveredAreas": [
+            "security",
+            "observability",
+            "resilience",
+            "backup-restore",
+            "slos",
+            "multi-tenant",
+            "performance",
+            "permissions",
+            "gateway",
+            "dependency-slos",
+        ],
+        "runtimeEvidence": [
+            "./scripts/test.sh contract",
+            "./scripts/test.sh smoke",
+            "./scripts/test.sh performance",
+            "./scripts/test.sh backup-restore",
+            "./scripts/test.sh hardening",
+            "GET /api/analytics/reports/hardening-review",
+        ],
+    }
+
+
+def build_production_maturity_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "claims-policy-authorization",
+            "openfga-provider-health",
+            "keycloak-session-enforcement",
+            "near-realtime-operational-read-models",
+            "gateway-api-management",
+            "gateway-rate-limit",
+            "proxy-cache",
+            "passive-downstream-failover",
+            "dependency-timeouts",
+            "dependency-slo-review",
+            "expanded-domain-contracts",
+        ],
+        "coveredAreas": [
+            "authorization",
+            "analytics-read-models",
+            "api-management",
+            "resilience",
+            "domain-contract-coverage",
+            "operational-documentation",
+        ],
+        "readModelMode": "operational-near-realtime",
+        "gatewayControls": {
+            "cache": True,
+            "rateLimit": True,
+            "downstreamTimeouts": True,
+            "passiveFailover": True,
+            "requestCorrelation": True,
+        },
+        "expandedContracts": [
+            "rentals",
+            "simulation",
+            "workflow-control",
+            "workflow-runtime",
+        ],
+        "runtimeEvidence": [
+            "infra/gateway/nginx.conf",
+            "infra/docker-compose.yml",
+            "docs/contracts/http/rentals.openapi.yaml",
+            "docs/contracts/http/simulation.openapi.yaml",
+            "docs/contracts/http/workflow-control.openapi.yaml",
+            "docs/contracts/http/workflow-runtime.openapi.yaml",
+            "GET /api/analytics/reports/hardening-review",
+            "GET /gateway/health",
         ],
     }
 

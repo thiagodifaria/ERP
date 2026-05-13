@@ -7,25 +7,25 @@ Este documento descreve os servicos do ERP: ownership, stack, caminho de impleme
 | Servico | Stack | Caminho | Contrato | Endpoints |
 |---------|-------|---------|----------|-----------|
 | `analytics` | Python | `service-api/service-python/analytics` | `docs/contracts/http/analytics.openapi.yaml` | 9 |
-| `billing` | .NET | `service-api/service-csharp/billing` | `docs/contracts/http/billing.openapi.yaml` | 9 |
-| `catalog` | Python | `service-api/service-python/catalog` | `docs/contracts/http/catalog.openapi.yaml` | 12 |
-| `crm` | Go | `service-api/service-golang/crm` | `docs/contracts/http/crm.openapi.yaml` | 5 |
-| `documents` | Go | `service-api/service-golang/documents` | `docs/contracts/http/documents.openapi.yaml` | 10 |
+| `billing` | .NET | `service-api/service-csharp/billing` | `docs/contracts/http/billing.openapi.yaml` | 28 |
+| `catalog` | Python | `service-api/service-python/catalog` | `docs/contracts/http/catalog.openapi.yaml` | 9 |
+| `crm` | Go | `service-api/service-golang/crm` | `docs/contracts/http/crm.openapi.yaml` | 20 |
+| `documents` | Go | `service-api/service-golang/documents` | `docs/contracts/http/documents.openapi.yaml` | 8 |
 | `edge` | Go | `service-api/service-golang/edge` | `docs/contracts/http/edge.openapi.yaml` | 8 |
 | `engagement` | TypeScript | `service-api/service-typescript/engagement` | `docs/contracts/http/engagement.openapi.yaml` | 9 |
-| `finance` | .NET | `service-api/service-csharp/finance` | `docs/contracts/http/finance.openapi.yaml` | 5 |
-| `fiscal` | Python | `service-api/service-python/fiscal` | `docs/contracts/http/fiscal.openapi.yaml` | 25 |
-| `identity` | .NET | `service-api/service-csharp/identity` | `docs/contracts/http/identity.openapi.yaml` | 6 |
-| `notification` | Python | `service-api/service-python/notification` | `docs/contracts/http/notification.openapi.yaml` | 8 |
-| `platform-control` | Python | `service-api/service-python/platform-control` | `docs/contracts/http/platform-control.openapi.yaml` | 40 |
-| `rentals` | Go | `service-api/service-golang/rentals` | `docs/contracts/http/rentals.openapi.yaml` | 4 |
-| `sales` | Go | `service-api/service-golang/sales` | `docs/contracts/http/sales.openapi.yaml` | 6 |
-| `simulation` | Python | `service-api/service-python/simulation` | `docs/contracts/http/simulation.openapi.yaml` | 3 |
-| `supplier` | Python | `service-api/service-python/supplier` | `docs/contracts/http/supplier.openapi.yaml` | 10 |
-| `support` | Python | `service-api/service-python/support` | `docs/contracts/http/support.openapi.yaml` | 11 |
-| `webhook-hub` | Rust | `service-api/service-rust/webhook-hub` | `docs/contracts/http/webhook-hub.openapi.yaml` | 13 |
-| `workflow-control` | TypeScript | `service-api/service-typescript/workflow-control` | `docs/contracts/http/workflow-control.openapi.yaml` | 7 |
-| `workflow-runtime` | Elixir | `service-api/service-elixir/workflow-runtime` | `docs/contracts/http/workflow-runtime.openapi.yaml` | 6 |
+| `finance` | .NET | `service-api/service-csharp/finance` | `docs/contracts/http/finance.openapi.yaml` | 22 |
+| `fiscal` | Python | `service-api/service-python/fiscal` | `docs/contracts/http/fiscal.openapi.yaml` | 21 |
+| `identity` | .NET | `service-api/service-csharp/identity` | `docs/contracts/http/identity.openapi.yaml` | 35 |
+| `notification` | Python | `service-api/service-python/notification` | `docs/contracts/http/notification.openapi.yaml` | 6 |
+| `platform-control` | Python | `service-api/service-python/platform-control` | `docs/contracts/http/platform-control.openapi.yaml` | 39 |
+| `rentals` | Go | `service-api/service-golang/rentals` | `docs/contracts/http/rentals.openapi.yaml` | 9 |
+| `sales` | Go | `service-api/service-golang/sales` | `docs/contracts/http/sales.openapi.yaml` | 30 |
+| `simulation` | Python | `service-api/service-python/simulation` | `docs/contracts/http/simulation.openapi.yaml` | 6 |
+| `supplier` | Python | `service-api/service-python/supplier` | `docs/contracts/http/supplier.openapi.yaml` | 8 |
+| `support` | Python | `service-api/service-python/support` | `docs/contracts/http/support.openapi.yaml` | 10 |
+| `webhook-hub` | Rust | `service-api/service-rust/webhook-hub` | `docs/contracts/http/webhook-hub.openapi.yaml` | 10 |
+| `workflow-control` | TypeScript | `service-api/service-typescript/workflow-control` | `docs/contracts/http/workflow-control.openapi.yaml` | 20 |
+| `workflow-runtime` | Elixir | `service-api/service-elixir/workflow-runtime` | `docs/contracts/http/workflow-runtime.openapi.yaml` | 14 |
 
 ## Ownership Por Servico
 
@@ -150,26 +150,26 @@ Esta tabela nao promete producao final; ela ajuda a entender o papel atual de ca
 
 | Servico | Estado atual | Proximo cuidado natural |
 |---------|--------------|-------------------------|
-| `identity` | base de tenancy/acesso estabelecida | endurecer autorizacao por rota e claims |
-| `crm` | relacao comercial, pipeline, deduplicacao por email, bulk/import, export filtrado, historico e outbox operacional | aprofundar scoring preditivo, forecast e enriquecimento externo real |
-| `sales` | operacao comercial basica integrada | aprofundar estados comerciais e aprovacao |
-| `billing` | recorrencia, cobranca, pricing flat/hybrid/usage, idempotencia de tentativas, recovery e suspend/reactivate operacionais | integrar gateways reais com fallback controlado e conciliacao externa |
-| `finance` | consolidacao financeira operacional | ampliar reconciliacao e fechamento |
-| `documents` | metadata, upload sessions, assinatura, versoes, retencao, arquivamento e links seguros operacionais | ligar storage real e varredura automatica de retencao |
-| `fiscal` | compliance fiscal/privacidade amplo | validar provider fiscal real e regras por regime |
-| `platform-control` | governanca SaaS avancada | endurecer lifecycle real e auditoria por ator |
-| `analytics` | reports executivos e hardening | persistir read models quando necessario |
-| `edge` | cockpits consolidados | garantir auth, cache e resiliencia por dependencia |
-| `workflow-control` | definicoes, catalogos, versionamento, publish/restore, ledger e diagnostico por workflow operacionais | melhorar autoria visual de fluxos e simulacao antes de publicar |
-| `workflow-runtime` | execucao duravel, transicoes, delays, retries, capacidades e compensacoes basicas operacionais | ampliar observabilidade de execucoes longas e cargas concorrentes |
-| `engagement` | callbacks e provider events | adapters externos reais por canal |
-| `webhook-hub` | inbound/outbound e DLQ | assinatura, retry policy e seguranca de endpoint |
-| `catalog` | itens, versoes imutaveis, consumers, contratos de consumo e governanca de produto operacionais | aprofundar disponibilidade, pricing e politicas comerciais |
-| `support` | casos, filas, SLA e exportacao/bulk operacionais | automacoes de atendimento e escalonamento |
-| `supplier` | diretorio, categorias, exportacao/bulk e contratos administrativos operacionais | procurement workflow e avaliacao continua |
-| `notification` | preferencias, central, severidade e bulk operacional | canais externos e templates |
-| `simulation` | cenarios e benchmark | alimentar planejamento com dados reais |
-| `rentals` | contratos, charges, reajustes, encerramento, historico, outbox e anexos operacionais | regras avancadas de reajuste e integracao contabil/fiscal |
+| `identity` | tenancy, empresas, usuarios, times, roles, convites, MFA, sessoes, recuperacao de senha, resolucao de acesso, Keycloak/OpenFGA e auditoria operacionais | modelar novas politicas de negocio por dominio conforme surgirem regras mais especificas |
+| `crm` | relacao comercial, pipeline, deduplicacao por email, bulk/import, export filtrado, historico e outbox operacional | evoluir scoring preditivo e enriquecimento externo real |
+| `sales` | oportunidade, proposta, conversao em venda, parcelas, comissao, pendencias, renegociacao, cancelamento, historico e outbox operacionais | evoluir politicas comerciais por segmento e aprovacao avancada |
+| `billing` | recorrencia, cobranca, pricing flat/hybrid/usage, idempotencia de tentativas, recovery e suspend/reactivate operacionais | conectar gateways reais e conciliacao externa controlada |
+| `finance` | recebiveis, liquidacao idempotente, comissoes, custos, contas a pagar, tesouraria, ledger de caixa, sync financeiro e fechamento de periodo operacionais | ampliar conciliacao bancaria/provider real e demonstrativos gerenciais |
+| `documents` | metadata, upload sessions, assinatura, versoes, retencao, arquivamento e links seguros operacionais | conectar storage real e varredura automatica de retencao |
+| `fiscal` | perfis fiscais, documentos, eventos, consentimentos, privacidade, retencao e auditoria operacional | conectar provider fiscal real, certificado digital e regras por regime |
+| `platform-control` | capabilities, entitlements, quotas, metering, provider defaults, blocks, lifecycle e go-live operacionais | evoluir enforcement distribuido de quotas e offboarding produtivo |
+| `analytics` | reports executivos, tenant 360, service pulse, hardening, simulacao, benchmark, estimativa de custo e read models operacionais quase em tempo real | evoluir streaming dedicado quando houver requisito comprovado de evento em baixa latencia |
+| `edge` | cockpits consolidados com auth, health, go-live, SaaS, contratos e visoes cross-service, apoiados por gateway local com cache, rate limit, timeouts e failover passivo | evoluir replicas produtivas e politicas de trafego por ambiente |
+| `workflow-control` | definicoes, catalogos, versionamento, publish/restore, runs, eventos, ledger e diagnostico por workflow operacionais | melhorar autoria visual e validacao pre-publicacao |
+| `workflow-runtime` | execucao duravel, timeline, transicoes, delays, retries, capacidades e compensacoes basicas operacionais | ampliar observabilidade de execucoes longas e cargas concorrentes |
+| `engagement` | campanhas, templates, callbacks idempotentes, touchpoints, deliveries, provider events e conversas estruturadas operacionais | conectar adapters externos reais por canal |
+| `webhook-hub` | inbound/outbound, assinatura preparada, retries, DLQ, requeue e ledger de transicoes operacionais | endurecer seguranca de endpoint e politicas por tenant |
+| `catalog` | itens, versoes imutaveis, consumers, contratos de consumo e governanca de produto operacionais | evoluir disponibilidade, pricing e politicas comerciais |
+| `support` | casos, filas, SLA, comentarios, exportacao/bulk e resumo operacional | evoluir automacoes de atendimento e escalonamento |
+| `supplier` | diretorio, categorias, exportacao/bulk e contratos administrativos operacionais | evoluir procurement workflow e avaliacao continua |
+| `notification` | preferencias, central, severidade, ciclo de vida e bulk operacional | conectar canais externos e templates avancados |
+| `simulation` | catalogo de cenarios, execucao what-if, listagem de runs, benchmark de carga e insumos de sizing operacionais | alimentar planejamento com series historicas reais |
+| `rentals` | contratos, charges, reajustes, encerramento, historico, outbox, anexos e contrato HTTP completo para operacao recorrente | evoluir regras avancadas de reajuste e integracao contabil/fiscal |
 
 ## Checklist Para Novo Servico
 

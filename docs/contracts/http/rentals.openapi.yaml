@@ -1,8 +1,10 @@
 openapi: 3.1.0
 info:
   title: ERP Rentals API
-  version: 0.8.0
+  version: 0.9.0
   description: Rental contracts, recurring charges, adjustments, rescission and attachment linkage.
+security:
+  - bearerAuth: []
 paths:
   /api/rentals/contracts:
     get:
@@ -15,6 +17,18 @@ paths:
       responses:
         "200":
           description: Created contract
+  /api/rentals/contracts/summary:
+    get:
+      summary: Read rental portfolio summary
+      responses:
+        "200":
+          description: Rental summary
+  /api/rentals/contracts/{publicId}:
+    get:
+      summary: Read one rental contract
+      responses:
+        "200":
+          description: Contract detail
   /api/rentals/contracts/{publicId}/charges:
     get:
       summary: List contract charges
@@ -27,3 +41,47 @@ paths:
       responses:
         "200":
           description: Updated charge
+  /api/rentals/contracts/{publicId}/history:
+    get:
+      summary: List contract lifecycle history
+      responses:
+        "200":
+          description: History entries
+  /api/rentals/contracts/{publicId}/adjustments:
+    get:
+      summary: List contract adjustments
+      responses:
+        "200":
+          description: Adjustment list
+    post:
+      summary: Create contract adjustment
+      responses:
+        "200":
+          description: Created adjustment
+  /api/rentals/contracts/{publicId}/terminate:
+    post:
+      summary: Terminate rental contract
+      responses:
+        "200":
+          description: Terminated contract
+  /api/rentals/contracts/{publicId}/attachments:
+    get:
+      summary: List contract attachments
+      responses:
+        "200":
+          description: Attachment list
+    post:
+      summary: Link attachment to contract
+      responses:
+        "200":
+          description: Linked attachment
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

@@ -15,6 +15,18 @@ Runtime e infraestrutura:
 ./scripts/build.sh logs edge
 ```
 
+Perfil corporate-like:
+
+```bash
+docker compose \
+  --env-file .env.production.example \
+  -f infra/docker-compose.yml \
+  -f infra/docker-compose.corporate-like.yml \
+  config
+```
+
+Esse overlay remove a publicacao direta dos servicos internos e deixa gateway/edge como pontos de entrada.
+
 Banco:
 
 ```bash
@@ -39,6 +51,7 @@ Validacao:
 ./scripts/test.sh performance
 ./scripts/test.sh backup-restore
 ./scripts/test.sh hardening
+./scripts/test.sh hardening-secrets
 ```
 
 ## Runtime Local
@@ -51,6 +64,8 @@ O script tambem tenta remapear portas locais ocupadas para evitar falha simples 
 ./scripts/build.sh ps
 ```
 
+Em `ERP_ENV=production`, fallbacks inseguros devem falhar: `ERP_ALLOW_BOOTSTRAP_TENANT_FALLBACK=false`, `DOCUMENTS_ACCESS_TOKEN_SECRET` obrigatorio e secrets criticos diferentes dos defaults locais.
+
 ## Console Tecnico da API
 
 ```bash
@@ -61,6 +76,17 @@ npm run dev
 ```
 
 Use o console para navegar documentacao, explorar contratos e testar endpoints contra o backend local.
+
+## Gateway Local
+
+O compose sobe `gateway` como ponto unico de entrada HTTP para `/api/<servico>/`. Ele aplica cache de leitura, rate limit, timeouts, failover passivo por dependencia e encaminha `X-Request-ID`.
+
+Validacao rapida:
+
+```bash
+curl -i "http://localhost:${GATEWAY_HTTP_PORT}/gateway/health"
+curl -i "http://localhost:${GATEWAY_HTTP_PORT}/api/edge/ops/service-pulse"
+```
 
 ## Probes Esperadas
 

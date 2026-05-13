@@ -1,5 +1,7 @@
 using Identity.Contracts;
 using Identity.Domain;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Identity.Application;
 
@@ -58,12 +60,13 @@ public sealed class StartIdentityPasswordRecovery
       ? request.ExpiresInMinutes.Value
       : 30;
 
+    var rawResetToken = PublicIds.NewUuidV7().ToString();
     var passwordResetToken = _securityStore.AddPasswordResetToken(new PasswordResetToken(
       _securityStore.NextPasswordResetTokenId(),
       tenant.Id,
       user.Id,
       PublicIds.NewUuidV7(),
-      PublicIds.NewUuidV7().ToString(),
+      HashResetToken(rawResetToken),
       "pending",
       DateTimeOffset.UtcNow.AddMinutes(expiresInMinutes),
       null,
@@ -71,6 +74,26 @@ public sealed class StartIdentityPasswordRecovery
 
     _auditWriter.Record(tenant.Id, user.PublicId, user.PublicId, "password_reset_requested", "info", $"Password reset requested for {email}.");
 
-    return OperationResult<PasswordRecoveryResponse>.Success(passwordResetToken.ToResponse(tenant.Slug, user));
+    return OperationResult<PasswordRecoveryResponse>.Success(passwordResetToken.ToResponse(tenant.Slug, user, ShouldExposeRecoveryToken() ? rawResetToken : ""));
+  }
+
+  private static string HashResetToken(string resetToken)
+  {
+    return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(resetToken.Trim()))).ToLowerInvariant();
+  }
+
+  private static bool ShouldExposeRecoveryToken()
+  {
+    if (string.Equals(Environment.GetEnvironmentVariable("IDENTITY_EXPOSE_PASSWORD_RECOVERY_TOKEN"), "true", StringComparison.OrdinalIgnoreCase))
+    {
+      return true;
+    }
+
+    var environment = Environment.GetEnvironmentVariable("ERP_ENV")
+      ?? Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
+      ?? Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT")
+      ?? "local";
+    var normalized = environment.Trim().ToLowerInvariant();
+    return normalized is "local" or "dev" or "development" or "test" or "testing";
   }
 }

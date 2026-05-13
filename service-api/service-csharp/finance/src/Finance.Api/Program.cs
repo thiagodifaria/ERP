@@ -9,6 +9,8 @@ builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(BuildConnectionString
 
 var app = builder.Build();
 
+app.UseMiddleware<ApiSecurityMiddleware>("finance");
+
 app.MapFinanceRoutes();
 
 app.Run();

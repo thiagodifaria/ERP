@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException
 
 from app.config.settings import settings
 from app.infrastructure.postgres import postgres_ready
+from app.security import install_security_middleware
 from app.runtime import (
     bulk_create_notifications,
     build_summary,
@@ -17,6 +18,7 @@ from app.runtime import (
 
 
 app = FastAPI(title=settings.service_name)
+install_security_middleware(app, settings.service_name)
 
 
 @app.get("/health/live")

@@ -1,9 +1,17 @@
 openapi: 3.1.0
 info:
   title: ERP Workflow Runtime API
-  version: 0.6.0
-  description: Workflow execution runtime with action snapshots, retries, delays and compensations.
+  version: 0.9.0
+  description: Workflow execution runtime with transitions, action snapshots, retries, delays and compensations.
+security:
+  - bearerAuth: []
 paths:
+  /api/workflow-runtime/capabilities:
+    get:
+      summary: List runtime capabilities
+      responses:
+        "200":
+          description: Runtime capability catalog
   /api/workflow-runtime/executions:
     get:
       summary: List workflow executions
@@ -13,29 +21,87 @@ paths:
     post:
       summary: Create workflow execution
       responses:
-        "200":
+        "201":
           description: Created execution
+  /api/workflow-runtime/executions/summary:
+    get:
+      summary: Read execution summary
+      responses:
+        "200":
+          description: Execution summary
+  /api/workflow-runtime/executions/summary/by-workflow:
+    get:
+      summary: Read execution summary by workflow
+      responses:
+        "200":
+          description: Execution summary by workflow
   /api/workflow-runtime/executions/{publicId}:
     get:
       summary: Read one workflow execution
       responses:
         "200":
           description: Execution detail
+  /api/workflow-runtime/executions/{publicId}/transitions:
+    get:
+      summary: List execution transitions
+      responses:
+        "200":
+          description: Execution transitions
   /api/workflow-runtime/executions/{publicId}/actions:
     get:
       summary: List execution action snapshots
       responses:
         "200":
           description: Execution actions
+  /api/workflow-runtime/executions/{publicId}/timeline:
+    get:
+      summary: List execution timeline
+      responses:
+        "200":
+          description: Execution timeline
+  /api/workflow-runtime/executions/{publicId}/start:
+    post:
+      summary: Start workflow execution
+      responses:
+        "200":
+          description: Started execution
+  /api/workflow-runtime/executions/{publicId}/complete:
+    post:
+      summary: Complete workflow execution
+      responses:
+        "200":
+          description: Completed execution
+  /api/workflow-runtime/executions/{publicId}/fail:
+    post:
+      summary: Fail workflow execution
+      responses:
+        "200":
+          description: Failed execution
+  /api/workflow-runtime/executions/{publicId}/cancel:
+    post:
+      summary: Cancel workflow execution
+      responses:
+        "200":
+          description: Cancelled execution
+  /api/workflow-runtime/executions/{publicId}/retry:
+    post:
+      summary: Retry workflow execution
+      responses:
+        "200":
+          description: Retried execution
   /api/workflow-runtime/executions/{publicId}/advance:
     post:
       summary: Advance one workflow execution
       responses:
         "200":
           description: Advanced execution
-  /api/workflow-runtime/capabilities:
-    get:
-      summary: List runtime capabilities
-      responses:
-        "200":
-          description: Runtime capability catalog
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

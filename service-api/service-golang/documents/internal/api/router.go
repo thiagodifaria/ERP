@@ -46,5 +46,5 @@ func NewRouterWithRuntime(logger *telemetry.Logger, attachmentRepository reposit
 	mux.HandleFunc("GET /api/documents/upload-sessions/{publicId}", attachmentHandler.GetUploadSession)
 	mux.HandleFunc("POST /api/documents/upload-sessions/{publicId}/complete", attachmentHandler.CompleteUploadSession)
 
-	return withCorrelation(logger, mux)
+	return withSecurity("documents", withCorrelation(logger, mux))
 }

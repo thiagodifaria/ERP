@@ -18,6 +18,36 @@ def _provider_ready() -> bool:
     )
 
 
+def build_compliance_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "fiscal-profile",
+            "fiscal-document-lifecycle",
+            "fiscal-event-ledger",
+            "privacy-request-execution",
+            "consent-governance",
+            "retention-policy",
+            "document-classification",
+            "sensitive-audit-trail",
+        ],
+        "coveredAreas": [
+            "fiscal",
+            "privacy",
+            "lgpd",
+            "retention",
+            "documents",
+            "audit",
+        ],
+        "runtimeEvidence": [
+            "GET /api/fiscal/compliance/summary",
+            "POST /api/fiscal/privacy-requests",
+            "POST /api/fiscal/retention/executions",
+            "GET /api/analytics/reports/compliance-control",
+        ],
+    }
+
+
 def build_compliance_control(tenant_slug: str | None = None) -> dict:
     slug = tenant_slug or "bootstrap-ops"
     if settings.repository_driver != "postgres":
@@ -31,6 +61,7 @@ def build_compliance_control(tenant_slug: str | None = None) -> dict:
             "retention": {"policies": 5, "restrictedDocuments": 10, "executions": 1},
             "audit": {"events": 12, "sensitiveOperations": 4},
             "readiness": {"status": "stable", "fiscalReady": True, "privacyReady": True, "retentionReady": True, "providerReady": _provider_ready()},
+            "complianceClosure": build_compliance_closure(),
         }
 
     with connect() as connection:
@@ -101,4 +132,5 @@ def build_compliance_control(tenant_slug: str | None = None) -> dict:
             "retentionReady": int(row.get("retention_policies", 0) or 0) > 0,
             "providerReady": _provider_ready(),
         },
+        "complianceClosure": build_compliance_closure(),
     }

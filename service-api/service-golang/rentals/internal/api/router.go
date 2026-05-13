@@ -32,7 +32,7 @@ func NewRouterWithRuntime(logger *telemetry.Logger, contractRepository repositor
 	mux.HandleFunc("GET /api/rentals/contracts/{publicId}/attachments", handler.ListAttachments)
 	mux.HandleFunc("POST /api/rentals/contracts/{publicId}/attachments", handler.CreateAttachment)
 
-	return withCorrelation(logger, mux)
+	return withSecurity("rentals", withCorrelation(logger, mux))
 }
 
 func hasDocumentsGatewayConfigured(documentsConfigured bool, attachmentGateway repository.AttachmentGateway) bool {

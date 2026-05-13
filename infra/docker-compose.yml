@@ -1,8 +1,20 @@
+x-erp-security-env: &erp-security-env
+  ERP_ENV: "${ERP_ENV}"
+  ERP_AUTH_ENFORCEMENT: "${ERP_AUTH_ENFORCEMENT}"
+  ERP_JWT_HS256_SECRET: "${ERP_JWT_HS256_SECRET}"
+  ERP_JWT_AUDIENCE: "${ERP_JWT_AUDIENCE}"
+  ERP_INTERNAL_SERVICE_TOKEN: "${ERP_INTERNAL_SERVICE_TOKEN}"
+  ERP_OPENFGA_ENFORCEMENT: "${ERP_OPENFGA_ENFORCEMENT}"
+  OPENFGA_BASE_URL: "${OPENFGA_BASE_URL}"
+  OPENFGA_STORE_ID: "${OPENFGA_STORE_ID}"
+  OPENFGA_AUTHORIZATION_MODEL_ID: "${OPENFGA_AUTHORIZATION_MODEL_ID}"
+
 services:
   service-postgresql:
     image: postgres:16-alpine
     container_name: erp-postgresql
     environment:
+      <<: *erp-security-env
       POSTGRES_DB: ${ERP_POSTGRES_DB}
       POSTGRES_USER: ${ERP_POSTGRES_USER}
       POSTGRES_PASSWORD: ${ERP_POSTGRES_PASSWORD}
@@ -35,6 +47,7 @@ services:
     image: confluentinc/cp-kafka:7.7.1
     container_name: erp-kafka
     environment:
+      <<: *erp-security-env
       KAFKA_NODE_ID: "1"
       KAFKA_PROCESS_ROLES: "broker,controller"
       KAFKA_CONTROLLER_QUORUM_VOTERS: "1@service-kafka:9093"
@@ -66,6 +79,7 @@ services:
       - --import-realm
       - --http-port=8080
     environment:
+      <<: *erp-security-env
       KEYCLOAK_ADMIN: "${KEYCLOAK_ADMIN_USER}"
       KEYCLOAK_ADMIN_PASSWORD: "${KEYCLOAK_ADMIN_PASSWORD}"
       KC_HEALTH_ENABLED: "true"
@@ -147,8 +161,9 @@ services:
     image: grafana/grafana:11.1.0
     container_name: erp-grafana
     environment:
-      GF_SECURITY_ADMIN_USER: "${KEYCLOAK_ADMIN_USER}"
-      GF_SECURITY_ADMIN_PASSWORD: "${KEYCLOAK_ADMIN_PASSWORD}"
+      <<: *erp-security-env
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD}"
       GF_PATHS_PROVISIONING: /etc/grafana/provisioning
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
@@ -164,6 +179,7 @@ services:
       context: ../service-api/service-golang/edge
     container_name: erp-edge
     environment:
+      <<: *erp-security-env
       EDGE_HTTP_ADDRESS: ":8080"
       EDGE_DOWNSTREAM_TIMEOUT: "${EDGE_DOWNSTREAM_TIMEOUT}"
       EDGE_IDENTITY_BASE_URL: "${EDGE_IDENTITY_BASE_URL}"
@@ -184,11 +200,61 @@ services:
     ports:
       - "${EDGE_HTTP_PORT}:8080"
 
+  gateway:
+    image: nginx:1.27-alpine
+    container_name: erp-gateway
+    depends_on:
+      edge:
+        condition: service_started
+      identity:
+        condition: service_started
+      crm:
+        condition: service_started
+      sales:
+        condition: service_started
+      finance:
+        condition: service_started
+      billing:
+        condition: service_started
+      documents:
+        condition: service_started
+      rentals:
+        condition: service_started
+      workflow-control:
+        condition: service_started
+      workflow-runtime:
+        condition: service_started
+      analytics:
+        condition: service_started
+      simulation:
+        condition: service_started
+      catalog:
+        condition: service_started
+      platform-control:
+        condition: service_started
+      support:
+        condition: service_started
+      supplier:
+        condition: service_started
+      notification:
+        condition: service_started
+      fiscal:
+        condition: service_started
+      engagement:
+        condition: service_started
+      webhook-hub:
+        condition: service_started
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "${GATEWAY_HTTP_PORT}:8080"
+
   crm:
     build:
       context: ../service-api/service-golang/crm
     container_name: erp-crm
     environment:
+      <<: *erp-security-env
       CRM_HTTP_ADDRESS: ":8083"
       CRM_REPOSITORY_DRIVER: "postgres"
       CRM_BOOTSTRAP_TENANT_SLUG: "bootstrap-ops"
@@ -212,6 +278,7 @@ services:
       context: ../service-api/service-golang/sales
     container_name: erp-sales
     environment:
+      <<: *erp-security-env
       SALES_HTTP_ADDRESS: ":8087"
       SALES_REPOSITORY_DRIVER: "postgres"
       SALES_BOOTSTRAP_TENANT_SLUG: "bootstrap-ops"
@@ -232,6 +299,7 @@ services:
       context: ../service-api/service-csharp/finance
     container_name: erp-finance
     environment:
+      <<: *erp-security-env
       FINANCE_BOOTSTRAP_TENANT_SLUG: "${FINANCE_BOOTSTRAP_TENANT_SLUG}"
       FINANCE_POSTGRES_HOST: "service-postgresql"
       FINANCE_POSTGRES_PORT: "5432"
@@ -250,6 +318,7 @@ services:
       context: ../service-api/service-csharp/billing
     container_name: erp-billing
     environment:
+      <<: *erp-security-env
       BILLING_BOOTSTRAP_TENANT_SLUG: "${BILLING_BOOTSTRAP_TENANT_SLUG}"
       BILLING_POSTGRES_HOST: "service-postgresql"
       BILLING_POSTGRES_PORT: "5432"
@@ -268,6 +337,7 @@ services:
       context: ../service-api/service-golang/documents
     container_name: erp-documents
     environment:
+      <<: *erp-security-env
       DOCUMENTS_HTTP_ADDRESS: ":8086"
       DOCUMENTS_REPOSITORY_DRIVER: "postgres"
       DOCUMENTS_BOOTSTRAP_TENANT_SLUG: "${DOCUMENTS_BOOTSTRAP_TENANT_SLUG}"
@@ -288,6 +358,7 @@ services:
       context: ../service-api/service-golang/rentals
     container_name: erp-rentals
     environment:
+      <<: *erp-security-env
       RENTALS_HTTP_ADDRESS: ":8096"
       RENTALS_REPOSITORY_DRIVER: "postgres"
       RENTALS_BOOTSTRAP_TENANT_SLUG: "${RENTALS_BOOTSTRAP_TENANT_SLUG}"
@@ -311,6 +382,7 @@ services:
       context: ../service-api/service-typescript/workflow-control
     container_name: erp-workflow-control
     environment:
+      <<: *erp-security-env
       WORKFLOW_CONTROL_HTTP_HOST: "0.0.0.0"
       WORKFLOW_CONTROL_HTTP_PORT: "8084"
       WORKFLOW_CONTROL_REPOSITORY_DRIVER: "postgres"
@@ -334,6 +406,7 @@ services:
       context: ../service-api/service-typescript/engagement
     container_name: erp-engagement
     environment:
+      <<: *erp-security-env
       ENGAGEMENT_HTTP_HOST: "0.0.0.0"
       ENGAGEMENT_HTTP_PORT: "8088"
       ENGAGEMENT_REPOSITORY_DRIVER: "postgres"
@@ -364,6 +437,7 @@ services:
       context: ../service-api/service-elixir/workflow-runtime
     container_name: erp-workflow-runtime
     environment:
+      <<: *erp-security-env
       WORKFLOW_RUNTIME_HTTP_HOST: "0.0.0.0"
       WORKFLOW_RUNTIME_HTTP_PORT: "8085"
       WORKFLOW_RUNTIME_BOOTSTRAP_TENANT_SLUG: "${WORKFLOW_RUNTIME_BOOTSTRAP_TENANT_SLUG}"
@@ -387,6 +461,7 @@ services:
       context: ../service-api/service-python/analytics
     container_name: erp-analytics
     environment:
+      <<: *erp-security-env
       ANALYTICS_HTTP_HOST: "0.0.0.0"
       ANALYTICS_HTTP_PORT: "8086"
       ANALYTICS_REPOSITORY_DRIVER: "postgres"
@@ -409,6 +484,7 @@ services:
       context: ../service-api/service-python/simulation
     container_name: erp-simulation
     environment:
+      <<: *erp-security-env
       SIMULATION_HTTP_HOST: "0.0.0.0"
       SIMULATION_HTTP_PORT: "8094"
       SIMULATION_REPOSITORY_DRIVER: "postgres"
@@ -431,6 +507,7 @@ services:
       context: ../service-api/service-python/catalog
     container_name: erp-catalog
     environment:
+      <<: *erp-security-env
       CATALOG_HTTP_PORT: "8097"
       CATALOG_REPOSITORY_DRIVER: "postgres"
       CATALOG_BOOTSTRAP_TENANT_SLUG: "${CATALOG_BOOTSTRAP_TENANT_SLUG}"
@@ -451,6 +528,7 @@ services:
       context: ../service-api/service-python/platform-control
     container_name: erp-platform-control
     environment:
+      <<: *erp-security-env
       PLATFORM_CONTROL_HTTP_PORT: "8098"
       PLATFORM_CONTROL_REPOSITORY_DRIVER: "postgres"
       PLATFORM_CONTROL_BOOTSTRAP_TENANT_SLUG: "${PLATFORM_CONTROL_BOOTSTRAP_TENANT_SLUG}"
@@ -471,6 +549,7 @@ services:
       context: ../service-api/service-python/support
     container_name: erp-support
     environment:
+      <<: *erp-security-env
       SUPPORT_HTTP_PORT: "8099"
       SUPPORT_REPOSITORY_DRIVER: "postgres"
       SUPPORT_BOOTSTRAP_TENANT_SLUG: "${SUPPORT_BOOTSTRAP_TENANT_SLUG}"
@@ -491,6 +570,7 @@ services:
       context: ../service-api/service-python/supplier
     container_name: erp-supplier
     environment:
+      <<: *erp-security-env
       SUPPLIER_HTTP_PORT: "8100"
       SUPPLIER_REPOSITORY_DRIVER: "postgres"
       SUPPLIER_BOOTSTRAP_TENANT_SLUG: "${SUPPLIER_BOOTSTRAP_TENANT_SLUG}"
@@ -511,6 +591,7 @@ services:
       context: ../service-api/service-python/notification
     container_name: erp-notification
     environment:
+      <<: *erp-security-env
       NOTIFICATION_HTTP_PORT: "8101"
       NOTIFICATION_REPOSITORY_DRIVER: "postgres"
       NOTIFICATION_BOOTSTRAP_TENANT_SLUG: "${NOTIFICATION_BOOTSTRAP_TENANT_SLUG}"
@@ -531,6 +612,7 @@ services:
       context: ../service-api/service-python/fiscal
     container_name: erp-fiscal
     environment:
+      <<: *erp-security-env
       FISCAL_HTTP_PORT: "8102"
       FISCAL_REPOSITORY_DRIVER: "postgres"
       FISCAL_BOOTSTRAP_TENANT_SLUG: "${FISCAL_BOOTSTRAP_TENANT_SLUG}"
@@ -551,6 +633,7 @@ services:
       context: ../service-api/service-csharp/identity
     container_name: erp-identity
     environment:
+      <<: *erp-security-env
       IDENTITY_REPOSITORY_DRIVER: "postgres"
       IDENTITY_POSTGRES_HOST: "service-postgresql"
       IDENTITY_POSTGRES_PORT: "5432"
@@ -584,6 +667,7 @@ services:
       context: ../service-api/service-rust/webhook-hub
     container_name: erp-webhook-hub
     environment:
+      <<: *erp-security-env
       WEBHOOK_HUB_HTTP_ADDRESS: "0.0.0.0:8082"
       WEBHOOK_HUB_REPOSITORY_DRIVER: "postgres"
       WEBHOOK_HUB_POSTGRES_HOST: "service-postgresql"

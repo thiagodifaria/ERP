@@ -86,17 +86,15 @@ func (repository *InMemoryLeadRepository) Save(lead entity.Lead) entity.Lead {
 }
 
 func normalizeCrmTenantSlug(tenantSlug string) string {
-	normalized := strings.ToLower(strings.TrimSpace(tenantSlug))
-	if normalized == "" {
-		return "bootstrap-ops"
-	}
-
-	return normalized
+	return strings.ToLower(strings.TrimSpace(tenantSlug))
 }
 
 func firstTenantSlug(tenantSlug ...string) string {
 	if len(tenantSlug) == 0 {
-		return ""
+		return "bootstrap-ops"
+	}
+	if strings.TrimSpace(tenantSlug[0]) == "" {
+		return "bootstrap-ops"
 	}
 
 	return tenantSlug[0]

@@ -3,6 +3,8 @@ info:
   title: ERP Support API
   version: 0.1.0
   description: Queue-based support cases with SLA, comments and lifecycle history.
+security:
+  - bearerAuth: []
 paths:
   /api/support/capabilities:
     get:
@@ -69,3 +71,13 @@ paths:
       responses:
         "200":
           description: Updated support case with new comment
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

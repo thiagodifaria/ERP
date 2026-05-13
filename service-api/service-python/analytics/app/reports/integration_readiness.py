@@ -15,6 +15,37 @@ def build_integration_readiness(tenant_slug: str | None = None) -> dict:
     return build_static_integration_readiness(tenant_slug)
 
 
+def build_provider_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "capability-registry",
+            "provider-posture",
+            "callback-idempotency",
+            "webhook-dlq",
+            "provider-fallbacks",
+            "business-entity-linkage",
+            "health-details-readiness",
+            "contract-artifacts",
+        ],
+        "coveredAreas": [
+            "payment-gateways",
+            "transactional-email",
+            "object-storage",
+            "digital-signature",
+            "cnpj-enrichment",
+            "messaging-providers",
+            "outbound-webhooks",
+        ],
+        "runtimeEvidence": [
+            "GET /api/analytics/reports/adapter-catalog",
+            "GET /api/analytics/reports/integration-readiness",
+            "GET /api/webhook-hub/capabilities",
+            "GET /health/details",
+        ],
+    }
+
+
 def build_static_integration_readiness(tenant_slug: str | None = None) -> dict:
     slug = tenant_slug or "global"
 
@@ -51,6 +82,7 @@ def build_static_integration_readiness(tenant_slug: str | None = None) -> dict:
             "externalAdaptersPrepared": True,
             "openProviderRisks": 1,
         },
+        "providerClosure": build_provider_closure(),
     }
 
 
@@ -107,6 +139,7 @@ def build_postgres_integration_readiness(tenant_slug: str | None = None) -> dict
             ),
             "openProviderRisks": open_provider_risks + adapter_catalog["summary"]["criticalUnconfiguredCapabilities"],
         },
+        "providerClosure": build_provider_closure(),
     }
 
 

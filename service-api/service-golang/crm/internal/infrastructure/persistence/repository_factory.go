@@ -2,6 +2,8 @@ package persistence
 
 import (
 	"database/sql"
+	"errors"
+	"os"
 	"strings"
 	"sync"
 
@@ -31,6 +33,9 @@ func (factory *InMemoryTenantRepositoryFactory) ForTenant(tenantSlug string) (re
 
 	slug := normalizeCrmTenantSlug(tenantSlug)
 	if slug == "" {
+		if !allowBootstrapTenantFallback() {
+			return repository.TenantRepositorySet{}, errors.New("tenant_slug_required")
+		}
 		slug = factory.bootstrapTenantSlug
 	}
 
@@ -69,6 +74,9 @@ func (factory *PostgresTenantRepositoryFactory) BootstrapTenantSlug() string {
 func (factory *PostgresTenantRepositoryFactory) ForTenant(tenantSlug string) (repository.TenantRepositorySet, error) {
 	slug := normalizeCrmTenantSlug(tenantSlug)
 	if strings.TrimSpace(slug) == "" {
+		if !allowBootstrapTenantFallback() {
+			return repository.TenantRepositorySet{}, errors.New("tenant_slug_required")
+		}
 		slug = factory.bootstrapTenantSlug
 	}
 
@@ -110,4 +118,14 @@ func (factory *PostgresTenantRepositoryFactory) ForTenant(tenantSlug string) (re
 		RelationshipEventRepository: eventRepository,
 		OutboxEventRepository:       outboxRepository,
 	}, nil
+}
+
+func allowBootstrapTenantFallback() bool {
+	explicit := strings.ToLower(strings.TrimSpace(os.Getenv("ERP_ALLOW_BOOTSTRAP_TENANT_FALLBACK")))
+	if explicit != "" {
+		return explicit == "true" || explicit == "1" || explicit == "yes"
+	}
+
+	environment := strings.ToLower(strings.TrimSpace(os.Getenv("ERP_ENV")))
+	return environment == "" || environment == "local" || environment == "dev" || environment == "development" || environment == "test"
 }

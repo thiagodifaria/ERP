@@ -3,6 +3,8 @@ info:
   title: ERP Supplier API
   version: 0.1.0
   description: Supplier directory, categories and payables-oriented vendor governance.
+security:
+  - bearerAuth: []
 paths:
   /api/supplier/capabilities:
     get:
@@ -62,3 +64,13 @@ paths:
       responses:
         "200":
           description: Updated supplier
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

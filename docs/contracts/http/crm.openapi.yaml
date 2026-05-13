@@ -1,45 +1,188 @@
 openapi: 3.1.0
 info:
   title: ERP CRM API
-  version: 0.2.0
-  description: CRM leads, customers, activity, attachments and commercial intelligence.
+  version: 1.0.0
+  description: Leads, customers, ownership, history, attachments, pipeline intelligence and CRM outbox.
+security:
+  - bearerAuth: []
 paths:
-  /api/crm/enrichment/cnpj/capabilities:
+  /api/crm/leads/summary:
     get:
-      summary: Read CNPJ enrichment provider capabilities
+      summary: Read lead summary
       responses:
-        "200":
-          description: Provider capability catalog
-  /api/crm/enrichment/cnpj/lookup:
+        "200": { description: Lead summary }
+  /api/crm/leads:
+    get:
+      summary: List leads
+      responses:
+        "200": { description: Lead list }
     post:
-      summary: Lookup and enrich one CNPJ through provider contract
+      summary: Create lead
       responses:
-        "200":
-          description: Enriched company profile
+        "201": { description: Created lead }
+        "409": { description: Duplicate email for tenant }
+  /api/crm/leads/export:
+    get:
+      summary: Export filtered leads
+      responses:
+        "200": { description: Lead export }
+  /api/crm/leads/bulk:
+    post:
+      summary: Create leads in bulk
+      responses:
+        "200": { description: Bulk creation result }
+  /api/crm/leads/{publicId}:
+    get:
+      summary: Read lead by public id
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Lead detail }
+    patch:
+      summary: Update lead profile
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Updated lead }
+  /api/crm/leads/{publicId}/convert:
+    post:
+      summary: Convert lead to customer
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "201": { description: Created customer }
+  /api/crm/leads/{publicId}/history:
+    get:
+      summary: List lead relationship history
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Lead history }
+  /api/crm/leads/{publicId}/notes:
+    get:
+      summary: List lead notes
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Lead note list }
+    post:
+      summary: Create lead note
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "201": { description: Created lead note }
+  /api/crm/leads/{publicId}/attachments:
+    get:
+      summary: List lead attachments
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Lead attachment list }
+    post:
+      summary: Create lead attachment metadata
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "201": { description: Created attachment }
+  /api/crm/leads/{publicId}/owner:
+    patch:
+      summary: Update lead owner
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Updated lead owner }
+  /api/crm/leads/{publicId}/status:
+    patch:
+      summary: Update lead status
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Updated lead status }
+  /api/crm/customers:
+    get:
+      summary: List customers
+      responses:
+        "200": { description: Customer list }
+  /api/crm/customers/{publicId}:
+    get:
+      summary: Read customer by public id
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Customer detail }
+  /api/crm/customers/{publicId}/history:
+    get:
+      summary: List customer relationship history
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Customer history }
+  /api/crm/customers/{publicId}/attachments:
+    get:
+      summary: List customer attachments
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Customer attachment list }
+    post:
+      summary: Create customer attachment metadata
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "201": { description: Created attachment }
+  /api/crm/outbox/pending:
+    get:
+      summary: List pending CRM outbox events
+      responses:
+        "200": { description: Pending outbox events }
   /api/crm/pipeline/config:
     get:
       summary: Read tenant pipeline configuration
       parameters:
-        - in: query
-          name: tenantSlug
-          schema:
-            type: string
+        - $ref: "#/components/parameters/TenantSlug"
       responses:
-        "200":
-          description: Pipeline configuration
+        "200": { description: Pipeline configuration }
     put:
       summary: Upsert tenant pipeline configuration
       responses:
-        "200":
-          description: Upserted pipeline configuration
+        "200": { description: Upserted pipeline configuration }
   /api/crm/leads/intelligence/summary:
     get:
       summary: Read lead scoring and pipeline intelligence summary
       parameters:
-        - in: query
-          name: tenantSlug
-          schema:
-            type: string
+        - $ref: "#/components/parameters/TenantSlug"
       responses:
-        "200":
-          description: Lead intelligence summary
+        "200": { description: Lead intelligence summary }
+  /api/crm/enrichment/cnpj/capabilities:
+    get:
+      summary: Read CNPJ enrichment provider capabilities
+      responses:
+        "200": { description: Provider capability catalog }
+  /api/crm/enrichment/cnpj/lookup:
+    post:
+      summary: Lookup and enrich one CNPJ through provider contract
+      responses:
+        "200": { description: Enriched company profile }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt
+  parameters:
+    PublicId:
+      in: path
+      name: publicId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    TenantSlug:
+      in: query
+      name: tenantSlug
+      schema:
+        type: string

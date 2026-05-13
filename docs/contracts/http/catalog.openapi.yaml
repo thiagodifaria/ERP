@@ -3,6 +3,8 @@ info:
   title: ERP Catalog API
   version: 0.2.0
   description: Product and service catalog with categories, activation, versioned items, cursor pagination and bulk creation.
+security:
+  - bearerAuth: []
 paths:
   /api/catalog/capabilities:
     get:
@@ -77,3 +79,13 @@ paths:
       responses:
         "200":
           description: Catalog item version history
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

@@ -1,36 +1,170 @@
 openapi: 3.1.0
 info:
   title: ERP Finance API
-  version: 0.4.0
-  description: Receivables, commission holds, cash control and cross-domain financial activity.
+  version: 1.0.0
+  description: Receivables, projections, settlements, commission lifecycle, payables, costs, treasury, period closures and financial activity.
+security:
+  - bearerAuth: []
 paths:
-  /api/finance/receivable-projections:
+  /api/finance/projections/ingest:
+    post:
+      summary: Ingest pending sales outbox events into finance projections
+      responses:
+        "200": { description: Projection ingest result }
+  /api/finance/projections:
     get:
       summary: List receivable projections
       responses:
-        "200":
-          description: Projection list
-  /api/finance/receivable-projections/sync:
-    post:
-      summary: Sync projections from sales and rentals
-      responses:
-        "200":
-          description: Sync result
-  /api/finance/commission-holds:
+        "200": { description: Projection list }
+  /api/finance/projections/summary:
     get:
-      summary: List commission holds
+      summary: Read projection summary
       responses:
-        "200":
-          description: Commission hold list
-  /api/finance/commission-holds/{publicId}/release:
+        "200": { description: Projection summary }
+  /api/finance/operations/sync:
     post:
-      summary: Release one commission hold
+      summary: Sync operational receivables and commissions from sales and rentals
       responses:
-        "200":
-          description: Released commission hold
+        "200": { description: Sync result }
+  /api/finance/receivables:
+    get:
+      summary: List operational receivables
+      responses:
+        "200": { description: Receivable list }
+  /api/finance/receivables/{publicId}/settlements:
+    post:
+      summary: Settle receivable idempotently
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Settlement result }
+        "409": { description: Settlement reference conflict }
+  /api/finance/commissions:
+    get:
+      summary: List commission entries
+      responses:
+        "200": { description: Commission list }
+  /api/finance/commissions/summary:
+    get:
+      summary: Read commission summary
+      responses:
+        "200": { description: Commission summary }
+  /api/finance/commissions/{publicId}/block:
+    post:
+      summary: Block commission
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Blocked commission }
+  /api/finance/commissions/{publicId}/release:
+    post:
+      summary: Release commission
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Released commission }
+  /api/finance/payables:
+    get:
+      summary: List payables
+      responses:
+        "200": { description: Payable list }
+    post:
+      summary: Create payable
+      responses:
+        "200": { description: Created payable }
+  /api/finance/payables/{publicId}/status:
+    patch:
+      summary: Update payable status
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Updated payable }
+  /api/finance/costs:
+    get:
+      summary: List cost entries
+      responses:
+        "200": { description: Cost list }
+    post:
+      summary: Create cost entry
+      responses:
+        "200": { description: Created cost entry }
+  /api/finance/cash-accounts:
+    get:
+      summary: List cash accounts
+      responses:
+        "200": { description: Cash account list }
+    post:
+      summary: Create cash account
+      responses:
+        "200": { description: Created cash account }
+  /api/finance/treasury/sync:
+    post:
+      summary: Sync treasury movements from finance operations
+      responses:
+        "200": { description: Treasury sync result }
+  /api/finance/cash-movements:
+    get:
+      summary: List cash movements
+      responses:
+        "200": { description: Cash movement list }
+  /api/finance/cash-movements/summary:
+    get:
+      summary: Read cash movement summary
+      responses:
+        "200": { description: Cash movement summary }
+  /api/finance/reports/treasury:
+    get:
+      summary: Read treasury operational report
+      responses:
+        "200": { description: Treasury report }
+  /api/finance/period-closures:
+    get:
+      summary: List period closures
+      responses:
+        "200": { description: Period closure list }
+    post:
+      summary: Close current financial period with immutable snapshot
+      responses:
+        "200": { description: Period closure result }
+  /api/finance/period-closures/{periodKey}:
+    get:
+      summary: Read period closure snapshot
+      parameters:
+        - $ref: "#/components/parameters/PeriodKey"
+      responses:
+        "200": { description: Period closure detail }
+  /api/finance/reports/operations:
+    get:
+      summary: Read finance operational report
+      responses:
+        "200": { description: Operational report }
   /api/finance/activity:
     get:
       summary: List finance operational activity
       responses:
-        "200":
-          description: Activity ledger
+        "200": { description: Activity ledger }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt
+  parameters:
+    PublicId:
+      in: path
+      name: publicId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PeriodKey:
+      in: path
+      name: periodKey
+      required: true
+      schema:
+        type: string
+        pattern: "^[0-9]{4}-[0-9]{2}$"

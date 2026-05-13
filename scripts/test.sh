@@ -85,6 +85,7 @@ prepare_runtime_ports() {
   remap_host_port_if_needed "OPENFGA_HTTP_PORT" "openfga-http"
   remap_host_port_if_needed "OPENFGA_GRPC_PORT" "openfga-grpc"
   remap_host_port_if_needed "OPENFGA_PLAYGROUND_PORT" "openfga-playground"
+  remap_host_port_if_needed "GATEWAY_HTTP_PORT" "gateway"
   remap_host_port_if_needed "EDGE_HTTP_PORT" "edge"
   remap_host_port_if_needed "IDENTITY_HTTP_PORT" "identity"
   remap_host_port_if_needed "WEBHOOK_HUB_HTTP_PORT" "webhook-hub"
@@ -244,7 +245,7 @@ run_dotnet_build() {
     -v "$ROOT_DIR/service-api/service-csharp/finance:/workspace" \
     -w /workspace \
     mcr.microsoft.com/dotnet/sdk:8.0 \
-    dotnet build src/Finance.Api/Finance.Api.csproj -c Release
+    dotnet test tests/Finance.UnitTests/Finance.UnitTests.csproj -c Release
 
   docker run --rm \
     -v "$ROOT_DIR/service-api/service-csharp/billing:/workspace" \
@@ -272,6 +273,7 @@ run_dotnet_contract() {
 run_contract_registry_checks() {
   python3 - "$ROOT_DIR" <<'PY'
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -296,6 +298,63 @@ def check_entries(group: str, base: Path) -> None:
 
 check_entries("http", root / "docs" / "contracts" / "http")
 check_entries("events", root / "docs" / "contracts" / "events")
+
+for contract_path in (root / "docs" / "contracts" / "http").glob("*.openapi.yaml"):
+    contract_text = contract_path.read_text(encoding="utf-8")
+    if "\nsecurity:\n" not in f"\n{contract_text}" or "securitySchemes:" not in contract_text:
+        errors.append(f"http contract missing security declaration: {contract_path.name}")
+
+security_markers = {
+    "csharp/identity": root / "service-api" / "service-csharp" / "identity" / "src" / "Identity.Api" / "ApiSecurityMiddleware.cs",
+    "csharp/billing": root / "service-api" / "service-csharp" / "billing" / "src" / "Billing.Api" / "ApiSecurityMiddleware.cs",
+    "csharp/finance": root / "service-api" / "service-csharp" / "finance" / "src" / "Finance.Api" / "ApiSecurityMiddleware.cs",
+    "go/edge": root / "service-api" / "service-golang" / "edge" / "internal" / "api" / "middleware" / "security.go",
+    "go/crm": root / "service-api" / "service-golang" / "crm" / "internal" / "api" / "middleware" / "security.go",
+    "go/sales": root / "service-api" / "service-golang" / "sales" / "internal" / "api" / "middleware" / "security.go",
+    "go/documents": root / "service-api" / "service-golang" / "documents" / "internal" / "api" / "security.go",
+    "go/rentals": root / "service-api" / "service-golang" / "rentals" / "internal" / "api" / "security.go",
+    "typescript/workflow-control": root / "service-api" / "service-typescript" / "workflow-control" / "src" / "api" / "security.ts",
+    "typescript/engagement": root / "service-api" / "service-typescript" / "engagement" / "src" / "api" / "security.ts",
+    "rust/webhook-hub": root / "service-api" / "service-rust" / "webhook-hub" / "src" / "api" / "router.rs",
+    "elixir/workflow-runtime": root / "service-api" / "service-elixir" / "workflow-runtime" / "lib" / "workflow_runtime" / "api" / "router.ex",
+}
+
+for service in ["analytics", "catalog", "fiscal", "notification", "platform-control", "simulation", "supplier", "support"]:
+    security_markers[f"python/{service}"] = root / "service-api" / "service-python" / service / "app" / "security.py"
+
+for label, marker_path in security_markers.items():
+    if not marker_path.is_file():
+        errors.append(f"security middleware missing: {label}")
+        continue
+    marker_text = marker_path.read_text(encoding="utf-8")
+    if "ERP_JWT_HS256_SECRET" not in marker_text or "ERP_OPENFGA_ENFORCEMENT" not in marker_text:
+        errors.append(f"security middleware lacks JWT/OpenFGA enforcement markers: {label}")
+
+dotnet_services = {
+    "identity": root / "service-api" / "service-csharp" / "identity" / "src" / "Identity.Api" / "Server.cs",
+    "billing": root / "service-api" / "service-csharp" / "billing" / "src" / "Billing.Api" / "Server.cs",
+    "finance": root / "service-api" / "service-csharp" / "finance" / "src" / "Finance.Api" / "Server.cs",
+}
+
+for service, source_path in dotnet_services.items():
+    source_text = source_path.read_text(encoding="utf-8")
+    implemented = {
+        match.group(1).replace(":guid", "")
+        for match in re.finditer(r'app\.Map(?:Get|Post|Put|Patch|Delete)\(\s*\n?\s*"([^"]+)"', source_text)
+        if match.group(1).startswith("/api/")
+    }
+    contract_text = (root / "docs" / "contracts" / "http" / f"{service}.openapi.yaml").read_text(encoding="utf-8")
+    declared = {
+        line.strip()[:-1]
+        for line in contract_text.splitlines()
+        if line.startswith("  /api/") and line.strip().endswith(":")
+    }
+    missing = sorted(implemented - declared)
+    extra = sorted(declared - implemented)
+    if missing:
+        errors.append(f"{service} OpenAPI missing implemented routes: {missing}")
+    if extra:
+        errors.append(f"{service} OpenAPI declares routes not found in Minimal API: {extra}")
 
 for doc_path in registry["docs"]:
     if not (root / doc_path).is_file():
@@ -326,6 +385,58 @@ if errors:
 
 print("[contract] registry, schema registry and portal validated")
 PY
+}
+
+run_hardening_secrets() {
+  local environment="${ERP_ENV:-local}"
+  local normalized_environment
+  normalized_environment="$(printf '%s' "$environment" | tr '[:upper:]' '[:lower:]')"
+
+  if [[ "$normalized_environment" == "local" || "$normalized_environment" == "dev" || "$normalized_environment" == "development" || "$normalized_environment" == "test" ]]; then
+    echo "[hardening-secrets] skipped for ERP_ENV=$environment"
+    return
+  fi
+
+  local failed=0
+
+  require_secret() {
+    local variable_name="$1"
+    local value="${!variable_name:-}"
+
+    if [[ -z "$value" || "$value" == "erp" || "$value" == "admin" || "$value" == "Change.Me123!" || "$value" == "documents-local-secret" ]]; then
+      echo "[hardening-secrets] insecure or empty value for $variable_name"
+      failed=1
+    fi
+  }
+
+  require_secret "ERP_POSTGRES_PASSWORD"
+  require_secret "KEYCLOAK_ADMIN_PASSWORD"
+  require_secret "IDENTITY_BOOTSTRAP_PASSWORD"
+  require_secret "ERP_JWT_HS256_SECRET"
+  require_secret "ERP_INTERNAL_SERVICE_TOKEN"
+  require_secret "DOCUMENTS_ACCESS_TOKEN_SECRET"
+  require_secret "WEBHOOK_HUB_OUTBOUND_SIGNING_SECRET"
+
+  if [[ "${ERP_ALLOW_BOOTSTRAP_TENANT_FALLBACK:-}" == "true" ]]; then
+    echo "[hardening-secrets] ERP_ALLOW_BOOTSTRAP_TENANT_FALLBACK must not be true outside local/test"
+    failed=1
+  fi
+
+  if [[ "${ERP_AUTH_ENFORCEMENT:-}" != "enforced" ]]; then
+    echo "[hardening-secrets] ERP_AUTH_ENFORCEMENT must be enforced outside local/test"
+    failed=1
+  fi
+
+  if [[ "${ERP_OPENFGA_ENFORCEMENT:-}" != "true" || -z "${OPENFGA_STORE_ID:-}" ]]; then
+    echo "[hardening-secrets] OpenFGA enforcement requires ERP_OPENFGA_ENFORCEMENT=true and OPENFGA_STORE_ID"
+    failed=1
+  fi
+
+  if [[ "$failed" -ne 0 ]]; then
+    exit 1
+  fi
+
+  echo "[hardening-secrets] non-local secret posture validated"
 }
 
 run_go_contract() {
@@ -2861,7 +2972,7 @@ run_analytics_runtime_smoke() {
     exit 1
   fi
 
-  if [[ "$relationship_intelligence_response" != *'"crmClosure"'* || "$relationship_intelligence_response" != *'"deterministic-email-dedup"'* || "$finance_control_response" != *'"billingClosure"'* || "$finance_control_response" != *'"payment-attempt-idempotency"'* || "$document_governance_response" != *'"documentClosure"'* || "$document_governance_response" != *'"version-history"'* || "$rental_operations_response" != *'"rentalClosure"'* || "$rental_operations_response" != *'"documents-linkage"'* || "$automation_board_response" != *'"workflowClosure"'* || "$automation_board_response" != *'"compensation-metadata"'* || "$core_operations_response" != *'"coreClosure"'* || "$core_operations_response" != *'"catalog-consumers"'* ]]; then
+  if [[ "$contract_governance_response" != *'"foundationClosure"'* || "$contract_governance_response" != *'"monorepo-layout"'* || "$hardening_review_response" != *'"platformClosure"'* || "$hardening_review_response" != *'"compose-stack"'* || "$tenant_360_response" != *'"identityClosure"'* || "$tenant_360_response" != *'"mfa-enforcement"'* || "$sales_journey_response" != *'"salesClosure"'* || "$sales_journey_response" != *'"commission-governance"'* || "$finance_control_response" != *'"financeClosure"'* || "$finance_control_response" != *'"period-closure"'* || "$engagement_operations_response" != *'"engagementClosure"'* || "$engagement_operations_response" != *'"provider-callback-idempotency"'* || "$cost_estimator_response" != *'"intelligenceClosure"'* || "$cost_estimator_response" != *'"cost-estimation"'* || "$hardening_review_response" != *'"hardeningClosure"'* || "$hardening_review_response" != *'"permission-review"'* || "$hardening_review_response" != *'"productionMaturityClosure"'* || "$hardening_review_response" != *'"gateway-api-management"'* || "$go_live_control_response" != *'"goLiveClosure"'* || "$go_live_control_response" != *'"tenant-rollout"'* || "$relationship_intelligence_response" != *'"relationshipClosure"'* || "$relationship_intelligence_response" != *'"forecast-scenarios"'* || "$integration_readiness_response" != *'"providerClosure"'* || "$integration_readiness_response" != *'"capability-registry"'* || "$compliance_control_response" != *'"complianceClosure"'* || "$compliance_control_response" != *'"privacy-request-execution"'* || "$saas_control_response" != *'"saasClosure"'* || "$saas_control_response" != *'"usage-metering"'* || "$contract_governance_response" != *'"contractClosure"'* || "$contract_governance_response" != *'"api-portal"'* || "$relationship_intelligence_response" != *'"crmClosure"'* || "$relationship_intelligence_response" != *'"deterministic-email-dedup"'* || "$finance_control_response" != *'"billingClosure"'* || "$finance_control_response" != *'"payment-attempt-idempotency"'* || "$document_governance_response" != *'"documentClosure"'* || "$document_governance_response" != *'"version-history"'* || "$rental_operations_response" != *'"rentalClosure"'* || "$rental_operations_response" != *'"documents-linkage"'* || "$automation_board_response" != *'"workflowClosure"'* || "$automation_board_response" != *'"compensation-metadata"'* || "$core_operations_response" != *'"coreClosure"'* || "$core_operations_response" != *'"catalog-consumers"'* ]]; then
     echo "[test] analytics closure evidence did not expose the expected payload"
     exit 1
   fi
@@ -4257,6 +4368,7 @@ Usage:
   ./scripts/test.sh performance
   ./scripts/test.sh backup-restore
   ./scripts/test.sh all
+  ./scripts/test.sh hardening-secrets
 EOF
 }
 
@@ -4307,6 +4419,9 @@ main() {
       ;;
     hardening)
       run_hardening_suite
+      ;;
+    hardening-secrets)
+      run_hardening_secrets
       ;;
     all)
       run_go_unit

@@ -1,26 +1,26 @@
 openapi: 3.1.0
 info:
   title: ERP Billing API
-  version: 0.9.7
-  description: Subscription billing, payment recovery and gateway capabilities.
-servers:
-  - url: http://localhost:8095
+  version: 1.0.0
+  description: Subscription billing, invoices, gateway capabilities, payment attempts, webhooks and recovery operations.
+security:
+  - bearerAuth: []
 paths:
-  /health/details:
+  /api/billing/events:
     get:
-      summary: Return readiness details and gateway posture
+      summary: Read billing events
       responses:
-        '200':
-          description: Runtime readiness payload
+        "200":
+          description: Operation result
   /api/billing/gateways:
     get:
-      summary: List gateway capabilities and Pix posture
+      summary: Read billing gateways
       responses:
-        '200':
-          description: Billing gateway catalog
+        "200":
+          description: Operation result
   /api/billing/gateways/{provider}:
     get:
-      summary: Read one gateway capability
+      summary: Read billing gateways provider
       parameters:
         - in: path
           name: provider
@@ -28,64 +28,271 @@ paths:
           schema:
             type: string
       responses:
-        '200':
-          description: Gateway detail
-        '404':
-          description: Gateway not found
+        "200":
+          description: Operation result
+  /api/billing/invoices:
+    get:
+      summary: Read billing invoices
+      responses:
+        "200":
+          description: Operation result
+  /api/billing/invoices/{publicId}:
+    get:
+      summary: Read billing invoices publicId
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/billing/invoices/{publicId}/attempts:
+    get:
+      summary: Read billing invoices publicId attempts
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+    post:
+      summary: Create or execute billing invoices publicId attempts
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/billing/invoices/{publicId}/recovery/open:
+    post:
+      summary: Create or execute billing invoices publicId recovery open
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
   /api/billing/plans:
     get:
-      summary: List billing plans including flat, hybrid and usage-based pricing
+      summary: Read billing plans
       responses:
-        '200':
-          description: Plan list
+        "200":
+          description: Operation result
     post:
-      summary: Create billing plan
-      requestBody:
-        required: true
+      summary: Create or execute billing plans
       responses:
-        '200':
-          description: Plan created
+        "200":
+          description: Operation result
+  /api/billing/recovery/cases:
+    get:
+      summary: Read billing recovery cases
+      responses:
+        "200":
+          description: Operation result
+  /api/billing/recovery/cases/{publicId}:
+    get:
+      summary: Read billing recovery cases publicId
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/billing/recovery/cases/{publicId}/actions:
+    get:
+      summary: Read billing recovery cases publicId actions
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/billing/recovery/cases/{publicId}/close:
+    post:
+      summary: Create or execute billing recovery cases publicId close
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/billing/recovery/cases/{publicId}/promise:
+    post:
+      summary: Create or execute billing recovery cases publicId promise
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/billing/recovery/cases/{publicId}/touchpoints:
+    post:
+      summary: Create or execute billing recovery cases publicId touchpoints
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/billing/reports/operations:
+    get:
+      summary: Read billing reports operations
+      responses:
+        "200":
+          description: Operation result
   /api/billing/subscriptions:
     get:
-      summary: List subscriptions
+      summary: Read billing subscriptions
       responses:
-        '200':
-          description: Subscription list
+        "200":
+          description: Operation result
     post:
-      summary: Create subscription
-      requestBody:
-        required: true
+      summary: Create or execute billing subscriptions
       responses:
-        '200':
-          description: Subscription created
+        "200":
+          description: Operation result
+  /api/billing/subscriptions/{publicId}:
+    get:
+      summary: Read billing subscriptions publicId
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/billing/subscriptions/{publicId}/events:
+    get:
+      summary: Read billing subscriptions publicId events
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/billing/subscriptions/{publicId}/invoices:
+    post:
+      summary: Create or execute billing subscriptions publicId invoices
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/billing/subscriptions/{publicId}/reactivate:
+    post:
+      summary: Create or execute billing subscriptions publicId reactivate
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
+  /api/billing/subscriptions/{publicId}/suspend:
+    post:
+      summary: Create or execute billing subscriptions publicId suspend
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Operation result
   /api/billing/subscriptions/{publicId}/usage-pricing:
     get:
-      summary: Project usage-based charge for one subscription
+      summary: Read billing subscriptions publicId usage pricing
       parameters:
         - in: path
           name: publicId
           required: true
           schema:
             type: string
-            format: uuid
       responses:
-        '200':
-          description: Usage-based billing projection
-  /api/billing/invoices/{publicId}/attempts:
+        "200":
+          description: Operation result
+  /api/billing/webhook-events/pending:
+    get:
+      summary: Read billing webhook events pending
+      responses:
+        "200":
+          description: Operation result
+  /api/billing/webhook-events/process:
     post:
-      summary: Create payment attempt with idempotency support
-      parameters:
-        - in: path
-          name: publicId
-          required: true
-          schema:
-            type: string
-            format: uuid
-        - in: header
-          name: Idempotency-Key
-          required: false
-          schema:
-            type: string
+      summary: Create or execute billing webhook events process
       responses:
-        '200':
-          description: Attempt processed
+        "200":
+          description: Operation result
+  /api/billing/webhook-events/process-batch:
+    post:
+      summary: Create or execute billing webhook events process batch
+      responses:
+        "200":
+          description: Operation result
+  /health/details:
+    get:
+      summary: Read health details
+      responses:
+        "200":
+          description: Operation result
+  /health/live:
+    get:
+      security: []
+      summary: Read health live
+      responses:
+        "200":
+          description: Operation result
+  /health/ready:
+    get:
+      summary: Read health ready
+      responses:
+        "200":
+          description: Operation result
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

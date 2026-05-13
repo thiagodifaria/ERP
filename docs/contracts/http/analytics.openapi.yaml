@@ -3,6 +3,8 @@ info:
   title: ERP Analytics API
   version: 0.1.0
   description: Executive reports, adapter catalog, SaaS control and contract governance.
+security:
+  - bearerAuth: []
 paths:
   /api/analytics/reports/adapter-catalog:
     get:
@@ -58,3 +60,13 @@ paths:
       responses:
         "200":
           description: Go-live control report
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

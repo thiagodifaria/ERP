@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/thiagodifaria/erp/service-api/service-golang/crm/internal/api/dto"
@@ -38,6 +39,10 @@ func resolveTenantRepositories(
 		tenantSlug = strings.TrimSpace(bodyTenantSlug)
 	}
 	if tenantSlug == "" {
+		if !bootstrapTenantFallbackAllowed() {
+			writeBadRequest(writer, "tenant_slug_required", "Tenant slug is required.")
+			return repository.TenantRepositorySet{}, ""
+		}
 		tenantSlug = factory.BootstrapTenantSlug()
 	}
 
@@ -48,6 +53,16 @@ func resolveTenantRepositories(
 	}
 
 	return bundle, tenantSlug
+}
+
+func bootstrapTenantFallbackAllowed() bool {
+	explicit := strings.ToLower(strings.TrimSpace(os.Getenv("ERP_ALLOW_BOOTSTRAP_TENANT_FALLBACK")))
+	if explicit != "" {
+		return explicit == "true" || explicit == "1" || explicit == "yes"
+	}
+
+	environment := strings.ToLower(strings.TrimSpace(os.Getenv("ERP_ENV")))
+	return environment == "" || environment == "local" || environment == "dev" || environment == "development" || environment == "test"
 }
 
 func writeBadRequest(writer http.ResponseWriter, code string, message string) {

@@ -1,9 +1,29 @@
 openapi: 3.1.0
 info:
   title: ERP Workflow Control API
-  version: 0.6.0
-  description: Workflow definition catalog, status, publication and action snapshots.
+  version: 0.9.0
+  description: Workflow definition catalog, publication, versioning, execution control and audit events.
+security:
+  - bearerAuth: []
 paths:
+  /api/workflow-control/catalog/triggers:
+    get:
+      summary: List workflow trigger catalog
+      responses:
+        "200":
+          description: Trigger catalog
+  /api/workflow-control/catalog/actions:
+    get:
+      summary: List workflow action catalog
+      responses:
+        "200":
+          description: Action catalog
+  /api/workflow-control/editor:
+    get:
+      summary: Read editor capabilities and catalogs
+      responses:
+        "200":
+          description: Editor capability snapshot
   /api/workflow-control/definitions:
     get:
       summary: List workflow definitions
@@ -13,7 +33,7 @@ paths:
     post:
       summary: Create workflow definition
       responses:
-        "200":
+        "201":
           description: Created definition
   /api/workflow-control/definitions/{key}:
     get:
@@ -32,15 +52,112 @@ paths:
       responses:
         "200":
           description: Updated workflow definition status
-  /api/workflow-control/capabilities/triggers:
+  /api/workflow-control/definitions/{key}/versions:
     get:
-      summary: List workflow trigger catalog
+      summary: List workflow definition versions
       responses:
         "200":
-          description: Trigger catalog
-  /api/workflow-control/capabilities/actions:
+          description: Version list
+    post:
+      summary: Publish workflow definition version
+      responses:
+        "201":
+          description: Published version
+  /api/workflow-control/definitions/{key}/versions/summary:
     get:
-      summary: List workflow action catalog
+      summary: Read workflow definition version summary
       responses:
         "200":
-          description: Action catalog
+          description: Version summary
+  /api/workflow-control/definitions/{key}/versions/current:
+    get:
+      summary: Read current workflow definition version
+      responses:
+        "200":
+          description: Current version
+  /api/workflow-control/definitions/{key}/versions/{versionNumber}:
+    get:
+      summary: Read one workflow definition version
+      responses:
+        "200":
+          description: Version detail
+  /api/workflow-control/definitions/{key}/versions/{versionNumber}/restore:
+    post:
+      summary: Restore workflow definition version
+      responses:
+        "200":
+          description: Restored definition
+  /api/workflow-control/runs:
+    get:
+      summary: List workflow runs
+      responses:
+        "200":
+          description: Workflow run list
+    post:
+      summary: Create workflow run
+      responses:
+        "201":
+          description: Created workflow run
+  /api/workflow-control/runs/summary:
+    get:
+      summary: Read workflow run summary
+      responses:
+        "200":
+          description: Workflow run summary
+  /api/workflow-control/runs/{publicId}:
+    get:
+      summary: Read one workflow run
+      responses:
+        "200":
+          description: Workflow run detail
+  /api/workflow-control/runs/{publicId}/start:
+    post:
+      summary: Start workflow run
+      responses:
+        "200":
+          description: Started workflow run
+  /api/workflow-control/runs/{publicId}/complete:
+    post:
+      summary: Complete workflow run
+      responses:
+        "200":
+          description: Completed workflow run
+  /api/workflow-control/runs/{publicId}/fail:
+    post:
+      summary: Fail workflow run
+      responses:
+        "200":
+          description: Failed workflow run
+  /api/workflow-control/runs/{publicId}/cancel:
+    post:
+      summary: Cancel workflow run
+      responses:
+        "200":
+          description: Cancelled workflow run
+  /api/workflow-control/runs/{publicId}/events:
+    get:
+      summary: List workflow run events
+      responses:
+        "200":
+          description: Workflow run events
+    post:
+      summary: Append workflow run note
+      responses:
+        "201":
+          description: Created workflow run event
+  /api/workflow-control/runs/{publicId}/events/summary:
+    get:
+      summary: Read workflow run event summary
+      responses:
+        "200":
+          description: Workflow run event summary
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

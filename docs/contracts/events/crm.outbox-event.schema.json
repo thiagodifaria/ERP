@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erp://contracts/events/crm.outbox-event.schema.json",
+  "title": "CRM Outbox Event",
+  "type": "object",
+  "required": ["tenantSlug", "publicId", "aggregateType", "aggregatePublicId", "eventType", "payload"],
+  "properties": {
+    "tenantSlug": { "type": "string", "minLength": 1 },
+    "publicId": { "type": "string", "format": "uuid" },
+    "aggregateType": { "type": "string", "enum": ["lead", "customer"] },
+    "aggregatePublicId": { "type": "string", "format": "uuid" },
+    "eventType": {
+      "type": "string",
+      "enum": [
+        "crm.lead.created",
+        "crm.lead.updated",
+        "crm.lead.status_changed",
+        "crm.lead.owner_changed",
+        "crm.lead.interaction_recorded",
+        "crm.lead.converted",
+        "crm.customer.created"
+      ]
+    },
+    "payload": { "type": "object" },
+    "occurredAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

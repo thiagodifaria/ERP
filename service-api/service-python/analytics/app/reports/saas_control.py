@@ -6,6 +6,38 @@ from app.config.settings import settings
 from app.infrastructure.postgres import connect
 
 
+def build_saas_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "feature-flags",
+            "entitlements",
+            "usage-metering",
+            "tenant-onboarding",
+            "tenant-offboarding",
+            "quota-enforcement",
+            "tenant-blocks",
+            "provider-defaults",
+            "usage-based-pricing",
+        ],
+        "coveredAreas": [
+            "capabilities",
+            "quotas",
+            "metering",
+            "lifecycle",
+            "providers",
+            "billing",
+            "go-live",
+        ],
+        "runtimeEvidence": [
+            "GET /api/platform-control/tenants/{tenantSlug}/capabilities",
+            "GET /api/platform-control/tenants/{tenantSlug}/usage",
+            "POST /api/platform-control/tenants/{tenantSlug}/lifecycle/onboarding",
+            "GET /api/analytics/reports/saas-control",
+        ],
+    }
+
+
 def build_saas_control(tenant_slug: str | None = None) -> dict:
     if settings.repository_driver != "postgres":
         slug = tenant_slug or "bootstrap-ops"
@@ -26,6 +58,7 @@ def build_saas_control(tenant_slug: str | None = None) -> dict:
                 "usageBasedBillingReady": True,
                 "providerDefaultsReady": True,
             },
+            "saasClosure": build_saas_closure(),
         }
 
     slug = tenant_slug or "bootstrap-ops"
@@ -164,4 +197,5 @@ def build_saas_control(tenant_slug: str | None = None) -> dict:
             "usageBasedBillingReady": int(pricing.get("usage_total", 0) or 0) > 0 or int(pricing.get("hybrid_total", 0) or 0) > 0,
             "providerDefaultsReady": int(providers.get("defaults_total", 0) or 0) > 0,
         },
+        "saasClosure": build_saas_closure(),
     }

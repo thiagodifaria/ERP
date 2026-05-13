@@ -46,7 +46,7 @@ internal static class IdentityResponseMapper
       auditEvent.CreatedAt);
   }
 
-  public static PasswordRecoveryResponse ToResponse(this PasswordResetToken passwordResetToken, string tenantSlug, User user)
+  public static PasswordRecoveryResponse ToResponse(this PasswordResetToken passwordResetToken, string tenantSlug, User user, string resetToken)
   {
     return new PasswordRecoveryResponse(
       passwordResetToken.PublicId,
@@ -54,7 +54,7 @@ internal static class IdentityResponseMapper
       user.PublicId,
       user.Email,
       passwordResetToken.Status,
-      passwordResetToken.ResetToken,
+      resetToken,
       passwordResetToken.ExpiresAt);
   }
 

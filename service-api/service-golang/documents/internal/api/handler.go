@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -477,11 +478,19 @@ func (handler AttachmentHandler) parseSignedAccessToken(token string) (string, s
 }
 
 func (handler AttachmentHandler) tokenSecret() string {
-	if handler.accessTokenSecret == "" {
+	if strings.TrimSpace(handler.accessTokenSecret) == "" && localRuntimeMode() {
 		return "documents-local-secret"
+	}
+	if strings.TrimSpace(handler.accessTokenSecret) == "" {
+		panic("DOCUMENTS_ACCESS_TOKEN_SECRET is required outside local/test environments")
 	}
 
 	return handler.accessTokenSecret
+}
+
+func localRuntimeMode() bool {
+	environment := strings.ToLower(strings.TrimSpace(os.Getenv("ERP_ENV")))
+	return environment == "" || environment == "local" || environment == "dev" || environment == "development" || environment == "test"
 }
 
 func buildStorageRedirectURL(request *http.Request, attachment entity.Attachment, accessToken string, expiresAt time.Time) string {

@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 
 from app.config.settings import settings
+from app.security import install_security_middleware
 from app.reports.adapter_catalog import build_adapter_catalog
 from app.infrastructure.postgres import postgres_ready
 from app.reports.automation_board import build_automation_board
@@ -32,6 +33,7 @@ from app.reports.contract_governance import build_contract_governance
 
 
 app = FastAPI(title=settings.service_name)
+install_security_middleware(app, settings.service_name)
 
 
 @app.get("/health/live")

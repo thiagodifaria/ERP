@@ -3,6 +3,8 @@ info:
   title: ERP Fiscal API
   version: 0.1.0
   description: Fiscal profile, document operations, privacy rights and compliance governance.
+security:
+  - bearerAuth: []
 paths:
   /api/fiscal/capabilities:
     get:
@@ -162,3 +164,13 @@ paths:
       responses:
         "200":
           description: Compliance summary
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

@@ -1,40 +1,279 @@
 openapi: 3.1.0
 info:
   title: ERP Sales API
-  version: 0.7.0
-  description: Opportunities, proposals, sales, invoices and commercial lifecycle control.
+  version: 1.0.0
+  description: Opportunities, proposals, sales, invoices, installments, commissions, pending items, renegotiations and commercial outbox.
+security:
+  - bearerAuth: []
 paths:
   /api/sales/opportunities:
     get:
       summary: List opportunities
       responses:
-        "200":
-          description: Opportunity list
+        "200": { description: Opportunity list }
     post:
       summary: Create opportunity
       responses:
-        "200":
-          description: Created opportunity
-  /api/sales/proposals:
+        "201": { description: Created opportunity }
+  /api/sales/opportunities/summary:
     get:
-      summary: List proposals
+      summary: Read opportunity summary
       responses:
-        "200":
-          description: Proposal list
+        "200": { description: Opportunity summary }
+  /api/sales/opportunities/{publicId}:
+    get:
+      summary: Read opportunity by public id
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Opportunity detail }
+    patch:
+      summary: Update opportunity profile
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Updated opportunity }
+  /api/sales/opportunities/{publicId}/history:
+    get:
+      summary: List opportunity history
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Opportunity history }
+  /api/sales/opportunities/{publicId}/stage:
+    patch:
+      summary: Update opportunity stage
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Updated opportunity stage }
+  /api/sales/opportunities/{publicId}/proposals:
+    get:
+      summary: List proposals by opportunity
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Proposal list }
     post:
-      summary: Create proposal
+      summary: Create proposal for opportunity
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
       responses:
-        "200":
-          description: Created proposal
+        "201": { description: Created proposal }
+  /api/sales/proposals/{publicId}:
+    get:
+      summary: Read proposal by public id
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Proposal detail }
+  /api/sales/proposals/{publicId}/history:
+    get:
+      summary: List proposal history
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Proposal history }
+  /api/sales/proposals/{publicId}/status:
+    patch:
+      summary: Update proposal status
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Updated proposal status }
+  /api/sales/proposals/{publicId}/convert:
+    post:
+      summary: Convert proposal to sale
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "201": { description: Created sale }
   /api/sales/sales:
     get:
       summary: List sales
       responses:
-        "200":
-          description: Sale list
+        "200": { description: Sale list }
+  /api/sales/sales/summary:
+    get:
+      summary: Read sales summary
+      responses:
+        "200": { description: Sales summary }
+  /api/sales/sales/{publicId}:
+    get:
+      summary: Read sale by public id
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Sale detail }
+  /api/sales/sales/{publicId}/history:
+    get:
+      summary: List sale history
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Sale history }
+  /api/sales/sales/{publicId}/status:
+    patch:
+      summary: Update sale status
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Updated sale status }
+  /api/sales/sales/{publicId}/cancel:
+    post:
+      summary: Cancel sale
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Cancelled sale }
+  /api/sales/sales/{publicId}/installments:
+    get:
+      summary: List sale installments
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Installment list }
+    post:
+      summary: Create installment schedule
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "201": { description: Created installment schedule }
+  /api/sales/sales/{publicId}/commissions:
+    get:
+      summary: List sale commissions
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Commission list }
+    post:
+      summary: Create sale commission
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "201": { description: Created commission }
+  /api/sales/sales/{publicId}/commissions/{commissionPublicId}/block:
+    post:
+      summary: Block commission
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+        - $ref: "#/components/parameters/CommissionPublicId"
+      responses:
+        "200": { description: Blocked commission }
+  /api/sales/sales/{publicId}/commissions/{commissionPublicId}/release:
+    post:
+      summary: Release commission
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+        - $ref: "#/components/parameters/CommissionPublicId"
+      responses:
+        "200": { description: Released commission }
+  /api/sales/sales/{publicId}/pending-items:
+    get:
+      summary: List sale pending items
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Pending item list }
+    post:
+      summary: Create sale pending item
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "201": { description: Created pending item }
+  /api/sales/sales/{publicId}/pending-items/{pendingItemPublicId}/resolve:
+    post:
+      summary: Resolve pending item
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+        - $ref: "#/components/parameters/PendingItemPublicId"
+      responses:
+        "200": { description: Resolved pending item }
+  /api/sales/sales/{publicId}/renegotiations:
+    get:
+      summary: List sale renegotiations
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Renegotiation list }
+    post:
+      summary: Apply sale renegotiation
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Renegotiated sale }
+  /api/sales/sales/{publicId}/invoice:
+    post:
+      summary: Create invoice for sale
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "201": { description: Created invoice }
   /api/sales/invoices:
     get:
       summary: List commercial invoices
       responses:
-        "200":
-          description: Invoice list
+        "200": { description: Invoice list }
+  /api/sales/invoices/summary:
+    get:
+      summary: Read invoice summary
+      responses:
+        "200": { description: Invoice summary }
+  /api/sales/invoices/{publicId}:
+    get:
+      summary: Read invoice by public id
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Invoice detail }
+  /api/sales/invoices/{publicId}/history:
+    get:
+      summary: List invoice history
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Invoice history }
+  /api/sales/invoices/{publicId}/status:
+    patch:
+      summary: Update invoice status
+      parameters:
+        - $ref: "#/components/parameters/PublicId"
+      responses:
+        "200": { description: Updated invoice status }
+  /api/sales/outbox/pending:
+    get:
+      summary: List pending sales outbox events
+      responses:
+        "200": { description: Pending outbox events }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt
+  parameters:
+    PublicId:
+      in: path
+      name: publicId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CommissionPublicId:
+      in: path
+      name: commissionPublicId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PendingItemPublicId:
+      in: path
+      name: pendingItemPublicId
+      required: true
+      schema:
+        type: string
+        format: uuid

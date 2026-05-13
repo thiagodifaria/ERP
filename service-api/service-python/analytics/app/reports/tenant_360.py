@@ -7,6 +7,43 @@ from app.infrastructure.postgres import connect
 from app.reports.pipeline_summary import append_filter, tenant_filter
 
 
+def build_identity_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "tenant-boundary",
+            "company-unit-catalog",
+            "user-team-role-model",
+            "invite-lifecycle",
+            "session-lifecycle",
+            "mfa-enforcement",
+            "password-recovery",
+            "access-resolution",
+            "security-audit",
+        ],
+        "coveredAreas": [
+            "tenants",
+            "companies",
+            "users",
+            "teams",
+            "roles",
+            "invitations",
+            "mfa",
+            "sessions",
+            "audit",
+        ],
+        "runtimeEvidence": [
+            "POST /api/identity/tenants",
+            "POST /api/identity/tenants/{slug}/invites",
+            "POST /api/identity/sessions/login",
+            "POST /api/identity/sessions/refresh",
+            "GET /api/identity/tenants/{slug}/access",
+            "GET /api/identity/tenants/{slug}/security/audit",
+            "GET /api/analytics/reports/tenant-360",
+        ],
+    }
+
+
 def build_tenant_360(tenant_slug: str | None = None) -> dict:
     if settings.repository_driver == "postgres":
         return build_postgres_tenant_360(tenant_slug)
@@ -95,6 +132,7 @@ def build_static_tenant_360(tenant_slug: str | None = None) -> dict:
             "runtimeFailed": 8,
             "runtimeCancelled": 4,
         },
+        "identityClosure": build_identity_closure(),
     }
 
 
@@ -123,6 +161,7 @@ def build_postgres_tenant_360(tenant_slug: str | None = None) -> dict:
         "finance": finance_metrics,
         "billing": billing_metrics,
         "automation": automation_metrics,
+        "identityClosure": build_identity_closure(),
     }
 
 

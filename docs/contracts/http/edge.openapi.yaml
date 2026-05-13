@@ -3,6 +3,8 @@ info:
   title: ERP Edge API
   version: 0.1.0
   description: Aggregated operational cockpits for tenants, contracts and SaaS control.
+security:
+  - bearerAuth: []
 paths:
   /api/edge/ops/core-operations:
     get:
@@ -52,3 +54,13 @@ paths:
       responses:
         "200":
           description: Hardening overview
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

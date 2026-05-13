@@ -1,5 +1,7 @@
 using Identity.Contracts;
 using Identity.Domain;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Identity.Application;
 
@@ -27,7 +29,7 @@ public sealed class CompleteIdentityPasswordRecovery
 
   public OperationResult<PasswordRecoveryResponse> Execute(string resetToken, ResetPasswordRequest request)
   {
-    var passwordResetToken = _securityStore.FindPasswordResetTokenByResetToken(resetToken.Trim());
+    var passwordResetToken = _securityStore.FindPasswordResetTokenByResetToken(HashResetToken(resetToken));
     if (passwordResetToken is null)
     {
       return OperationResult<PasswordRecoveryResponse>.NotFound(
@@ -82,6 +84,11 @@ public sealed class CompleteIdentityPasswordRecovery
     var consumedToken = _securityStore.UpdatePasswordResetToken(passwordResetToken.Consume(DateTimeOffset.UtcNow));
     _auditWriter.Record(tenant.Id, user.PublicId, user.PublicId, "password_reset_completed", "info", $"Password reset completed for {user.Email}.");
 
-    return OperationResult<PasswordRecoveryResponse>.Success(consumedToken.ToResponse(tenant.Slug, user));
+    return OperationResult<PasswordRecoveryResponse>.Success(consumedToken.ToResponse(tenant.Slug, user, ""));
+  }
+
+  private static string HashResetToken(string resetToken)
+  {
+    return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(resetToken.Trim()))).ToLowerInvariant();
   }
 }

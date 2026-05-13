@@ -184,7 +184,7 @@ public static class Server
         return TypedResults.BadRequest(new ErrorResponse("invalid_settlement_amount", "Settlement amount must match the receivable amount."));
       }
 
-      var settledAt = ParseUtcOrNow(request.SettledAt);
+      var settledAt = FinancePolicies.ParseUtcOrNow(request.SettledAt);
       if (settledAt is null)
       {
         await transaction.RollbackAsync();
@@ -344,7 +344,7 @@ public static class Server
         return TypedResults.BadRequest(new ErrorResponse("invalid_payable_status", "Target payable status is required."));
       }
 
-      var normalizedStatus = NormalizePayableStatus(request.Status);
+      var normalizedStatus = FinancePolicies.NormalizePayableStatus(request.Status);
       if (normalizedStatus.Length == 0)
       {
         return TypedResults.BadRequest(new ErrorResponse("invalid_payable_status", "Target payable status is invalid."));
@@ -374,7 +374,7 @@ public static class Server
         return TypedResults.Ok(payable);
       }
 
-      if (!CanTransitionPayableStatus(payable.Status, normalizedStatus))
+      if (!FinancePolicies.CanTransitionPayableStatus(payable.Status, normalizedStatus))
       {
         await transaction.RollbackAsync();
         return TypedResults.BadRequest(new ErrorResponse("invalid_payable_status_transition", "Payable status transition is invalid."));
@@ -391,7 +391,7 @@ public static class Server
         }
       }
 
-      var paidAt = normalizedStatus == "paid" ? ParseUtcOrNow(request.PaidAt) : null;
+      var paidAt = normalizedStatus == "paid" ? FinancePolicies.ParseUtcOrNow(request.PaidAt) : null;
       if (normalizedStatus == "paid" && paidAt is null)
       {
         await transaction.RollbackAsync();
@@ -460,7 +460,7 @@ public static class Server
     app.MapGet("/api/finance/cash-accounts", async Task<IResult> (string? tenantSlug, string? status, NpgsqlDataSource dataSource, IConfiguration configuration) =>
     {
       var resolvedTenantSlug = ResolveTenantSlug(tenantSlug, configuration);
-      var normalizedStatus = NormalizeCashAccountStatus(status);
+      var normalizedStatus = FinancePolicies.NormalizeCashAccountStatus(status);
       if (status is not null && normalizedStatus.Length == 0)
       {
         return TypedResults.BadRequest(new ErrorResponse("invalid_cash_account_status", "Cash account status is invalid."));
@@ -548,13 +548,13 @@ public static class Server
     app.MapGet("/api/finance/cash-movements", async Task<IResult> (string? tenantSlug, string? cashAccountPublicId, string? direction, string? movementType, NpgsqlDataSource dataSource, IConfiguration configuration) =>
     {
       var resolvedTenantSlug = ResolveTenantSlug(tenantSlug, configuration);
-      var normalizedDirection = NormalizeCashMovementDirection(direction);
+      var normalizedDirection = FinancePolicies.NormalizeCashMovementDirection(direction);
       if (direction is not null && normalizedDirection.Length == 0)
       {
         return TypedResults.BadRequest(new ErrorResponse("invalid_cash_movement_direction", "Cash movement direction is invalid."));
       }
 
-      var normalizedMovementType = NormalizeCashMovementType(movementType);
+      var normalizedMovementType = FinancePolicies.NormalizeCashMovementType(movementType);
       if (movementType is not null && normalizedMovementType.Length == 0)
       {
         return TypedResults.BadRequest(new ErrorResponse("invalid_cash_movement_type", "Cash movement type is invalid."));
@@ -589,7 +589,7 @@ public static class Server
       }
 
       var periodKey = request.PeriodKey.Trim();
-      if (!TryResolveCurrentPeriodKey(periodKey, out var currentPeriodKey) || !string.Equals(periodKey, currentPeriodKey, StringComparison.Ordinal))
+      if (!FinancePolicies.TryResolveCurrentPeriodKey(periodKey, out var currentPeriodKey) || !string.Equals(periodKey, currentPeriodKey, StringComparison.Ordinal))
       {
         return TypedResults.BadRequest(new ErrorResponse("unsupported_period_closure", "Only the current UTC period can be closed at this stage."));
       }
@@ -1848,7 +1848,7 @@ public static class Server
       """,
       connection);
     command.Parameters.AddWithValue(tenantSlug);
-    command.Parameters.AddWithValue(NormalizePayableStatus(status));
+    command.Parameters.AddWithValue(FinancePolicies.NormalizePayableStatus(status));
 
     var response = new List<PayableResponse>();
     await using var reader = await command.ExecuteReaderAsync();

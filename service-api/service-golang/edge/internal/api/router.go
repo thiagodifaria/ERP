@@ -60,5 +60,5 @@ func NewRouter(
 	mux.Handle("/api/edge/ops/finance-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(financeOverviewHandler.Overview)))
 	mux.Handle("/api/edge/ops/rentals-overview", middleware.WithTenantAccess(identityBaseURL, accessResolver, http.HandlerFunc(rentalsOverviewHandler.Overview)))
 
-	return middleware.WithCorrelation(logger, mux)
+	return middleware.WithSecurity("edge", middleware.WithCorrelation(logger, mux))
 }

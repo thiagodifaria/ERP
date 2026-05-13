@@ -46,10 +46,10 @@ export const services: ServiceContract[] = [
     "slug": "billing",
     "name": "Billing",
     "title": "ERP Billing API",
-    "version": "0.9.7",
-    "description": "Subscription billing, payment recovery and gateway capabilities.",
+    "version": "1.0.0",
+    "description": "Subscription billing, invoices, gateway capabilities, payment attempts, webhooks and recovery operations.",
     "contractFile": "docs/contracts/http/billing.openapi.yaml",
-    "endpointCount": 9
+    "endpointCount": 31
   },
   {
     "slug": "catalog",
@@ -64,10 +64,10 @@ export const services: ServiceContract[] = [
     "slug": "crm",
     "name": "CRM",
     "title": "ERP CRM API",
-    "version": "0.2.0",
-    "description": "CRM leads, customers, activity, attachments and commercial intelligence.",
+    "version": "1.0.0",
+    "description": "Leads, customers, ownership, history, attachments, pipeline intelligence and CRM outbox.",
     "contractFile": "docs/contracts/http/crm.openapi.yaml",
-    "endpointCount": 5
+    "endpointCount": 26
   },
   {
     "slug": "documents",
@@ -100,10 +100,10 @@ export const services: ServiceContract[] = [
     "slug": "finance",
     "name": "Finance",
     "title": "ERP Finance API",
-    "version": "0.4.0",
-    "description": "Receivables, commission holds, cash control and cross-domain financial activity.",
+    "version": "1.0.0",
+    "description": "Receivables, projections, settlements, commission lifecycle, payables, costs, treasury, period closures and financial activity.",
     "contractFile": "docs/contracts/http/finance.openapi.yaml",
-    "endpointCount": 5
+    "endpointCount": 26
   },
   {
     "slug": "fiscal",
@@ -118,10 +118,10 @@ export const services: ServiceContract[] = [
     "slug": "identity",
     "name": "Identity",
     "title": "ERP Identity API",
-    "version": "0.5.0",
-    "description": "Tenancy, access, sessions, invitations and tenant-scoped identity governance.",
+    "version": "0.9.0",
+    "description": "Tenancy, access, sessions, invitations, MFA, recovery and tenant-scoped identity governance.",
     "contractFile": "docs/contracts/http/identity.openapi.yaml",
-    "endpointCount": 6
+    "endpointCount": 46
   },
   {
     "slug": "notification",
@@ -145,28 +145,28 @@ export const services: ServiceContract[] = [
     "slug": "rentals",
     "name": "Rentals",
     "title": "ERP Rentals API",
-    "version": "0.8.0",
+    "version": "0.9.0",
     "description": "Rental contracts, recurring charges, adjustments, rescission and attachment linkage.",
     "contractFile": "docs/contracts/http/rentals.openapi.yaml",
-    "endpointCount": 4
+    "endpointCount": 12
   },
   {
     "slug": "sales",
     "name": "Sales",
     "title": "ERP Sales API",
-    "version": "0.7.0",
-    "description": "Opportunities, proposals, sales, invoices and commercial lifecycle control.",
+    "version": "1.0.0",
+    "description": "Opportunities, proposals, sales, invoices, installments, commissions, pending items, renegotiations and commercial outbox.",
     "contractFile": "docs/contracts/http/sales.openapi.yaml",
-    "endpointCount": 6
+    "endpointCount": 37
   },
   {
     "slug": "simulation",
     "name": "Simulation",
     "title": "ERP Simulation API",
-    "version": "0.7.0",
+    "version": "0.8.0",
     "description": "Scenario simulation, load benchmark and cost estimation runtime.",
     "contractFile": "docs/contracts/http/simulation.openapi.yaml",
-    "endpointCount": 3
+    "endpointCount": 6
   },
   {
     "slug": "supplier",
@@ -199,19 +199,19 @@ export const services: ServiceContract[] = [
     "slug": "workflow-control",
     "name": "Workflow Control",
     "title": "ERP Workflow Control API",
-    "version": "0.6.0",
-    "description": "Workflow definition catalog, status, publication and action snapshots.",
+    "version": "0.9.0",
+    "description": "Workflow definition catalog, publication, versioning, execution control and audit events.",
     "contractFile": "docs/contracts/http/workflow-control.openapi.yaml",
-    "endpointCount": 7
+    "endpointCount": 25
   },
   {
     "slug": "workflow-runtime",
     "name": "Workflow Runtime",
     "title": "ERP Workflow Runtime API",
-    "version": "0.6.0",
-    "description": "Workflow execution runtime with action snapshots, retries, delays and compensations.",
+    "version": "0.9.0",
+    "description": "Workflow execution runtime with transitions, action snapshots, retries, delays and compensations.",
     "contractFile": "docs/contracts/http/workflow-runtime.openapi.yaml",
-    "endpointCount": 6
+    "endpointCount": 15
   }
 ];
 
@@ -361,37 +361,13 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
-    "id": "billing:GET:/health/live",
+    "id": "billing:GET:/api/billing/events",
     "service": "billing",
     "method": "GET",
-    "path": "/health/live",
-    "tag": "Health",
-    "description": "Health live do serviço billing.",
-    "summary": "Health live",
-    "source": "runtime",
-    "hasBody": false,
-    "pathParams": []
-  },
-  {
-    "id": "billing:GET:/health/ready",
-    "service": "billing",
-    "method": "GET",
-    "path": "/health/ready",
-    "tag": "Health",
-    "description": "Health ready do serviço billing.",
-    "summary": "Health ready",
-    "source": "runtime",
-    "hasBody": false,
-    "pathParams": []
-  },
-  {
-    "id": "billing:GET:/health/details",
-    "service": "billing",
-    "method": "GET",
-    "path": "/health/details",
+    "path": "/api/billing/events",
     "tag": "Billing",
-    "description": "Return readiness details and gateway posture",
-    "summary": "Return readiness details and gateway posture",
+    "description": "Read billing events",
+    "summary": "Read billing events",
     "source": "docs/contracts/http/billing.openapi.yaml",
     "hasBody": false,
     "pathParams": []
@@ -402,8 +378,8 @@ export const endpoints: EndpointContract[] = [
     "method": "GET",
     "path": "/api/billing/gateways",
     "tag": "Billing",
-    "description": "List gateway capabilities and Pix posture",
-    "summary": "List gateway capabilities and Pix posture",
+    "description": "Read billing gateways",
+    "summary": "Read billing gateways",
     "source": "docs/contracts/http/billing.openapi.yaml",
     "hasBody": false,
     "pathParams": []
@@ -414,8 +390,8 @@ export const endpoints: EndpointContract[] = [
     "method": "GET",
     "path": "/api/billing/gateways/{provider}",
     "tag": "Billing",
-    "description": "Read one gateway capability",
-    "summary": "Read one gateway capability",
+    "description": "Read billing gateways provider",
+    "summary": "Read billing gateways provider",
     "source": "docs/contracts/http/billing.openapi.yaml",
     "hasBody": false,
     "pathParams": [
@@ -423,61 +399,39 @@ export const endpoints: EndpointContract[] = [
     ]
   },
   {
-    "id": "billing:GET:/api/billing/plans",
+    "id": "billing:GET:/api/billing/invoices",
     "service": "billing",
     "method": "GET",
-    "path": "/api/billing/plans",
+    "path": "/api/billing/invoices",
     "tag": "Billing",
-    "description": "List billing plans including flat, hybrid and usage-based pricing",
-    "summary": "List billing plans including flat, hybrid and usage-based pricing",
+    "description": "Read billing invoices",
+    "summary": "Read billing invoices",
     "source": "docs/contracts/http/billing.openapi.yaml",
     "hasBody": false,
     "pathParams": []
   },
   {
-    "id": "billing:POST:/api/billing/plans",
-    "service": "billing",
-    "method": "POST",
-    "path": "/api/billing/plans",
-    "tag": "Billing",
-    "description": "Create billing plan",
-    "summary": "Create billing plan",
-    "source": "docs/contracts/http/billing.openapi.yaml",
-    "hasBody": true,
-    "pathParams": []
-  },
-  {
-    "id": "billing:GET:/api/billing/subscriptions",
+    "id": "billing:GET:/api/billing/invoices/{publicId}",
     "service": "billing",
     "method": "GET",
-    "path": "/api/billing/subscriptions",
+    "path": "/api/billing/invoices/{publicId}",
     "tag": "Billing",
-    "description": "List subscriptions",
-    "summary": "List subscriptions",
+    "description": "Read billing invoices publicId",
+    "summary": "Read billing invoices publicId",
     "source": "docs/contracts/http/billing.openapi.yaml",
     "hasBody": false,
-    "pathParams": []
+    "pathParams": [
+      "publicId"
+    ]
   },
   {
-    "id": "billing:POST:/api/billing/subscriptions",
-    "service": "billing",
-    "method": "POST",
-    "path": "/api/billing/subscriptions",
-    "tag": "Billing",
-    "description": "Create subscription",
-    "summary": "Create subscription",
-    "source": "docs/contracts/http/billing.openapi.yaml",
-    "hasBody": true,
-    "pathParams": []
-  },
-  {
-    "id": "billing:GET:/api/billing/subscriptions/{publicId}/usage-pricing",
+    "id": "billing:GET:/api/billing/invoices/{publicId}/attempts",
     "service": "billing",
     "method": "GET",
-    "path": "/api/billing/subscriptions/{publicId}/usage-pricing",
+    "path": "/api/billing/invoices/{publicId}/attempts",
     "tag": "Billing",
-    "description": "Project usage-based charge for one subscription",
-    "summary": "Project usage-based charge for one subscription",
+    "description": "Read billing invoices publicId attempts",
+    "summary": "Read billing invoices publicId attempts",
     "source": "docs/contracts/http/billing.openapi.yaml",
     "hasBody": false,
     "pathParams": [
@@ -490,13 +444,325 @@ export const endpoints: EndpointContract[] = [
     "method": "POST",
     "path": "/api/billing/invoices/{publicId}/attempts",
     "tag": "Billing",
-    "description": "Create payment attempt with idempotency support",
-    "summary": "Create payment attempt with idempotency support",
+    "description": "Create or execute billing invoices publicId attempts",
+    "summary": "Create or execute billing invoices publicId attempts",
     "source": "docs/contracts/http/billing.openapi.yaml",
     "hasBody": true,
     "pathParams": [
       "publicId"
     ]
+  },
+  {
+    "id": "billing:POST:/api/billing/invoices/{publicId}/recovery/open",
+    "service": "billing",
+    "method": "POST",
+    "path": "/api/billing/invoices/{publicId}/recovery/open",
+    "tag": "Billing",
+    "description": "Create or execute billing invoices publicId recovery open",
+    "summary": "Create or execute billing invoices publicId recovery open",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "billing:GET:/api/billing/plans",
+    "service": "billing",
+    "method": "GET",
+    "path": "/api/billing/plans",
+    "tag": "Billing",
+    "description": "Read billing plans",
+    "summary": "Read billing plans",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "billing:POST:/api/billing/plans",
+    "service": "billing",
+    "method": "POST",
+    "path": "/api/billing/plans",
+    "tag": "Billing",
+    "description": "Create or execute billing plans",
+    "summary": "Create or execute billing plans",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "billing:GET:/api/billing/recovery/cases",
+    "service": "billing",
+    "method": "GET",
+    "path": "/api/billing/recovery/cases",
+    "tag": "Billing",
+    "description": "Read billing recovery cases",
+    "summary": "Read billing recovery cases",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "billing:GET:/api/billing/recovery/cases/{publicId}",
+    "service": "billing",
+    "method": "GET",
+    "path": "/api/billing/recovery/cases/{publicId}",
+    "tag": "Billing",
+    "description": "Read billing recovery cases publicId",
+    "summary": "Read billing recovery cases publicId",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "billing:GET:/api/billing/recovery/cases/{publicId}/actions",
+    "service": "billing",
+    "method": "GET",
+    "path": "/api/billing/recovery/cases/{publicId}/actions",
+    "tag": "Billing",
+    "description": "Read billing recovery cases publicId actions",
+    "summary": "Read billing recovery cases publicId actions",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "billing:POST:/api/billing/recovery/cases/{publicId}/close",
+    "service": "billing",
+    "method": "POST",
+    "path": "/api/billing/recovery/cases/{publicId}/close",
+    "tag": "Billing",
+    "description": "Create or execute billing recovery cases publicId close",
+    "summary": "Create or execute billing recovery cases publicId close",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "billing:POST:/api/billing/recovery/cases/{publicId}/promise",
+    "service": "billing",
+    "method": "POST",
+    "path": "/api/billing/recovery/cases/{publicId}/promise",
+    "tag": "Billing",
+    "description": "Create or execute billing recovery cases publicId promise",
+    "summary": "Create or execute billing recovery cases publicId promise",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "billing:POST:/api/billing/recovery/cases/{publicId}/touchpoints",
+    "service": "billing",
+    "method": "POST",
+    "path": "/api/billing/recovery/cases/{publicId}/touchpoints",
+    "tag": "Billing",
+    "description": "Create or execute billing recovery cases publicId touchpoints",
+    "summary": "Create or execute billing recovery cases publicId touchpoints",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "billing:GET:/api/billing/reports/operations",
+    "service": "billing",
+    "method": "GET",
+    "path": "/api/billing/reports/operations",
+    "tag": "Billing",
+    "description": "Read billing reports operations",
+    "summary": "Read billing reports operations",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "billing:GET:/api/billing/subscriptions",
+    "service": "billing",
+    "method": "GET",
+    "path": "/api/billing/subscriptions",
+    "tag": "Billing",
+    "description": "Read billing subscriptions",
+    "summary": "Read billing subscriptions",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "billing:POST:/api/billing/subscriptions",
+    "service": "billing",
+    "method": "POST",
+    "path": "/api/billing/subscriptions",
+    "tag": "Billing",
+    "description": "Create or execute billing subscriptions",
+    "summary": "Create or execute billing subscriptions",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "billing:GET:/api/billing/subscriptions/{publicId}",
+    "service": "billing",
+    "method": "GET",
+    "path": "/api/billing/subscriptions/{publicId}",
+    "tag": "Billing",
+    "description": "Read billing subscriptions publicId",
+    "summary": "Read billing subscriptions publicId",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "billing:GET:/api/billing/subscriptions/{publicId}/events",
+    "service": "billing",
+    "method": "GET",
+    "path": "/api/billing/subscriptions/{publicId}/events",
+    "tag": "Billing",
+    "description": "Read billing subscriptions publicId events",
+    "summary": "Read billing subscriptions publicId events",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "billing:POST:/api/billing/subscriptions/{publicId}/invoices",
+    "service": "billing",
+    "method": "POST",
+    "path": "/api/billing/subscriptions/{publicId}/invoices",
+    "tag": "Billing",
+    "description": "Create or execute billing subscriptions publicId invoices",
+    "summary": "Create or execute billing subscriptions publicId invoices",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "billing:POST:/api/billing/subscriptions/{publicId}/reactivate",
+    "service": "billing",
+    "method": "POST",
+    "path": "/api/billing/subscriptions/{publicId}/reactivate",
+    "tag": "Billing",
+    "description": "Create or execute billing subscriptions publicId reactivate",
+    "summary": "Create or execute billing subscriptions publicId reactivate",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "billing:POST:/api/billing/subscriptions/{publicId}/suspend",
+    "service": "billing",
+    "method": "POST",
+    "path": "/api/billing/subscriptions/{publicId}/suspend",
+    "tag": "Billing",
+    "description": "Create or execute billing subscriptions publicId suspend",
+    "summary": "Create or execute billing subscriptions publicId suspend",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "billing:GET:/api/billing/subscriptions/{publicId}/usage-pricing",
+    "service": "billing",
+    "method": "GET",
+    "path": "/api/billing/subscriptions/{publicId}/usage-pricing",
+    "tag": "Billing",
+    "description": "Read billing subscriptions publicId usage pricing",
+    "summary": "Read billing subscriptions publicId usage pricing",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "billing:GET:/api/billing/webhook-events/pending",
+    "service": "billing",
+    "method": "GET",
+    "path": "/api/billing/webhook-events/pending",
+    "tag": "Billing",
+    "description": "Read billing webhook events pending",
+    "summary": "Read billing webhook events pending",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "billing:POST:/api/billing/webhook-events/process",
+    "service": "billing",
+    "method": "POST",
+    "path": "/api/billing/webhook-events/process",
+    "tag": "Billing",
+    "description": "Create or execute billing webhook events process",
+    "summary": "Create or execute billing webhook events process",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "billing:POST:/api/billing/webhook-events/process-batch",
+    "service": "billing",
+    "method": "POST",
+    "path": "/api/billing/webhook-events/process-batch",
+    "tag": "Billing",
+    "description": "Create or execute billing webhook events process batch",
+    "summary": "Create or execute billing webhook events process batch",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "billing:GET:/health/details",
+    "service": "billing",
+    "method": "GET",
+    "path": "/health/details",
+    "tag": "Billing",
+    "description": "Read health details",
+    "summary": "Read health details",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "billing:GET:/health/live",
+    "service": "billing",
+    "method": "GET",
+    "path": "/health/live",
+    "tag": "Billing",
+    "description": "Read health live",
+    "summary": "Read health live",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "billing:GET:/health/ready",
+    "service": "billing",
+    "method": "GET",
+    "path": "/health/ready",
+    "tag": "Billing",
+    "description": "Read health ready",
+    "summary": "Read health ready",
+    "source": "docs/contracts/http/billing.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
   },
   {
     "id": "catalog:GET:/health/live",
@@ -721,27 +987,283 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
-    "id": "crm:GET:/api/crm/enrichment/cnpj/capabilities",
+    "id": "crm:GET:/api/crm/leads/summary",
     "service": "crm",
     "method": "GET",
-    "path": "/api/crm/enrichment/cnpj/capabilities",
+    "path": "/api/crm/leads/summary",
     "tag": "Crm",
-    "description": "Read CNPJ enrichment provider capabilities",
-    "summary": "Read CNPJ enrichment provider capabilities",
+    "description": "Read lead summary",
+    "summary": "Read lead summary",
     "source": "docs/contracts/http/crm.openapi.yaml",
     "hasBody": false,
     "pathParams": []
   },
   {
-    "id": "crm:POST:/api/crm/enrichment/cnpj/lookup",
+    "id": "crm:GET:/api/crm/leads",
+    "service": "crm",
+    "method": "GET",
+    "path": "/api/crm/leads",
+    "tag": "Crm",
+    "description": "List leads",
+    "summary": "List leads",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "crm:POST:/api/crm/leads",
     "service": "crm",
     "method": "POST",
-    "path": "/api/crm/enrichment/cnpj/lookup",
+    "path": "/api/crm/leads",
     "tag": "Crm",
-    "description": "Lookup and enrich one CNPJ through provider contract",
-    "summary": "Lookup and enrich one CNPJ through provider contract",
+    "description": "Create lead",
+    "summary": "Create lead",
     "source": "docs/contracts/http/crm.openapi.yaml",
     "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "crm:GET:/api/crm/leads/export",
+    "service": "crm",
+    "method": "GET",
+    "path": "/api/crm/leads/export",
+    "tag": "Crm",
+    "description": "Export filtered leads",
+    "summary": "Export filtered leads",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "crm:POST:/api/crm/leads/bulk",
+    "service": "crm",
+    "method": "POST",
+    "path": "/api/crm/leads/bulk",
+    "tag": "Crm",
+    "description": "Create leads in bulk",
+    "summary": "Create leads in bulk",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "crm:GET:/api/crm/leads/{publicId}",
+    "service": "crm",
+    "method": "GET",
+    "path": "/api/crm/leads/{publicId}",
+    "tag": "Crm",
+    "description": "Read lead by public id",
+    "summary": "Read lead by public id",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "crm:PATCH:/api/crm/leads/{publicId}",
+    "service": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/leads/{publicId}",
+    "tag": "Crm",
+    "description": "Update lead profile",
+    "summary": "Update lead profile",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "crm:POST:/api/crm/leads/{publicId}/convert",
+    "service": "crm",
+    "method": "POST",
+    "path": "/api/crm/leads/{publicId}/convert",
+    "tag": "Crm",
+    "description": "Convert lead to customer",
+    "summary": "Convert lead to customer",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "crm:GET:/api/crm/leads/{publicId}/history",
+    "service": "crm",
+    "method": "GET",
+    "path": "/api/crm/leads/{publicId}/history",
+    "tag": "Crm",
+    "description": "List lead relationship history",
+    "summary": "List lead relationship history",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "crm:GET:/api/crm/leads/{publicId}/notes",
+    "service": "crm",
+    "method": "GET",
+    "path": "/api/crm/leads/{publicId}/notes",
+    "tag": "Crm",
+    "description": "List lead notes",
+    "summary": "List lead notes",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "crm:POST:/api/crm/leads/{publicId}/notes",
+    "service": "crm",
+    "method": "POST",
+    "path": "/api/crm/leads/{publicId}/notes",
+    "tag": "Crm",
+    "description": "Create lead note",
+    "summary": "Create lead note",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "crm:GET:/api/crm/leads/{publicId}/attachments",
+    "service": "crm",
+    "method": "GET",
+    "path": "/api/crm/leads/{publicId}/attachments",
+    "tag": "Crm",
+    "description": "List lead attachments",
+    "summary": "List lead attachments",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "crm:POST:/api/crm/leads/{publicId}/attachments",
+    "service": "crm",
+    "method": "POST",
+    "path": "/api/crm/leads/{publicId}/attachments",
+    "tag": "Crm",
+    "description": "Create lead attachment metadata",
+    "summary": "Create lead attachment metadata",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "crm:PATCH:/api/crm/leads/{publicId}/owner",
+    "service": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/leads/{publicId}/owner",
+    "tag": "Crm",
+    "description": "Update lead owner",
+    "summary": "Update lead owner",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "crm:PATCH:/api/crm/leads/{publicId}/status",
+    "service": "crm",
+    "method": "PATCH",
+    "path": "/api/crm/leads/{publicId}/status",
+    "tag": "Crm",
+    "description": "Update lead status",
+    "summary": "Update lead status",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "crm:GET:/api/crm/customers",
+    "service": "crm",
+    "method": "GET",
+    "path": "/api/crm/customers",
+    "tag": "Crm",
+    "description": "List customers",
+    "summary": "List customers",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "crm:GET:/api/crm/customers/{publicId}",
+    "service": "crm",
+    "method": "GET",
+    "path": "/api/crm/customers/{publicId}",
+    "tag": "Crm",
+    "description": "Read customer by public id",
+    "summary": "Read customer by public id",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "crm:GET:/api/crm/customers/{publicId}/history",
+    "service": "crm",
+    "method": "GET",
+    "path": "/api/crm/customers/{publicId}/history",
+    "tag": "Crm",
+    "description": "List customer relationship history",
+    "summary": "List customer relationship history",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "crm:GET:/api/crm/customers/{publicId}/attachments",
+    "service": "crm",
+    "method": "GET",
+    "path": "/api/crm/customers/{publicId}/attachments",
+    "tag": "Crm",
+    "description": "List customer attachments",
+    "summary": "List customer attachments",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "crm:POST:/api/crm/customers/{publicId}/attachments",
+    "service": "crm",
+    "method": "POST",
+    "path": "/api/crm/customers/{publicId}/attachments",
+    "tag": "Crm",
+    "description": "Create customer attachment metadata",
+    "summary": "Create customer attachment metadata",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "crm:GET:/api/crm/outbox/pending",
+    "service": "crm",
+    "method": "GET",
+    "path": "/api/crm/outbox/pending",
+    "tag": "Crm",
+    "description": "List pending CRM outbox events",
+    "summary": "List pending CRM outbox events",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": false,
     "pathParams": []
   },
   {
@@ -778,6 +1300,30 @@ export const endpoints: EndpointContract[] = [
     "summary": "Read lead scoring and pipeline intelligence summary",
     "source": "docs/contracts/http/crm.openapi.yaml",
     "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "crm:GET:/api/crm/enrichment/cnpj/capabilities",
+    "service": "crm",
+    "method": "GET",
+    "path": "/api/crm/enrichment/cnpj/capabilities",
+    "tag": "Crm",
+    "description": "Read CNPJ enrichment provider capabilities",
+    "summary": "Read CNPJ enrichment provider capabilities",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "crm:POST:/api/crm/enrichment/cnpj/lookup",
+    "service": "crm",
+    "method": "POST",
+    "path": "/api/crm/enrichment/cnpj/lookup",
+    "tag": "Crm",
+    "description": "Lookup and enrich one CNPJ through provider contract",
+    "summary": "Lookup and enrich one CNPJ through provider contract",
+    "source": "docs/contracts/http/crm.openapi.yaml",
+    "hasBody": true,
     "pathParams": []
   },
   {
@@ -1237,10 +1783,22 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
-    "id": "finance:GET:/api/finance/receivable-projections",
+    "id": "finance:POST:/api/finance/projections/ingest",
+    "service": "finance",
+    "method": "POST",
+    "path": "/api/finance/projections/ingest",
+    "tag": "Finance",
+    "description": "Ingest pending sales outbox events into finance projections",
+    "summary": "Ingest pending sales outbox events into finance projections",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "finance:GET:/api/finance/projections",
     "service": "finance",
     "method": "GET",
-    "path": "/api/finance/receivable-projections",
+    "path": "/api/finance/projections",
     "tag": "Finance",
     "description": "List receivable projections",
     "summary": "List receivable projections",
@@ -1249,42 +1807,290 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
-    "id": "finance:POST:/api/finance/receivable-projections/sync",
-    "service": "finance",
-    "method": "POST",
-    "path": "/api/finance/receivable-projections/sync",
-    "tag": "Finance",
-    "description": "Sync projections from sales and rentals",
-    "summary": "Sync projections from sales and rentals",
-    "source": "docs/contracts/http/finance.openapi.yaml",
-    "hasBody": true,
-    "pathParams": []
-  },
-  {
-    "id": "finance:GET:/api/finance/commission-holds",
+    "id": "finance:GET:/api/finance/projections/summary",
     "service": "finance",
     "method": "GET",
-    "path": "/api/finance/commission-holds",
+    "path": "/api/finance/projections/summary",
     "tag": "Finance",
-    "description": "List commission holds",
-    "summary": "List commission holds",
+    "description": "Read projection summary",
+    "summary": "Read projection summary",
     "source": "docs/contracts/http/finance.openapi.yaml",
     "hasBody": false,
     "pathParams": []
   },
   {
-    "id": "finance:POST:/api/finance/commission-holds/{publicId}/release",
+    "id": "finance:POST:/api/finance/operations/sync",
     "service": "finance",
     "method": "POST",
-    "path": "/api/finance/commission-holds/{publicId}/release",
+    "path": "/api/finance/operations/sync",
     "tag": "Finance",
-    "description": "Release one commission hold",
-    "summary": "Release one commission hold",
+    "description": "Sync operational receivables and commissions from sales and rentals",
+    "summary": "Sync operational receivables and commissions from sales and rentals",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "finance:GET:/api/finance/receivables",
+    "service": "finance",
+    "method": "GET",
+    "path": "/api/finance/receivables",
+    "tag": "Finance",
+    "description": "List operational receivables",
+    "summary": "List operational receivables",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "finance:POST:/api/finance/receivables/{publicId}/settlements",
+    "service": "finance",
+    "method": "POST",
+    "path": "/api/finance/receivables/{publicId}/settlements",
+    "tag": "Finance",
+    "description": "Settle receivable idempotently",
+    "summary": "Settle receivable idempotently",
     "source": "docs/contracts/http/finance.openapi.yaml",
     "hasBody": true,
     "pathParams": [
       "publicId"
     ]
+  },
+  {
+    "id": "finance:GET:/api/finance/commissions",
+    "service": "finance",
+    "method": "GET",
+    "path": "/api/finance/commissions",
+    "tag": "Finance",
+    "description": "List commission entries",
+    "summary": "List commission entries",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "finance:GET:/api/finance/commissions/summary",
+    "service": "finance",
+    "method": "GET",
+    "path": "/api/finance/commissions/summary",
+    "tag": "Finance",
+    "description": "Read commission summary",
+    "summary": "Read commission summary",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "finance:POST:/api/finance/commissions/{publicId}/block",
+    "service": "finance",
+    "method": "POST",
+    "path": "/api/finance/commissions/{publicId}/block",
+    "tag": "Finance",
+    "description": "Block commission",
+    "summary": "Block commission",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "finance:POST:/api/finance/commissions/{publicId}/release",
+    "service": "finance",
+    "method": "POST",
+    "path": "/api/finance/commissions/{publicId}/release",
+    "tag": "Finance",
+    "description": "Release commission",
+    "summary": "Release commission",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "finance:GET:/api/finance/payables",
+    "service": "finance",
+    "method": "GET",
+    "path": "/api/finance/payables",
+    "tag": "Finance",
+    "description": "List payables",
+    "summary": "List payables",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "finance:POST:/api/finance/payables",
+    "service": "finance",
+    "method": "POST",
+    "path": "/api/finance/payables",
+    "tag": "Finance",
+    "description": "Create payable",
+    "summary": "Create payable",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "finance:PATCH:/api/finance/payables/{publicId}/status",
+    "service": "finance",
+    "method": "PATCH",
+    "path": "/api/finance/payables/{publicId}/status",
+    "tag": "Finance",
+    "description": "Update payable status",
+    "summary": "Update payable status",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "finance:GET:/api/finance/costs",
+    "service": "finance",
+    "method": "GET",
+    "path": "/api/finance/costs",
+    "tag": "Finance",
+    "description": "List cost entries",
+    "summary": "List cost entries",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "finance:POST:/api/finance/costs",
+    "service": "finance",
+    "method": "POST",
+    "path": "/api/finance/costs",
+    "tag": "Finance",
+    "description": "Create cost entry",
+    "summary": "Create cost entry",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "finance:GET:/api/finance/cash-accounts",
+    "service": "finance",
+    "method": "GET",
+    "path": "/api/finance/cash-accounts",
+    "tag": "Finance",
+    "description": "List cash accounts",
+    "summary": "List cash accounts",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "finance:POST:/api/finance/cash-accounts",
+    "service": "finance",
+    "method": "POST",
+    "path": "/api/finance/cash-accounts",
+    "tag": "Finance",
+    "description": "Create cash account",
+    "summary": "Create cash account",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "finance:POST:/api/finance/treasury/sync",
+    "service": "finance",
+    "method": "POST",
+    "path": "/api/finance/treasury/sync",
+    "tag": "Finance",
+    "description": "Sync treasury movements from finance operations",
+    "summary": "Sync treasury movements from finance operations",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "finance:GET:/api/finance/cash-movements",
+    "service": "finance",
+    "method": "GET",
+    "path": "/api/finance/cash-movements",
+    "tag": "Finance",
+    "description": "List cash movements",
+    "summary": "List cash movements",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "finance:GET:/api/finance/cash-movements/summary",
+    "service": "finance",
+    "method": "GET",
+    "path": "/api/finance/cash-movements/summary",
+    "tag": "Finance",
+    "description": "Read cash movement summary",
+    "summary": "Read cash movement summary",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "finance:GET:/api/finance/reports/treasury",
+    "service": "finance",
+    "method": "GET",
+    "path": "/api/finance/reports/treasury",
+    "tag": "Finance",
+    "description": "Read treasury operational report",
+    "summary": "Read treasury operational report",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "finance:GET:/api/finance/period-closures",
+    "service": "finance",
+    "method": "GET",
+    "path": "/api/finance/period-closures",
+    "tag": "Finance",
+    "description": "List period closures",
+    "summary": "List period closures",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "finance:POST:/api/finance/period-closures",
+    "service": "finance",
+    "method": "POST",
+    "path": "/api/finance/period-closures",
+    "tag": "Finance",
+    "description": "Close current financial period with immutable snapshot",
+    "summary": "Close current financial period with immutable snapshot",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "finance:GET:/api/finance/period-closures/{periodKey}",
+    "service": "finance",
+    "method": "GET",
+    "path": "/api/finance/period-closures/{periodKey}",
+    "tag": "Finance",
+    "description": "Read period closure snapshot",
+    "summary": "Read period closure snapshot",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "periodKey"
+    ]
+  },
+  {
+    "id": "finance:GET:/api/finance/reports/operations",
+    "service": "finance",
+    "method": "GET",
+    "path": "/api/finance/reports/operations",
+    "tag": "Finance",
+    "description": "Read finance operational report",
+    "summary": "Read finance operational report",
+    "source": "docs/contracts/http/finance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
   },
   {
     "id": "finance:GET:/api/finance/activity",
@@ -1668,77 +2474,43 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
-    "id": "identity:GET:/health/live",
-    "service": "identity",
-    "method": "GET",
-    "path": "/health/live",
-    "tag": "Health",
-    "description": "Health live do serviço identity.",
-    "summary": "Health live",
-    "source": "runtime",
-    "hasBody": false,
-    "pathParams": []
-  },
-  {
-    "id": "identity:GET:/health/ready",
-    "service": "identity",
-    "method": "GET",
-    "path": "/health/ready",
-    "tag": "Health",
-    "description": "Health ready do serviço identity.",
-    "summary": "Health ready",
-    "source": "runtime",
-    "hasBody": false,
-    "pathParams": []
-  },
-  {
-    "id": "identity:GET:/health/details",
-    "service": "identity",
-    "method": "GET",
-    "path": "/health/details",
-    "tag": "Health",
-    "description": "Health details do serviço identity.",
-    "summary": "Health details",
-    "source": "runtime",
-    "hasBody": false,
-    "pathParams": []
-  },
-  {
-    "id": "identity:GET:/api/identity/tenants",
-    "service": "identity",
-    "method": "GET",
-    "path": "/api/identity/tenants",
-    "tag": "Identity",
-    "description": "List tenants",
-    "summary": "List tenants",
-    "source": "docs/contracts/http/identity.openapi.yaml",
-    "hasBody": false,
-    "pathParams": []
-  },
-  {
-    "id": "identity:POST:/api/identity/tenants",
+    "id": "identity:POST:/api/identity/invites/{inviteToken}/accept",
     "service": "identity",
     "method": "POST",
-    "path": "/api/identity/tenants",
+    "path": "/api/identity/invites/{inviteToken}/accept",
     "tag": "Identity",
-    "description": "Create tenant",
-    "summary": "Create tenant",
+    "description": "Create or execute identity invites inviteToken accept",
+    "summary": "Create or execute identity invites inviteToken accept",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "inviteToken"
+    ]
+  },
+  {
+    "id": "identity:POST:/api/identity/password-recovery",
+    "service": "identity",
+    "method": "POST",
+    "path": "/api/identity/password-recovery",
+    "tag": "Identity",
+    "description": "Create or execute identity password recovery",
+    "summary": "Create or execute identity password recovery",
     "source": "docs/contracts/http/identity.openapi.yaml",
     "hasBody": true,
     "pathParams": []
   },
   {
-    "id": "identity:GET:/api/identity/tenants/{slug}/snapshot",
+    "id": "identity:POST:/api/identity/password-recovery/{resetToken}/complete",
     "service": "identity",
-    "method": "GET",
-    "path": "/api/identity/tenants/{slug}/snapshot",
+    "method": "POST",
+    "path": "/api/identity/password-recovery/{resetToken}/complete",
     "tag": "Identity",
-    "description": "Read one tenant snapshot",
-    "summary": "Read one tenant snapshot",
+    "description": "Create or execute identity password recovery resetToken complete",
+    "summary": "Create or execute identity password recovery resetToken complete",
     "source": "docs/contracts/http/identity.openapi.yaml",
-    "hasBody": false,
+    "hasBody": true,
     "pathParams": [
-      "slug"
+      "resetToken"
     ]
   },
   {
@@ -1747,8 +2519,20 @@ export const endpoints: EndpointContract[] = [
     "method": "POST",
     "path": "/api/identity/sessions/login",
     "tag": "Identity",
-    "description": "Authenticate identity session",
-    "summary": "Authenticate identity session",
+    "description": "Create or execute identity sessions login",
+    "summary": "Create or execute identity sessions login",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "identity:POST:/api/identity/sessions/logout",
+    "service": "identity",
+    "method": "POST",
+    "path": "/api/identity/sessions/logout",
+    "tag": "Identity",
+    "description": "Create or execute identity sessions logout",
+    "summary": "Create or execute identity sessions logout",
     "source": "docs/contracts/http/identity.openapi.yaml",
     "hasBody": true,
     "pathParams": []
@@ -1759,22 +2543,584 @@ export const endpoints: EndpointContract[] = [
     "method": "POST",
     "path": "/api/identity/sessions/refresh",
     "tag": "Identity",
-    "description": "Refresh identity session",
-    "summary": "Refresh identity session",
+    "description": "Create or execute identity sessions refresh",
+    "summary": "Create or execute identity sessions refresh",
     "source": "docs/contracts/http/identity.openapi.yaml",
     "hasBody": true,
     "pathParams": []
   },
   {
-    "id": "identity:POST:/api/identity/invitations",
+    "id": "identity:GET:/api/identity/tenants",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants",
+    "tag": "Identity",
+    "description": "Read identity tenants",
+    "summary": "Read identity tenants",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "identity:POST:/api/identity/tenants",
     "service": "identity",
     "method": "POST",
-    "path": "/api/identity/invitations",
+    "path": "/api/identity/tenants",
     "tag": "Identity",
-    "description": "Create invitation",
-    "summary": "Create invitation",
+    "description": "Create or execute identity tenants",
+    "summary": "Create or execute identity tenants",
     "source": "docs/contracts/http/identity.openapi.yaml",
     "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}",
+    "tag": "Identity",
+    "description": "Read identity tenants slug",
+    "summary": "Read identity tenants slug",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/access",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/access",
+    "tag": "Identity",
+    "description": "Read identity tenants slug access",
+    "summary": "Read identity tenants slug access",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/companies",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/companies",
+    "tag": "Identity",
+    "description": "Read identity tenants slug companies",
+    "summary": "Read identity tenants slug companies",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug"
+    ]
+  },
+  {
+    "id": "identity:POST:/api/identity/tenants/{slug}/companies",
+    "service": "identity",
+    "method": "POST",
+    "path": "/api/identity/tenants/{slug}/companies",
+    "tag": "Identity",
+    "description": "Create or execute identity tenants slug companies",
+    "summary": "Create or execute identity tenants slug companies",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "slug"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/companies/{companyPublicId}",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/companies/{companyPublicId}",
+    "tag": "Identity",
+    "description": "Read identity tenants slug companies companyPublicId",
+    "summary": "Read identity tenants slug companies companyPublicId",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug",
+      "companyPublicId"
+    ]
+  },
+  {
+    "id": "identity:PATCH:/api/identity/tenants/{slug}/companies/{companyPublicId}",
+    "service": "identity",
+    "method": "PATCH",
+    "path": "/api/identity/tenants/{slug}/companies/{companyPublicId}",
+    "tag": "Identity",
+    "description": "Update identity tenants slug companies companyPublicId",
+    "summary": "Update identity tenants slug companies companyPublicId",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "slug",
+      "companyPublicId"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/invites",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/invites",
+    "tag": "Identity",
+    "description": "Read identity tenants slug invites",
+    "summary": "Read identity tenants slug invites",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug"
+    ]
+  },
+  {
+    "id": "identity:POST:/api/identity/tenants/{slug}/invites",
+    "service": "identity",
+    "method": "POST",
+    "path": "/api/identity/tenants/{slug}/invites",
+    "tag": "Identity",
+    "description": "Create or execute identity tenants slug invites",
+    "summary": "Create or execute identity tenants slug invites",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "slug"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/invites/{invitePublicId}",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/invites/{invitePublicId}",
+    "tag": "Identity",
+    "description": "Read identity tenants slug invites invitePublicId",
+    "summary": "Read identity tenants slug invites invitePublicId",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug",
+      "invitePublicId"
+    ]
+  },
+  {
+    "id": "identity:POST:/api/identity/tenants/{slug}/invites/{invitePublicId}/cancel",
+    "service": "identity",
+    "method": "POST",
+    "path": "/api/identity/tenants/{slug}/invites/{invitePublicId}/cancel",
+    "tag": "Identity",
+    "description": "Create or execute identity tenants slug invites invitePublicId cancel",
+    "summary": "Create or execute identity tenants slug invites invitePublicId cancel",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "slug",
+      "invitePublicId"
+    ]
+  },
+  {
+    "id": "identity:POST:/api/identity/tenants/{slug}/invites/{invitePublicId}/resend",
+    "service": "identity",
+    "method": "POST",
+    "path": "/api/identity/tenants/{slug}/invites/{invitePublicId}/resend",
+    "tag": "Identity",
+    "description": "Create or execute identity tenants slug invites invitePublicId resend",
+    "summary": "Create or execute identity tenants slug invites invitePublicId resend",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "slug",
+      "invitePublicId"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/roles",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/roles",
+    "tag": "Identity",
+    "description": "Read identity tenants slug roles",
+    "summary": "Read identity tenants slug roles",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/security/audit",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/security/audit",
+    "tag": "Identity",
+    "description": "Read identity tenants slug security audit",
+    "summary": "Read identity tenants slug security audit",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug"
+    ]
+  },
+  {
+    "id": "identity:DELETE:/api/identity/tenants/{slug}/sessions/{sessionPublicId}",
+    "service": "identity",
+    "method": "DELETE",
+    "path": "/api/identity/tenants/{slug}/sessions/{sessionPublicId}",
+    "tag": "Identity",
+    "description": "Delete identity tenants slug sessions sessionPublicId",
+    "summary": "Delete identity tenants slug sessions sessionPublicId",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug",
+      "sessionPublicId"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/snapshot",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/snapshot",
+    "tag": "Identity",
+    "description": "Read identity tenants slug snapshot",
+    "summary": "Read identity tenants slug snapshot",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/teams",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/teams",
+    "tag": "Identity",
+    "description": "Read identity tenants slug teams",
+    "summary": "Read identity tenants slug teams",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug"
+    ]
+  },
+  {
+    "id": "identity:POST:/api/identity/tenants/{slug}/teams",
+    "service": "identity",
+    "method": "POST",
+    "path": "/api/identity/tenants/{slug}/teams",
+    "tag": "Identity",
+    "description": "Create or execute identity tenants slug teams",
+    "summary": "Create or execute identity tenants slug teams",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "slug"
+    ]
+  },
+  {
+    "id": "identity:PATCH:/api/identity/tenants/{slug}/teams/{teamPublicId}",
+    "service": "identity",
+    "method": "PATCH",
+    "path": "/api/identity/tenants/{slug}/teams/{teamPublicId}",
+    "tag": "Identity",
+    "description": "Update identity tenants slug teams teamPublicId",
+    "summary": "Update identity tenants slug teams teamPublicId",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "slug",
+      "teamPublicId"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/teams/{teamPublicId}/members",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/teams/{teamPublicId}/members",
+    "tag": "Identity",
+    "description": "Read identity tenants slug teams teamPublicId members",
+    "summary": "Read identity tenants slug teams teamPublicId members",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug",
+      "teamPublicId"
+    ]
+  },
+  {
+    "id": "identity:POST:/api/identity/tenants/{slug}/teams/{teamPublicId}/members",
+    "service": "identity",
+    "method": "POST",
+    "path": "/api/identity/tenants/{slug}/teams/{teamPublicId}/members",
+    "tag": "Identity",
+    "description": "Create or execute identity tenants slug teams teamPublicId members",
+    "summary": "Create or execute identity tenants slug teams teamPublicId members",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "slug",
+      "teamPublicId"
+    ]
+  },
+  {
+    "id": "identity:DELETE:/api/identity/tenants/{slug}/teams/{teamPublicId}/members/{userPublicId}",
+    "service": "identity",
+    "method": "DELETE",
+    "path": "/api/identity/tenants/{slug}/teams/{teamPublicId}/members/{userPublicId}",
+    "tag": "Identity",
+    "description": "Delete identity tenants slug teams teamPublicId members userPublicId",
+    "summary": "Delete identity tenants slug teams teamPublicId members userPublicId",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug",
+      "teamPublicId",
+      "userPublicId"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/users",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/users",
+    "tag": "Identity",
+    "description": "Read identity tenants slug users",
+    "summary": "Read identity tenants slug users",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug"
+    ]
+  },
+  {
+    "id": "identity:POST:/api/identity/tenants/{slug}/users",
+    "service": "identity",
+    "method": "POST",
+    "path": "/api/identity/tenants/{slug}/users",
+    "tag": "Identity",
+    "description": "Create or execute identity tenants slug users",
+    "summary": "Create or execute identity tenants slug users",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "slug"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/users/{userPublicId}",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/users/{userPublicId}",
+    "tag": "Identity",
+    "description": "Read identity tenants slug users userPublicId",
+    "summary": "Read identity tenants slug users userPublicId",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug",
+      "userPublicId"
+    ]
+  },
+  {
+    "id": "identity:PATCH:/api/identity/tenants/{slug}/users/{userPublicId}",
+    "service": "identity",
+    "method": "PATCH",
+    "path": "/api/identity/tenants/{slug}/users/{userPublicId}",
+    "tag": "Identity",
+    "description": "Update identity tenants slug users userPublicId",
+    "summary": "Update identity tenants slug users userPublicId",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "slug",
+      "userPublicId"
+    ]
+  },
+  {
+    "id": "identity:PATCH:/api/identity/tenants/{slug}/users/{userPublicId}/access",
+    "service": "identity",
+    "method": "PATCH",
+    "path": "/api/identity/tenants/{slug}/users/{userPublicId}/access",
+    "tag": "Identity",
+    "description": "Update identity tenants slug users userPublicId access",
+    "summary": "Update identity tenants slug users userPublicId access",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "slug",
+      "userPublicId"
+    ]
+  },
+  {
+    "id": "identity:DELETE:/api/identity/tenants/{slug}/users/{userPublicId}/mfa",
+    "service": "identity",
+    "method": "DELETE",
+    "path": "/api/identity/tenants/{slug}/users/{userPublicId}/mfa",
+    "tag": "Identity",
+    "description": "Delete identity tenants slug users userPublicId mfa",
+    "summary": "Delete identity tenants slug users userPublicId mfa",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug",
+      "userPublicId"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/users/{userPublicId}/mfa",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/users/{userPublicId}/mfa",
+    "tag": "Identity",
+    "description": "Read identity tenants slug users userPublicId mfa",
+    "summary": "Read identity tenants slug users userPublicId mfa",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug",
+      "userPublicId"
+    ]
+  },
+  {
+    "id": "identity:POST:/api/identity/tenants/{slug}/users/{userPublicId}/mfa/enroll",
+    "service": "identity",
+    "method": "POST",
+    "path": "/api/identity/tenants/{slug}/users/{userPublicId}/mfa/enroll",
+    "tag": "Identity",
+    "description": "Create or execute identity tenants slug users userPublicId mfa enroll",
+    "summary": "Create or execute identity tenants slug users userPublicId mfa enroll",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "slug",
+      "userPublicId"
+    ]
+  },
+  {
+    "id": "identity:POST:/api/identity/tenants/{slug}/users/{userPublicId}/mfa/verify",
+    "service": "identity",
+    "method": "POST",
+    "path": "/api/identity/tenants/{slug}/users/{userPublicId}/mfa/verify",
+    "tag": "Identity",
+    "description": "Create or execute identity tenants slug users userPublicId mfa verify",
+    "summary": "Create or execute identity tenants slug users userPublicId mfa verify",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "slug",
+      "userPublicId"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/users/{userPublicId}/roles",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/users/{userPublicId}/roles",
+    "tag": "Identity",
+    "description": "Read identity tenants slug users userPublicId roles",
+    "summary": "Read identity tenants slug users userPublicId roles",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug",
+      "userPublicId"
+    ]
+  },
+  {
+    "id": "identity:POST:/api/identity/tenants/{slug}/users/{userPublicId}/roles",
+    "service": "identity",
+    "method": "POST",
+    "path": "/api/identity/tenants/{slug}/users/{userPublicId}/roles",
+    "tag": "Identity",
+    "description": "Create or execute identity tenants slug users userPublicId roles",
+    "summary": "Create or execute identity tenants slug users userPublicId roles",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "slug",
+      "userPublicId"
+    ]
+  },
+  {
+    "id": "identity:DELETE:/api/identity/tenants/{slug}/users/{userPublicId}/roles/{roleCode}",
+    "service": "identity",
+    "method": "DELETE",
+    "path": "/api/identity/tenants/{slug}/users/{userPublicId}/roles/{roleCode}",
+    "tag": "Identity",
+    "description": "Delete identity tenants slug users userPublicId roles roleCode",
+    "summary": "Delete identity tenants slug users userPublicId roles roleCode",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug",
+      "userPublicId",
+      "roleCode"
+    ]
+  },
+  {
+    "id": "identity:DELETE:/api/identity/tenants/{slug}/users/{userPublicId}/sessions",
+    "service": "identity",
+    "method": "DELETE",
+    "path": "/api/identity/tenants/{slug}/users/{userPublicId}/sessions",
+    "tag": "Identity",
+    "description": "Delete identity tenants slug users userPublicId sessions",
+    "summary": "Delete identity tenants slug users userPublicId sessions",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug",
+      "userPublicId"
+    ]
+  },
+  {
+    "id": "identity:GET:/api/identity/tenants/{slug}/users/{userPublicId}/sessions",
+    "service": "identity",
+    "method": "GET",
+    "path": "/api/identity/tenants/{slug}/users/{userPublicId}/sessions",
+    "tag": "Identity",
+    "description": "Read identity tenants slug users userPublicId sessions",
+    "summary": "Read identity tenants slug users userPublicId sessions",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "slug",
+      "userPublicId"
+    ]
+  },
+  {
+    "id": "identity:GET:/health/details",
+    "service": "identity",
+    "method": "GET",
+    "path": "/health/details",
+    "tag": "Identity",
+    "description": "Read health details",
+    "summary": "Read health details",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "identity:GET:/health/live",
+    "service": "identity",
+    "method": "GET",
+    "path": "/health/live",
+    "tag": "Identity",
+    "description": "Read health live",
+    "summary": "Read health live",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "identity:GET:/health/ready",
+    "service": "identity",
+    "method": "GET",
+    "path": "/health/ready",
+    "tag": "Identity",
+    "description": "Read health ready",
+    "summary": "Read health ready",
+    "source": "docs/contracts/http/identity.openapi.yaml",
+    "hasBody": false,
     "pathParams": []
   },
   {
@@ -2582,6 +3928,32 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
+    "id": "rentals:GET:/api/rentals/contracts/summary",
+    "service": "rentals",
+    "method": "GET",
+    "path": "/api/rentals/contracts/summary",
+    "tag": "Rentals",
+    "description": "Read rental portfolio summary",
+    "summary": "Read rental portfolio summary",
+    "source": "docs/contracts/http/rentals.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "rentals:GET:/api/rentals/contracts/{publicId}",
+    "service": "rentals",
+    "method": "GET",
+    "path": "/api/rentals/contracts/{publicId}",
+    "tag": "Rentals",
+    "description": "Read one rental contract",
+    "summary": "Read one rental contract",
+    "source": "docs/contracts/http/rentals.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
     "id": "rentals:GET:/api/rentals/contracts/{publicId}/charges",
     "service": "rentals",
     "method": "GET",
@@ -2608,6 +3980,90 @@ export const endpoints: EndpointContract[] = [
     "pathParams": [
       "publicId",
       "chargePublicId"
+    ]
+  },
+  {
+    "id": "rentals:GET:/api/rentals/contracts/{publicId}/history",
+    "service": "rentals",
+    "method": "GET",
+    "path": "/api/rentals/contracts/{publicId}/history",
+    "tag": "Rentals",
+    "description": "List contract lifecycle history",
+    "summary": "List contract lifecycle history",
+    "source": "docs/contracts/http/rentals.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "rentals:GET:/api/rentals/contracts/{publicId}/adjustments",
+    "service": "rentals",
+    "method": "GET",
+    "path": "/api/rentals/contracts/{publicId}/adjustments",
+    "tag": "Rentals",
+    "description": "List contract adjustments",
+    "summary": "List contract adjustments",
+    "source": "docs/contracts/http/rentals.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "rentals:POST:/api/rentals/contracts/{publicId}/adjustments",
+    "service": "rentals",
+    "method": "POST",
+    "path": "/api/rentals/contracts/{publicId}/adjustments",
+    "tag": "Rentals",
+    "description": "Create contract adjustment",
+    "summary": "Create contract adjustment",
+    "source": "docs/contracts/http/rentals.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "rentals:POST:/api/rentals/contracts/{publicId}/terminate",
+    "service": "rentals",
+    "method": "POST",
+    "path": "/api/rentals/contracts/{publicId}/terminate",
+    "tag": "Rentals",
+    "description": "Terminate rental contract",
+    "summary": "Terminate rental contract",
+    "source": "docs/contracts/http/rentals.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "rentals:GET:/api/rentals/contracts/{publicId}/attachments",
+    "service": "rentals",
+    "method": "GET",
+    "path": "/api/rentals/contracts/{publicId}/attachments",
+    "tag": "Rentals",
+    "description": "List contract attachments",
+    "summary": "List contract attachments",
+    "source": "docs/contracts/http/rentals.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "rentals:POST:/api/rentals/contracts/{publicId}/attachments",
+    "service": "rentals",
+    "method": "POST",
+    "path": "/api/rentals/contracts/{publicId}/attachments",
+    "tag": "Rentals",
+    "description": "Link attachment to contract",
+    "summary": "Link attachment to contract",
+    "source": "docs/contracts/http/rentals.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
     ]
   },
   {
@@ -2671,28 +4127,156 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
-    "id": "sales:GET:/api/sales/proposals",
+    "id": "sales:GET:/api/sales/opportunities/summary",
     "service": "sales",
     "method": "GET",
-    "path": "/api/sales/proposals",
+    "path": "/api/sales/opportunities/summary",
     "tag": "Sales",
-    "description": "List proposals",
-    "summary": "List proposals",
+    "description": "Read opportunity summary",
+    "summary": "Read opportunity summary",
     "source": "docs/contracts/http/sales.openapi.yaml",
     "hasBody": false,
     "pathParams": []
   },
   {
-    "id": "sales:POST:/api/sales/proposals",
+    "id": "sales:GET:/api/sales/opportunities/{publicId}",
     "service": "sales",
-    "method": "POST",
-    "path": "/api/sales/proposals",
+    "method": "GET",
+    "path": "/api/sales/opportunities/{publicId}",
     "tag": "Sales",
-    "description": "Create proposal",
-    "summary": "Create proposal",
+    "description": "Read opportunity by public id",
+    "summary": "Read opportunity by public id",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:PATCH:/api/sales/opportunities/{publicId}",
+    "service": "sales",
+    "method": "PATCH",
+    "path": "/api/sales/opportunities/{publicId}",
+    "tag": "Sales",
+    "description": "Update opportunity profile",
+    "summary": "Update opportunity profile",
     "source": "docs/contracts/http/sales.openapi.yaml",
     "hasBody": true,
-    "pathParams": []
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:GET:/api/sales/opportunities/{publicId}/history",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/opportunities/{publicId}/history",
+    "tag": "Sales",
+    "description": "List opportunity history",
+    "summary": "List opportunity history",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:PATCH:/api/sales/opportunities/{publicId}/stage",
+    "service": "sales",
+    "method": "PATCH",
+    "path": "/api/sales/opportunities/{publicId}/stage",
+    "tag": "Sales",
+    "description": "Update opportunity stage",
+    "summary": "Update opportunity stage",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:GET:/api/sales/opportunities/{publicId}/proposals",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/opportunities/{publicId}/proposals",
+    "tag": "Sales",
+    "description": "List proposals by opportunity",
+    "summary": "List proposals by opportunity",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:POST:/api/sales/opportunities/{publicId}/proposals",
+    "service": "sales",
+    "method": "POST",
+    "path": "/api/sales/opportunities/{publicId}/proposals",
+    "tag": "Sales",
+    "description": "Create proposal for opportunity",
+    "summary": "Create proposal for opportunity",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:GET:/api/sales/proposals/{publicId}",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/proposals/{publicId}",
+    "tag": "Sales",
+    "description": "Read proposal by public id",
+    "summary": "Read proposal by public id",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:GET:/api/sales/proposals/{publicId}/history",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/proposals/{publicId}/history",
+    "tag": "Sales",
+    "description": "List proposal history",
+    "summary": "List proposal history",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:PATCH:/api/sales/proposals/{publicId}/status",
+    "service": "sales",
+    "method": "PATCH",
+    "path": "/api/sales/proposals/{publicId}/status",
+    "tag": "Sales",
+    "description": "Update proposal status",
+    "summary": "Update proposal status",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:POST:/api/sales/proposals/{publicId}/convert",
+    "service": "sales",
+    "method": "POST",
+    "path": "/api/sales/proposals/{publicId}/convert",
+    "tag": "Sales",
+    "description": "Convert proposal to sale",
+    "summary": "Convert proposal to sale",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
   },
   {
     "id": "sales:GET:/api/sales/sales",
@@ -2707,6 +4291,245 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
+    "id": "sales:GET:/api/sales/sales/summary",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/sales/summary",
+    "tag": "Sales",
+    "description": "Read sales summary",
+    "summary": "Read sales summary",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "sales:GET:/api/sales/sales/{publicId}",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/sales/{publicId}",
+    "tag": "Sales",
+    "description": "Read sale by public id",
+    "summary": "Read sale by public id",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:GET:/api/sales/sales/{publicId}/history",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/sales/{publicId}/history",
+    "tag": "Sales",
+    "description": "List sale history",
+    "summary": "List sale history",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:PATCH:/api/sales/sales/{publicId}/status",
+    "service": "sales",
+    "method": "PATCH",
+    "path": "/api/sales/sales/{publicId}/status",
+    "tag": "Sales",
+    "description": "Update sale status",
+    "summary": "Update sale status",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:POST:/api/sales/sales/{publicId}/cancel",
+    "service": "sales",
+    "method": "POST",
+    "path": "/api/sales/sales/{publicId}/cancel",
+    "tag": "Sales",
+    "description": "Cancel sale",
+    "summary": "Cancel sale",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:GET:/api/sales/sales/{publicId}/installments",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/sales/{publicId}/installments",
+    "tag": "Sales",
+    "description": "List sale installments",
+    "summary": "List sale installments",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:POST:/api/sales/sales/{publicId}/installments",
+    "service": "sales",
+    "method": "POST",
+    "path": "/api/sales/sales/{publicId}/installments",
+    "tag": "Sales",
+    "description": "Create installment schedule",
+    "summary": "Create installment schedule",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:GET:/api/sales/sales/{publicId}/commissions",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/sales/{publicId}/commissions",
+    "tag": "Sales",
+    "description": "List sale commissions",
+    "summary": "List sale commissions",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:POST:/api/sales/sales/{publicId}/commissions",
+    "service": "sales",
+    "method": "POST",
+    "path": "/api/sales/sales/{publicId}/commissions",
+    "tag": "Sales",
+    "description": "Create sale commission",
+    "summary": "Create sale commission",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:POST:/api/sales/sales/{publicId}/commissions/{commissionPublicId}/block",
+    "service": "sales",
+    "method": "POST",
+    "path": "/api/sales/sales/{publicId}/commissions/{commissionPublicId}/block",
+    "tag": "Sales",
+    "description": "Block commission",
+    "summary": "Block commission",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId",
+      "commissionPublicId"
+    ]
+  },
+  {
+    "id": "sales:POST:/api/sales/sales/{publicId}/commissions/{commissionPublicId}/release",
+    "service": "sales",
+    "method": "POST",
+    "path": "/api/sales/sales/{publicId}/commissions/{commissionPublicId}/release",
+    "tag": "Sales",
+    "description": "Release commission",
+    "summary": "Release commission",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId",
+      "commissionPublicId"
+    ]
+  },
+  {
+    "id": "sales:GET:/api/sales/sales/{publicId}/pending-items",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/sales/{publicId}/pending-items",
+    "tag": "Sales",
+    "description": "List sale pending items",
+    "summary": "List sale pending items",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:POST:/api/sales/sales/{publicId}/pending-items",
+    "service": "sales",
+    "method": "POST",
+    "path": "/api/sales/sales/{publicId}/pending-items",
+    "tag": "Sales",
+    "description": "Create sale pending item",
+    "summary": "Create sale pending item",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:POST:/api/sales/sales/{publicId}/pending-items/{pendingItemPublicId}/resolve",
+    "service": "sales",
+    "method": "POST",
+    "path": "/api/sales/sales/{publicId}/pending-items/{pendingItemPublicId}/resolve",
+    "tag": "Sales",
+    "description": "Resolve pending item",
+    "summary": "Resolve pending item",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId",
+      "pendingItemPublicId"
+    ]
+  },
+  {
+    "id": "sales:GET:/api/sales/sales/{publicId}/renegotiations",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/sales/{publicId}/renegotiations",
+    "tag": "Sales",
+    "description": "List sale renegotiations",
+    "summary": "List sale renegotiations",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:POST:/api/sales/sales/{publicId}/renegotiations",
+    "service": "sales",
+    "method": "POST",
+    "path": "/api/sales/sales/{publicId}/renegotiations",
+    "tag": "Sales",
+    "description": "Apply sale renegotiation",
+    "summary": "Apply sale renegotiation",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:POST:/api/sales/sales/{publicId}/invoice",
+    "service": "sales",
+    "method": "POST",
+    "path": "/api/sales/sales/{publicId}/invoice",
+    "tag": "Sales",
+    "description": "Create invoice for sale",
+    "summary": "Create invoice for sale",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
     "id": "sales:GET:/api/sales/invoices",
     "service": "sales",
     "method": "GET",
@@ -2714,6 +4537,72 @@ export const endpoints: EndpointContract[] = [
     "tag": "Sales",
     "description": "List commercial invoices",
     "summary": "List commercial invoices",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "sales:GET:/api/sales/invoices/summary",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/invoices/summary",
+    "tag": "Sales",
+    "description": "Read invoice summary",
+    "summary": "Read invoice summary",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "sales:GET:/api/sales/invoices/{publicId}",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/invoices/{publicId}",
+    "tag": "Sales",
+    "description": "Read invoice by public id",
+    "summary": "Read invoice by public id",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:GET:/api/sales/invoices/{publicId}/history",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/invoices/{publicId}/history",
+    "tag": "Sales",
+    "description": "List invoice history",
+    "summary": "List invoice history",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:PATCH:/api/sales/invoices/{publicId}/status",
+    "service": "sales",
+    "method": "PATCH",
+    "path": "/api/sales/invoices/{publicId}/status",
+    "tag": "Sales",
+    "description": "Update invoice status",
+    "summary": "Update invoice status",
+    "source": "docs/contracts/http/sales.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "sales:GET:/api/sales/outbox/pending",
+    "service": "sales",
+    "method": "GET",
+    "path": "/api/sales/outbox/pending",
+    "tag": "Sales",
+    "description": "List pending sales outbox events",
+    "summary": "List pending sales outbox events",
     "source": "docs/contracts/http/sales.openapi.yaml",
     "hasBody": false,
     "pathParams": []
@@ -2755,28 +4644,54 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
-    "id": "simulation:GET:/api/simulation/scenarios",
+    "id": "simulation:GET:/api/simulation/scenarios/catalog",
     "service": "simulation",
     "method": "GET",
-    "path": "/api/simulation/scenarios",
+    "path": "/api/simulation/scenarios/catalog",
     "tag": "Simulation",
-    "description": "List scenarios",
-    "summary": "List scenarios",
+    "description": "List available scenario templates",
+    "summary": "List available scenario templates",
     "source": "docs/contracts/http/simulation.openapi.yaml",
     "hasBody": false,
     "pathParams": []
   },
   {
-    "id": "simulation:POST:/api/simulation/scenarios",
+    "id": "simulation:POST:/api/simulation/scenarios/operational-load",
     "service": "simulation",
     "method": "POST",
-    "path": "/api/simulation/scenarios",
+    "path": "/api/simulation/scenarios/operational-load",
     "tag": "Simulation",
-    "description": "Create scenario run",
-    "summary": "Create scenario run",
+    "description": "Create operational load scenario",
+    "summary": "Create operational load scenario",
     "source": "docs/contracts/http/simulation.openapi.yaml",
     "hasBody": true,
     "pathParams": []
+  },
+  {
+    "id": "simulation:GET:/api/simulation/scenarios/runs",
+    "service": "simulation",
+    "method": "GET",
+    "path": "/api/simulation/scenarios/runs",
+    "tag": "Simulation",
+    "description": "List scenario runs",
+    "summary": "List scenario runs",
+    "source": "docs/contracts/http/simulation.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "simulation:GET:/api/simulation/scenarios/runs/{publicId}",
+    "service": "simulation",
+    "method": "GET",
+    "path": "/api/simulation/scenarios/runs/{publicId}",
+    "tag": "Simulation",
+    "description": "Read one scenario run",
+    "summary": "Read one scenario run",
+    "source": "docs/contracts/http/simulation.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
   },
   {
     "id": "simulation:POST:/api/simulation/benchmarks/load",
@@ -2788,6 +4703,18 @@ export const endpoints: EndpointContract[] = [
     "summary": "Execute one load benchmark run",
     "source": "docs/contracts/http/simulation.openapi.yaml",
     "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "simulation:GET:/api/simulation/benchmarks/runs",
+    "service": "simulation",
+    "method": "GET",
+    "path": "/api/simulation/benchmarks/runs",
+    "tag": "Simulation",
+    "description": "List load benchmark runs",
+    "summary": "List load benchmark runs",
+    "source": "docs/contracts/http/simulation.openapi.yaml",
+    "hasBody": false,
     "pathParams": []
   },
   {
@@ -3358,6 +5285,42 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
+    "id": "workflow-control:GET:/api/workflow-control/catalog/triggers",
+    "service": "workflow-control",
+    "method": "GET",
+    "path": "/api/workflow-control/catalog/triggers",
+    "tag": "Workflow Control",
+    "description": "List workflow trigger catalog",
+    "summary": "List workflow trigger catalog",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "workflow-control:GET:/api/workflow-control/catalog/actions",
+    "service": "workflow-control",
+    "method": "GET",
+    "path": "/api/workflow-control/catalog/actions",
+    "tag": "Workflow Control",
+    "description": "List workflow action catalog",
+    "summary": "List workflow action catalog",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "workflow-control:GET:/api/workflow-control/editor",
+    "service": "workflow-control",
+    "method": "GET",
+    "path": "/api/workflow-control/editor",
+    "tag": "Workflow Control",
+    "description": "Read editor capabilities and catalogs",
+    "summary": "Read editor capabilities and catalogs",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
     "id": "workflow-control:GET:/api/workflow-control/definitions",
     "service": "workflow-control",
     "method": "GET",
@@ -3424,28 +5387,238 @@ export const endpoints: EndpointContract[] = [
     ]
   },
   {
-    "id": "workflow-control:GET:/api/workflow-control/capabilities/triggers",
+    "id": "workflow-control:GET:/api/workflow-control/definitions/{key}/versions",
     "service": "workflow-control",
     "method": "GET",
-    "path": "/api/workflow-control/capabilities/triggers",
+    "path": "/api/workflow-control/definitions/{key}/versions",
     "tag": "Workflow Control",
-    "description": "List workflow trigger catalog",
-    "summary": "List workflow trigger catalog",
+    "description": "List workflow definition versions",
+    "summary": "List workflow definition versions",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "key"
+    ]
+  },
+  {
+    "id": "workflow-control:POST:/api/workflow-control/definitions/{key}/versions",
+    "service": "workflow-control",
+    "method": "POST",
+    "path": "/api/workflow-control/definitions/{key}/versions",
+    "tag": "Workflow Control",
+    "description": "Publish workflow definition version",
+    "summary": "Publish workflow definition version",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "key"
+    ]
+  },
+  {
+    "id": "workflow-control:GET:/api/workflow-control/definitions/{key}/versions/summary",
+    "service": "workflow-control",
+    "method": "GET",
+    "path": "/api/workflow-control/definitions/{key}/versions/summary",
+    "tag": "Workflow Control",
+    "description": "Read workflow definition version summary",
+    "summary": "Read workflow definition version summary",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "key"
+    ]
+  },
+  {
+    "id": "workflow-control:GET:/api/workflow-control/definitions/{key}/versions/current",
+    "service": "workflow-control",
+    "method": "GET",
+    "path": "/api/workflow-control/definitions/{key}/versions/current",
+    "tag": "Workflow Control",
+    "description": "Read current workflow definition version",
+    "summary": "Read current workflow definition version",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "key"
+    ]
+  },
+  {
+    "id": "workflow-control:GET:/api/workflow-control/definitions/{key}/versions/{versionNumber}",
+    "service": "workflow-control",
+    "method": "GET",
+    "path": "/api/workflow-control/definitions/{key}/versions/{versionNumber}",
+    "tag": "Workflow Control",
+    "description": "Read one workflow definition version",
+    "summary": "Read one workflow definition version",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "key",
+      "versionNumber"
+    ]
+  },
+  {
+    "id": "workflow-control:POST:/api/workflow-control/definitions/{key}/versions/{versionNumber}/restore",
+    "service": "workflow-control",
+    "method": "POST",
+    "path": "/api/workflow-control/definitions/{key}/versions/{versionNumber}/restore",
+    "tag": "Workflow Control",
+    "description": "Restore workflow definition version",
+    "summary": "Restore workflow definition version",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "key",
+      "versionNumber"
+    ]
+  },
+  {
+    "id": "workflow-control:GET:/api/workflow-control/runs",
+    "service": "workflow-control",
+    "method": "GET",
+    "path": "/api/workflow-control/runs",
+    "tag": "Workflow Control",
+    "description": "List workflow runs",
+    "summary": "List workflow runs",
     "source": "docs/contracts/http/workflow-control.openapi.yaml",
     "hasBody": false,
     "pathParams": []
   },
   {
-    "id": "workflow-control:GET:/api/workflow-control/capabilities/actions",
+    "id": "workflow-control:POST:/api/workflow-control/runs",
+    "service": "workflow-control",
+    "method": "POST",
+    "path": "/api/workflow-control/runs",
+    "tag": "Workflow Control",
+    "description": "Create workflow run",
+    "summary": "Create workflow run",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "workflow-control:GET:/api/workflow-control/runs/summary",
     "service": "workflow-control",
     "method": "GET",
-    "path": "/api/workflow-control/capabilities/actions",
+    "path": "/api/workflow-control/runs/summary",
     "tag": "Workflow Control",
-    "description": "List workflow action catalog",
-    "summary": "List workflow action catalog",
+    "description": "Read workflow run summary",
+    "summary": "Read workflow run summary",
     "source": "docs/contracts/http/workflow-control.openapi.yaml",
     "hasBody": false,
     "pathParams": []
+  },
+  {
+    "id": "workflow-control:GET:/api/workflow-control/runs/{publicId}",
+    "service": "workflow-control",
+    "method": "GET",
+    "path": "/api/workflow-control/runs/{publicId}",
+    "tag": "Workflow Control",
+    "description": "Read one workflow run",
+    "summary": "Read one workflow run",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "workflow-control:POST:/api/workflow-control/runs/{publicId}/start",
+    "service": "workflow-control",
+    "method": "POST",
+    "path": "/api/workflow-control/runs/{publicId}/start",
+    "tag": "Workflow Control",
+    "description": "Start workflow run",
+    "summary": "Start workflow run",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "workflow-control:POST:/api/workflow-control/runs/{publicId}/complete",
+    "service": "workflow-control",
+    "method": "POST",
+    "path": "/api/workflow-control/runs/{publicId}/complete",
+    "tag": "Workflow Control",
+    "description": "Complete workflow run",
+    "summary": "Complete workflow run",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "workflow-control:POST:/api/workflow-control/runs/{publicId}/fail",
+    "service": "workflow-control",
+    "method": "POST",
+    "path": "/api/workflow-control/runs/{publicId}/fail",
+    "tag": "Workflow Control",
+    "description": "Fail workflow run",
+    "summary": "Fail workflow run",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "workflow-control:POST:/api/workflow-control/runs/{publicId}/cancel",
+    "service": "workflow-control",
+    "method": "POST",
+    "path": "/api/workflow-control/runs/{publicId}/cancel",
+    "tag": "Workflow Control",
+    "description": "Cancel workflow run",
+    "summary": "Cancel workflow run",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "workflow-control:GET:/api/workflow-control/runs/{publicId}/events",
+    "service": "workflow-control",
+    "method": "GET",
+    "path": "/api/workflow-control/runs/{publicId}/events",
+    "tag": "Workflow Control",
+    "description": "List workflow run events",
+    "summary": "List workflow run events",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "workflow-control:POST:/api/workflow-control/runs/{publicId}/events",
+    "service": "workflow-control",
+    "method": "POST",
+    "path": "/api/workflow-control/runs/{publicId}/events",
+    "tag": "Workflow Control",
+    "description": "Append workflow run note",
+    "summary": "Append workflow run note",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "workflow-control:GET:/api/workflow-control/runs/{publicId}/events/summary",
+    "service": "workflow-control",
+    "method": "GET",
+    "path": "/api/workflow-control/runs/{publicId}/events/summary",
+    "tag": "Workflow Control",
+    "description": "Read workflow run event summary",
+    "summary": "Read workflow run event summary",
+    "source": "docs/contracts/http/workflow-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
   },
   {
     "id": "workflow-runtime:GET:/health/live",
@@ -3484,6 +5657,18 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
+    "id": "workflow-runtime:GET:/api/workflow-runtime/capabilities",
+    "service": "workflow-runtime",
+    "method": "GET",
+    "path": "/api/workflow-runtime/capabilities",
+    "tag": "Workflow Runtime",
+    "description": "List runtime capabilities",
+    "summary": "List runtime capabilities",
+    "source": "docs/contracts/http/workflow-runtime.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
     "id": "workflow-runtime:GET:/api/workflow-runtime/executions",
     "service": "workflow-runtime",
     "method": "GET",
@@ -3508,6 +5693,30 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
+    "id": "workflow-runtime:GET:/api/workflow-runtime/executions/summary",
+    "service": "workflow-runtime",
+    "method": "GET",
+    "path": "/api/workflow-runtime/executions/summary",
+    "tag": "Workflow Runtime",
+    "description": "Read execution summary",
+    "summary": "Read execution summary",
+    "source": "docs/contracts/http/workflow-runtime.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "workflow-runtime:GET:/api/workflow-runtime/executions/summary/by-workflow",
+    "service": "workflow-runtime",
+    "method": "GET",
+    "path": "/api/workflow-runtime/executions/summary/by-workflow",
+    "tag": "Workflow Runtime",
+    "description": "Read execution summary by workflow",
+    "summary": "Read execution summary by workflow",
+    "source": "docs/contracts/http/workflow-runtime.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
     "id": "workflow-runtime:GET:/api/workflow-runtime/executions/{publicId}",
     "service": "workflow-runtime",
     "method": "GET",
@@ -3515,6 +5724,20 @@ export const endpoints: EndpointContract[] = [
     "tag": "Workflow Runtime",
     "description": "Read one workflow execution",
     "summary": "Read one workflow execution",
+    "source": "docs/contracts/http/workflow-runtime.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "workflow-runtime:GET:/api/workflow-runtime/executions/{publicId}/transitions",
+    "service": "workflow-runtime",
+    "method": "GET",
+    "path": "/api/workflow-runtime/executions/{publicId}/transitions",
+    "tag": "Workflow Runtime",
+    "description": "List execution transitions",
+    "summary": "List execution transitions",
     "source": "docs/contracts/http/workflow-runtime.openapi.yaml",
     "hasBody": false,
     "pathParams": [
@@ -3536,6 +5759,90 @@ export const endpoints: EndpointContract[] = [
     ]
   },
   {
+    "id": "workflow-runtime:GET:/api/workflow-runtime/executions/{publicId}/timeline",
+    "service": "workflow-runtime",
+    "method": "GET",
+    "path": "/api/workflow-runtime/executions/{publicId}/timeline",
+    "tag": "Workflow Runtime",
+    "description": "List execution timeline",
+    "summary": "List execution timeline",
+    "source": "docs/contracts/http/workflow-runtime.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "workflow-runtime:POST:/api/workflow-runtime/executions/{publicId}/start",
+    "service": "workflow-runtime",
+    "method": "POST",
+    "path": "/api/workflow-runtime/executions/{publicId}/start",
+    "tag": "Workflow Runtime",
+    "description": "Start workflow execution",
+    "summary": "Start workflow execution",
+    "source": "docs/contracts/http/workflow-runtime.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "workflow-runtime:POST:/api/workflow-runtime/executions/{publicId}/complete",
+    "service": "workflow-runtime",
+    "method": "POST",
+    "path": "/api/workflow-runtime/executions/{publicId}/complete",
+    "tag": "Workflow Runtime",
+    "description": "Complete workflow execution",
+    "summary": "Complete workflow execution",
+    "source": "docs/contracts/http/workflow-runtime.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "workflow-runtime:POST:/api/workflow-runtime/executions/{publicId}/fail",
+    "service": "workflow-runtime",
+    "method": "POST",
+    "path": "/api/workflow-runtime/executions/{publicId}/fail",
+    "tag": "Workflow Runtime",
+    "description": "Fail workflow execution",
+    "summary": "Fail workflow execution",
+    "source": "docs/contracts/http/workflow-runtime.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "workflow-runtime:POST:/api/workflow-runtime/executions/{publicId}/cancel",
+    "service": "workflow-runtime",
+    "method": "POST",
+    "path": "/api/workflow-runtime/executions/{publicId}/cancel",
+    "tag": "Workflow Runtime",
+    "description": "Cancel workflow execution",
+    "summary": "Cancel workflow execution",
+    "source": "docs/contracts/http/workflow-runtime.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "workflow-runtime:POST:/api/workflow-runtime/executions/{publicId}/retry",
+    "service": "workflow-runtime",
+    "method": "POST",
+    "path": "/api/workflow-runtime/executions/{publicId}/retry",
+    "tag": "Workflow Runtime",
+    "description": "Retry workflow execution",
+    "summary": "Retry workflow execution",
+    "source": "docs/contracts/http/workflow-runtime.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
     "id": "workflow-runtime:POST:/api/workflow-runtime/executions/{publicId}/advance",
     "service": "workflow-runtime",
     "method": "POST",
@@ -3548,18 +5855,6 @@ export const endpoints: EndpointContract[] = [
     "pathParams": [
       "publicId"
     ]
-  },
-  {
-    "id": "workflow-runtime:GET:/api/workflow-runtime/capabilities",
-    "service": "workflow-runtime",
-    "method": "GET",
-    "path": "/api/workflow-runtime/capabilities",
-    "tag": "Workflow Runtime",
-    "description": "List runtime capabilities",
-    "summary": "List runtime capabilities",
-    "source": "docs/contracts/http/workflow-runtime.openapi.yaml",
-    "hasBody": false,
-    "pathParams": []
   }
 ];
 
@@ -3573,6 +5868,11 @@ export const eventSchemas: EventSchemaContract[] = [
     "fileName": "crm.cnpj-enrichment.schema.json",
     "name": "crm.cnpj-enrichment",
     "source": "docs/contracts/events/crm.cnpj-enrichment.schema.json"
+  },
+  {
+    "fileName": "crm.outbox-event.schema.json",
+    "name": "crm.outbox-event",
+    "source": "docs/contracts/events/crm.outbox-event.schema.json"
   },
   {
     "fileName": "documents.signing-request.schema.json",
@@ -3608,6 +5908,11 @@ export const eventSchemas: EventSchemaContract[] = [
     "fileName": "platform-control.quota.schema.json",
     "name": "platform-control.quota",
     "source": "docs/contracts/events/platform-control.quota.schema.json"
+  },
+  {
+    "fileName": "sales.outbox-event.schema.json",
+    "name": "sales.outbox-event",
+    "source": "docs/contracts/events/sales.outbox-event.schema.json"
   },
   {
     "fileName": "support.case.schema.json",

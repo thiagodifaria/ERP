@@ -3,6 +3,8 @@ info:
   title: ERP Platform Control API
   version: 0.2.0
   description: Tenant capabilities, entitlements, quotas, metering, lifecycle jobs and SaaS governance.
+security:
+  - bearerAuth: []
 paths:
   /api/platform-control/capabilities/catalog:
     get:
@@ -277,3 +279,13 @@ paths:
       responses:
         "200":
           description: Rolled back go-live rollout
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

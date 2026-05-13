@@ -1,23 +1,54 @@
 openapi: 3.1.0
 info:
   title: ERP Simulation API
-  version: 0.7.0
+  version: 0.8.0
   description: Scenario simulation, load benchmark and cost estimation runtime.
+security:
+  - bearerAuth: []
 paths:
-  /api/simulation/scenarios:
+  /api/simulation/scenarios/catalog:
     get:
-      summary: List scenarios
+      summary: List available scenario templates
       responses:
         "200":
-          description: Scenario list
+          description: Scenario catalog
+  /api/simulation/scenarios/operational-load:
     post:
-      summary: Create scenario run
+      summary: Create operational load scenario
       responses:
         "200":
           description: Scenario result
+  /api/simulation/scenarios/runs:
+    get:
+      summary: List scenario runs
+      responses:
+        "200":
+          description: Scenario run list
+  /api/simulation/scenarios/runs/{publicId}:
+    get:
+      summary: Read one scenario run
+      responses:
+        "200":
+          description: Scenario run detail
   /api/simulation/benchmarks/load:
     post:
       summary: Execute one load benchmark run
       responses:
         "200":
           description: Benchmark result
+  /api/simulation/benchmarks/runs:
+    get:
+      summary: List load benchmark runs
+      responses:
+        "200":
+          description: Benchmark run list
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

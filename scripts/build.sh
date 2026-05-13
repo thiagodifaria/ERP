@@ -132,6 +132,7 @@ prepare_runtime_ports() {
   remap_host_port_if_needed "OPENFGA_HTTP_PORT" "openfga-http"
   remap_host_port_if_needed "OPENFGA_GRPC_PORT" "openfga-grpc"
   remap_host_port_if_needed "OPENFGA_PLAYGROUND_PORT" "openfga-playground"
+  remap_host_port_if_needed "GATEWAY_HTTP_PORT" "gateway"
   remap_host_port_if_needed "EDGE_HTTP_PORT" "edge"
   remap_host_port_if_needed "IDENTITY_HTTP_PORT" "identity"
   remap_host_port_if_needed "WEBHOOK_HUB_HTTP_PORT" "webhook-hub"

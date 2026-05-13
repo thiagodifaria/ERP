@@ -54,7 +54,7 @@ func NewRouter(
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/owner", leadHandler.UpdateOwner)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/status", leadHandler.UpdateStatus)
 
-	return middleware.WithCorrelation(logger, mux)
+	return middleware.WithSecurity("crm", middleware.WithCorrelation(logger, mux))
 }
 
 func NewRouterWithRuntime(
@@ -101,5 +101,5 @@ func NewRouterWithRuntime(
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/owner", leadHandler.UpdateOwner)
 	mux.HandleFunc("PATCH /api/crm/leads/{publicId}/status", leadHandler.UpdateStatus)
 
-	return middleware.WithCorrelation(logger, mux)
+	return middleware.WithSecurity("crm", middleware.WithCorrelation(logger, mux))
 }

@@ -5,6 +5,8 @@ info:
   description: Inbound webhook intake, DLQ and operator recovery surface.
 servers:
   - url: http://localhost:8082
+security:
+  - bearerAuth: []
 paths:
   /health/details:
     get:
@@ -101,3 +103,13 @@ paths:
       responses:
         '200':
           description: Event requeued
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

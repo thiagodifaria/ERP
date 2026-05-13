@@ -7,7 +7,166 @@ defmodule WorkflowRuntime.Api.Router do
 
   plug :match
   plug Plug.Parsers, parsers: [:json], pass: ["application/json"], json_decoder: Jason
+  plug :security
   plug :dispatch
+
+  def security(%Plug.Conn{request_path: "/health/" <> _rest} = conn, _opts), do: conn
+
+  def security(conn, _opts) do
+    if security_enforced?() do
+      with :ok <- ensure_correlation(conn),
+           {:ok, auth} <- authenticate(conn),
+           :ok <- authorize_openfga(conn, auth) do
+        conn
+        |> Plug.Conn.put_req_header("x-erp-auth-subject", auth.subject)
+        |> Plug.Conn.put_req_header("x-erp-auth-tenant", auth.tenant_slug)
+        |> Plug.Conn.put_req_header("x-erp-auth-scopes", Enum.join(auth.scopes, " "))
+      else
+        {:error, :correlation} ->
+          conn |> json(400, %{code: "correlation_id_required", message: "Mutation requests require X-Correlation-Id."}) |> halt()
+
+        {:error, :auth} ->
+          conn |> json(401, %{code: "unauthorized", message: "Bearer token is invalid or missing."}) |> halt()
+
+        {:error, :openfga} ->
+          conn |> json(403, %{code: "openfga_denied", message: "OpenFGA denied the request."}) |> halt()
+      end
+    else
+      conn
+    end
+  end
+
+  defp security_enforced? do
+    mode = System.get_env("ERP_AUTH_ENFORCEMENT", "") |> String.trim() |> String.downcase()
+
+    cond do
+      mode in ["disabled", "off", "false"] -> false
+      mode in ["enforced", "strict", "true"] -> true
+      true ->
+        environment = System.get_env("ERP_ENV", "local") |> String.trim() |> String.downcase()
+        environment not in ["", "local", "dev", "development", "test", "testing"]
+    end
+  end
+
+  defp ensure_correlation(%Plug.Conn{method: method}) when method in ["GET", "HEAD", "OPTIONS"], do: :ok
+
+  defp ensure_correlation(conn) do
+    case Plug.Conn.get_req_header(conn, "x-correlation-id") do
+      [value | _] when value != "" -> :ok
+      _ -> {:error, :correlation}
+    end
+  end
+
+  defp authenticate(conn) do
+    with ["Bearer " <> token | _] <- Plug.Conn.get_req_header(conn, "authorization") do
+      internal_token = System.get_env("ERP_INTERNAL_SERVICE_TOKEN", "")
+
+      cond do
+        internal_token != "" and secure_compare(token, internal_token) ->
+          {:ok, %{subject: "service:internal", tenant_slug: resolve_tenant(conn), scopes: ["service"]}}
+
+        true ->
+          case verify_jwt(token) do
+            {:ok, claims} ->
+              subject = claims["sub"] || claims["user_public_id"]
+              tenant_slug = claims["tenant_slug"] || claims["tenant"] || resolve_tenant(conn)
+              scopes = parse_scopes(claims["scope"])
+              if subject, do: {:ok, %{subject: subject, tenant_slug: tenant_slug, scopes: scopes}}, else: {:error, :auth}
+
+            _ ->
+              {:error, :auth}
+          end
+      end
+    else
+      _ -> {:error, :auth}
+    end
+  end
+
+  defp verify_jwt(token) do
+    secret = System.get_env("ERP_JWT_HS256_SECRET", "")
+
+    with true <- secret != "",
+         [encoded_header, encoded_payload, signature] <- String.split(token, "."),
+         {:ok, header_json} <- Base.url_decode64(encoded_header, padding: false),
+         {:ok, %{"alg" => "HS256"}} <- Jason.decode(header_json),
+         expected <- :crypto.mac(:hmac, :sha256, secret, "#{encoded_header}.#{encoded_payload}") |> Base.url_encode64(padding: false),
+         true <- secure_compare(signature, expected),
+         {:ok, payload_json} <- Base.url_decode64(encoded_payload, padding: false),
+         {:ok, claims} <- Jason.decode(payload_json),
+         true <- valid_expiration?(claims) do
+      {:ok, claims}
+    else
+      _ -> {:error, :auth}
+    end
+  end
+
+  defp authorize_openfga(conn, auth) do
+    if String.downcase(System.get_env("ERP_OPENFGA_ENFORCEMENT", "")) == "true" do
+      do_authorize_openfga(conn, auth)
+    else
+      :ok
+    end
+  end
+
+  defp do_authorize_openfga(conn, auth) do
+    base_url = System.get_env("OPENFGA_BASE_URL", "") |> String.trim_trailing("/")
+    store_id = System.get_env("OPENFGA_STORE_ID", "")
+
+    if base_url == "" or store_id == "" do
+      {:error, :openfga}
+    else
+      {:ok, _apps} = Application.ensure_all_started(:inets)
+      relation = if conn.method in ["GET", "HEAD", "OPTIONS"], do: "read", else: "write"
+      object = if auth.tenant_slug == "", do: "service:workflow-runtime", else: "tenant:#{normalize_object(auth.tenant_slug)}"
+      user = if String.starts_with?(auth.subject, "service:"), do: auth.subject, else: "user:#{auth.subject}"
+
+      payload =
+        %{tuple_key: %{user: user, relation: relation, object: object}}
+        |> maybe_put_authorization_model()
+        |> Jason.encode!()
+
+      url = String.to_charlist("#{base_url}/stores/#{store_id}/check")
+
+      case :httpc.request(:post, {url, [{~c"content-type", ~c"application/json"}], ~c"application/json", payload}, [{:timeout, 2_000}], []) do
+        {:ok, {{_, status, _}, _headers, body}} when status in 200..299 ->
+          case Jason.decode(to_string(body)) do
+            {:ok, %{"allowed" => true}} -> :ok
+            _ -> {:error, :openfga}
+          end
+
+        _ ->
+          {:error, :openfga}
+      end
+    end
+  end
+
+  defp maybe_put_authorization_model(payload) do
+    case System.get_env("OPENFGA_AUTHORIZATION_MODEL_ID", "") do
+      "" -> payload
+      model_id -> Map.put(payload, :authorization_model_id, model_id)
+    end
+  end
+
+  defp valid_expiration?(%{"exp" => exp}) when is_integer(exp), do: exp > DateTime.to_unix(DateTime.utc_now())
+  defp valid_expiration?(_claims), do: true
+
+  defp parse_scopes(scope) when is_binary(scope), do: String.split(scope, " ", trim: true)
+  defp parse_scopes(scope) when is_list(scope), do: Enum.map(scope, &to_string/1)
+  defp parse_scopes(_scope), do: []
+
+  defp resolve_tenant(conn) do
+    conn = Plug.Conn.fetch_query_params(conn)
+
+    Plug.Conn.get_req_header(conn, "x-tenant-slug")
+    |> Kernel.++(Plug.Conn.get_req_header(conn, "x-erp-tenant-slug"))
+    |> List.first()
+    |> Kernel.||(conn.query_params["tenant_slug"] || "")
+  end
+
+  defp secure_compare(left, right) when byte_size(left) == byte_size(right), do: Plug.Crypto.secure_compare(left, right)
+  defp secure_compare(_left, _right), do: false
+
+  defp normalize_object(value), do: value |> String.trim() |> String.downcase() |> String.replace(" ", "-")
 
   get "/health/live" do
     json(conn, 200, %{service: "workflow-runtime", status: "live"})

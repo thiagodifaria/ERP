@@ -5,6 +5,8 @@ info:
   description: Omnichannel engagement, provider callbacks and campaign operations.
 servers:
   - url: http://localhost:8088
+security:
+  - bearerAuth: []
 paths:
   /health/details:
     get:
@@ -85,3 +87,13 @@ paths:
           description: Provider event detail
         '404':
           description: Provider event not found
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

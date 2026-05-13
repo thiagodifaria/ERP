@@ -131,5 +131,5 @@ func NewRouterWithRuntime(
 	mux.HandleFunc("PATCH /api/sales/invoices/{publicId}/status", invoiceHandler.UpdateStatus)
 	mux.HandleFunc("GET /api/sales/outbox/pending", activityHandler.ListPendingOutbox)
 
-	return middleware.WithCorrelation(logger, mux)
+	return middleware.WithSecurity("sales", middleware.WithCorrelation(logger, mux))
 }

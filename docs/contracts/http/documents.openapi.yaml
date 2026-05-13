@@ -5,6 +5,8 @@ info:
   description: Attachment governance, upload orchestration and storage capabilities.
 servers:
   - url: http://localhost:8093
+security:
+  - bearerAuth: []
 paths:
   /health/details:
     get:
@@ -93,3 +95,13 @@ paths:
       responses:
         '201':
           description: Version created
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

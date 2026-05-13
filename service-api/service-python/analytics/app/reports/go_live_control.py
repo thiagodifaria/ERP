@@ -41,6 +41,7 @@ def build_go_live_control(tenant_slug: str | None = None) -> dict:
             "adjustments": {"recommended": 1, "applySupported": 1},
             "readiness": {"status": "stable", "rolloutReady": True, "rollbackReady": True, "metricsObserved": True},
             "releaseControls": build_release_controls(),
+            "goLiveClosure": build_release_controls(),
         }
 
     with connect() as connection:
@@ -157,4 +158,5 @@ def build_go_live_control(tenant_slug: str | None = None) -> dict:
             "metricsObserved": tracked_metrics > 0,
         },
         "releaseControls": build_release_controls(),
+        "goLiveClosure": build_release_controls(),
     }

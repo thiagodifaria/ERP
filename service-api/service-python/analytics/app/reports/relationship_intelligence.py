@@ -35,6 +35,37 @@ def build_crm_closure() -> dict:
     }
 
 
+def build_relationship_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "lead-scoring",
+            "tenant-pipeline-config",
+            "sla-tracking",
+            "forecast-scenarios",
+            "territory-rules",
+            "approval-policies",
+            "bulk-import-export",
+            "conversation-threading",
+            "near-realtime-reporting",
+        ],
+        "coveredAreas": [
+            "crm",
+            "sales",
+            "engagement",
+            "support",
+            "analytics",
+        ],
+        "runtimeEvidence": [
+            "GET /api/crm/leads/summary",
+            "POST /api/crm/leads/bulk",
+            "GET /api/crm/leads/export",
+            "GET /api/engagement/touchpoints",
+            "GET /api/analytics/reports/relationship-intelligence",
+        ],
+    }
+
+
 def build_relationship_intelligence(tenant_slug: str | None = None) -> dict:
     slug = tenant_slug or "bootstrap-ops"
     if settings.repository_driver != "postgres":
@@ -51,6 +82,7 @@ def build_relationship_intelligence(tenant_slug: str | None = None) -> dict:
             "forecast": {"bookedRevenueCents": 1775000, "weightedPipelineCents": 2314000, "confidence": "attention", "scenarioCount": 2},
             "readiness": {"status": "attention", "slaReady": True, "forecastReady": True, "relationshipSignalsReady": True, "bulkReady": True},
             "crmClosure": build_crm_closure(),
+            "relationshipClosure": build_relationship_closure(),
         }
 
     with connect() as connection:
@@ -135,4 +167,5 @@ def build_relationship_intelligence(tenant_slug: str | None = None) -> dict:
             "bulkReady": True,
         },
         "crmClosure": build_crm_closure(),
+        "relationshipClosure": build_relationship_closure(),
     }

@@ -9,8 +9,8 @@ A arquitetura atual e uma plataforma backend-first, multi-tenant e poliglota, co
 ## Numeros de Referencia
 
 - 20 servicos HTTP com contrato OpenAPI.
-- 206 endpoints HTTP versionados.
-- 12 schemas de evento versionados.
+- 321 endpoints HTTP versionados.
+- 14 schemas de evento versionados.
 - Contratos em `docs/contracts/`.
 - Runtime local em `infra/docker-compose.yml`.
 - Banco PostgreSQL dividido por contextos.
@@ -45,6 +45,9 @@ A arquitetura atual e uma plataforma backend-first, multi-tenant e poliglota, co
 client / client-api
         |
         v
+   local gateway
+        |
+        v
       edge  ----------------------+
         |                         |
         v                         v
@@ -59,6 +62,8 @@ client / client-api
 `analytics` consolida relatorios e governanca usando contratos, fixtures e leituras operacionais. Ele nao substitui os servicos donos de escrita.
 
 `client-web/client-api` e uma ferramenta tecnica para explorar a API e a documentacao; ele nao e o frontend empresarial do produto.
+
+O gateway local em `infra/gateway/nginx.conf` concentra roteamento `/api/<servico>/`, health publico, cache de leituras, rate limit, timeouts, correlacao de request e failover passivo por dependencia. Ele nao substitui um API management corporativo completo, mas torna o stack local mais proximo de um ponto unico de entrada verificavel.
 
 ## Ownership de Dados
 
@@ -117,6 +122,20 @@ A decisao deve ser reavaliada quando houver streaming real entre servicos, garga
 - Webhooks externos entram por endpoints de provider ou pelo `webhook-hub`.
 - Operacoes longas usam recursos de job, rollout ou execution.
 - Agregacoes devem preferir `analytics`/`edge` a leitura direta de tabela alheia.
+
+## Confianca Entre Servicos
+
+O padrao de chamadas internas e service-account first: cada servico chamador deve usar token curto com audience do destino, correlation id obrigatorio, tenant explicito e actor propagado quando a acao nasceu de um usuario. A rede interna reduz exposicao, mas nao e autorizacao suficiente para mutacoes sensiveis.
+
+Regras atuais:
+
+- `bearerAuth` representa sessao/OIDC de usuario nos OpenAPI.
+- `internalServiceToken` representa token de service account entre workloads.
+- `X-Correlation-Id` deve acompanhar chamadas e eventos cross-service.
+- `tenantSlug` nao deve cair em bootstrap fora de `local`/`test`.
+- rotas financeiras, fiscais, documentais, identity, platform-control e webhook-hub devem ser tratadas como sensiveis mesmo quando chamadas internamente.
+
+Para um ambiente corporativo, `infra/docker-compose.corporate-like.yml` remove a publicacao direta dos servicos de dominio e mantem o trafego no gateway/edge. mTLS ou service mesh seguem como evolucao natural quando houver runtime produtivo com certificados e identidade de workload gerenciados.
 
 ## Persistencia
 

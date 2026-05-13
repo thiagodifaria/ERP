@@ -1,0 +1,92 @@
+# Corporate-like overlay for local validation.
+# Usage:
+#   docker compose --env-file .env.production.example -f infra/docker-compose.yml -f infra/docker-compose.corporate-like.yml config
+#
+# This overlay keeps service-to-service traffic on the internal Docker network and
+# publishes only the gateway and edge entrypoints.
+
+services:
+  service-postgresql:
+    ports: !reset []
+
+  service-redis:
+    ports: !reset []
+
+  service-kafka:
+    ports: !reset []
+
+  service-keycloak:
+    command:
+      - start
+      - --import-realm
+      - --http-port=8080
+    ports: !reset []
+
+  service-openfga:
+    ports: !reset []
+
+  service-prometheus:
+    ports: !reset []
+
+  service-grafana:
+    environment:
+      GF_SECURITY_ADMIN_USER: "${GRAFANA_ADMIN_USER}"
+      GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_ADMIN_PASSWORD}"
+    ports: !reset []
+
+  crm:
+    ports: !reset []
+
+  sales:
+    ports: !reset []
+
+  finance:
+    ports: !reset []
+
+  billing:
+    ports: !reset []
+
+  documents:
+    ports: !reset []
+
+  rentals:
+    ports: !reset []
+
+  workflow-control:
+    ports: !reset []
+
+  engagement:
+    ports: !reset []
+
+  workflow-runtime:
+    ports: !reset []
+
+  analytics:
+    ports: !reset []
+
+  simulation:
+    ports: !reset []
+
+  catalog:
+    ports: !reset []
+
+  platform-control:
+    ports: !reset []
+
+  support:
+    ports: !reset []
+
+  supplier:
+    ports: !reset []
+
+  notification:
+    ports: !reset []
+
+  fiscal:
+    ports: !reset []
+
+  identity:
+    ports: !reset []
+
+  webhook-hub:
+    ports: !reset []

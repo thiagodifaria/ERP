@@ -12,6 +12,8 @@ builder.Services
 
 var app = builder.Build();
 
+app.UseMiddleware<ApiSecurityMiddleware>("identity");
+
 app.MapIdentityRoutes();
 
 app.Run();

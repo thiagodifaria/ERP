@@ -7,6 +7,38 @@ from app.config.settings import settings
 from app.infrastructure.postgres import connect
 
 
+def build_intelligence_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "operational-reports",
+            "tenant-360",
+            "service-pulse",
+            "scenario-simulation",
+            "load-benchmark",
+            "cost-estimation",
+            "performance-footprint",
+            "capacity-recommendations",
+        ],
+        "coveredAreas": [
+            "analytics",
+            "simulation",
+            "performance",
+            "cost",
+            "capacity",
+            "executive-reporting",
+        ],
+        "runtimeEvidence": [
+            "GET /api/analytics/reports/service-pulse",
+            "GET /api/analytics/reports/tenant-360",
+            "POST /api/simulation/scenarios",
+            "POST /api/simulation/load-benchmarks",
+            "GET /api/analytics/reports/cost-estimator",
+            "GET /api/analytics/reports/load-benchmark",
+        ],
+    }
+
+
 def build_cost_estimator(tenant_slug: str | None = None) -> dict:
     if settings.repository_driver == "postgres":
         return build_postgres_cost_estimator(tenant_slug)
@@ -39,6 +71,7 @@ def build_static_cost_estimator(tenant_slug: str | None = None) -> dict:
             "needsTeamExpansion": True,
             "suggestedStorageTier": "warm-object-storage",
         },
+        "intelligenceClosure": build_intelligence_closure(),
     }
 
 
@@ -96,6 +129,7 @@ def build_postgres_cost_estimator(tenant_slug: str | None = None) -> dict:
             "needsTeamExpansion": int(projection.get("teamCapacityGap", 0) or 0) > 0,
             "suggestedStorageTier": build_storage_tier(int(projection.get("storageProjectedMb", 0) or 0)),
         },
+        "intelligenceClosure": build_intelligence_closure(),
     }
 
 

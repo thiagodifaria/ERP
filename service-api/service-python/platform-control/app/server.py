@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.config.settings import settings
 from app.infrastructure.postgres import postgres_ready
+from app.security import install_security_middleware
 from app.runtime import (
     apply_go_live_adjustment,
     build_go_live_adoption,
@@ -42,6 +43,7 @@ from app.runtime import (
 
 
 app = FastAPI(title=settings.service_name)
+install_security_middleware(app, settings.service_name)
 
 
 @app.get("/health/live")

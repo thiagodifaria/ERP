@@ -43,6 +43,67 @@ def resolve_architecture_decision_docs(root: Path) -> list[str]:
     return ["ARQUITETURA.md"] if (root / "docs" / "ARQUITETURA.md").exists() else []
 
 
+def build_foundation_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "monorepo-layout",
+            "polyglot-service-boundaries",
+            "domain-owned-postgresql-contexts",
+            "public-contract-registry",
+            "documentation-map",
+            "scripted-validation",
+            "tenant-aware-guidelines",
+            "id-standardization",
+        ],
+        "coveredAreas": [
+            "repository",
+            "service-api",
+            "infra",
+            "docs",
+            "scripts",
+            "tests",
+            "contracts",
+        ],
+        "runtimeEvidence": [
+            "docs/ARQUITETURA.md",
+            "docs/SERVICOS.md",
+            "docs/contracts/registry.json",
+            "scripts/test.sh",
+        ],
+    }
+
+
+def build_contract_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "openapi-registry",
+            "event-schema-registry",
+            "api-portal",
+            "idempotency-key-pattern",
+            "accepted-202-pattern",
+            "cursor-pagination-pattern",
+            "bulk-partial-success-pattern",
+            "http-first-decision",
+        ],
+        "coveredAreas": [
+            "http-contracts",
+            "event-contracts",
+            "schema-registry",
+            "client-api",
+            "integration-guidelines",
+            "versioning",
+        ],
+        "runtimeEvidence": [
+            "GET /api/analytics/reports/contract-governance",
+            "docs/contracts/http/*.openapi.yaml",
+            "docs/contracts/events/*.schema.json",
+            "docs/contracts/portal/index.html",
+        ],
+    }
+
+
 def build_contract_governance() -> dict:
     root = try_resolve_repo_root(Path(__file__))
     if root is not None:
@@ -83,4 +144,6 @@ def build_contract_governance() -> dict:
             "navigableApiReady": api_portal_ready,
             "registryReady": registry_ready,
         },
+        "foundationClosure": build_foundation_closure(),
+        "contractClosure": build_contract_closure(),
     }

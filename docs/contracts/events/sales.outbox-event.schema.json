@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erp://contracts/events/sales.outbox-event.schema.json",
+  "title": "Sales Outbox Event",
+  "type": "object",
+  "required": ["tenantSlug", "publicId", "aggregateType", "aggregatePublicId", "eventType", "payload"],
+  "properties": {
+    "tenantSlug": { "type": "string", "minLength": 1 },
+    "publicId": { "type": "string", "format": "uuid" },
+    "aggregateType": { "type": "string", "enum": ["sale", "invoice"] },
+    "aggregatePublicId": { "type": "string", "format": "uuid" },
+    "eventType": {
+      "type": "string",
+      "enum": [
+        "sale.created",
+        "sale.status_changed",
+        "sale.installments_defined",
+        "sale.renegotiated",
+        "invoice.created",
+        "invoice.status_changed"
+      ]
+    },
+    "payload": { "type": "object" },
+    "occurredAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

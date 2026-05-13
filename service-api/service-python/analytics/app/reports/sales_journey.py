@@ -7,6 +7,40 @@ from app.infrastructure.postgres import connect
 from app.reports.pipeline_summary import append_filter, tenant_filter
 
 
+def build_sales_closure() -> dict:
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "opportunity-lifecycle",
+            "proposal-lifecycle",
+            "sale-conversion",
+            "invoice-linkage",
+            "installment-schedule",
+            "commission-governance",
+            "pending-items",
+            "renegotiation-and-cancel",
+            "commercial-history",
+            "outbox-events",
+        ],
+        "coveredAreas": [
+            "lead-to-opportunity",
+            "opportunity-to-proposal",
+            "proposal-to-sale",
+            "sale-to-invoice",
+            "sales-activity",
+            "workflow-dispatch",
+            "finance-sync",
+        ],
+        "runtimeEvidence": [
+            "POST /api/sales/opportunities",
+            "POST /api/sales/proposals",
+            "POST /api/sales/proposals/{publicId}/convert",
+            "POST /api/sales/sales/{publicId}/installments",
+            "GET /api/analytics/reports/sales-journey",
+        ],
+    }
+
+
 def build_sales_journey(tenant_slug: str | None = None) -> dict:
     if settings.repository_driver == "postgres":
         return build_postgres_sales_journey(tenant_slug)
@@ -49,6 +83,7 @@ def build_static_sales_journey(tenant_slug: str | None = None) -> dict:
             "runtimeExecutions": 15,
             "runtimeCompleted": 11,
         },
+        "salesClosure": build_sales_closure(),
     }
 
 
@@ -71,6 +106,7 @@ def build_postgres_sales_journey(tenant_slug: str | None = None) -> dict:
         "proposals": proposals,
         "sales": sales,
         "automation": automation,
+        "salesClosure": build_sales_closure(),
     }
 
 

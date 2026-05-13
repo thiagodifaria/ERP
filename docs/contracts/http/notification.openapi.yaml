@@ -3,6 +3,8 @@ info:
   title: ERP Notification API
   version: 0.1.0
   description: Internal notification center, preferences and reusable dispatch shape.
+security:
+  - bearerAuth: []
 paths:
   /api/notification/capabilities:
     get:
@@ -50,3 +52,13 @@ paths:
       responses:
         "200":
           description: Notification summary
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt
