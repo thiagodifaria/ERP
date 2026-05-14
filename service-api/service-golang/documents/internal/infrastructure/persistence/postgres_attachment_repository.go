@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/domain/entity"
-	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/domain/repository"
+	repositorypkg "github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/domain/repository"
 )
 
 type PostgresAttachmentRepository struct {
@@ -25,7 +25,7 @@ func NewPostgresAttachmentRepository(database *sql.DB, bootstrapTenantSlug strin
 	}
 }
 
-func (repository *PostgresAttachmentRepository) List(filters repository.AttachmentFilters) []entity.Attachment {
+func (repository *PostgresAttachmentRepository) List(filters repositorypkg.AttachmentFilters) []entity.Attachment {
 	tenantID, tenantSlug, err := repository.resolveTenant(filters.TenantSlug)
 	if err != nil {
 		return []entity.Attachment{}
@@ -406,6 +406,160 @@ func (repository *PostgresAttachmentRepository) CreateVersion(tenantSlug string,
 	return updatedAttachment, version, true
 }
 
+func (repository *PostgresAttachmentRepository) RevokeAccessToken(tenantSlug string, attachmentPublicID string, tokenHash string, reason string, actor string, correlationID string) time.Time {
+	tenantID, _, err := repository.resolveTenant(tenantSlug)
+	if err != nil {
+		return time.Now().UTC()
+	}
+
+	attachmentID, ok := repository.findAttachmentID(tenantID, attachmentPublicID)
+	if !ok {
+		return time.Now().UTC()
+	}
+
+	revokedAt := time.Now().UTC()
+	_ = repository.database.QueryRow(
+		`
+      INSERT INTO documents.access_link_revocations (
+        tenant_id,
+        attachment_id,
+        token_hash,
+        reason,
+        actor,
+        correlation_id,
+        revoked_at
+      )
+      VALUES ($1, $2, $3, COALESCE(NULLIF($4, ''), 'manual_revocation'), COALESCE(NULLIF($5, ''), 'system'), $6, $7)
+      ON CONFLICT (token_hash) DO UPDATE
+      SET reason = EXCLUDED.reason,
+          actor = EXCLUDED.actor,
+          correlation_id = EXCLUDED.correlation_id
+      RETURNING revoked_at
+    `,
+		tenantID,
+		attachmentID,
+		strings.TrimSpace(tokenHash),
+		strings.TrimSpace(reason),
+		strings.TrimSpace(actor),
+		strings.TrimSpace(correlationID),
+		revokedAt,
+	).Scan(&revokedAt)
+
+	return revokedAt.UTC()
+}
+
+func (repository *PostgresAttachmentRepository) IsAccessTokenRevoked(tokenHash string) bool {
+	var exists bool
+	err := repository.database.QueryRow(
+		`
+      SELECT EXISTS (
+        SELECT 1
+        FROM documents.access_link_revocations
+        WHERE token_hash = $1
+      )
+    `,
+		strings.TrimSpace(tokenHash),
+	).Scan(&exists)
+	return err == nil && exists
+}
+
+func (repository *PostgresAttachmentRepository) RecordDocumentAuditEvent(event repositorypkg.DocumentAuditEvent) repositorypkg.DocumentAuditEvent {
+	tenantID, normalizedTenantSlug, err := repository.resolveTenant(event.TenantSlug)
+	if err != nil {
+		return event
+	}
+	if event.CreatedAt.IsZero() {
+		event.CreatedAt = time.Now().UTC()
+	}
+	publicID := strings.TrimSpace(event.PublicID)
+	if publicID == "" {
+		publicID = uuid.NewString()
+	}
+	attachmentPublicID := strings.TrimSpace(event.AttachmentPublicID)
+	if attachmentPublicID == "" || !isUUID(attachmentPublicID) {
+		attachmentPublicID = "00000000-0000-0000-0000-000000000000"
+	}
+
+	_, _ = repository.database.Exec(
+		`
+      INSERT INTO documents.audit_events (
+        tenant_id,
+        public_id,
+        attachment_public_id,
+        event_code,
+        actor,
+        reason,
+        correlation_id,
+        created_at
+      )
+      VALUES ($1, $2::uuid, NULLIF($3, '00000000-0000-0000-0000-000000000000')::uuid, $4, $5, $6, $7, $8)
+      ON CONFLICT (public_id) DO NOTHING
+    `,
+		tenantID,
+		publicID,
+		attachmentPublicID,
+		strings.TrimSpace(event.EventCode),
+		strings.TrimSpace(event.Actor),
+		strings.TrimSpace(event.Reason),
+		strings.TrimSpace(event.CorrelationID),
+		event.CreatedAt,
+	)
+	event.PublicID = publicID
+	event.TenantSlug = normalizedTenantSlug
+	return event
+}
+
+func (repository *PostgresAttachmentRepository) ListDocumentAuditEvents(filters repositorypkg.DocumentAuditEventFilters) []repositorypkg.DocumentAuditEvent {
+	tenantID, normalizedTenantSlug, err := repository.resolveTenant(filters.TenantSlug)
+	if err != nil {
+		return []repositorypkg.DocumentAuditEvent{}
+	}
+
+	query := `
+      SELECT public_id::text, COALESCE(attachment_public_id::text, ''), event_code, actor, reason, correlation_id, created_at
+      FROM documents.audit_events
+      WHERE tenant_id = $1
+    `
+	args := []any{tenantID}
+	if strings.TrimSpace(filters.AttachmentPublicID) != "" {
+		query += fmt.Sprintf(" AND attachment_public_id = $%d::uuid", len(args)+1)
+		args = append(args, strings.TrimSpace(filters.AttachmentPublicID))
+	}
+	query += " ORDER BY created_at DESC, id DESC LIMIT 500"
+
+	rows, err := repository.database.Query(query, args...)
+	if err != nil {
+		return []repositorypkg.DocumentAuditEvent{}
+	}
+	defer rows.Close()
+
+	response := []repositorypkg.DocumentAuditEvent{}
+	for rows.Next() {
+		var event repositorypkg.DocumentAuditEvent
+		event.TenantSlug = normalizedTenantSlug
+		if err := rows.Scan(&event.PublicID, &event.AttachmentPublicID, &event.EventCode, &event.Actor, &event.Reason, &event.CorrelationID, &event.CreatedAt); err == nil {
+			response = append(response, event)
+		}
+	}
+	return response
+}
+
+func (repository *PostgresAttachmentRepository) findAttachmentID(tenantID int64, attachmentPublicID string) (int64, bool) {
+	var attachmentID int64
+	err := repository.database.QueryRow(
+		`
+      SELECT id
+      FROM documents.attachments
+      WHERE tenant_id = $1
+        AND public_id = $2::uuid
+      LIMIT 1
+    `,
+		tenantID,
+		strings.TrimSpace(attachmentPublicID),
+	).Scan(&attachmentID)
+	return attachmentID, err == nil
+}
+
 func (repository *PostgresAttachmentRepository) resolveTenant(tenantSlug string) (int64, string, error) {
 	slug := strings.ToLower(strings.TrimSpace(tenantSlug))
 	if slug == "" {
@@ -474,4 +628,9 @@ func scanAttachment(scanner attachmentScanner, tenantSlug string) (entity.Attach
 	attachment.VersionCount = currentVersion
 
 	return attachment, true
+}
+
+func isUUID(value string) bool {
+	_, err := uuid.Parse(strings.TrimSpace(value))
+	return err == nil
 }

@@ -135,6 +135,7 @@
           <li><a href="../events/crm.cnpj-enrichment.schema.json">crm.cnpj-enrichment.schema.json</a></li>
           <li><a href="../events/documents.signing-request.schema.json">documents.signing-request.schema.json</a></li>
           <li><a href="../events/engagement.provider-event.schema.json">engagement.provider-event.schema.json</a></li>
+          <li><a href="../events/event-envelope.schema.json">event-envelope.schema.json</a></li>
           <li><a href="../events/fiscal.consent.schema.json">fiscal.consent.schema.json</a></li>
           <li><a href="../events/fiscal.document-event.schema.json">fiscal.document-event.schema.json</a></li>
           <li><a href="../events/platform-control.go-live-rollout.schema.json">platform-control.go-live-rollout.schema.json</a></li>
@@ -154,11 +155,28 @@
           <li><a href="../../API.md">API.md</a></li>
           <li><a href="../../ARQUITETURA.md">ARQUITETURA.md</a></li>
           <li><a href="../../CONTRATOS.md">CONTRATOS.md</a></li>
+          <li><a href="../../DADOS_LGPD.md">DADOS_LGPD.md</a></li>
           <li><a href="../../INTEGRACOES.md">INTEGRACOES.md</a></li>
           <li><a href="../../OPERACOES.md">OPERACOES.md</a></li>
           <li><a href="../../PADROES.md">PADROES.md</a></li>
+          <li><a href="../../POLIGLOTISMO.md">POLIGLOTISMO.md</a></li>
+          <li><a href="../../SEGURANCA.md">SEGURANCA.md</a></li>
+          <li><a href="../../SRE.md">SRE.md</a></li>
           <li><a href="../../SERVICOS.md">SERVICOS.md</a></li>
           <li><a href="../registry.json">registry.json</a></li>
+        </ul>
+      </article>
+
+      <article class="card">
+        <div class="kicker">Integration Rules</div>
+        <h2>Auth, tenancy and errors</h2>
+        <ul>
+          <li>Auth model: bearer JWT or internal service token.</li>
+          <li>Tenancy: tenant-aware routes require explicit tenant context.</li>
+          <li>Idempotency: sensitive mutations require stable keys.</li>
+          <li>Error payload: stable <code>code</code> and concise <code>message</code>.</li>
+          <li>Breaking changes: update OpenAPI, schema registry and changelog together.</li>
+          <li>Events: published and consumed payloads use the ERP event envelope.</li>
         </ul>
       </article>
     </section>

@@ -77,6 +77,103 @@ paths:
       responses:
         '200':
           description: Event summary
+  /api/webhook-hub/events/dead-letter:
+    get:
+      summary: List dead-lettered inbound webhook events
+      responses:
+        '200':
+          description: Dead-letter event list
+  /api/webhook-hub/events/{publicId}:
+    get:
+      summary: Read one inbound webhook event
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event detail
+  /api/webhook-hub/events/{publicId}/transitions:
+    get:
+      summary: List state transitions for one event
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event transitions
+  /api/webhook-hub/events/{publicId}/validate:
+    post:
+      summary: Validate inbound webhook event
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event validated
+  /api/webhook-hub/events/{publicId}/queue:
+    post:
+      summary: Queue inbound webhook event for processing
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event queued
+  /api/webhook-hub/events/{publicId}/process:
+    post:
+      summary: Mark inbound webhook event as processing
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event processing
+  /api/webhook-hub/events/{publicId}/forward:
+    post:
+      summary: Mark inbound webhook event as forwarded
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event forwarded
+  /api/webhook-hub/events/{publicId}/fail:
+    post:
+      summary: Record inbound webhook processing failure
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event failed
   /api/webhook-hub/events/{publicId}/dead-letter:
     post:
       summary: Move event to dead letter queue
@@ -103,6 +200,19 @@ paths:
       responses:
         '200':
           description: Event requeued
+  /api/webhook-hub/events/{publicId}/reject:
+    post:
+      summary: Reject inbound webhook event
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event rejected
 components:
   securitySchemes:
     bearerAuth:

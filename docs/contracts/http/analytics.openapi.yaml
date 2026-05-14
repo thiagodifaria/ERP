@@ -6,6 +6,102 @@ info:
 security:
   - bearerAuth: []
 paths:
+  /api/analytics/reports/service-pulse:
+    get:
+      summary: Read service pulse report
+      responses:
+        "200":
+          description: Service pulse report
+  /api/analytics/reports/tenant-360:
+    get:
+      summary: Read tenant 360 report
+      responses:
+        "200":
+          description: Tenant 360 report
+  /api/analytics/reports/pipeline-summary:
+    get:
+      summary: Read pipeline summary report
+      responses:
+        "200":
+          description: Pipeline summary report
+  /api/analytics/reports/workflow-definition-health:
+    get:
+      summary: Read workflow definition health report
+      responses:
+        "200":
+          description: Workflow definition health report
+  /api/analytics/reports/automation-board:
+    get:
+      summary: Read automation board report
+      responses:
+        "200":
+          description: Automation board report
+  /api/analytics/reports/sales-journey:
+    get:
+      summary: Read sales journey report
+      responses:
+        "200":
+          description: Sales journey report
+  /api/analytics/reports/revenue-operations:
+    get:
+      summary: Read revenue operations report
+      responses:
+        "200":
+          description: Revenue operations report
+  /api/analytics/reports/finance-control:
+    get:
+      summary: Read finance control report
+      responses:
+        "200":
+          description: Finance control report
+  /api/analytics/reports/collections-control:
+    get:
+      summary: Read collections control report
+      responses:
+        "200":
+          description: Collections control report
+  /api/analytics/reports/document-governance:
+    get:
+      summary: Read document governance report
+      responses:
+        "200":
+          description: Document governance report
+  /api/analytics/reports/rental-operations:
+    get:
+      summary: Read rental operations report
+      responses:
+        "200":
+          description: Rental operations report
+  /api/analytics/reports/engagement-operations:
+    get:
+      summary: Read engagement operations report
+      responses:
+        "200":
+          description: Engagement operations report
+  /api/analytics/reports/cost-estimator:
+    get:
+      summary: Read cost estimator report
+      responses:
+        "200":
+          description: Cost estimator report
+  /api/analytics/reports/delivery-reliability:
+    get:
+      summary: Read delivery reliability report
+      responses:
+        "200":
+          description: Delivery reliability report
+  /api/analytics/reports/load-benchmark:
+    get:
+      summary: Read load benchmark report
+      responses:
+        "200":
+          description: Load benchmark report
+  /api/analytics/reports/platform-reliability:
+    get:
+      summary: Read platform reliability report
+      responses:
+        "200":
+          description: Platform reliability report
   /api/analytics/reports/adapter-catalog:
     get:
       summary: Read external adapter capability catalog

@@ -6,6 +6,18 @@ info:
 security:
   - bearerAuth: []
 paths:
+  /api/edge/ops/health:
+    get:
+      summary: Read edge dependency health
+      responses:
+        "200":
+          description: Edge operational health
+  /api/edge/ops/tenant-overview:
+    get:
+      summary: Read tenant operational overview
+      responses:
+        "200":
+          description: Tenant overview
   /api/edge/ops/core-operations:
     get:
       summary: Read executive core product cockpit
@@ -30,12 +42,42 @@ paths:
       responses:
         "200":
           description: Go-live overview
+  /api/edge/ops/automation-overview:
+    get:
+      summary: Read automation cockpit
+      responses:
+        "200":
+          description: Automation overview
+  /api/edge/ops/engagement-overview:
+    get:
+      summary: Read engagement cockpit
+      responses:
+        "200":
+          description: Engagement overview
   /api/edge/ops/integrations-overview:
     get:
       summary: Read executive integrations cockpit
       responses:
         "200":
           description: Integrations overview
+  /api/edge/ops/documents-overview:
+    get:
+      summary: Read documents cockpit
+      responses:
+        "200":
+          description: Documents overview
+  /api/edge/ops/collections-overview:
+    get:
+      summary: Read collections cockpit
+      responses:
+        "200":
+          description: Collections overview
+  /api/edge/ops/platform-reliability:
+    get:
+      summary: Read platform reliability cockpit
+      responses:
+        "200":
+          description: Platform reliability overview
   /api/edge/ops/saas-overview:
     get:
       summary: Read executive SaaS cockpit
@@ -48,6 +90,30 @@ paths:
       responses:
         "200":
           description: Contracts overview
+  /api/edge/ops/sales-overview:
+    get:
+      summary: Read sales cockpit
+      responses:
+        "200":
+          description: Sales overview
+  /api/edge/ops/revenue-overview:
+    get:
+      summary: Read revenue cockpit
+      responses:
+        "200":
+          description: Revenue overview
+  /api/edge/ops/finance-overview:
+    get:
+      summary: Read finance cockpit
+      responses:
+        "200":
+          description: Finance overview
+  /api/edge/ops/rentals-overview:
+    get:
+      summary: Read rentals cockpit
+      responses:
+        "200":
+          description: Rentals overview
   /api/edge/ops/hardening-overview:
     get:
       summary: Read executive hardening cockpit

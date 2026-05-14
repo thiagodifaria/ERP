@@ -356,6 +356,85 @@ for service, source_path in dotnet_services.items():
     if extra:
         errors.append(f"{service} OpenAPI declares routes not found in Minimal API: {extra}")
 
+def normalize_route(path: str) -> str:
+    aliases = {
+        "public_id": "publicId",
+        "delivery_public_id": "deliveryPublicId",
+        "tenant_slug": "tenantSlug",
+        "company_public_id": "companyPublicId",
+        "document_public_id": "documentPublicId",
+        "data_domain": "dataDomain",
+        "metric_key": "metricKey",
+        "capability_key": "capabilityKey",
+        "block_key": "blockKey",
+        "category_key": "categoryKey",
+        "item_sku": "itemSku",
+        "case_public_id": "casePublicId",
+        "supplier_public_id": "supplierPublicId",
+        "notification_public_id": "notificationPublicId",
+        "user_public_id": "userPublicId",
+        "queue_key": "queueKey",
+    }
+    for source, target in aliases.items():
+        path = path.replace("{" + source + "}", "{" + target + "}")
+        path = path.replace(":" + source, "{" + target + "}")
+    path = re.sub(r"\{[^}:]+:guid\}", lambda match: match.group(0).replace(":guid", ""), path)
+    path = re.sub(r":([A-Za-z][A-Za-z0-9_]*)", lambda match: "{" + aliases.get(match.group(1), match.group(1)) + "}", path)
+    return path
+
+def declared_routes(service: str) -> set[str]:
+    contract_text = (root / "docs" / "contracts" / "http" / f"{service}.openapi.yaml").read_text(encoding="utf-8")
+    return {
+        line.strip()[:-1]
+        for line in contract_text.splitlines()
+        if line.startswith("  /api/") and line.strip().endswith(":")
+    }
+
+def compare_routes(service: str, implemented: set[str]) -> None:
+    declared = declared_routes(service)
+    missing = sorted(implemented - declared)
+    extra = sorted(declared - implemented)
+    if missing:
+        errors.append(f"{service} OpenAPI missing implemented routes: {missing}")
+    if extra:
+        errors.append(f"{service} OpenAPI declares routes not found in implementation: {extra}")
+
+go_services = {
+    "crm": root / "service-api" / "service-golang" / "crm" / "internal" / "api" / "router.go",
+    "documents": root / "service-api" / "service-golang" / "documents" / "internal" / "api" / "router.go",
+    "edge": root / "service-api" / "service-golang" / "edge" / "internal" / "api" / "router.go",
+    "rentals": root / "service-api" / "service-golang" / "rentals" / "internal" / "api" / "router.go",
+    "sales": root / "service-api" / "service-golang" / "sales" / "internal" / "api" / "router.go",
+}
+for service, source_path in go_services.items():
+    source_text = source_path.read_text(encoding="utf-8")
+    implemented = {
+        normalize_route(match.group(1))
+        for match in re.finditer(r'mux\.Handle(?:Func)?\("(?:[A-Z]+ )?(/api/[^"]+)"', source_text)
+    }
+    compare_routes(service, implemented)
+
+python_services = ["analytics", "catalog", "fiscal", "notification", "platform-control", "simulation", "supplier", "support"]
+for service in python_services:
+    source_text = (root / "service-api" / "service-python" / service / "app" / "server.py").read_text(encoding="utf-8")
+    implemented = {
+        normalize_route(match.group(1))
+        for match in re.finditer(r'@app\.(?:get|post|put|patch|delete)\("(/api/[^"]+)"', source_text)
+    }
+    compare_routes(service, implemented)
+
+rust_text = (root / "service-api" / "service-rust" / "webhook-hub" / "src" / "api" / "router.rs").read_text(encoding="utf-8")
+compare_routes("webhook-hub", {
+    normalize_route(match.group(1))
+    for match in re.finditer(r'\.route\("(/api/[^"]+)"', rust_text)
+})
+
+elixir_text = (root / "service-api" / "service-elixir" / "workflow-runtime" / "lib" / "workflow_runtime" / "api" / "router.ex").read_text(encoding="utf-8")
+compare_routes("workflow-runtime", {
+    normalize_route(match.group(1))
+    for match in re.finditer(r'(?:get|post|put|patch|delete)\s+"(/api/[^"]+)"', elixir_text)
+})
+
 for doc_path in registry["docs"]:
     if not (root / doc_path).is_file():
         errors.append(f"doc missing from registry: {doc_path}")
@@ -437,6 +516,197 @@ run_hardening_secrets() {
   fi
 
   echo "[hardening-secrets] non-local secret posture validated"
+}
+
+run_security_suite() {
+  python3 - "$ROOT_DIR" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+errors: list[str] = []
+
+def require_file(path: str, *markers: str) -> None:
+    file_path = root / path
+    if not file_path.is_file():
+        errors.append(f"missing file: {path}")
+        return
+    text = file_path.read_text(encoding="utf-8")
+    for marker in markers:
+        if marker not in text:
+            errors.append(f"{path} missing marker: {marker}")
+
+security_files = [
+    "service-api/service-csharp/identity/src/Identity.Api/ApiSecurityMiddleware.cs",
+    "service-api/service-csharp/billing/src/Billing.Api/ApiSecurityMiddleware.cs",
+    "service-api/service-csharp/finance/src/Finance.Api/ApiSecurityMiddleware.cs",
+    "service-api/service-golang/edge/internal/api/middleware/security.go",
+    "service-api/service-golang/crm/internal/api/middleware/security.go",
+    "service-api/service-golang/sales/internal/api/middleware/security.go",
+    "service-api/service-golang/documents/internal/api/security.go",
+    "service-api/service-golang/rentals/internal/api/security.go",
+    "service-api/service-typescript/workflow-control/src/api/security.ts",
+    "service-api/service-typescript/engagement/src/api/security.ts",
+    "service-api/service-rust/webhook-hub/src/api/router.rs",
+    "service-api/service-elixir/workflow-runtime/lib/workflow_runtime/api/router.ex",
+]
+for service in ["analytics", "catalog", "fiscal", "notification", "platform-control", "simulation", "supplier", "support"]:
+    security_files.append(f"service-api/service-python/{service}/app/security.py")
+for path in security_files:
+    require_file(path, "ERP_JWT_HS256_SECRET", "ERP_OPENFGA_ENFORCEMENT")
+
+require_file("infra/gateway/nginx.conf", "erp_auth_sensitive", "erp_abuse_sensitive", "rate_limit_exceeded")
+require_file("service-api/service-csharp/identity/src/Identity.Application/StartIdentityPasswordRecovery.cs", "HashResetToken", "ShouldExposeRecoveryToken")
+require_file("service-api/service-csharp/identity/src/Identity.Application/CompleteIdentityPasswordRecovery.cs", "HashResetToken")
+require_file("service-api/service-golang/documents/internal/api/handler.go", "RevokeAccessLink", "access_link_revoked", "malware_detected", "attachment_retention_expired")
+require_file("service-api/service-golang/documents/internal/infrastructure/persistence/postgres_attachment_repository.go", "RevokeAccessToken", "IsAccessTokenRevoked", "RecordDocumentAuditEvent", "documents.access_link_revocations", "documents.audit_events")
+require_file("service-api/service-postgresql/documents/migrations/000007_documents_access_audit.sql", "documents.access_link_revocations", "token_hash", "documents.audit_events", "correlation_id")
+require_file("service-api/service-csharp/finance/src/Finance.Api/FinancePolicies.cs", "RequiresIdempotencyKey", "IsImmutableLedgerOperation", "RequiresPciScopeReview")
+require_file("docs/contracts/events/event-envelope.schema.json", "eventId", "correlationId", "schemaRef")
+require_file("docs/contracts/portal/index.html", "Auth model", "Idempotency", "Breaking changes", "Events")
+require_file("docs/SEGURANCA.md", "JWT", "OpenFGA", "security")
+require_file("docs/SRE.md", "SLO", "Runbooks", "DLQ")
+require_file("docs/DADOS_LGPD.md", "identity", "documents", "privacy")
+require_file("docs/POLIGLOTISMO.md", "Licenca Arquitetural", "Checklist De Novo Servico")
+require_file("docs/templates/SERVICE_STARTER_CHECKLIST.md", "Auth middleware", "OpenAPI", "Eventos")
+require_file("docs/templates/stacks/README.md", "middleware", "traceparent", "Dockerfile")
+for starter in [
+    "docs/templates/stacks/go/security.go",
+    "docs/templates/stacks/python/security.py",
+    "docs/templates/stacks/typescript/security.ts",
+    "docs/templates/stacks/csharp/ApiSecurityMiddleware.cs",
+    "docs/templates/stacks/rust/security.rs",
+    "docs/templates/stacks/elixir/security.ex",
+]:
+    require_file(starter, "correlation", "unauthorized", "forbidden")
+require_file("scripts/build.sh", "database_backup_encrypted", "database_restore_encrypted", "ERP_BACKUP_ENCRYPTION_KEY")
+
+registry = json.loads((root / "docs/contracts/registry.json").read_text(encoding="utf-8"))
+schema_registry = json.loads((root / "docs/contracts/schema-registry.json").read_text(encoding="utf-8"))
+if "event-envelope.schema.json" not in registry.get("events", []):
+    errors.append("event envelope missing from contract registry")
+if not any(item.get("key") == "event-envelope" for item in schema_registry.get("schemas", [])):
+    errors.append("event envelope missing from schema registry")
+for doc in ["docs/SEGURANCA.md", "docs/SRE.md", "docs/DADOS_LGPD.md", "docs/POLIGLOTISMO.md"]:
+    if doc not in registry.get("docs", []):
+        errors.append(f"{doc} missing from docs registry")
+
+env_example = (root / ".env.example").read_text(encoding="utf-8")
+env_prod = (root / ".env.production.example").read_text(encoding="utf-8")
+for marker in ["ERP_AUTH_ENFORCEMENT", "ERP_JWT_HS256_SECRET", "ERP_INTERNAL_SERVICE_TOKEN", "ERP_OPENFGA_ENFORCEMENT"]:
+    if marker not in env_example or marker not in env_prod:
+        errors.append(f"security env marker missing: {marker}")
+
+if errors:
+    for error in errors:
+        print(f"[security] {error}")
+    sys.exit(1)
+
+print("[security] static security, data, event, SRE and polyglot guardrails validated")
+PY
+  run_hardening_secrets
+}
+
+run_supply_chain_suite() {
+  python3 - "$ROOT_DIR" <<'PY'
+import json
+import re
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+errors: list[str] = []
+
+ignored_dirs = {".git", "node_modules", "dist", "build", "bin", "obj", ".pytest_cache", "__pycache__"}
+secret_patterns = [
+    re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |)PRIVATE KEY-----"),
+    re.compile(r"AKIA[0-9A-Z]{16}"),
+    re.compile(r"(?i)(password|secret|token|api[_-]?key)\s*=\s*['\"]?[^'\"\n]*(prod|live|real|sk_live|ghp_|xoxb-|AKIA)[^'\"\n]*"),
+]
+
+for file_path in root.rglob("*"):
+    if any(part in ignored_dirs for part in file_path.parts):
+        continue
+    if not file_path.is_file() or file_path.stat().st_size > 1_000_000:
+        continue
+    if file_path.suffix.lower() in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".woff", ".woff2"}:
+        continue
+    try:
+        text = file_path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        continue
+    for pattern in secret_patterns:
+        if pattern.search(text):
+            errors.append(f"high confidence secret-like content found: {file_path.relative_to(root)}")
+
+dockerfiles = sorted(root.glob("service-api/**/Dockerfile"))
+if not dockerfiles:
+    errors.append("no Dockerfiles found for container scan baseline")
+docker_images: list[dict[str, str]] = []
+for dockerfile in dockerfiles:
+    for line in dockerfile.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("FROM "):
+            continue
+        image = stripped.split()[1]
+        docker_images.append({"dockerfile": str(dockerfile.relative_to(root)), "image": image})
+        if image.endswith(":latest") or (":" not in image and "@" not in image):
+            errors.append(f"unpinned Docker image in {dockerfile.relative_to(root)}: {image}")
+
+manifests = []
+for pattern in [
+    "service-api/**/go.mod",
+    "service-api/**/package.json",
+    "service-api/**/pyproject.toml",
+    "service-api/**/*.csproj",
+    "service-api/**/Cargo.toml",
+    "service-api/**/mix.exs",
+    "client-web/client-api/package.json",
+]:
+    manifests.extend(sorted(root.glob(pattern)))
+if not manifests:
+    errors.append("no dependency manifests found")
+
+lock_markers = [
+    "go.sum",
+    "package-lock.json",
+    "Cargo.lock",
+    "mix.lock",
+    "packages.lock.json",
+]
+lockfiles = [path for marker in lock_markers for path in root.glob(f"**/{marker}") if not any(part in ignored_dirs for part in path.parts)]
+
+sbom = {
+    "bomFormat": "CycloneDX-lite",
+    "specVersion": "1.5",
+    "metadata": {
+        "component": {"name": "ERP", "type": "application"},
+        "tool": "scripts/test.sh supply-chain",
+    },
+    "components": [
+        {"type": "file", "name": str(path.relative_to(root)), "scope": "manifest"}
+        for path in sorted(set(manifests))
+    ],
+    "containerImages": docker_images,
+    "lockfiles": [str(path.relative_to(root)) for path in sorted(set(lockfiles))],
+    "checks": {
+        "secretScan": "high-confidence-regex",
+        "dockerImagePinning": "tag-or-digest-required",
+        "dependencyManifestInventory": "enabled",
+    },
+}
+output_path = Path(sys.argv[2]) if len(sys.argv) > 2 else root / "build" / "erp-sbom.json"
+output_path.parent.mkdir(parents=True, exist_ok=True)
+output_path.write_text(json.dumps(sbom, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+if errors:
+    for error in errors:
+        print(f"[supply-chain] {error}")
+    sys.exit(1)
+
+print(f"[supply-chain] secret scan, Docker image pinning and SBOM inventory validated: {output_path}")
+PY
 }
 
 run_go_contract() {
@@ -932,6 +1202,9 @@ run_documents_runtime_smoke() {
   local upload_session_detail_response
   local upload_session_complete_response
   local download_response
+  local revoke_response
+  local revoked_download_response
+  local audit_events_response
   local northwind_create_response
   local northwind_list_response
   local db_summary
@@ -984,6 +1257,14 @@ run_documents_runtime_smoke() {
   access_link_token="$(echo "$access_link_response" | sed -n 's/.*accessToken=\([^\\"]*\)\\u0026expiresAt=.*/\1/p')"
   download_response="$(curl -sS -D - -o /dev/null \
     "$base_url/api/documents/attachments/$created_attachment_public_id/download?accessToken=$access_link_token")"
+  revoke_response="$(curl -fsS \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "{\"tenantSlug\":\"bootstrap-ops\",\"accessToken\":\"$access_link_token\",\"reason\":\"smoke_revocation\",\"revokedBy\":\"documents-smoke\"}" \
+    "$base_url/api/documents/attachments/$created_attachment_public_id/access-links/revoke")"
+  revoked_download_response="$(curl -sS -D - -o - \
+    "$base_url/api/documents/attachments/$created_attachment_public_id/download?accessToken=$access_link_token")"
+  audit_events_response="$(curl -fsS "$base_url/api/documents/audit-events?tenantSlug=bootstrap-ops&attachmentPublicId=$created_attachment_public_id")"
   archive_response="$(curl -fsS \
     -X POST \
     -H "Content-Type: application/json" \
@@ -1031,7 +1312,9 @@ run_documents_runtime_smoke() {
         (SELECT count(*) FROM documents.attachments AS attachment WHERE attachment.tenant_id = tenant.id AND attachment.visibility = 'public') AS public_visibility,
         (SELECT count(*) FROM documents.attachment_versions AS version WHERE version.tenant_id = tenant.id) AS attachment_versions,
         (SELECT count(*) FROM documents.upload_sessions AS session WHERE session.tenant_id = tenant.id) AS upload_sessions,
-        (SELECT count(*) FROM documents.upload_sessions AS session WHERE session.tenant_id = tenant.id AND session.status = 'completed') AS completed_upload_sessions
+        (SELECT count(*) FROM documents.upload_sessions AS session WHERE session.tenant_id = tenant.id AND session.status = 'completed') AS completed_upload_sessions,
+        (SELECT count(*) FROM documents.access_link_revocations AS revocation WHERE revocation.tenant_id = tenant.id) AS access_link_revocations,
+        (SELECT count(*) FROM documents.audit_events AS event WHERE event.tenant_id = tenant.id) AS audit_events
       FROM identity.tenants AS tenant
       WHERE tenant.slug = 'bootstrap-ops'
       LIMIT 1;
@@ -1045,6 +1328,9 @@ run_documents_runtime_smoke() {
   echo "[test] documents versions => $versions_response"
   echo "[test] documents access link => $access_link_response"
   echo "[test] documents download => $download_response"
+  echo "[test] documents revoke access link => $revoke_response"
+  echo "[test] documents revoked download => $revoked_download_response"
+  echo "[test] documents audit events => $audit_events_response"
   echo "[test] documents archive => $archive_response"
   echo "[test] documents archived list => $archived_list_response"
   echo "[test] documents active list => $active_list_response"
@@ -1062,7 +1348,7 @@ run_documents_runtime_smoke() {
     exit 1
   fi
 
-  if [[ -z "$created_attachment_public_id" || "$create_response" != *'"tenantSlug":"bootstrap-ops"'* || "$create_response" != *'"ownerType":"crm.lead"'* || "$create_response" != *'"fileSizeBytes":8192'* || "$create_response" != *'"visibility":"internal"'* || "$create_response" != *'"currentVersion":1'* || "$detail_response" != *'"checksumSha256":"abcdef1234567890"'* || "$detail_response" != *'"retentionDays":365'* || "$create_version_response" != *'"versionNumber":2'* || "$create_version_response" != *'"currentVersion":2'* || "$create_version_response" != *'"storageKey":"crm/bootstrap-proposal-v2.pdf"'* || "$versions_response" != *'"versionNumber":2'* || "$versions_response" != *'"versionNumber":1'* || "$access_link_response" != *"\"attachmentPublicId\":\"$created_attachment_public_id\""* || "$access_link_response" != *'"accessMode":"read"'* || "$access_link_response" != *'"storageDriver":"manual"'* || "$access_link_response" != *'"accessUrl":"http://localhost:'* || "$download_response" != *'HTTP/1.1 307 Temporary Redirect'* || "$download_response" != *'/files/manual/'* || "$archive_response" != *'"archiveReason":"proposta substituida pelo fluxo operacional"'* || "$archive_response" != *'"archivedAt":'* || "$archive_response" != *'"currentVersion":2'* || "$archived_list_response" != *'"fileName":"bootstrap-proposal-v2.pdf"'* || "$active_list_response" != '[]' || "$customer_create_response" != *'"storageDriver":"r2"'* || "$customer_create_response" != *'"visibility":"restricted"'* || "$customer_list_response" != *'"fileName":"bootstrap-contract.pdf"'* || -z "$upload_session_public_id" || "$upload_session_response" != *'"status":"pending_upload"'* || "$upload_session_response" != *'"uploadUrl":"http://localhost:'* || "$upload_session_detail_response" != *"\"publicId\":\"$upload_session_public_id\""* || "$upload_session_complete_response" != *'"status":"completed"'* || "$upload_session_complete_response" != *'"fileSizeBytes":10240'* || "$upload_session_complete_response" != *'"checksumSha256":"aa11bb22cc33dd44"'* || "$upload_session_complete_response" != *'"currentVersion":1'* || "$northwind_create_response" != *'"tenantSlug":"northwind-group"'* || "$northwind_list_response" != *'"fileName":"northwind-proof.pdf"'* || "$northwind_list_response" != *'"visibility":"public"'* || "$db_summary" != 'bootstrap-ops|3|1|2|2|1|1|2|1|2|0|4|1|1' ]]; then
+  if [[ -z "$created_attachment_public_id" || "$create_response" != *'"tenantSlug":"bootstrap-ops"'* || "$create_response" != *'"ownerType":"crm.lead"'* || "$create_response" != *'"fileSizeBytes":8192'* || "$create_response" != *'"visibility":"internal"'* || "$create_response" != *'"currentVersion":1'* || "$detail_response" != *'"checksumSha256":"abcdef1234567890"'* || "$detail_response" != *'"retentionDays":365'* || "$create_version_response" != *'"versionNumber":2'* || "$create_version_response" != *'"currentVersion":2'* || "$create_version_response" != *'"storageKey":"crm/bootstrap-proposal-v2.pdf"'* || "$versions_response" != *'"versionNumber":2'* || "$versions_response" != *'"versionNumber":1'* || "$access_link_response" != *"\"attachmentPublicId\":\"$created_attachment_public_id\""* || "$access_link_response" != *'"accessMode":"read"'* || "$access_link_response" != *'"storageDriver":"manual"'* || "$access_link_response" != *'"accessUrl":"http://localhost:'* || "$download_response" != *'HTTP/1.1 307 Temporary Redirect'* || "$download_response" != *'/files/manual/'* || "$revoke_response" != *'"revoked":true'* || "$revoke_response" != *'"reason":"smoke_revocation"'* || "$revoked_download_response" != *'HTTP/1.1 401 Unauthorized'* || "$revoked_download_response" != *'access_token_revoked'* || "$audit_events_response" != *'"eventCode":"access_link_created"'* || "$audit_events_response" != *'"eventCode":"download_redirected"'* || "$audit_events_response" != *'"eventCode":"access_link_revoked"'* || "$audit_events_response" != *'"eventCode":"access_link_denied"'* || "$archive_response" != *'"archiveReason":"proposta substituida pelo fluxo operacional"'* || "$archive_response" != *'"archivedAt":'* || "$archive_response" != *'"currentVersion":2'* || "$archived_list_response" != *'"fileName":"bootstrap-proposal-v2.pdf"'* || "$active_list_response" != '[]' || "$customer_create_response" != *'"storageDriver":"r2"'* || "$customer_create_response" != *'"visibility":"restricted"'* || "$customer_list_response" != *'"fileName":"bootstrap-contract.pdf"'* || -z "$upload_session_public_id" || "$upload_session_response" != *'"status":"pending_upload"'* || "$upload_session_response" != *'"uploadUrl":"http://localhost:'* || "$upload_session_detail_response" != *"\"publicId\":\"$upload_session_public_id\""* || "$upload_session_complete_response" != *'"status":"completed"'* || "$upload_session_complete_response" != *'"fileSizeBytes":10240'* || "$upload_session_complete_response" != *'"checksumSha256":"aa11bb22cc33dd44"'* || "$upload_session_complete_response" != *'"currentVersion":1'* || "$northwind_create_response" != *'"tenantSlug":"northwind-group"'* || "$northwind_list_response" != *'"fileName":"northwind-proof.pdf"'* || "$northwind_list_response" != *'"visibility":"public"'* || "$db_summary" != 'bootstrap-ops|3|1|2|2|1|1|2|1|2|0|4|1|1|1|4' ]]; then
     echo "[test] documents runtime state did not persist the expected attachment contracts"
     exit 1
   fi
@@ -4367,6 +4653,8 @@ Usage:
   ./scripts/test.sh smoke
   ./scripts/test.sh performance
   ./scripts/test.sh backup-restore
+  ./scripts/test.sh security
+  ./scripts/test.sh supply-chain
   ./scripts/test.sh all
   ./scripts/test.sh hardening-secrets
 EOF
@@ -4420,6 +4708,12 @@ main() {
     hardening)
       run_hardening_suite
       ;;
+    security)
+      run_security_suite
+      ;;
+    supply-chain)
+      run_supply_chain_suite
+      ;;
     hardening-secrets)
       run_hardening_secrets
       ;;
@@ -4435,6 +4729,8 @@ main() {
       run_go_contract
       run_dotnet_contract
       run_rust_unit
+      run_security_suite
+      run_supply_chain_suite
       ;;
     *)
       usage
@@ -4443,4 +4739,6 @@ main() {
   esac
 }
 
-main "$@"
+if [[ "${ERP_TEST_SKIP_MAIN:-0}" != "1" ]]; then
+  main "$@"
+fi

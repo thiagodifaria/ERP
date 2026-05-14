@@ -37,7 +37,9 @@ Banco:
 ./scripts/build.sh summary crm
 ./scripts/build.sh psql
 ./scripts/build.sh backup /tmp/erp-local-backup.sql
+ERP_BACKUP_ENCRYPTION_KEY="$SECRET_VALUE" ./scripts/build.sh backup-encrypted /tmp/erp-local-backup.sql.enc
 ./scripts/build.sh restore /tmp/erp-local-backup.sql
+ERP_BACKUP_ENCRYPTION_KEY="$SECRET_VALUE" ./scripts/build.sh restore-encrypted /tmp/erp-local-backup.sql.enc
 ```
 
 Validacao:
@@ -51,6 +53,8 @@ Validacao:
 ./scripts/test.sh performance
 ./scripts/test.sh backup-restore
 ./scripts/test.sh hardening
+./scripts/test.sh security
+./scripts/test.sh supply-chain
 ./scripts/test.sh hardening-secrets
 ```
 
@@ -149,6 +153,8 @@ workflow-runtime
 | `performance` | carga e capacidade local |
 | `backup-restore` | backup e restauracao do PostgreSQL |
 | `hardening` | readiness, contratos, providers e postura operacional |
+| `security` | guardrails de auth, secrets, eventos, documents, LGPD e templates |
+| `supply-chain` | secret scan de alta confianca, inventario SBOM e pinning de imagens |
 
 Para o hardening enterprise, o conjunto minimo de evidencia operacional e formado por `contract`, `smoke`, `performance`, `backup-restore` e `hardening`. O relatorio `GET /api/analytics/reports/hardening-review` consolida esse fechamento como `operationalRunbooks`, permitindo validar rapidamente se seguranca operacional, observabilidade, DLQ/retry, backup/restore, SLOs, multi-tenant, failover, performance e permissoes possuem cobertura operacional rastreavel.
 
@@ -202,12 +208,14 @@ Backup local:
 
 ```bash
 ./scripts/build.sh backup /tmp/erp-local-backup.sql
+ERP_BACKUP_ENCRYPTION_KEY="$SECRET_VALUE" ./scripts/build.sh backup-encrypted /tmp/erp-local-backup.sql.enc
 ```
 
 Restore local:
 
 ```bash
 ./scripts/build.sh restore /tmp/erp-local-backup.sql
+ERP_BACKUP_ENCRYPTION_KEY="$SECRET_VALUE" ./scripts/build.sh restore-encrypted /tmp/erp-local-backup.sql.enc
 ```
 
 Depois de restore, rode uma validacao proporcional:

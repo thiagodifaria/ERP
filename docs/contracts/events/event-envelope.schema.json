@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "erp://contracts/events/event-envelope.schema.json",
+  "title": "ERP Event Envelope",
+  "type": "object",
+  "required": [
+    "eventId",
+    "eventType",
+    "eventVersion",
+    "occurredAt",
+    "tenantSlug",
+    "actor",
+    "correlationId",
+    "schemaRef",
+    "payload"
+  ],
+  "properties": {
+    "eventId": { "type": "string", "format": "uuid" },
+    "eventType": { "type": "string", "minLength": 3 },
+    "eventVersion": { "type": "integer", "minimum": 1 },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "tenantId": { "type": ["integer", "null"], "minimum": 1 },
+    "tenantSlug": { "type": "string", "minLength": 1 },
+    "actor": {
+      "type": "object",
+      "required": ["type", "subject"],
+      "properties": {
+        "type": { "type": "string", "enum": ["user", "service", "system", "provider"] },
+        "subject": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
+    },
+    "correlationId": { "type": "string", "minLength": 1 },
+    "causationId": { "type": ["string", "null"] },
+    "schemaRef": { "type": "string", "minLength": 3 },
+    "payload": { "type": "object" }
+  },
+  "additionalProperties": false
+}

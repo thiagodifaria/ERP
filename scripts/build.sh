@@ -303,6 +303,21 @@ database_backup() {
   ok "backup salvo em $output_path"
 }
 
+database_backup_encrypted() {
+  local output_path="${1:-/tmp/erp-local-backup.sql.enc}"
+  local temporary_backup
+
+  [[ -n "${ERP_BACKUP_ENCRYPTION_KEY:-}" ]] || fail "ERP_BACKUP_ENCRYPTION_KEY obrigatorio para backup criptografado"
+  command -v openssl >/dev/null 2>&1 || fail "openssl nao encontrado para backup criptografado"
+
+  temporary_backup="$(mktemp "${TMPDIR:-/tmp}/erp-backup-plain-XXXXXX.sql")"
+  database_backup "$temporary_backup"
+  mkdir -p "$(dirname "$output_path")"
+  openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:ERP_BACKUP_ENCRYPTION_KEY -in "$temporary_backup" -out "$output_path"
+  rm -f "$temporary_backup"
+  ok "backup criptografado salvo em $output_path"
+}
+
 database_restore() {
   local input_path="${1:-}"
   [[ -n "$input_path" ]] || fail "uso: ./scripts/build.sh restore <arquivo.sql>"
@@ -313,6 +328,22 @@ database_restore() {
   "${COMPOSE_CMD[@]}" exec -T service-postgresql \
     psql -v ON_ERROR_STOP=1 -U "$DB_USER" -d "$DB_NAME" < "$input_path"
   ok "restore aplicado"
+}
+
+database_restore_encrypted() {
+  local input_path="${1:-}"
+  local temporary_backup
+
+  [[ -n "$input_path" ]] || fail "uso: ./scripts/build.sh restore-encrypted <arquivo.sql.enc>"
+  [[ -f "$input_path" ]] || fail "backup criptografado nao encontrado: $input_path"
+  [[ -n "${ERP_BACKUP_ENCRYPTION_KEY:-}" ]] || fail "ERP_BACKUP_ENCRYPTION_KEY obrigatorio para restore criptografado"
+  command -v openssl >/dev/null 2>&1 || fail "openssl nao encontrado para restore criptografado"
+
+  temporary_backup="$(mktemp "${TMPDIR:-/tmp}/erp-backup-decrypted-XXXXXX.sql")"
+  openssl enc -d -aes-256-cbc -pbkdf2 -pass env:ERP_BACKUP_ENCRYPTION_KEY -in "$input_path" -out "$temporary_backup"
+  database_restore "$temporary_backup"
+  rm -f "$temporary_backup"
+  ok "restore criptografado aplicado"
 }
 
 database_summary() {
@@ -360,7 +391,9 @@ Uso:
   ./scripts/build.sh migrate <contexto|all>  aplica migrations
   ./scripts/build.sh seed <contexto|all>     aplica seeds
   ./scripts/build.sh backup [arquivo.sql]    gera dump do PostgreSQL
+  ./scripts/build.sh backup-encrypted [arquivo.sql.enc] gera dump criptografado
   ./scripts/build.sh restore <arquivo.sql>   restaura dump do PostgreSQL
+  ./scripts/build.sh restore-encrypted <arquivo.sql.enc> restaura dump criptografado
   ./scripts/build.sh summary <schema>        resumo relacional simples
   ./scripts/build.sh psql                    abre psql no PostgreSQL local
   ./scripts/build.sh db <comando>            alias para comandos de banco
@@ -379,7 +412,9 @@ dispatch_database() {
     migrate) database_migrate "$@" ;;
     seed) database_seed "$@" ;;
     backup) database_backup "$@" ;;
+    backup-encrypted) database_backup_encrypted "$@" ;;
     restore) database_restore "$@" ;;
+    restore-encrypted) database_restore_encrypted "$@" ;;
     summary) database_summary "$@" ;;
     psql) database_psql "$@" ;;
     *) usage; exit 1 ;;
@@ -409,7 +444,9 @@ main() {
     migrate) database_migrate "$@" ;;
     seed) database_seed "$@" ;;
     backup) database_backup "$@" ;;
+    backup-encrypted) database_backup_encrypted "$@" ;;
     restore) database_restore "$@" ;;
+    restore-encrypted) database_restore_encrypted "$@" ;;
     summary) database_summary "$@" ;;
     psql) database_psql "$@" ;;
     db) dispatch_database "$@" ;;

@@ -72,4 +72,51 @@ public sealed class FinancePoliciesTests
   {
     Assert.Equal(expected, FinancePolicies.TryResolveCurrentPeriodKey(periodKey, out _));
   }
+
+  [Theory]
+  [InlineData("receivable_settlement", true)]
+  [InlineData("provider_callback", true)]
+  [InlineData("cash_movement", true)]
+  [InlineData("read_report", false)]
+  public void SensitiveFinancialMutationsShouldRequireIdempotency(string operation, bool expected)
+  {
+    Assert.Equal(expected, FinancePolicies.RequiresIdempotencyKey(operation));
+  }
+
+  [Theory]
+  [InlineData("receivable_settlement", true)]
+  [InlineData("period_closure", true)]
+  [InlineData("manual_adjustment_preview", false)]
+  public void LedgerOperationsShouldBeImmutable(string operation, bool expected)
+  {
+    Assert.Equal(expected, FinancePolicies.IsImmutableLedgerOperation(operation));
+  }
+
+  [Theory]
+  [InlineData("discount", "discount")]
+  [InlineData("commission_release", "commission_release")]
+  [InlineData("manual_cash_adjustment", "manual_cash_adjustment")]
+  [InlineData("free_text", "")]
+  public void ApprovalActionsShouldBeWhitelisted(string input, string expected)
+  {
+    Assert.Equal(expected, FinancePolicies.NormalizeApprovalAction(input));
+  }
+
+  [Theory]
+  [InlineData("matched", "matched")]
+  [InlineData("manual_review", "manual_review")]
+  [InlineData("pending", "")]
+  public void ReconciliationStatusShouldBeExplicit(string input, string expected)
+  {
+    Assert.Equal(expected, FinancePolicies.NormalizeReconciliationStatus(input));
+  }
+
+  [Theory]
+  [InlineData("hosted_checkout", false, false)]
+  [InlineData("direct_card", false, true)]
+  [InlineData("redirect", true, true)]
+  public void PciScopeReviewShouldTriggerWhenCardDataCouldTouchThePlatform(string providerMode, bool storesCardData, bool expected)
+  {
+    Assert.Equal(expected, FinancePolicies.RequiresPciScopeReview(providerMode, storesCardData));
+  }
 }

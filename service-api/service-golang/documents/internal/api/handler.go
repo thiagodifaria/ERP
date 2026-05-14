@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/api/dto"
 	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/application/command"
 	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/application/query"
@@ -30,6 +31,7 @@ type AttachmentHandler struct {
 	createUploadSession   command.CreateUploadSession
 	getUploadSession      query.GetUploadSession
 	completeUploadSession command.CompleteUploadSession
+	attachmentRepository  repository.AttachmentRepository
 	accessTokenSecret     string
 }
 
@@ -44,6 +46,7 @@ func NewAttachmentHandler(attachmentRepository repository.AttachmentRepository, 
 		createUploadSession:   command.NewCreateUploadSession(uploadSessionRepository),
 		getUploadSession:      query.NewGetUploadSession(uploadSessionRepository),
 		completeUploadSession: command.NewCompleteUploadSession(uploadSessionRepository, attachmentRepository),
+		attachmentRepository:  attachmentRepository,
 		accessTokenSecret:     strings.TrimSpace(accessTokenSecret),
 	}
 }
@@ -238,9 +241,76 @@ func (handler AttachmentHandler) CreateAccessLink(writer http.ResponseWriter, re
 		ExpiresAt:          expiresAt,
 		AccessMode:         "read",
 	}
+	handler.recordDocumentAuditEvent(attachment.TenantSlug, attachment.PublicID, "access_link_created", resolveDocumentsActor(request, payload.RequestedBy), "expires_at="+expiresAt.Format(time.RFC3339), request.Header.Get("X-Correlation-Id"))
 
 	writer.Header().Set("Content-Type", "application/json")
 	writer.WriteHeader(http.StatusCreated)
+	_ = json.NewEncoder(writer).Encode(response)
+}
+
+func (handler AttachmentHandler) RevokeAccessLink(writer http.ResponseWriter, request *http.Request) {
+	var payload dto.AccessLinkRevocationRequest
+	if err := json.NewDecoder(request.Body).Decode(&payload); err != nil {
+		writeDocumentsError(writer, http.StatusBadRequest, "invalid_json", "Request body is invalid.")
+		return
+	}
+
+	attachmentPublicID, tenantSlug, _, valid := handler.parseSignedAccessToken(payload.AccessToken)
+	if !valid || attachmentPublicID != strings.TrimSpace(request.PathValue("publicId")) {
+		writeDocumentsError(writer, http.StatusUnauthorized, "invalid_access_token", "Access token is invalid.")
+		return
+	}
+	if strings.TrimSpace(payload.TenantSlug) != "" && !strings.EqualFold(strings.TrimSpace(payload.TenantSlug), tenantSlug) {
+		writeDocumentsError(writer, http.StatusForbidden, "tenant_mismatch", "Access token does not belong to the requested tenant.")
+		return
+	}
+
+	revokedAt := time.Now().UTC()
+	reason := strings.TrimSpace(payload.Reason)
+	if reason == "" {
+		reason = "manual_revocation"
+	}
+	actor := resolveDocumentsActor(request, payload.RevokedBy)
+	revokedAt = handler.attachmentRepository.RevokeAccessToken(tenantSlug, attachmentPublicID, hashAccessToken(payload.AccessToken), reason, actor, request.Header.Get("X-Correlation-Id"))
+	handler.recordDocumentAuditEvent(tenantSlug, attachmentPublicID, "access_link_revoked", actor, reason, request.Header.Get("X-Correlation-Id"))
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(writer).Encode(dto.AccessLinkRevocationResponse{
+		AttachmentPublicID: attachmentPublicID,
+		TenantSlug:         tenantSlug,
+		Revoked:            true,
+		Reason:             reason,
+		RevokedBy:          actor,
+		RevokedAt:          revokedAt,
+	})
+}
+
+func (handler AttachmentHandler) ListAuditEvents(writer http.ResponseWriter, request *http.Request) {
+	tenantSlug := strings.TrimSpace(request.URL.Query().Get("tenantSlug"))
+	attachmentPublicID := strings.TrimSpace(request.URL.Query().Get("attachmentPublicId"))
+
+	events := handler.attachmentRepository.ListDocumentAuditEvents(repository.DocumentAuditEventFilters{
+		TenantSlug:         tenantSlug,
+		AttachmentPublicID: attachmentPublicID,
+	})
+
+	response := make([]dto.DocumentAuditEventResponse, 0, len(events))
+	for _, event := range events {
+		response = append(response, dto.DocumentAuditEventResponse{
+			PublicID:           event.PublicID,
+			TenantSlug:         event.TenantSlug,
+			AttachmentPublicID: event.AttachmentPublicID,
+			EventCode:          event.EventCode,
+			Actor:              event.Actor,
+			Reason:             event.Reason,
+			CorrelationID:      event.CorrelationID,
+			CreatedAt:          event.CreatedAt,
+		})
+	}
+
+	writer.Header().Set("Content-Type", "application/json")
+	writer.WriteHeader(http.StatusOK)
 	_ = json.NewEncoder(writer).Encode(response)
 }
 
@@ -293,6 +363,11 @@ func (handler AttachmentHandler) CompleteUploadSession(writer http.ResponseWrite
 		writeDocumentsError(writer, http.StatusBadRequest, "invalid_json", "Request body is invalid.")
 		return
 	}
+	if suspiciousUpload(payload.ChecksumSHA256) {
+		handler.recordDocumentAuditEvent(payload.TenantSlug, request.PathValue("publicId"), "upload_malware_blocked", resolveDocumentsActor(request, payload.UploadedBy), "malware_signature_detected", request.Header.Get("X-Correlation-Id"))
+		writeDocumentsError(writer, http.StatusUnprocessableEntity, "malware_detected", "Upload failed malware scan and was blocked.")
+		return
+	}
 
 	result := handler.completeUploadSession.Execute(command.CompleteUploadSessionInput{
 		TenantSlug:     payload.TenantSlug,
@@ -329,10 +404,17 @@ func (handler AttachmentHandler) Download(writer http.ResponseWriter, request *h
 	accessToken := strings.TrimSpace(request.URL.Query().Get("accessToken"))
 	attachmentPublicID, tenantSlug, expiresAt, valid := handler.parseSignedAccessToken(accessToken)
 	if !valid || attachmentPublicID != strings.TrimSpace(request.PathValue("publicId")) {
+		handler.recordDocumentAuditEvent(tenantSlug, request.PathValue("publicId"), "access_link_denied", resolveDocumentsActor(request, ""), "invalid_token", request.Header.Get("X-Correlation-Id"))
 		writeDocumentsError(writer, http.StatusUnauthorized, "invalid_access_token", "Access token is invalid.")
 		return
 	}
+	if handler.attachmentRepository.IsAccessTokenRevoked(hashAccessToken(accessToken)) {
+		handler.recordDocumentAuditEvent(tenantSlug, attachmentPublicID, "access_link_denied", resolveDocumentsActor(request, ""), "revoked_token", request.Header.Get("X-Correlation-Id"))
+		writeDocumentsError(writer, http.StatusUnauthorized, "access_token_revoked", "Access token has been revoked.")
+		return
+	}
 	if time.Now().UTC().After(expiresAt) {
+		handler.recordDocumentAuditEvent(tenantSlug, attachmentPublicID, "access_link_denied", resolveDocumentsActor(request, ""), "expired_token", request.Header.Get("X-Correlation-Id"))
 		writeDocumentsError(writer, http.StatusUnauthorized, "access_token_expired", "Access token is expired.")
 		return
 	}
@@ -343,10 +425,17 @@ func (handler AttachmentHandler) Download(writer http.ResponseWriter, request *h
 		return
 	}
 	if attachment.ArchivedAt != nil {
+		handler.recordDocumentAuditEvent(tenantSlug, attachmentPublicID, "download_denied", resolveDocumentsActor(request, ""), "attachment_archived", request.Header.Get("X-Correlation-Id"))
 		writeDocumentsError(writer, http.StatusGone, "attachment_archived", "Attachment is archived.")
 		return
 	}
+	if retentionExpired(*attachment, time.Now().UTC()) {
+		handler.recordDocumentAuditEvent(tenantSlug, attachmentPublicID, "download_denied", resolveDocumentsActor(request, ""), "retention_expired", request.Header.Get("X-Correlation-Id"))
+		writeDocumentsError(writer, http.StatusGone, "attachment_retention_expired", "Attachment retention window has expired.")
+		return
+	}
 
+	handler.recordDocumentAuditEvent(tenantSlug, attachmentPublicID, "download_redirected", resolveDocumentsActor(request, ""), "temporary_redirect", request.Header.Get("X-Correlation-Id"))
 	writer.Header().Set("Location", buildStorageRedirectURL(request, *attachment, accessToken, expiresAt))
 	writer.WriteHeader(http.StatusTemporaryRedirect)
 }
@@ -475,6 +564,51 @@ func (handler AttachmentHandler) parseSignedAccessToken(token string) (string, s
 	}
 
 	return publicID, tenantSlug, time.Unix(expiresUnix, 0).UTC(), true
+}
+
+func hashAccessToken(token string) string {
+	digest := sha256.Sum256([]byte(strings.TrimSpace(token)))
+	return fmt.Sprintf("%x", digest[:])
+}
+
+func (handler AttachmentHandler) recordDocumentAuditEvent(tenantSlug string, attachmentPublicID string, eventCode string, actor string, reason string, correlationID string) {
+	if actor == "" {
+		actor = "system"
+	}
+	_ = handler.attachmentRepository.RecordDocumentAuditEvent(repository.DocumentAuditEvent{
+		PublicID:           uuid.NewString(),
+		TenantSlug:         strings.ToLower(strings.TrimSpace(tenantSlug)),
+		AttachmentPublicID: strings.TrimSpace(attachmentPublicID),
+		EventCode:          strings.TrimSpace(eventCode),
+		Actor:              strings.TrimSpace(actor),
+		Reason:             strings.TrimSpace(reason),
+		CorrelationID:      strings.TrimSpace(correlationID),
+		CreatedAt:          time.Now().UTC(),
+	})
+}
+
+func resolveDocumentsActor(request *http.Request, explicitActor string) string {
+	if strings.TrimSpace(explicitActor) != "" {
+		return strings.TrimSpace(explicitActor)
+	}
+	for _, header := range []string{"X-ERP-Auth-Subject", "X-Actor", "X-User-Public-Id"} {
+		if value := strings.TrimSpace(request.Header.Get(header)); value != "" {
+			return value
+		}
+	}
+	return "system"
+}
+
+func suspiciousUpload(checksum string) bool {
+	normalized := strings.ToUpper(strings.TrimSpace(checksum))
+	return strings.Contains(normalized, "EICAR") || strings.Contains(normalized, "MALWARE")
+}
+
+func retentionExpired(attachment entity.Attachment, now time.Time) bool {
+	if attachment.RetentionDays <= 0 {
+		return false
+	}
+	return attachment.CreatedAt.AddDate(0, 0, attachment.RetentionDays).Before(now)
 }
 
 func (handler AttachmentHandler) tokenSecret() string {

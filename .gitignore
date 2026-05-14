@@ -1,4 +1,5 @@
 .cache/
+build/
 **/bin/
 **/obj/
 **/target/

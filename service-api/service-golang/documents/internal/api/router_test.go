@@ -102,6 +102,34 @@ func TestRouterShouldGetArchiveAndIssueAccessLinks(t *testing.T) {
 		t.Fatalf("expected redirect location header")
 	}
 
+	revokeRequest := httptest.NewRequest(
+		http.MethodPost,
+		"/api/documents/attachments/"+created.PublicID+"/access-links/revoke",
+		bytes.NewBufferString(`{"tenantSlug":"bootstrap-ops","accessToken":"`+extractAccessToken(t, accessLink.AccessURL)+`","reason":"operator_revoked","revokedBy":"security-ops"}`),
+	)
+	revokeRecorder := httptest.NewRecorder()
+	router.ServeHTTP(revokeRecorder, revokeRequest)
+
+	if revokeRecorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, revokeRecorder.Code)
+	}
+
+	revokedDownloadRecorder := httptest.NewRecorder()
+	router.ServeHTTP(revokedDownloadRecorder, downloadRequest)
+	if revokedDownloadRecorder.Code != http.StatusUnauthorized || !bytes.Contains(revokedDownloadRecorder.Body.Bytes(), []byte("access_token_revoked")) {
+		t.Fatalf("expected revoked token denial, got status=%d body=%s", revokedDownloadRecorder.Code, revokedDownloadRecorder.Body.String())
+	}
+
+	auditRequest := httptest.NewRequest(http.MethodGet, "/api/documents/audit-events?tenantSlug=bootstrap-ops&attachmentPublicId="+created.PublicID, nil)
+	auditRecorder := httptest.NewRecorder()
+	router.ServeHTTP(auditRecorder, auditRequest)
+	if auditRecorder.Code != http.StatusOK {
+		t.Fatalf("expected status %d, got %d", http.StatusOK, auditRecorder.Code)
+	}
+	if !bytes.Contains(auditRecorder.Body.Bytes(), []byte("access_link_created")) || !bytes.Contains(auditRecorder.Body.Bytes(), []byte("access_link_revoked")) {
+		t.Fatalf("expected access audit events, got %s", auditRecorder.Body.String())
+	}
+
 	archiveRequest := httptest.NewRequest(
 		http.MethodPost,
 		"/api/documents/attachments/"+created.PublicID+"/archive",
@@ -130,6 +158,47 @@ func TestRouterShouldGetArchiveAndIssueAccessLinks(t *testing.T) {
 	if len(archivedPayload) != 1 || archivedPayload[0].ArchivedAt == nil || archivedPayload[0].ArchiveReason != "fim-do-contrato" {
 		t.Fatalf("expected archived attachment, got %+v", archivedPayload)
 	}
+}
+
+func TestRouterShouldBlockSuspiciousUploadCompletion(t *testing.T) {
+	router := NewRouter(telemetry.New("documents-test"), persistence.NewInMemoryAttachmentRepository(), persistence.NewInMemoryUploadSessionRepository())
+
+	createSessionRequest := httptest.NewRequest(
+		http.MethodPost,
+		"/api/documents/upload-sessions",
+		bytes.NewBufferString(`{"tenantSlug":"bootstrap-ops","ownerType":"crm.customer","ownerPublicId":"0195e7a0-7a9c-7c1f-8a44-4a6e70000342","fileName":"evidencia.txt","contentType":"text/plain","storageDriver":"local","source":"crm","requestedBy":"documents-smoke","visibility":"restricted","retentionDays":120}`),
+	)
+	createSessionRecorder := httptest.NewRecorder()
+	router.ServeHTTP(createSessionRecorder, createSessionRequest)
+	if createSessionRecorder.Code != http.StatusCreated {
+		t.Fatalf("expected status %d, got %d", http.StatusCreated, createSessionRecorder.Code)
+	}
+
+	var session dto.UploadSessionResponse
+	if err := json.Unmarshal(createSessionRecorder.Body.Bytes(), &session); err != nil {
+		t.Fatalf("unexpected decode error: %v", err)
+	}
+
+	completeRequest := httptest.NewRequest(
+		http.MethodPost,
+		"/api/documents/upload-sessions/"+session.PublicID+"/complete",
+		bytes.NewBufferString(`{"tenantSlug":"bootstrap-ops","uploadedBy":"security-ops","fileSizeBytes":68,"checksumSha256":"EICAR-MALWARE-SIGNATURE"}`),
+	)
+	completeRecorder := httptest.NewRecorder()
+	router.ServeHTTP(completeRecorder, completeRequest)
+
+	if completeRecorder.Code != http.StatusUnprocessableEntity || !bytes.Contains(completeRecorder.Body.Bytes(), []byte("malware_detected")) {
+		t.Fatalf("expected malware scan denial, got status=%d body=%s", completeRecorder.Code, completeRecorder.Body.String())
+	}
+}
+
+func extractAccessToken(t *testing.T, accessURL string) string {
+	t.Helper()
+	request, err := http.NewRequest(http.MethodGet, accessURL, nil)
+	if err != nil {
+		t.Fatalf("unexpected access url parse error: %v", err)
+	}
+	return request.URL.Query().Get("accessToken")
 }
 
 func TestRouterShouldCreateAndListAttachmentVersions(t *testing.T) {

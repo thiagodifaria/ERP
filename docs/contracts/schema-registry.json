@@ -32,6 +32,12 @@
       "domain": "engagement"
     },
     {
+      "key": "event-envelope",
+      "path": "docs/contracts/events/event-envelope.schema.json",
+      "format": "json-schema",
+      "domain": "platform"
+    },
+    {
       "key": "fiscal.consent",
       "path": "docs/contracts/events/fiscal.consent.schema.json",
       "format": "json-schema",

@@ -75,6 +75,21 @@ paths:
       responses:
         '201':
           description: Attachment created
+  /api/documents/attachments/{publicId}:
+    get:
+      summary: Read attachment metadata
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Attachment detail
+        '404':
+          description: Attachment not found
   /api/documents/attachments/{publicId}/versions:
     get:
       summary: List attachment versions
@@ -95,6 +110,103 @@ paths:
       responses:
         '201':
           description: Version created
+  /api/documents/attachments/{publicId}/download:
+    get:
+      summary: Redirect to storage when access token is valid and retention allows download
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - in: query
+          name: accessToken
+          required: true
+          schema:
+            type: string
+      responses:
+        '307':
+          description: Temporary storage redirect
+        '401':
+          description: Invalid, expired or revoked access token
+        '410':
+          description: Archived or retention-expired attachment
+  /api/documents/attachments/{publicId}/archive:
+    post:
+      summary: Archive attachment metadata under retention governance
+      requestBody:
+        required: true
+      responses:
+        '200':
+          description: Attachment archived
+  /api/documents/attachments/{publicId}/access-links:
+    post:
+      summary: Create signed short-lived access link
+      requestBody:
+        required: true
+      responses:
+        '201':
+          description: Access link created and audit event recorded
+        '409':
+          description: Archived attachment cannot receive new link
+  /api/documents/attachments/{publicId}/access-links/revoke:
+    post:
+      summary: Revoke a signed access link before expiration
+      requestBody:
+        required: true
+      responses:
+        '200':
+          description: Access link revoked and audit event recorded
+        '401':
+          description: Invalid access token
+  /api/documents/audit-events:
+    get:
+      summary: List document access audit events
+      parameters:
+        - in: query
+          name: tenantSlug
+          schema:
+            type: string
+        - in: query
+          name: attachmentPublicId
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Document audit event list
+  /api/documents/upload-sessions:
+    post:
+      summary: Create governed upload session
+      requestBody:
+        required: true
+      responses:
+        '201':
+          description: Upload session created
+  /api/documents/upload-sessions/{publicId}:
+    get:
+      summary: Read upload session
+      parameters:
+        - in: path
+          name: publicId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Upload session detail
+  /api/documents/upload-sessions/{publicId}/complete:
+    post:
+      summary: Complete upload session after malware scan gate
+      requestBody:
+        required: true
+      responses:
+        '200':
+          description: Upload session completed and attachment created
+        '422':
+          description: Upload blocked by malware scan
 components:
   securitySchemes:
     bearerAuth:

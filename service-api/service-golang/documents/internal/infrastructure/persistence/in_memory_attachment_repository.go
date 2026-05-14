@@ -7,23 +7,27 @@ import (
 	"time"
 
 	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/domain/entity"
-	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/domain/repository"
+	repositorypkg "github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/domain/repository"
 )
 
 type InMemoryAttachmentRepository struct {
-	mutex       sync.Mutex
-	attachments []entity.Attachment
-	versions    map[string][]entity.AttachmentVersion
+	mutex         sync.Mutex
+	attachments   []entity.Attachment
+	versions      map[string][]entity.AttachmentVersion
+	revokedTokens map[string]time.Time
+	auditEvents   []repositorypkg.DocumentAuditEvent
 }
 
 func NewInMemoryAttachmentRepository() *InMemoryAttachmentRepository {
 	return &InMemoryAttachmentRepository{
-		attachments: []entity.Attachment{},
-		versions:    map[string][]entity.AttachmentVersion{},
+		attachments:   []entity.Attachment{},
+		versions:      map[string][]entity.AttachmentVersion{},
+		revokedTokens: map[string]time.Time{},
+		auditEvents:   []repositorypkg.DocumentAuditEvent{},
 	}
 }
 
-func (repository *InMemoryAttachmentRepository) List(filters repository.AttachmentFilters) []entity.Attachment {
+func (repository *InMemoryAttachmentRepository) List(filters repositorypkg.AttachmentFilters) []entity.Attachment {
 	repository.mutex.Lock()
 	defer repository.mutex.Unlock()
 
@@ -171,4 +175,55 @@ func (repository *InMemoryAttachmentRepository) CreateVersion(tenantSlug string,
 	}
 
 	return entity.Attachment{}, entity.AttachmentVersion{}, false
+}
+
+func (repository *InMemoryAttachmentRepository) RevokeAccessToken(tenantSlug string, attachmentPublicID string, tokenHash string, reason string, actor string, correlationID string) time.Time {
+	repository.mutex.Lock()
+	defer repository.mutex.Unlock()
+
+	revokedAt := time.Now().UTC()
+	repository.revokedTokens[strings.TrimSpace(tokenHash)] = revokedAt
+	return revokedAt
+}
+
+func (repository *InMemoryAttachmentRepository) IsAccessTokenRevoked(tokenHash string) bool {
+	repository.mutex.Lock()
+	defer repository.mutex.Unlock()
+
+	_, revoked := repository.revokedTokens[strings.TrimSpace(tokenHash)]
+	return revoked
+}
+
+func (repository *InMemoryAttachmentRepository) RecordDocumentAuditEvent(event repositorypkg.DocumentAuditEvent) repositorypkg.DocumentAuditEvent {
+	repository.mutex.Lock()
+	defer repository.mutex.Unlock()
+
+	if event.CreatedAt.IsZero() {
+		event.CreatedAt = time.Now().UTC()
+	}
+	repository.auditEvents = append(repository.auditEvents, event)
+	if len(repository.auditEvents) > 1000 {
+		repository.auditEvents = repository.auditEvents[len(repository.auditEvents)-1000:]
+	}
+	return event
+}
+
+func (repository *InMemoryAttachmentRepository) ListDocumentAuditEvents(filters repositorypkg.DocumentAuditEventFilters) []repositorypkg.DocumentAuditEvent {
+	repository.mutex.Lock()
+	defer repository.mutex.Unlock()
+
+	tenantSlug := strings.ToLower(strings.TrimSpace(filters.TenantSlug))
+	attachmentPublicID := strings.TrimSpace(filters.AttachmentPublicID)
+	response := make([]repositorypkg.DocumentAuditEvent, 0, len(repository.auditEvents))
+	for index := len(repository.auditEvents) - 1; index >= 0; index-- {
+		event := repository.auditEvents[index]
+		if tenantSlug != "" && event.TenantSlug != tenantSlug {
+			continue
+		}
+		if attachmentPublicID != "" && event.AttachmentPublicID != attachmentPublicID {
+			continue
+		}
+		response = append(response, event)
+	}
+	return response
 }

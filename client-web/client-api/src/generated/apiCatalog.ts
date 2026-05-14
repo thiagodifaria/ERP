@@ -40,7 +40,7 @@ export const services: ServiceContract[] = [
     "version": "0.1.0",
     "description": "Executive reports, adapter catalog, SaaS control and contract governance.",
     "contractFile": "docs/contracts/http/analytics.openapi.yaml",
-    "endpointCount": 9
+    "endpointCount": 25
   },
   {
     "slug": "billing",
@@ -76,7 +76,7 @@ export const services: ServiceContract[] = [
     "version": "0.9.7",
     "description": "Attachment governance, upload orchestration and storage capabilities.",
     "contractFile": "docs/contracts/http/documents.openapi.yaml",
-    "endpointCount": 10
+    "endpointCount": 19
   },
   {
     "slug": "edge",
@@ -85,7 +85,7 @@ export const services: ServiceContract[] = [
     "version": "0.1.0",
     "description": "Aggregated operational cockpits for tenants, contracts and SaaS control.",
     "contractFile": "docs/contracts/http/edge.openapi.yaml",
-    "endpointCount": 8
+    "endpointCount": 19
   },
   {
     "slug": "engagement",
@@ -193,7 +193,7 @@ export const services: ServiceContract[] = [
     "version": "0.9.7",
     "description": "Inbound webhook intake, DLQ and operator recovery surface.",
     "contractFile": "docs/contracts/http/webhook-hub.openapi.yaml",
-    "endpointCount": 13
+    "endpointCount": 22
   },
   {
     "slug": "workflow-control",
@@ -249,6 +249,198 @@ export const endpoints: EndpointContract[] = [
     "description": "Health details do serviço analytics.",
     "summary": "Health details",
     "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/service-pulse",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/service-pulse",
+    "tag": "Analytics",
+    "description": "Read service pulse report",
+    "summary": "Read service pulse report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/tenant-360",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/tenant-360",
+    "tag": "Analytics",
+    "description": "Read tenant 360 report",
+    "summary": "Read tenant 360 report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/pipeline-summary",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/pipeline-summary",
+    "tag": "Analytics",
+    "description": "Read pipeline summary report",
+    "summary": "Read pipeline summary report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/workflow-definition-health",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/workflow-definition-health",
+    "tag": "Analytics",
+    "description": "Read workflow definition health report",
+    "summary": "Read workflow definition health report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/automation-board",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/automation-board",
+    "tag": "Analytics",
+    "description": "Read automation board report",
+    "summary": "Read automation board report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/sales-journey",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/sales-journey",
+    "tag": "Analytics",
+    "description": "Read sales journey report",
+    "summary": "Read sales journey report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/revenue-operations",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/revenue-operations",
+    "tag": "Analytics",
+    "description": "Read revenue operations report",
+    "summary": "Read revenue operations report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/finance-control",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/finance-control",
+    "tag": "Analytics",
+    "description": "Read finance control report",
+    "summary": "Read finance control report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/collections-control",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/collections-control",
+    "tag": "Analytics",
+    "description": "Read collections control report",
+    "summary": "Read collections control report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/document-governance",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/document-governance",
+    "tag": "Analytics",
+    "description": "Read document governance report",
+    "summary": "Read document governance report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/rental-operations",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/rental-operations",
+    "tag": "Analytics",
+    "description": "Read rental operations report",
+    "summary": "Read rental operations report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/engagement-operations",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/engagement-operations",
+    "tag": "Analytics",
+    "description": "Read engagement operations report",
+    "summary": "Read engagement operations report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/cost-estimator",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/cost-estimator",
+    "tag": "Analytics",
+    "description": "Read cost estimator report",
+    "summary": "Read cost estimator report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/delivery-reliability",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/delivery-reliability",
+    "tag": "Analytics",
+    "description": "Read delivery reliability report",
+    "summary": "Read delivery reliability report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/load-benchmark",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/load-benchmark",
+    "tag": "Analytics",
+    "description": "Read load benchmark report",
+    "summary": "Read load benchmark report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/platform-reliability",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/platform-reliability",
+    "tag": "Analytics",
+    "description": "Read platform reliability report",
+    "summary": "Read platform reliability report",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
     "hasBody": false,
     "pathParams": []
   },
@@ -1451,6 +1643,20 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
+    "id": "documents:GET:/api/documents/attachments/{publicId}",
+    "service": "documents",
+    "method": "GET",
+    "path": "/api/documents/attachments/{publicId}",
+    "tag": "Documents",
+    "description": "Read attachment metadata",
+    "summary": "Read attachment metadata",
+    "source": "docs/contracts/http/documents.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
     "id": "documents:GET:/api/documents/attachments/{publicId}/versions",
     "service": "documents",
     "method": "GET",
@@ -1472,6 +1678,114 @@ export const endpoints: EndpointContract[] = [
     "tag": "Documents",
     "description": "Append attachment version",
     "summary": "Append attachment version",
+    "source": "docs/contracts/http/documents.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "documents:GET:/api/documents/attachments/{publicId}/download",
+    "service": "documents",
+    "method": "GET",
+    "path": "/api/documents/attachments/{publicId}/download",
+    "tag": "Documents",
+    "description": "Redirect to storage when access token is valid and retention allows download",
+    "summary": "Redirect to storage when access token is valid and retention allows download",
+    "source": "docs/contracts/http/documents.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "documents:POST:/api/documents/attachments/{publicId}/archive",
+    "service": "documents",
+    "method": "POST",
+    "path": "/api/documents/attachments/{publicId}/archive",
+    "tag": "Documents",
+    "description": "Archive attachment metadata under retention governance",
+    "summary": "Archive attachment metadata under retention governance",
+    "source": "docs/contracts/http/documents.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "documents:POST:/api/documents/attachments/{publicId}/access-links",
+    "service": "documents",
+    "method": "POST",
+    "path": "/api/documents/attachments/{publicId}/access-links",
+    "tag": "Documents",
+    "description": "Create signed short-lived access link",
+    "summary": "Create signed short-lived access link",
+    "source": "docs/contracts/http/documents.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "documents:POST:/api/documents/attachments/{publicId}/access-links/revoke",
+    "service": "documents",
+    "method": "POST",
+    "path": "/api/documents/attachments/{publicId}/access-links/revoke",
+    "tag": "Documents",
+    "description": "Revoke a signed access link before expiration",
+    "summary": "Revoke a signed access link before expiration",
+    "source": "docs/contracts/http/documents.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "documents:GET:/api/documents/audit-events",
+    "service": "documents",
+    "method": "GET",
+    "path": "/api/documents/audit-events",
+    "tag": "Documents",
+    "description": "List document access audit events",
+    "summary": "List document access audit events",
+    "source": "docs/contracts/http/documents.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "documents:POST:/api/documents/upload-sessions",
+    "service": "documents",
+    "method": "POST",
+    "path": "/api/documents/upload-sessions",
+    "tag": "Documents",
+    "description": "Create governed upload session",
+    "summary": "Create governed upload session",
+    "source": "docs/contracts/http/documents.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "documents:GET:/api/documents/upload-sessions/{publicId}",
+    "service": "documents",
+    "method": "GET",
+    "path": "/api/documents/upload-sessions/{publicId}",
+    "tag": "Documents",
+    "description": "Read upload session",
+    "summary": "Read upload session",
+    "source": "docs/contracts/http/documents.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "documents:POST:/api/documents/upload-sessions/{publicId}/complete",
+    "service": "documents",
+    "method": "POST",
+    "path": "/api/documents/upload-sessions/{publicId}/complete",
+    "tag": "Documents",
+    "description": "Complete upload session after malware scan gate",
+    "summary": "Complete upload session after malware scan gate",
     "source": "docs/contracts/http/documents.openapi.yaml",
     "hasBody": true,
     "pathParams": [
@@ -1511,6 +1825,30 @@ export const endpoints: EndpointContract[] = [
     "description": "Health details do serviço edge.",
     "summary": "Health details",
     "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "edge:GET:/api/edge/ops/health",
+    "service": "edge",
+    "method": "GET",
+    "path": "/api/edge/ops/health",
+    "tag": "Edge",
+    "description": "Read edge dependency health",
+    "summary": "Read edge dependency health",
+    "source": "docs/contracts/http/edge.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "edge:GET:/api/edge/ops/tenant-overview",
+    "service": "edge",
+    "method": "GET",
+    "path": "/api/edge/ops/tenant-overview",
+    "tag": "Edge",
+    "description": "Read tenant operational overview",
+    "summary": "Read tenant operational overview",
+    "source": "docs/contracts/http/edge.openapi.yaml",
     "hasBody": false,
     "pathParams": []
   },
@@ -1563,6 +1901,30 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
+    "id": "edge:GET:/api/edge/ops/automation-overview",
+    "service": "edge",
+    "method": "GET",
+    "path": "/api/edge/ops/automation-overview",
+    "tag": "Edge",
+    "description": "Read automation cockpit",
+    "summary": "Read automation cockpit",
+    "source": "docs/contracts/http/edge.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "edge:GET:/api/edge/ops/engagement-overview",
+    "service": "edge",
+    "method": "GET",
+    "path": "/api/edge/ops/engagement-overview",
+    "tag": "Edge",
+    "description": "Read engagement cockpit",
+    "summary": "Read engagement cockpit",
+    "source": "docs/contracts/http/edge.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
     "id": "edge:GET:/api/edge/ops/integrations-overview",
     "service": "edge",
     "method": "GET",
@@ -1570,6 +1932,42 @@ export const endpoints: EndpointContract[] = [
     "tag": "Edge",
     "description": "Read executive integrations cockpit",
     "summary": "Read executive integrations cockpit",
+    "source": "docs/contracts/http/edge.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "edge:GET:/api/edge/ops/documents-overview",
+    "service": "edge",
+    "method": "GET",
+    "path": "/api/edge/ops/documents-overview",
+    "tag": "Edge",
+    "description": "Read documents cockpit",
+    "summary": "Read documents cockpit",
+    "source": "docs/contracts/http/edge.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "edge:GET:/api/edge/ops/collections-overview",
+    "service": "edge",
+    "method": "GET",
+    "path": "/api/edge/ops/collections-overview",
+    "tag": "Edge",
+    "description": "Read collections cockpit",
+    "summary": "Read collections cockpit",
+    "source": "docs/contracts/http/edge.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "edge:GET:/api/edge/ops/platform-reliability",
+    "service": "edge",
+    "method": "GET",
+    "path": "/api/edge/ops/platform-reliability",
+    "tag": "Edge",
+    "description": "Read platform reliability cockpit",
+    "summary": "Read platform reliability cockpit",
     "source": "docs/contracts/http/edge.openapi.yaml",
     "hasBody": false,
     "pathParams": []
@@ -1594,6 +1992,54 @@ export const endpoints: EndpointContract[] = [
     "tag": "Edge",
     "description": "Read executive contracts cockpit",
     "summary": "Read executive contracts cockpit",
+    "source": "docs/contracts/http/edge.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "edge:GET:/api/edge/ops/sales-overview",
+    "service": "edge",
+    "method": "GET",
+    "path": "/api/edge/ops/sales-overview",
+    "tag": "Edge",
+    "description": "Read sales cockpit",
+    "summary": "Read sales cockpit",
+    "source": "docs/contracts/http/edge.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "edge:GET:/api/edge/ops/revenue-overview",
+    "service": "edge",
+    "method": "GET",
+    "path": "/api/edge/ops/revenue-overview",
+    "tag": "Edge",
+    "description": "Read revenue cockpit",
+    "summary": "Read revenue cockpit",
+    "source": "docs/contracts/http/edge.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "edge:GET:/api/edge/ops/finance-overview",
+    "service": "edge",
+    "method": "GET",
+    "path": "/api/edge/ops/finance-overview",
+    "tag": "Edge",
+    "description": "Read finance cockpit",
+    "summary": "Read finance cockpit",
+    "source": "docs/contracts/http/edge.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "edge:GET:/api/edge/ops/rentals-overview",
+    "service": "edge",
+    "method": "GET",
+    "path": "/api/edge/ops/rentals-overview",
+    "tag": "Edge",
+    "description": "Read rentals cockpit",
+    "summary": "Read rentals cockpit",
     "source": "docs/contracts/http/edge.openapi.yaml",
     "hasBody": false,
     "pathParams": []
@@ -5221,6 +5667,116 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
+    "id": "webhook-hub:GET:/api/webhook-hub/events/dead-letter",
+    "service": "webhook-hub",
+    "method": "GET",
+    "path": "/api/webhook-hub/events/dead-letter",
+    "tag": "Webhook Hub",
+    "description": "List dead-lettered inbound webhook events",
+    "summary": "List dead-lettered inbound webhook events",
+    "source": "docs/contracts/http/webhook-hub.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "webhook-hub:GET:/api/webhook-hub/events/{publicId}",
+    "service": "webhook-hub",
+    "method": "GET",
+    "path": "/api/webhook-hub/events/{publicId}",
+    "tag": "Webhook Hub",
+    "description": "Read one inbound webhook event",
+    "summary": "Read one inbound webhook event",
+    "source": "docs/contracts/http/webhook-hub.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "webhook-hub:GET:/api/webhook-hub/events/{publicId}/transitions",
+    "service": "webhook-hub",
+    "method": "GET",
+    "path": "/api/webhook-hub/events/{publicId}/transitions",
+    "tag": "Webhook Hub",
+    "description": "List state transitions for one event",
+    "summary": "List state transitions for one event",
+    "source": "docs/contracts/http/webhook-hub.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "webhook-hub:POST:/api/webhook-hub/events/{publicId}/validate",
+    "service": "webhook-hub",
+    "method": "POST",
+    "path": "/api/webhook-hub/events/{publicId}/validate",
+    "tag": "Webhook Hub",
+    "description": "Validate inbound webhook event",
+    "summary": "Validate inbound webhook event",
+    "source": "docs/contracts/http/webhook-hub.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "webhook-hub:POST:/api/webhook-hub/events/{publicId}/queue",
+    "service": "webhook-hub",
+    "method": "POST",
+    "path": "/api/webhook-hub/events/{publicId}/queue",
+    "tag": "Webhook Hub",
+    "description": "Queue inbound webhook event for processing",
+    "summary": "Queue inbound webhook event for processing",
+    "source": "docs/contracts/http/webhook-hub.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "webhook-hub:POST:/api/webhook-hub/events/{publicId}/process",
+    "service": "webhook-hub",
+    "method": "POST",
+    "path": "/api/webhook-hub/events/{publicId}/process",
+    "tag": "Webhook Hub",
+    "description": "Mark inbound webhook event as processing",
+    "summary": "Mark inbound webhook event as processing",
+    "source": "docs/contracts/http/webhook-hub.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "webhook-hub:POST:/api/webhook-hub/events/{publicId}/forward",
+    "service": "webhook-hub",
+    "method": "POST",
+    "path": "/api/webhook-hub/events/{publicId}/forward",
+    "tag": "Webhook Hub",
+    "description": "Mark inbound webhook event as forwarded",
+    "summary": "Mark inbound webhook event as forwarded",
+    "source": "docs/contracts/http/webhook-hub.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "webhook-hub:POST:/api/webhook-hub/events/{publicId}/fail",
+    "service": "webhook-hub",
+    "method": "POST",
+    "path": "/api/webhook-hub/events/{publicId}/fail",
+    "tag": "Webhook Hub",
+    "description": "Record inbound webhook processing failure",
+    "summary": "Record inbound webhook processing failure",
+    "source": "docs/contracts/http/webhook-hub.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
     "id": "webhook-hub:POST:/api/webhook-hub/events/{publicId}/dead-letter",
     "service": "webhook-hub",
     "method": "POST",
@@ -5242,6 +5798,20 @@ export const endpoints: EndpointContract[] = [
     "tag": "Webhook Hub",
     "description": "Requeue dead-letter event",
     "summary": "Requeue dead-letter event",
+    "source": "docs/contracts/http/webhook-hub.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "webhook-hub:POST:/api/webhook-hub/events/{publicId}/reject",
+    "service": "webhook-hub",
+    "method": "POST",
+    "path": "/api/webhook-hub/events/{publicId}/reject",
+    "tag": "Webhook Hub",
+    "description": "Reject inbound webhook event",
+    "summary": "Reject inbound webhook event",
     "source": "docs/contracts/http/webhook-hub.openapi.yaml",
     "hasBody": true,
     "pathParams": [
@@ -5883,6 +6453,11 @@ export const eventSchemas: EventSchemaContract[] = [
     "fileName": "engagement.provider-event.schema.json",
     "name": "engagement.provider-event",
     "source": "docs/contracts/events/engagement.provider-event.schema.json"
+  },
+  {
+    "fileName": "event-envelope.schema.json",
+    "name": "event-envelope",
+    "source": "docs/contracts/events/event-envelope.schema.json"
   },
   {
     "fileName": "fiscal.consent.schema.json",

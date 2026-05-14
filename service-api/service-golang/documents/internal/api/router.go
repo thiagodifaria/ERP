@@ -42,6 +42,8 @@ func NewRouterWithRuntime(logger *telemetry.Logger, attachmentRepository reposit
 	mux.HandleFunc("GET /api/documents/attachments/{publicId}/download", attachmentHandler.Download)
 	mux.HandleFunc("POST /api/documents/attachments/{publicId}/archive", attachmentHandler.Archive)
 	mux.HandleFunc("POST /api/documents/attachments/{publicId}/access-links", attachmentHandler.CreateAccessLink)
+	mux.HandleFunc("POST /api/documents/attachments/{publicId}/access-links/revoke", attachmentHandler.RevokeAccessLink)
+	mux.HandleFunc("GET /api/documents/audit-events", attachmentHandler.ListAuditEvents)
 	mux.HandleFunc("POST /api/documents/upload-sessions", attachmentHandler.CreateUploadSession)
 	mux.HandleFunc("GET /api/documents/upload-sessions/{publicId}", attachmentHandler.GetUploadSession)
 	mux.HandleFunc("POST /api/documents/upload-sessions/{publicId}/complete", attachmentHandler.CompleteUploadSession)
