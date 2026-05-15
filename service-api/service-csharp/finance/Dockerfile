@@ -13,7 +13,7 @@ COPY src ./src
 RUN dotnet publish src/Finance.Api/Finance.Api.csproj -c Release -o /out /p:UseAppHost=false
 
 # Runtime stage for the API.
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 
 WORKDIR /app
 
