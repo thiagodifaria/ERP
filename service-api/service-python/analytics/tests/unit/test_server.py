@@ -398,3 +398,26 @@ def test_go_live_control_returns_rollout_and_adoption_payload() -> None:
     assert "rollback" in payload["releaseControls"]["controls"]
     assert "hardening" in payload["releaseControls"]["testSuites"]
     assert payload["goLiveClosure"]["acceptanceReady"] is True
+
+
+def test_production_readiness_returns_1_0_release_gate() -> None:
+    response = client.get("/api/analytics/reports/production-readiness?tenant_slug=bootstrap-ops")
+    payload = response.json()
+
+    assert response.status_code == 200
+    assert payload["tenantSlug"] == "bootstrap-ops"
+    assert payload["release"]["version"] == "1.0.0"
+    assert payload["release"]["name"] == "Production Readiness & Enterprise Deployment"
+    assert payload["release"]["releaseReady"] is True
+    assert payload["release"]["blockingGates"] == []
+    assert "contract" in payload["evidence"]["requiredSuites"]
+    assert "security" in payload["evidence"]["requiredSuites"]
+    assert "hardening-secrets" in payload["evidence"]["requiredSuites"]
+    assert "kubectl apply --dry-run=server -k infra/kubernetes/overlays/production" in payload["evidence"]["commands"]
+    assert payload["gates"]["deployArtifacts"]["status"] == "ready"
+    assert payload["gates"]["edgeSecurity"]["status"] == "ready"
+    assert payload["gates"]["workloadSecurity"]["status"] == "ready"
+    assert payload["gates"]["providers"]["blockingForRelease"] is False
+    assert "infra/kubernetes/base" in payload["gates"]["deployArtifacts"]["evidence"]
+    assert payload["closures"]["productionMaturity"]["acceptanceReady"] is True
+    assert "marketplace de extensoes" in payload["nonGoals"]

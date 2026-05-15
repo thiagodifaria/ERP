@@ -158,7 +158,7 @@ Servico: `webhook-hub`.
 - Atualize docs junto da mudanca que altera contrato, runtime ou arquitetura.
 - Changelog registra evolucao cronologica; nao deve virar documentacao de uso.
 
-## Checklist de PR
+## Controle Interno De Mudanca
 
 - O servico dono esta correto?
 - O contrato foi atualizado?

@@ -9,10 +9,11 @@ A arquitetura atual e uma plataforma backend-first, multi-tenant e poliglota, co
 ## Numeros de Referencia
 
 - 24 servicos HTTP com contrato OpenAPI.
-- 542 endpoints HTTP versionados.
+- 543 endpoints HTTP versionados.
 - 15 schemas de evento versionados.
 - Contratos em `docs/contracts/`.
 - Runtime local em `infra/docker-compose.yml`.
+- Deploy corporativo em `infra/kubernetes/`.
 - Banco PostgreSQL dividido por contextos.
 
 ## Principios Arquiteturais
@@ -65,6 +66,21 @@ client / client-api
 `client-web/client-api` e uma ferramenta tecnica para explorar a API e a documentacao; ele nao e o frontend empresarial do produto.
 
 O gateway local em `infra/gateway/nginx.conf` concentra roteamento `/api/<servico>/`, health publico, cache de leituras, rate limit, timeouts, correlacao de request e failover passivo por dependencia. Ele nao substitui um API management corporativo completo, mas torna o stack local mais proximo de um ponto unico de entrada verificavel.
+
+## Release 1.0.0
+
+A arquitetura da versao 1.0.0 e orientada por production readiness. O objetivo do release e provar que o ERP nao e apenas amplo em dominios, mas tambem operavel em ambiente corporativo.
+
+O pacote arquitetural de 1.0.0 inclui:
+
+- `infra/docker-compose.corporate-like.yml` para validar topologia com somente gateway/edge publicados;
+- `infra/kubernetes/base` com namespace, config, secret template, service account, migration job, deployments, services, ingress TLS, NetworkPolicy e HPA;
+- `infra/kubernetes/overlays/production` como entrada declarativa de deploy produtivo;
+- `GET /api/analytics/reports/production-readiness` como evidencia runtime do gate;
+- `./scripts/test.sh production-readiness` como validacao estatica de release;
+- documentacao operacional do aceite em `docs/OPERACOES.md`.
+
+O principio e deny-by-default: servicos internos nao sao pontos publicos de entrada, secrets nao vivem no repositorio, mutacoes sensiveis exigem identidade/correlacao, e providers sem credencial real nao sao apresentados como produtivos.
 
 ## Ownership de Dados
 

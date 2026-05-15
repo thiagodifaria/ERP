@@ -19,14 +19,36 @@ This README gives a complete but compact view of the project. Topic-specific det
 
 ## Project Shape
 
+- Version 1.0.0 production-readiness gate.
 - 24 HTTP services with OpenAPI contracts.
-- 542 versioned HTTP endpoints.
+- 543 versioned HTTP endpoints.
 - 15 versioned event schemas.
 - Contracts under `docs/contracts/`.
 - Container runtime through `infra/docker-compose.yml`.
+- Enterprise deployment artifacts under `infra/kubernetes/`.
 - Operational entrypoint through `./scripts/build.sh`.
 - Validation entrypoint through `./scripts/test.sh`.
 - Technical API console under `client-web/client-api`.
+
+## Version 1.0.0
+
+Version 1.0.0 is the ERP production-readiness release. It consolidates gateway/edge-only corporate topology, security enforcement, versioned contracts, supply-chain checks, backup/restore evidence, tenant go-live controls, provider readiness and Kubernetes deployment artifacts.
+
+Official gate:
+
+```bash
+./scripts/test.sh production-readiness
+```
+
+Runtime evidence:
+
+```http
+GET /api/analytics/reports/production-readiness
+```
+
+## Private Ownership
+
+This repository is privately maintained. External write workflow, public merge flow, community triage and unsolicited patches are outside the project model. Code changes are controlled directly by the maintainer.
 
 ## Architecture Summary
 
@@ -74,6 +96,7 @@ Validation:
 ./scripts/test.sh performance
 ./scripts/test.sh backup-restore
 ./scripts/test.sh hardening
+./scripts/test.sh production-readiness
 ```
 
 ## API Console
@@ -199,20 +222,16 @@ The project is intentionally backend-heavy because the hard part being modeled i
 - platform entitlements and go-live;
 - analytics and operational control.
 
-## What This Repository Is Not Yet
+## Explicit Production Boundaries
 
-The existence of a service or endpoint does not mean every production concern is fully closed. Some areas are intentionally structured before being connected to real external providers.
+Version 1.0.0 closes operational posture, but local fallback behavior is not presented as a real external provider integration. Every external capability must expose whether it is `configured`, `manual`, `fallback` or `unconfigured`.
 
-Examples of remaining production concerns:
+The following are real integrations only when provider credentials and environment posture are configured:
 
-- stronger authentication and authorization on every public route;
 - real external payment, fiscal, communication and signing providers;
-- distributed tracing across all services;
-- stricter secret handling for every integration path;
-- production deployment manifests beyond local Docker Compose;
 - business-facing frontend separated from the technical API console.
 
-This distinction matters: the platform is advanced structurally, but documentation should not pretend that local fallback behavior is the same as production integration.
+This distinction matters: the platform can be operationally ready without pretending that every provider is already homologated.
 
 ## Quality Gates
 
@@ -226,6 +245,7 @@ The project has several validation levels. Use the smallest suite that proves th
 | provider/readiness/go-live posture | `./scripts/test.sh hardening` |
 | infrastructure/runtime change | `./scripts/test.sh platform` |
 | database migration risk | `./scripts/test.sh backup-restore` |
+| 1.0.0 acceptance | `./scripts/test.sh production-readiness` |
 
 For the API console:
 
@@ -250,7 +270,7 @@ The documentation is split by responsibility:
 
 Avoid adding the same endpoint catalog to every file. If a change affects an endpoint, update the OpenAPI and the focused documentation that explains why the endpoint exists.
 
-## Typical Contributor Flow
+## Internal Change Flow
 
 1. Identify the owning service.
 2. Check its OpenAPI contract.

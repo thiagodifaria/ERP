@@ -21,6 +21,7 @@ from app.reports.integration_readiness import build_integration_readiness
 from app.reports.load_benchmark import build_load_benchmark
 from app.reports.pipeline_summary import build_pipeline_summary
 from app.reports.platform_reliability import build_platform_reliability
+from app.reports.production_readiness import build_production_readiness
 from app.reports.relationship_intelligence import build_relationship_intelligence
 from app.reports.rental_operations import build_rental_operations
 from app.reports.revenue_operations import build_revenue_operations
@@ -192,3 +193,8 @@ def compliance_control(tenant_slug: str | None = None) -> dict:
 @app.get("/api/analytics/reports/go-live-control")
 def go_live_control(tenant_slug: str | None = None) -> dict:
     return build_go_live_control(tenant_slug)
+
+
+@app.get("/api/analytics/reports/production-readiness")
+def production_readiness(tenant_slug: str | None = None) -> dict:
+    return build_production_readiness(tenant_slug)

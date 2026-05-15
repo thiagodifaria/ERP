@@ -19,7 +19,7 @@ Use este arquivo para entender como chamar e evoluir a API. Para ownership dos s
 | Servico | Arquivo | Endpoints | Base funcional |
 |---------|---------|-----------|----------------|
 | `accounting` | `docs/contracts/http/accounting.openapi.yaml` | 25 | contas contabeis, centros de custo, journal entries imutaveis, regras de posting, razao, DRE, balanco e fechamento |
-| `analytics` | `docs/contracts/http/analytics.openapi.yaml` | 25 | relatorios executivos, governanca, readiness e leituras operacionais |
+| `analytics` | `docs/contracts/http/analytics.openapi.yaml` | 26 | relatorios executivos, governanca, readiness, production-readiness e leituras operacionais |
 | `banking` | `docs/contracts/http/banking.openapi.yaml` | 33 | CNAB, boletos, extratos, conciliacao bancaria, Pix cobranca/devolucao/webhooks e Open Finance |
 | `billing` | `docs/contracts/http/billing.openapi.yaml` | 31 | planos, assinaturas, invoices, pricing por uso e tentativas de pagamento |
 | `catalog` | `docs/contracts/http/catalog.openapi.yaml` | 12 | categorias, itens, historico de versoes, bulk e contratos de consumo |
@@ -62,6 +62,16 @@ Servicos HTTP devem expor probes baratas e seguras:
 - `GET /health/live`: processo vivo;
 - `GET /health/ready`: dependencias essenciais prontas;
 - `GET /health/details`: diagnostico operacional sem segredo.
+
+### Production Readiness
+
+O gate HTTP da versao 1.0.0 fica no `analytics`:
+
+```http
+GET /api/analytics/reports/production-readiness?tenant_slug=bootstrap-ops
+```
+
+Esse endpoint consolida a decisao de release com `release.version`, `release.releaseReady`, `blockingGates`, evidencias de teste, artefatos Kubernetes, postura de providers e fechamento de go-live. Ele deve ser lido junto de `hardening-review` e `go-live-control`.
 
 ### Tenant
 

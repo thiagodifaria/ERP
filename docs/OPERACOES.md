@@ -55,6 +55,7 @@ Validacao:
 ./scripts/test.sh hardening
 ./scripts/test.sh security
 ./scripts/test.sh supply-chain
+./scripts/test.sh production-readiness
 ./scripts/test.sh hardening-secrets
 ```
 
@@ -69,6 +70,8 @@ O script tambem tenta remapear portas locais ocupadas para evitar falha simples 
 ```
 
 Em `ERP_ENV=production`, fallbacks inseguros devem falhar: `ERP_ALLOW_BOOTSTRAP_TENANT_FALLBACK=false`, `DOCUMENTS_ACCESS_TOKEN_SECRET` obrigatorio e secrets criticos diferentes dos defaults locais.
+
+Em perfil produtivo, a postura esperada tambem inclui `ERP_SECURITY_LEVEL=strict`, `ERP_REQUIRE_REQUEST_SIGNATURE=true`, `ERP_SECURITY_HEADERS=enabled`, `ERP_AUDIT_LOG_REDACTION=strict`, `WEBHOOK_HUB_REQUIRE_SIGNATURE=true`, janela curta de replay em webhooks e `DOCUMENTS_MALWARE_SCAN_MODE=required`.
 
 ## Console Tecnico da API
 
@@ -170,8 +173,60 @@ tenant-security
 | `hardening` | readiness, contratos, providers e postura operacional |
 | `security` | guardrails de auth, secrets, eventos, documents, dados pessoais e padroes |
 | `supply-chain` | secret scan de alta confianca, inventario SBOM e pinning de imagens |
+| `production-readiness` | gate 1.0.0, manifests Kubernetes, docs oficiais e postura de ownership |
 
 Para o hardening enterprise, o conjunto minimo de evidencia operacional e formado por `contract`, `smoke`, `performance`, `backup-restore` e `hardening`. O relatorio `GET /api/analytics/reports/hardening-review` consolida esse fechamento como `operationalRunbooks`, permitindo validar rapidamente se seguranca operacional, observabilidade, DLQ/retry, backup/restore, SLOs, multi-tenant, failover, performance e permissoes possuem cobertura operacional rastreavel.
+
+Para o hardening de seguranca 1.0.0, `security` valida tambem headers defensivos, limite de body, correlacao na borda, Pod Security restricted, NetworkPolicy deny-by-default, request signature, redaction estrita, scan obrigatorio de documentos e assinatura/replay de webhooks.
+
+## Production Readiness 1.0.0
+
+A versao 1.0.0 e o gate de producao do projeto. Ela nao adiciona um novo dominio funcional; ela consolida o ERP como plataforma implantavel, auditavel, observavel, recuperavel e segura por padrao.
+
+O gate oficial e exposto em:
+
+```bash
+GET /api/analytics/reports/production-readiness?tenant_slug=bootstrap-ops
+```
+
+O relatorio retorna `release.version=1.0.0`, `release.releaseReady`, gates de trafego, auth/tenant, secrets, contratos, observabilidade, backup/DR, deploy, providers e go-live, alem das evidencias que precisam existir para aceitar a entrega.
+
+Validacao completa do release:
+
+```bash
+docker compose --env-file .env.production.example -f infra/docker-compose.yml -f infra/docker-compose.corporate-like.yml config >/dev/null
+./scripts/test.sh contract
+./scripts/test.sh security
+./scripts/test.sh hardening-secrets
+./scripts/test.sh backup-restore
+./scripts/test.sh hardening
+./scripts/test.sh smoke
+./scripts/test.sh production-readiness
+```
+
+O caminho Kubernetes oficial fica em `infra/kubernetes/`:
+
+```bash
+kubectl apply --dry-run=server -k infra/kubernetes/overlays/production
+kubectl -n erp rollout status deployment/erp-edge
+kubectl -n erp get networkpolicy
+```
+
+O deploy corporativo considera obrigatorio:
+
+- namespace dedicado;
+- secrets injetados fora do repositorio;
+- config sem credenciais;
+- job de migration antes do rollout;
+- `edge` exposto por ingress TLS;
+- servicos internos como `ClusterIP`;
+- NetworkPolicy com deny-by-default;
+- probes de live/readiness;
+- `readOnlyRootFilesystem`, `allowPrivilegeEscalation=false` e drop de capabilities;
+- HPA inicial para o ponto de entrada;
+- rollback por revisao de deployment ou estrategia controlada.
+
+Se provider externo estiver em fallback/manual/unconfigured, o release pode continuar tecnicamente pronto, mas a capability deve aparecer como nao produtiva no readiness de providers. O sistema nao deve mascarar fallback local como integracao real.
 
 ## Runbook Rapido
 

@@ -156,6 +156,12 @@ paths:
       responses:
         "200":
           description: Go-live control report
+  /api/analytics/reports/production-readiness:
+    get:
+      summary: Read production readiness 1.0.0 release gate
+      responses:
+        "200":
+          description: Production readiness release gate
 components:
   securitySchemes:
     bearerAuth:

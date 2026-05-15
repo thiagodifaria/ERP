@@ -75,9 +75,9 @@ O registry existe para descoberta e auditoria. Ao adicionar ou remover contrato 
 
 O registry deve apontar para arquivos existentes e nao deve conter entrada decorativa sem artefato correspondente.
 
-## Revisao de PR
+## Controle Interno De Contratos
 
-Antes de aprovar uma mudanca contratual, confira:
+Antes de aceitar uma mudanca contratual no codigo mantido internamente, confira:
 
 - O arquivo OpenAPI/event schema mudou junto da implementacao?
 - O servico dono e o correto?

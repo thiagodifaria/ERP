@@ -584,7 +584,17 @@ for service in ["analytics", "banking", "accounting", "catalog", "fiscal", "inve
 for path in security_files:
     require_file(path, "ERP_JWT_HS256_SECRET", "ERP_OPENFGA_ENFORCEMENT")
 
-require_file("infra/gateway/nginx.conf", "erp_auth_sensitive", "erp_abuse_sensitive", "rate_limit_exceeded")
+require_file(
+    "infra/gateway/nginx.conf",
+    "erp_auth_sensitive",
+    "erp_abuse_sensitive",
+    "rate_limit_exceeded",
+    "Strict-Transport-Security",
+    "X-Content-Type-Options",
+    "Content-Security-Policy",
+    "client_max_body_size 8m",
+    "X-Correlation-Id",
+)
 require_file("service-api/service-csharp/identity/src/Identity.Application/StartIdentityPasswordRecovery.cs", "HashResetToken", "ShouldExposeRecoveryToken")
 require_file("service-api/service-csharp/identity/src/Identity.Application/CompleteIdentityPasswordRecovery.cs", "HashResetToken")
 require_file("service-api/service-golang/documents/internal/api/handler.go", "RevokeAccessLink", "access_link_revoked", "malware_detected", "attachment_retention_expired")
@@ -598,6 +608,9 @@ require_file("docs/OPERACOES.md", "SLOs E Alertas", "DLQ ou retry crescendo", "D
 require_file("docs/ARQUITETURA.md", "Poliglotismo orientado por dominio", "Nova linguagem")
 require_file("docs/PADROES.md", "Checklist Para Novo Servico", "Auth middleware", "traceparent")
 require_file("scripts/build.sh", "database_backup_encrypted", "database_restore_encrypted", "ERP_BACKUP_ENCRYPTION_KEY")
+require_file("infra/kubernetes/base/namespace.yaml", "pod-security.kubernetes.io/enforce: restricted", "pod-security.kubernetes.io/audit: restricted")
+require_file("infra/kubernetes/base/network-policy.yaml", "erp-default-deny", "policyTypes", "Ingress", "Egress")
+require_file("infra/kubernetes/base/configmap.yaml", "ERP_SECURITY_LEVEL", "ERP_REQUIRE_REQUEST_SIGNATURE", "ERP_AUDIT_LOG_REDACTION")
 
 registry = json.loads((root / "docs/contracts/registry.json").read_text(encoding="utf-8"))
 schema_registry = json.loads((root / "docs/contracts/schema-registry.json").read_text(encoding="utf-8"))
@@ -611,7 +624,18 @@ for doc in ["docs/SEGURANCA.md", "docs/OPERACOES.md", "docs/ARQUITETURA.md", "do
 
 env_example = (root / ".env.example").read_text(encoding="utf-8")
 env_prod = (root / ".env.production.example").read_text(encoding="utf-8")
-for marker in ["ERP_AUTH_ENFORCEMENT", "ERP_JWT_HS256_SECRET", "ERP_INTERNAL_SERVICE_TOKEN", "ERP_OPENFGA_ENFORCEMENT"]:
+for marker in [
+    "ERP_AUTH_ENFORCEMENT",
+    "ERP_SECURITY_LEVEL",
+    "ERP_JWT_HS256_SECRET",
+    "ERP_INTERNAL_SERVICE_TOKEN",
+    "ERP_OPENFGA_ENFORCEMENT",
+    "ERP_REQUIRE_REQUEST_SIGNATURE",
+    "ERP_AUDIT_LOG_REDACTION",
+    "WEBHOOK_HUB_REQUIRE_SIGNATURE",
+    "WEBHOOK_HUB_REPLAY_WINDOW_SECONDS",
+    "DOCUMENTS_MALWARE_SCAN_MODE",
+]:
     if marker not in env_example or marker not in env_prod:
         errors.append(f"security env marker missing: {marker}")
 
@@ -623,6 +647,88 @@ if errors:
 print("[security] static security, data, event, operational and architecture guardrails validated")
 PY
   run_hardening_secrets
+}
+
+run_production_readiness_suite() {
+  python3 - "$ROOT_DIR" <<'PY'
+import json
+import sys
+import yaml
+from pathlib import Path
+
+root = Path(sys.argv[1])
+errors: list[str] = []
+
+def require_file(path: str, *markers: str) -> str:
+    file_path = root / path
+    if not file_path.is_file():
+        errors.append(f"missing file: {path}")
+        return ""
+    text = file_path.read_text(encoding="utf-8")
+    for marker in markers:
+        if marker not in text:
+            errors.append(f"{path} missing marker: {marker}")
+    return text
+
+required_kubernetes = [
+    "infra/kubernetes/base/kustomization.yaml",
+    "infra/kubernetes/base/namespace.yaml",
+    "infra/kubernetes/base/configmap.yaml",
+    "infra/kubernetes/base/secret.example.yaml",
+    "infra/kubernetes/base/service-account.yaml",
+    "infra/kubernetes/base/postgres-migration-job.yaml",
+    "infra/kubernetes/base/edge-deployment.yaml",
+    "infra/kubernetes/base/analytics-deployment.yaml",
+    "infra/kubernetes/base/platform-control-deployment.yaml",
+    "infra/kubernetes/base/services.yaml",
+    "infra/kubernetes/base/ingress.yaml",
+    "infra/kubernetes/base/network-policy.yaml",
+    "infra/kubernetes/base/hpa.yaml",
+    "infra/kubernetes/overlays/production/kustomization.yaml",
+    "infra/kubernetes/overlays/production/production-patch.yaml",
+]
+for path in required_kubernetes:
+    require_file(path)
+
+require_file("infra/kubernetes/base/network-policy.yaml", "erp-default-deny", "policyTypes", "Ingress", "Egress")
+require_file("infra/kubernetes/base/ingress.yaml", "tls:", "erp-edge", "ingressClassName")
+require_file("infra/kubernetes/base/postgres-migration-job.yaml", "kind: Job", "erp-postgres-migrations", "readOnlyRootFilesystem")
+require_file("infra/kubernetes/base/edge-deployment.yaml", "readinessProbe", "livenessProbe", "allowPrivilegeEscalation: false")
+require_file("infra/kubernetes/base/hpa.yaml", "HorizontalPodAutoscaler", "maxReplicas")
+require_file("service-api/service-python/analytics/app/reports/production_readiness.py", "version\": \"1.0.0", "blockingGates", "infra/kubernetes/base")
+require_file("service-api/service-python/analytics/app/server.py", "/api/analytics/reports/production-readiness")
+require_file("service-api/service-python/analytics/tests/unit/test_server.py", "test_production_readiness_returns_1_0_release_gate")
+require_file("docs/OPERACOES.md", "Production Readiness 1.0.0", "production-readiness")
+require_file("docs/ARQUITETURA.md", "Release 1.0.0", "infra/kubernetes")
+require_file("docs/API.md", "production-readiness")
+require_file("docs/PADROES.md", "Controle Interno De Mudanca")
+require_file("docs/CONTRATOS.md", "Controle Interno De Contratos")
+require_file("README.md", "Version 1.0.0", "Private Ownership")
+require_file("README_PT.md", "Versao 1.0.0", "Ownership Privado")
+require_file("README_EN.md", "Version 1.0.0", "Private Ownership")
+
+analytics_contract = yaml.safe_load((root / "docs/contracts/http/analytics.openapi.yaml").read_text(encoding="utf-8"))
+if "/api/analytics/reports/production-readiness" not in analytics_contract.get("paths", {}):
+    errors.append("analytics OpenAPI missing production-readiness route")
+
+registry = json.loads((root / "docs/contracts/registry.json").read_text(encoding="utf-8"))
+if "docs/OPERACOES.md" not in registry.get("docs", []):
+    errors.append("operations doc missing from contract registry")
+
+for doc_path in ["README.md", "README_PT.md", "README_EN.md", "docs/PADROES.md", "docs/CONTRATOS.md"]:
+    text = (root / doc_path).read_text(encoding="utf-8").lower()
+    forbidden = ["pull request", "contribuicao", "contribuição", "contributing", "community contribution"]
+    for marker in forbidden:
+        if marker in text:
+            errors.append(f"{doc_path} still contains external contribution marker: {marker}")
+
+if errors:
+    for error in errors:
+        print(f"[production-readiness] {error}")
+    sys.exit(1)
+
+print("[production-readiness] release 1.0.0 gate, kubernetes artifacts, docs and ownership posture validated")
+PY
 }
 
 run_supply_chain_suite() {
@@ -4672,6 +4778,7 @@ Usage:
   ./scripts/test.sh backup-restore
   ./scripts/test.sh security
   ./scripts/test.sh supply-chain
+  ./scripts/test.sh production-readiness
   ./scripts/test.sh all
   ./scripts/test.sh hardening-secrets
 EOF
@@ -4731,6 +4838,9 @@ main() {
     supply-chain)
       run_supply_chain_suite
       ;;
+    production-readiness)
+      run_production_readiness_suite
+      ;;
     hardening-secrets)
       run_hardening_secrets
       ;;
@@ -4748,6 +4858,7 @@ main() {
       run_rust_unit
       run_security_suite
       run_supply_chain_suite
+      run_production_readiness_suite
       ;;
     *)
       usage

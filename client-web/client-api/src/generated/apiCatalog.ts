@@ -49,7 +49,7 @@ export const services: ServiceContract[] = [
     "version": "0.1.0",
     "description": "Executive reports, adapter catalog, SaaS control and contract governance.",
     "contractFile": "docs/contracts/http/analytics.openapi.yaml",
-    "endpointCount": 25
+    "endpointCount": 26
   },
   {
     "slug": "banking",
@@ -942,6 +942,18 @@ export const endpoints: EndpointContract[] = [
     "tag": "Analytics",
     "description": "Read go-live rollout control",
     "summary": "Read go-live rollout control",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reports/production-readiness",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reports/production-readiness",
+    "tag": "Analytics",
+    "description": "Read production readiness 1.0.0 release gate",
+    "summary": "Read production readiness 1.0.0 release gate",
     "source": "docs/contracts/http/analytics.openapi.yaml",
     "hasBody": false,
     "pathParams": []

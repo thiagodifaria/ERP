@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: erp-runtime-config
+  labels:
+    app.kubernetes.io/name: erp
+data:
+  ERP_ENV: "production"
+  ERP_AUTH_ENFORCEMENT: "enforced"
+  ERP_SECURITY_LEVEL: "strict"
+  ERP_ALLOW_BOOTSTRAP_TENANT_FALLBACK: "false"
+  ERP_OPENFGA_ENFORCEMENT: "true"
+  ERP_REQUIRE_REQUEST_SIGNATURE: "true"
+  ERP_SECURITY_HEADERS: "enabled"
+  ERP_AUDIT_LOG_REDACTION: "strict"
+  ERP_INTERNAL_MTLS_MODE: "mesh-or-ingress"
+  ERP_JWT_AUDIENCE: "erp-api"
+  EDGE_HTTP_PORT: "8080"
+  ANALYTICS_HTTP_PORT: "8000"
+  PLATFORM_CONTROL_HTTP_PORT: "8000"
+  ANALYTICS_REPOSITORY_DRIVER: "postgres"
+  PLATFORM_CONTROL_REPOSITORY_DRIVER: "postgres"

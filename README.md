@@ -21,13 +21,35 @@ This repository is a polyglot, container-first backend platform. The root README
 
 | Item | Value |
 |------|-------|
+| Release posture | Version 1.0.0 production-readiness gate |
 | HTTP services with OpenAPI contracts | 24 |
-| Versioned HTTP endpoints | 542 |
+| Versioned HTTP endpoints | 543 |
 | Event schemas | 15 |
 | Contract catalog | `docs/contracts/` |
 | Runtime command | `./scripts/build.sh` |
 | Validation command | `./scripts/test.sh` |
 | API console | `client-web/client-api` |
+| Enterprise deploy artifacts | `infra/kubernetes/` |
+
+## Version 1.0.0
+
+The 1.0.0 release is the production-readiness release. It consolidates gateway-only corporate topology, security enforcement, contract governance, supply-chain checks, backup/restore evidence, go-live controls, provider readiness and Kubernetes deployment artifacts.
+
+Official release gate:
+
+```bash
+./scripts/test.sh production-readiness
+```
+
+Runtime evidence:
+
+```http
+GET /api/analytics/reports/production-readiness
+```
+
+## Private Ownership
+
+This is a privately maintained codebase. External write workflow, public merge flow, community triage and unsolicited patches are outside the project model. Code changes are controlled directly by the maintainer.
 
 ## Quick Start
 
@@ -104,6 +126,7 @@ service-api/               backend services and PostgreSQL contexts
 ./scripts/test.sh contract
 ./scripts/test.sh smoke
 ./scripts/test.sh hardening
+./scripts/test.sh production-readiness
 ```
 
 Use the detailed READMEs for context and the files in `docs/` for focused reference.

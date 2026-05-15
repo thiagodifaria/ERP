@@ -408,7 +408,7 @@ Uso:
   ./scripts/build.sh db <comando>            alias para comandos de banco
 
 Testes continuam centralizados em:
-  ./scripts/test.sh unit|integration|contract|platform|smoke|performance|backup-restore|hardening|all
+  ./scripts/test.sh unit|integration|contract|platform|smoke|performance|backup-restore|hardening|security|supply-chain|production-readiness|all
 EOF
 }
 

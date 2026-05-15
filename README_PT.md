@@ -19,14 +19,36 @@ Este README traz uma visao completa, mas compacta. Os detalhes especificos ficam
 
 ## Estado Atual
 
+- Versao 1.0.0 como gate de production readiness.
 - 24 servicos HTTP com contratos OpenAPI.
-- 542 endpoints HTTP versionados.
+- 543 endpoints HTTP versionados.
 - 15 schemas de evento versionados.
 - Contratos em `docs/contracts/`.
 - Runtime em `infra/docker-compose.yml`.
+- Deploy corporativo em `infra/kubernetes/`.
 - Entrada operacional em `./scripts/build.sh`.
 - Entrada de validacao em `./scripts/test.sh`.
 - Console tecnico da API em `client-web/client-api`.
+
+## Versao 1.0.0
+
+A versao 1.0.0 e o update de production readiness do ERP. Ela consolida topologia corporativa com gateway/edge como entrada, enforcement de seguranca, contratos versionados, supply-chain, backup/restore, go-live por tenant, readiness de providers e artefatos Kubernetes.
+
+Gate oficial:
+
+```bash
+./scripts/test.sh production-readiness
+```
+
+Evidencia runtime:
+
+```http
+GET /api/analytics/reports/production-readiness
+```
+
+## Ownership Privado
+
+Este repositorio e mantido de forma privada. Fluxo externo de escrita, merge publico, triagem comunitaria e patches nao solicitados ficam fora do modelo do projeto. Mudancas de codigo sao controladas diretamente pelo mantenedor.
 
 ## Resumo Arquitetural
 
@@ -74,6 +96,7 @@ Validacao:
 ./scripts/test.sh performance
 ./scripts/test.sh backup-restore
 ./scripts/test.sh hardening
+./scripts/test.sh production-readiness
 ```
 
 ## Console da API
@@ -199,20 +222,16 @@ O projeto e pesado em backend de proposito, porque a parte dificil modelada aqui
 - entitlements de plataforma e go-live;
 - analytics e controle operacional.
 
-## O Que Ainda Nao Deve Ser Vendido Como Final
+## Limites Produtivos Explicitos
 
-A existencia de um servico ou endpoint nao significa que toda preocupacao de producao esta fechada. Algumas areas ja estao estruturadas antes de serem conectadas a providers externos reais.
+A versao 1.0.0 fecha a postura operacional do projeto, mas nao transforma fallback local em provider externo real. Cada capability externa precisa informar se esta `configured`, `manual`, `fallback` ou `unconfigured`.
 
-Exemplos de preocupacoes ainda naturais de produto:
+Pontos que continuam tratados como integracao real apenas quando houver credencial/provider configurado:
 
-- autenticacao e autorizacao mais fortes em todas as rotas publicas;
 - providers externos reais de pagamento, fiscal, comunicacao e assinatura;
-- tracing distribuido entre todos os servicos;
-- tratamento mais rigoroso de segredo em todo caminho de integracao;
-- manifests de deploy de producao alem do Docker Compose local;
 - frontend empresarial separado do console tecnico da API.
 
-Essa distincao importa: a plataforma esta estruturalmente avancada, mas a documentacao nao deve fingir que fallback local e a mesma coisa que integracao de producao.
+Essa distincao importa: a plataforma pode estar pronta operacionalmente sem fingir que todo provider externo ja esta homologado.
 
 ## Portoes de Qualidade
 
@@ -226,6 +245,7 @@ O projeto tem varios niveis de validacao. Use a menor suite que prova a mudanca 
 | provider/readiness/go-live | `./scripts/test.sh hardening` |
 | infraestrutura/runtime | `./scripts/test.sh platform` |
 | risco de migration/banco | `./scripts/test.sh backup-restore` |
+| aceite 1.0.0 | `./scripts/test.sh production-readiness` |
 
 Para o console da API:
 
@@ -250,7 +270,7 @@ A documentacao e separada por responsabilidade:
 
 Evite adicionar o mesmo catalogo de endpoints em todo arquivo. Se uma mudanca afeta endpoint, atualize o OpenAPI e a documentacao focada que explica por que aquele endpoint existe.
 
-## Fluxo Tipico de Contribuicao
+## Fluxo Interno De Mudanca
 
 1. Identifique o servico dono.
 2. Confira o contrato OpenAPI.

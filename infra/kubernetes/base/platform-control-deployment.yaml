@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: erp-platform-control
+  labels:
+    app.kubernetes.io/name: erp-platform-control
+    app.kubernetes.io/part-of: erp-platform
+    app.kubernetes.io/component: control-plane
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: erp-platform-control
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: erp-platform-control
+        app.kubernetes.io/part-of: erp-platform
+    spec:
+      serviceAccountName: erp-workload
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: platform-control
+          image: ghcr.io/thiagodifaria/erp-platform-control:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: erp-runtime-config
+            - secretRef:
+                name: erp-runtime-secrets
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: http
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi

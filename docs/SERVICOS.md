@@ -7,7 +7,7 @@ Este documento descreve os servicos do ERP: ownership, stack, caminho de impleme
 | Servico | Stack | Caminho | Contrato | Endpoints |
 |---------|-------|---------|----------|-----------|
 | `accounting` | Python | `service-api/service-python/accounting` | `docs/contracts/http/accounting.openapi.yaml` | 25 |
-| `analytics` | Python | `service-api/service-python/analytics` | `docs/contracts/http/analytics.openapi.yaml` | 25 |
+| `analytics` | Python | `service-api/service-python/analytics` | `docs/contracts/http/analytics.openapi.yaml` | 26 |
 | `banking` | Python | `service-api/service-python/banking` | `docs/contracts/http/banking.openapi.yaml` | 33 |
 | `billing` | .NET | `service-api/service-csharp/billing` | `docs/contracts/http/billing.openapi.yaml` | 31 |
 | `catalog` | Python | `service-api/service-python/catalog` | `docs/contracts/http/catalog.openapi.yaml` | 12 |
@@ -39,7 +39,7 @@ Responsavel por plano de contas, contas gerenciais, lancamentos de diario imutav
 
 ### `analytics`
 
-Responsavel por reports executivos, governanca contratual, readiness de integracoes, hardening, compliance, custos e go-live. Deve agregar leituras; nao deve virar dono transacional dos dominios que observa.
+Responsavel por reports executivos, governanca contratual, readiness de integracoes, hardening, compliance, custos, production-readiness e go-live. Deve agregar leituras; nao deve virar dono transacional dos dominios que observa.
 
 ### `banking`
 
@@ -184,7 +184,7 @@ Esta tabela nao promete producao final; ela ajuda a entender o papel atual de ca
 | `documents` | metadata, upload sessions, assinatura, versoes, retencao, arquivamento e links seguros operacionais | conectar storage real e varredura automatica de retencao |
 | `fiscal` | perfis fiscais, documentos, fila de emissao, certificados, contingencia, SPED, eventos, consentimentos, privacidade, retencao e auditoria operacional | conectar provider fiscal real, certificado digital gerenciado e regras por regime/UF/municipio |
 | `platform-control` | capabilities, entitlements, quotas, metering, provider defaults, blocks, lifecycle e go-live operacionais | evoluir enforcement distribuido de quotas e offboarding produtivo |
-| `analytics` | reports executivos, tenant 360, service pulse, hardening, simulacao, benchmark, estimativa de custo e read models operacionais quase em tempo real | evoluir streaming dedicado quando houver requisito comprovado de evento em baixa latencia |
+| `analytics` | reports executivos, tenant 360, service pulse, hardening, production-readiness, simulacao, benchmark, estimativa de custo e read models operacionais quase em tempo real | evoluir streaming dedicado quando houver requisito comprovado de evento em baixa latencia |
 | `edge` | cockpits consolidados com auth, health, go-live, SaaS, contratos e visoes cross-service, apoiados por gateway local com cache, rate limit, timeouts e failover passivo | evoluir replicas produtivas e politicas de trafego por ambiente |
 | `workflow-control` | definicoes, catalogos, versionamento, publish/restore, runs, eventos, ledger e diagnostico por workflow operacionais | melhorar autoria visual e validacao pre-publicacao |
 | `workflow-runtime` | execucao duravel, timeline, transicoes, delays, retries, capacidades e compensacoes basicas operacionais | ampliar observabilidade de execucoes longas e cargas concorrentes |
