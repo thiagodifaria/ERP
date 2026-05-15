@@ -8,7 +8,7 @@ import math
 import uuid
 
 from app.config.settings import settings
-from app.infrastructure.postgres import connect
+from app.infrastructure.postgres import connect, fetch_limited
 
 
 _MEMORY_SCENARIO_RUNS: list[dict] = []
@@ -117,7 +117,7 @@ def list_operational_load_scenarios(tenant_slug: str | None = None) -> list[dict
                     """,
                     params,
                 )
-                rows = cursor.fetchall()
+                rows = fetch_limited(cursor)
 
         return [restore_scenario_record(row) for row in rows]
 
@@ -263,7 +263,7 @@ def list_load_benchmarks(tenant_slug: str | None = None) -> list[dict]:
                     """,
                     params,
                 )
-                rows = cursor.fetchall()
+                rows = fetch_limited(cursor)
 
         return [restore_benchmark_record(row) for row in rows]
 

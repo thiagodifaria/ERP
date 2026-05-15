@@ -8,9 +8,9 @@ A arquitetura atual e uma plataforma backend-first, multi-tenant e poliglota, co
 
 ## Numeros de Referencia
 
-- 20 servicos HTTP com contrato OpenAPI.
-- 321 endpoints HTTP versionados.
-- 14 schemas de evento versionados.
+- 24 servicos HTTP com contrato OpenAPI.
+- 542 endpoints HTTP versionados.
+- 15 schemas de evento versionados.
 - Contratos em `docs/contracts/`.
 - Runtime local em `infra/docker-compose.yml`.
 - Banco PostgreSQL dividido por contextos.
@@ -32,12 +32,13 @@ A arquitetura atual e uma plataforma backend-first, multi-tenant e poliglota, co
 | Public operations | `edge` | entrada publica e cockpits cross-service |
 | Identity/security | `identity` | tenancy, usuario, sessao, role, convite e MFA |
 | Commercial | `crm`, `sales` | relacionamento, pipeline, oportunidades, propostas e vendas |
-| Recurrence/financial | `billing`, `finance`, `rentals` | assinaturas, cobrancas, recebiveis, comissoes e contratos recorrentes |
-| Documents/compliance | `documents`, `fiscal` | anexos, assinatura, documentos fiscais, privacidade, consentimento e auditoria |
+| Supply chain | `inventory`, `procurement`, `supplier`, `catalog` | estoque, compras, fornecedores, recebimento e catalogo de itens |
+| Recurrence/financial | `billing`, `finance`, `banking`, `accounting`, `rentals` | assinaturas, cobrancas, bancos, ledger, recebiveis, comissoes e contratos recorrentes |
+| Documents/compliance | `documents`, `fiscal` | anexos, assinatura, documentos fiscais, emissao, certificados, privacidade, consentimento e auditoria |
 | Automation | `workflow-control`, `workflow-runtime` | definicao, publicacao e execucao duravel de workflows |
 | Interaction/integration | `engagement`, `notification`, `webhook-hub` | comunicacao, callbacks, webhooks e notificacoes |
 | Platform governance | `platform-control`, `analytics`, `simulation` | capabilities, providers, quotas, lifecycle, reports e simulacoes |
-| Administrative | `support`, `supplier`, `catalog` | suporte, fornecedores, catalogo e contratos de consumo |
+| Administrative | `support` | suporte e atendimento operacional |
 
 ## Topologia de Runtime
 
@@ -72,9 +73,13 @@ O gateway local em `infra/gateway/nginx.conf` concentra roteamento `/api/<servic
 | `identity` | tenants, companies, users, roles, sessions, invitations |
 | `crm` | leads, customers, pipeline, enrichment |
 | `sales` | opportunities, proposals, sales, invoices |
+| `inventory` | locations, balances, movements, reservations, FIFO/average costing, cycle counts |
+| `procurement` | requisitions, quotations, purchase orders, approvals, receiving, 3-way matching |
 | `rentals` | rental contracts and charges |
 | `billing` | plans, subscriptions, invoices, payment attempts |
 | `finance` | receivables, projections, commission holds, activity |
+| `accounting` | chart of accounts, cost centers, immutable journal entries, posting rules, ledger, close, statements |
+| `banking` | CNAB, boletos, statements, reconciliation, Pix refunds/webhooks, Open Finance |
 | `documents` | attachments, storage metadata, signing requests, versions |
 | `engagement` | providers, touchpoints, conversations, provider events |
 | `workflow-control` | definitions, catalogs, control-plane runs |
@@ -183,6 +188,17 @@ O custo do poliglotismo e compensado por:
 - `scripts/build.sh` e `scripts/test.sh` como entradas padronizadas;
 - documentacao central em `docs/`.
 
+| Stack | Servicos atuais | Uso preferencial | Evitar quando |
+| --- | --- | --- | --- |
+| Go | `edge`, `crm`, `sales`, `documents`, `rentals` | APIs leves, IO direto, gateways e dominios com handlers simples | regra ja depende fortemente de .NET ou Python |
+| C#/.NET | `identity`, `billing`, `finance` | dominios transacionais, contratos ricos e forte tipagem | scripts pequenos ou adapters descartaveis |
+| Python/FastAPI | `accounting`, `analytics`, `banking`, `catalog`, `fiscal`, `inventory`, `notification`, `platform-control`, `procurement`, `simulation`, `supplier`, `support` | reports, catalogos operacionais, simulacao, integracoes simples e dominios administrativos parametrizados | transacao financeira critica sem camada forte de teste |
+| TypeScript | `workflow-control`, `engagement` | orquestracao HTTP, catalogo de workflows e integracoes web/eventos | processamento numerico/financeiro critico |
+| Rust | `webhook-hub` | ingestao/eventos com foco em robustez e controle de runtime | CRUD simples com alta mudanca de regra |
+| Elixir | `workflow-runtime` | runtime concorrente, timers, retries e processos de longa duracao | rotas CRUD convencionais |
+
+Nova linguagem so entra se houver ganho claro e se auth, tracing, contrato, teste, build e dependency scan ficarem equivalentes aos stacks existentes.
+
 ### Edge como leitura operacional
 
 `edge` existe para expor cockpits e leituras consolidadas. Ele pode chamar ou compor dados de outros dominios, mas nao deve se tornar o lugar onde regras de `billing`, `finance`, `crm` ou `platform-control` sao implementadas.
@@ -229,21 +245,23 @@ crm
   -> sales
   -> billing
   -> finance
+  -> accounting
   -> analytics/edge
 ```
 
-`crm` qualifica relacionamento, `sales` registra operacao comercial, `billing` controla recorrencia e cobranca, `finance` consolida consequencias financeiras. `analytics` e `edge` observam.
+`crm` qualifica relacionamento, `sales` registra operacao comercial, `billing` controla recorrencia e cobranca, `finance` consolida consequencias financeiras, e `accounting` registra impactos gerenciais. `analytics` e `edge` observam.
 
 ### Documento e compliance
 
 ```text
 documents
   -> fiscal
+  -> banking/accounting quando houver conciliacao
   -> analytics compliance-control
   -> edge compliance-overview
 ```
 
-`documents` guarda metadata documental e assinatura. `fiscal` governa documento fiscal, retencao, consentimento, privacidade e auditoria.
+`documents` guarda metadata documental e assinatura. `fiscal` governa documento fiscal, emissao, certificado, retencao, consentimento, privacidade e auditoria. `banking` e `accounting` entram quando ha conciliacao ou reflexo financeiro/contabil.
 
 ### Automacao
 

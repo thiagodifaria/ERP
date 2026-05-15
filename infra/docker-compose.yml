@@ -9,6 +9,14 @@ x-erp-security-env: &erp-security-env
   OPENFGA_STORE_ID: "${OPENFGA_STORE_ID}"
   OPENFGA_AUTHORIZATION_MODEL_ID: "${OPENFGA_AUTHORIZATION_MODEL_ID}"
 
+x-erp-container-hardening: &erp-container-hardening
+  init: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  pids_limit: 512
+
 services:
   service-postgresql:
     image: postgres:16-alpine
@@ -178,6 +186,7 @@ services:
     build:
       context: ../service-api/service-golang/edge
     container_name: erp-edge
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       EDGE_HTTP_ADDRESS: ":8080"
@@ -203,6 +212,7 @@ services:
   gateway:
     image: nginx:1.27-alpine
     container_name: erp-gateway
+    <<: *erp-container-hardening
     depends_on:
       edge:
         condition: service_started
@@ -253,6 +263,7 @@ services:
     build:
       context: ../service-api/service-golang/crm
     container_name: erp-crm
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       CRM_HTTP_ADDRESS: ":8083"
@@ -277,6 +288,7 @@ services:
     build:
       context: ../service-api/service-golang/sales
     container_name: erp-sales
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       SALES_HTTP_ADDRESS: ":8087"
@@ -298,6 +310,7 @@ services:
     build:
       context: ../service-api/service-csharp/finance
     container_name: erp-finance
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       FINANCE_BOOTSTRAP_TENANT_SLUG: "${FINANCE_BOOTSTRAP_TENANT_SLUG}"
@@ -317,6 +330,7 @@ services:
     build:
       context: ../service-api/service-csharp/billing
     container_name: erp-billing
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       BILLING_BOOTSTRAP_TENANT_SLUG: "${BILLING_BOOTSTRAP_TENANT_SLUG}"
@@ -336,6 +350,7 @@ services:
     build:
       context: ../service-api/service-golang/documents
     container_name: erp-documents
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       DOCUMENTS_HTTP_ADDRESS: ":8086"
@@ -357,6 +372,7 @@ services:
     build:
       context: ../service-api/service-golang/rentals
     container_name: erp-rentals
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       RENTALS_HTTP_ADDRESS: ":8096"
@@ -381,6 +397,7 @@ services:
     build:
       context: ../service-api/service-typescript/workflow-control
     container_name: erp-workflow-control
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       WORKFLOW_CONTROL_HTTP_HOST: "0.0.0.0"
@@ -405,6 +422,7 @@ services:
     build:
       context: ../service-api/service-typescript/engagement
     container_name: erp-engagement
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       ENGAGEMENT_HTTP_HOST: "0.0.0.0"
@@ -436,6 +454,7 @@ services:
     build:
       context: ../service-api/service-elixir/workflow-runtime
     container_name: erp-workflow-runtime
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       WORKFLOW_RUNTIME_HTTP_HOST: "0.0.0.0"
@@ -460,6 +479,7 @@ services:
     build:
       context: ../service-api/service-python/analytics
     container_name: erp-analytics
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       ANALYTICS_HTTP_HOST: "0.0.0.0"
@@ -483,6 +503,7 @@ services:
     build:
       context: ../service-api/service-python/simulation
     container_name: erp-simulation
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       SIMULATION_HTTP_HOST: "0.0.0.0"
@@ -506,6 +527,7 @@ services:
     build:
       context: ../service-api/service-python/catalog
     container_name: erp-catalog
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       CATALOG_HTTP_PORT: "8097"
@@ -527,6 +549,7 @@ services:
     build:
       context: ../service-api/service-python/platform-control
     container_name: erp-platform-control
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       PLATFORM_CONTROL_HTTP_PORT: "8098"
@@ -548,6 +571,7 @@ services:
     build:
       context: ../service-api/service-python/support
     container_name: erp-support
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       SUPPORT_HTTP_PORT: "8099"
@@ -569,6 +593,7 @@ services:
     build:
       context: ../service-api/service-python/supplier
     container_name: erp-supplier
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       SUPPLIER_HTTP_PORT: "8100"
@@ -590,6 +615,7 @@ services:
     build:
       context: ../service-api/service-python/notification
     container_name: erp-notification
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       NOTIFICATION_HTTP_PORT: "8101"
@@ -611,6 +637,7 @@ services:
     build:
       context: ../service-api/service-python/fiscal
     container_name: erp-fiscal
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       FISCAL_HTTP_PORT: "8102"
@@ -628,10 +655,99 @@ services:
     ports:
       - "${FISCAL_HTTP_PORT}:8102"
 
+  accounting:
+    build:
+      context: ../service-api/service-python/accounting
+    container_name: erp-accounting
+    <<: *erp-container-hardening
+    environment:
+      <<: *erp-security-env
+      ACCOUNTING_HTTP_PORT: "8103"
+      ACCOUNTING_REPOSITORY_DRIVER: "postgres"
+      ACCOUNTING_BOOTSTRAP_TENANT_SLUG: "${ACCOUNTING_BOOTSTRAP_TENANT_SLUG}"
+      ACCOUNTING_POSTGRES_HOST: "service-postgresql"
+      ACCOUNTING_POSTGRES_PORT: "5432"
+      ERP_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      ERP_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      ERP_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      ACCOUNTING_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+    ports:
+      - "${ACCOUNTING_HTTP_PORT}:8103"
+
+  inventory:
+    build:
+      context: ../service-api/service-python/inventory
+    container_name: erp-inventory
+    <<: *erp-container-hardening
+    environment:
+      <<: *erp-security-env
+      INVENTORY_HTTP_PORT: "8104"
+      INVENTORY_REPOSITORY_DRIVER: "postgres"
+      INVENTORY_BOOTSTRAP_TENANT_SLUG: "${INVENTORY_BOOTSTRAP_TENANT_SLUG}"
+      INVENTORY_POSTGRES_HOST: "service-postgresql"
+      INVENTORY_POSTGRES_PORT: "5432"
+      ERP_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      ERP_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      ERP_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      INVENTORY_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+    ports:
+      - "${INVENTORY_HTTP_PORT}:8104"
+
+  procurement:
+    build:
+      context: ../service-api/service-python/procurement
+    container_name: erp-procurement
+    <<: *erp-container-hardening
+    environment:
+      <<: *erp-security-env
+      PROCUREMENT_HTTP_PORT: "8105"
+      PROCUREMENT_REPOSITORY_DRIVER: "postgres"
+      PROCUREMENT_BOOTSTRAP_TENANT_SLUG: "${PROCUREMENT_BOOTSTRAP_TENANT_SLUG}"
+      PROCUREMENT_POSTGRES_HOST: "service-postgresql"
+      PROCUREMENT_POSTGRES_PORT: "5432"
+      ERP_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      ERP_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      ERP_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      PROCUREMENT_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+    ports:
+      - "${PROCUREMENT_HTTP_PORT}:8105"
+
+  banking:
+    build:
+      context: ../service-api/service-python/banking
+    container_name: erp-banking
+    <<: *erp-container-hardening
+    environment:
+      <<: *erp-security-env
+      BANKING_HTTP_PORT: "8106"
+      BANKING_REPOSITORY_DRIVER: "postgres"
+      BANKING_BOOTSTRAP_TENANT_SLUG: "${BANKING_BOOTSTRAP_TENANT_SLUG}"
+      BANKING_POSTGRES_HOST: "service-postgresql"
+      BANKING_POSTGRES_PORT: "5432"
+      ERP_POSTGRES_DB: "${ERP_POSTGRES_DB}"
+      ERP_POSTGRES_USER: "${ERP_POSTGRES_USER}"
+      ERP_POSTGRES_PASSWORD: "${ERP_POSTGRES_PASSWORD}"
+      BANKING_POSTGRES_SSL_MODE: "disable"
+    depends_on:
+      service-postgresql:
+        condition: service_healthy
+    ports:
+      - "${BANKING_HTTP_PORT}:8106"
+
   identity:
     build:
       context: ../service-api/service-csharp/identity
     container_name: erp-identity
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       IDENTITY_REPOSITORY_DRIVER: "postgres"
@@ -666,6 +782,7 @@ services:
     build:
       context: ../service-api/service-rust/webhook-hub
     container_name: erp-webhook-hub
+    <<: *erp-container-hardening
     environment:
       <<: *erp-security-env
       WEBHOOK_HUB_HTTP_ADDRESS: "0.0.0.0:8082"

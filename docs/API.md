@@ -18,26 +18,30 @@ Use este arquivo para entender como chamar e evoluir a API. Para ownership dos s
 
 | Servico | Arquivo | Endpoints | Base funcional |
 |---------|---------|-----------|----------------|
-| `analytics` | `docs/contracts/http/analytics.openapi.yaml` | 9 | reports operacionais e governanca |
-| `billing` | `docs/contracts/http/billing.openapi.yaml` | 28 | planos, assinaturas e cobranca |
-| `catalog` | `docs/contracts/http/catalog.openapi.yaml` | 9 | categorias, itens e consumidores |
-| `crm` | `docs/contracts/http/crm.openapi.yaml` | 20 | pipeline, leads, customers, historico, anexos e enrichment |
-| `documents` | `docs/contracts/http/documents.openapi.yaml` | 8 | anexos, storage e assinatura |
-| `edge` | `docs/contracts/http/edge.openapi.yaml` | 8 | cockpits cross-service |
-| `engagement` | `docs/contracts/http/engagement.openapi.yaml` | 9 | providers, callbacks e conversas |
-| `finance` | `docs/contracts/http/finance.openapi.yaml` | 22 | recebiveis, comissoes, tesouraria, fechamentos e atividade financeira |
-| `fiscal` | `docs/contracts/http/fiscal.openapi.yaml` | 21 | fiscal, retencao, privacidade e auditoria |
-| `identity` | `docs/contracts/http/identity.openapi.yaml` | 35 | tenants, sessoes e convites |
-| `notification` | `docs/contracts/http/notification.openapi.yaml` | 6 | preferencias e central de notificacoes |
-| `platform-control` | `docs/contracts/http/platform-control.openapi.yaml` | 39 | capabilities, quotas, lifecycle e go-live |
-| `rentals` | `docs/contracts/http/rentals.openapi.yaml` | 9 | contratos recorrentes e cobrancas |
-| `sales` | `docs/contracts/http/sales.openapi.yaml` | 30 | oportunidades, propostas, vendas, invoices e operacoes comerciais |
-| `simulation` | `docs/contracts/http/simulation.openapi.yaml` | 6 | cenarios e benchmarks |
-| `supplier` | `docs/contracts/http/supplier.openapi.yaml` | 8 | categorias e fornecedores |
-| `support` | `docs/contracts/http/support.openapi.yaml` | 10 | filas, casos e comentarios |
-| `webhook-hub` | `docs/contracts/http/webhook-hub.openapi.yaml` | 10 | inbound/outbound webhooks e DLQ |
-| `workflow-control` | `docs/contracts/http/workflow-control.openapi.yaml` | 20 | definicoes, versionamento, runs e eventos de workflow |
-| `workflow-runtime` | `docs/contracts/http/workflow-runtime.openapi.yaml` | 14 | execucoes, timeline, transicoes e actions |
+| `accounting` | `docs/contracts/http/accounting.openapi.yaml` | 25 | contas contabeis, centros de custo, journal entries imutaveis, regras de posting, razao, DRE, balanco e fechamento |
+| `analytics` | `docs/contracts/http/analytics.openapi.yaml` | 25 | relatorios executivos, governanca, readiness e leituras operacionais |
+| `banking` | `docs/contracts/http/banking.openapi.yaml` | 33 | CNAB, boletos, extratos, conciliacao bancaria, Pix cobranca/devolucao/webhooks e Open Finance |
+| `billing` | `docs/contracts/http/billing.openapi.yaml` | 31 | planos, assinaturas, invoices, pricing por uso e tentativas de pagamento |
+| `catalog` | `docs/contracts/http/catalog.openapi.yaml` | 12 | categorias, itens, historico de versoes, bulk e contratos de consumo |
+| `crm` | `docs/contracts/http/crm.openapi.yaml` | 26 | leads, customers, pipeline e enriquecimento de CNPJ |
+| `documents` | `docs/contracts/http/documents.openapi.yaml` | 19 | anexos, storage, assinatura e historico de versoes |
+| `edge` | `docs/contracts/http/edge.openapi.yaml` | 19 | entrada publica e cockpits cross-service |
+| `engagement` | `docs/contracts/http/engagement.openapi.yaml` | 9 | providers, eventos inbound, touchpoints e conversas |
+| `finance` | `docs/contracts/http/finance.openapi.yaml` | 26 | recebiveis, projecoes, contas a pagar, tesouraria e comissoes |
+| `fiscal` | `docs/contracts/http/fiscal.openapi.yaml` | 37 | perfil fiscal, documentos fiscais, emissao, certificados, contingencia, SPED, retencao, privacidade e auditoria |
+| `identity` | `docs/contracts/http/identity.openapi.yaml` | 46 | tenants, usuarios, sessoes, convites, roles e MFA |
+| `inventory` | `docs/contracts/http/inventory.openapi.yaml` | 23 | saldos por local/deposito, movimentos, reservas, custo medio/FIFO e contagem ciclica |
+| `notification` | `docs/contracts/http/notification.openapi.yaml` | 8 | preferencias, central de notificacoes e estado de entrega |
+| `platform-control` | `docs/contracts/http/platform-control.openapi.yaml` | 40 | capabilities, providers, entitlements, quotas, lifecycle e go-live |
+| `procurement` | `docs/contracts/http/procurement.openapi.yaml` | 25 | requisicoes, cotacoes, pedidos de compra, aprovacoes, recebimento e 3-way matching real |
+| `rentals` | `docs/contracts/http/rentals.openapi.yaml` | 12 | contratos recorrentes e ciclo de cobrancas |
+| `sales` | `docs/contracts/http/sales.openapi.yaml` | 37 | oportunidades, propostas, vendas, invoices e comissoes |
+| `simulation` | `docs/contracts/http/simulation.openapi.yaml` | 6 | cenarios e benchmarks de carga |
+| `supplier` | `docs/contracts/http/supplier.openapi.yaml` | 10 | categorias e diretorio de fornecedores |
+| `support` | `docs/contracts/http/support.openapi.yaml` | 11 | filas, casos, SLA, comentarios e resumo de atendimento |
+| `webhook-hub` | `docs/contracts/http/webhook-hub.openapi.yaml` | 22 | webhooks inbound/outbound, delivery log e DLQ |
+| `workflow-control` | `docs/contracts/http/workflow-control.openapi.yaml` | 25 | definicoes de workflow, catalogos e estado de controle |
+| `workflow-runtime` | `docs/contracts/http/workflow-runtime.openapi.yaml` | 15 | execucoes, actions, transicoes, retries e compensacoes |
 
 ## Convencoes HTTP
 
@@ -78,6 +82,10 @@ Mutacoes sensiveis devem aceitar `Idempotency-Key` quando repeticao puder gerar 
 - webhook;
 - assinatura;
 - processamento fiscal;
+- lancamento contabil;
+- conciliacao bancaria;
+- reserva de estoque;
+- requisicao, pedido de compra e recebimento;
 - operacao bulk.
 
 ### Operacoes Longas
@@ -134,18 +142,22 @@ Mutacoes e chamadas cross-context devem registrar:
 - `identity`: tenants, snapshots, login, refresh e convites.
 - `platform-control`: capabilities, providers, entitlements, flags, quotas, blocks, metering, lifecycle e go-live.
 
-### Comercial e financeiro
+### Comercial, financeiro e contabilidade
 
 - `crm`: enrichment e pipeline intelligence.
 - `sales`: opportunities, proposals, sales e invoices.
 - `billing`: gateways, plans, subscriptions, usage pricing e payment attempts.
-- `finance`: receivable projections, commission holds e activity.
+- `finance`: receivable projections, commission holds, treasury e activity.
+- `accounting`: chart of accounts, cost centers, immutable journal entries, posting rules, ledger, DRE/balance sheet e period close.
+- `banking`: CNAB, boletos, statements, reconciliation, Pix charges/refunds/webhooks e Open Finance.
 - `rentals`: contracts e charges.
 
-### Compliance e documentos
+### Supply chain, compliance e documentos
 
+- `inventory`: location balances, stock movements, reservations, FIFO/average costing e cycle counts.
+- `procurement`: purchase requisitions, quotations, purchase orders, approvals, receiving e 3-way matching.
 - `documents`: storage, signing, attachments e versions.
-- `fiscal`: company profile, retention, fiscal documents, privacy requests, consents, audit events e compliance summary.
+- `fiscal`: company profile, tax document lifecycle, issuance queue, certificates, contingency, SPED, privacy requests, consents, audit events e compliance summary.
 
 ### Integracao e automacao
 
@@ -210,10 +222,15 @@ Padrao conceitual:
 edge                 http://localhost:${EDGE_HTTP_PORT}
 gateway              http://localhost:${GATEWAY_HTTP_PORT}
 identity             http://localhost:${IDENTITY_HTTP_PORT}
+accounting           http://localhost:${ACCOUNTING_HTTP_PORT}
+banking              http://localhost:${BANKING_HTTP_PORT}
 crm                  http://localhost:${CRM_HTTP_PORT}
 sales                http://localhost:${SALES_HTTP_PORT}
 billing              http://localhost:${BILLING_HTTP_PORT}
 finance              http://localhost:${FINANCE_HTTP_PORT}
+fiscal               http://localhost:${FISCAL_HTTP_PORT}
+inventory            http://localhost:${INVENTORY_HTTP_PORT}
+procurement          http://localhost:${PROCUREMENT_HTTP_PORT}
 platform-control     http://localhost:${PLATFORM_CONTROL_HTTP_PORT}
 ```
 
@@ -275,7 +292,11 @@ Exemplos:
 - trigger/action catalog;
 - storage/signing capabilities;
 - notification capabilities;
-- fiscal capabilities.
+- fiscal capabilities;
+- accounting close capabilities;
+- banking provider capabilities;
+- inventory availability capabilities;
+- procurement approval capabilities.
 
 ### Lifecycle
 
@@ -313,7 +334,8 @@ Webhooks precisam de:
 | Familia | Servicos | Caracteristica |
 |---------|----------|----------------|
 | Core business | `crm`, `sales`, `catalog`, `rentals` | recursos operacionais de negocio |
-| Money movement | `billing`, `finance` | cobranca, recorrencia, recebiveis e comissoes |
+| Supply chain | `inventory`, `procurement`, `supplier` | estoque, compras, fornecedores e recebimento |
+| Money movement | `billing`, `finance`, `banking`, `accounting` | cobranca, tesouraria, bancos, ledger e comissoes |
 | Compliance | `documents`, `fiscal` | documentos, fiscal, privacidade e auditoria |
 | Platform | `identity`, `platform-control` | tenant, acesso, entitlement, quota e lifecycle |
 | Automation | `workflow-control`, `workflow-runtime` | definicao e execucao de workflows |

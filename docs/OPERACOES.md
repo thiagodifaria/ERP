@@ -102,6 +102,20 @@ Quando um servico HTTP estiver ativo:
 
 Nem todo contrato lista os tres probes, mas servicos de runtime devem seguir esse padrao quando participam do stack.
 
+## SLOs E Alertas
+
+| Jornada | Indicador | Objetivo local/corporativo |
+| --- | --- | --- |
+| Auth/login | taxa de sucesso e p95 | 99.5% de sucesso, p95 abaixo de 800ms |
+| CRM lead intake | criacao de lead e outbox | 99.0% de sucesso, sem backlog critico |
+| Sales creation | criacao de oportunidade/sale/invoice | 99.0% de sucesso, idempotencia preservada |
+| Billing payment attempt | tentativa e callback | 99.0% processado ou DLQ explicita |
+| Webhook ingestion | validacao, fila, forward/DLQ | 99.0% sem perda, replay auditavel |
+| Document download | access link valido para redirect | 99.5% de sucesso, revogacao imediata |
+| Fiscal issue/cancel | documento/evento fiscal | 99.0% com trilha de auditoria |
+
+Alertas basicos: erro 5xx acima do limiar do dominio, p95/p99 fora do SLO por 10 minutos, DLQ crescendo sem drenagem, provider fora, backup/restore falhando, divergencia financeira e repeticao anormal de login, recovery, upload ou webhook.
+
 ## Banco de Dados
 
 Migrations vivem em:
@@ -139,6 +153,7 @@ engagement
 webhook-hub
 workflow-control
 workflow-runtime
+tenant-security
 ```
 
 ## Suites de Validacao
@@ -153,7 +168,7 @@ workflow-runtime
 | `performance` | carga e capacidade local |
 | `backup-restore` | backup e restauracao do PostgreSQL |
 | `hardening` | readiness, contratos, providers e postura operacional |
-| `security` | guardrails de auth, secrets, eventos, documents, LGPD e templates |
+| `security` | guardrails de auth, secrets, eventos, documents, dados pessoais e padroes |
 | `supply-chain` | secret scan de alta confianca, inventario SBOM e pinning de imagens |
 
 Para o hardening enterprise, o conjunto minimo de evidencia operacional e formado por `contract`, `smoke`, `performance`, `backup-restore` e `hardening`. O relatorio `GET /api/analytics/reports/hardening-review` consolida esse fechamento como `operationalRunbooks`, permitindo validar rapidamente se seguranca operacional, observabilidade, DLQ/retry, backup/restore, SLOs, multi-tenant, failover, performance e permissoes possuem cobertura operacional rastreavel.
@@ -201,6 +216,20 @@ npm run generate
 ```
 
 Atualize OpenAPI, registry e implementacao no mesmo fluxo de mudanca.
+
+### DLQ ou retry crescendo
+
+1. Conferir `/api/webhook-hub/events/dead-letter` e summary.
+2. Validar `correlationId`, provider, payload e schemaRef.
+3. Reprocessar apenas eventos idempotentes.
+4. Se o erro for contrato, bloquear replay ate corrigir schema/adapter.
+
+### Divergencia financeira
+
+1. Conferir cash movements, settlement/payment reference e period closure.
+2. Validar se a mutacao usou `Idempotency-Key`.
+3. Registrar ajuste ou estorno em vez de update destrutivo.
+4. Bloquear fechamento de periodo se a divergencia continuar.
 
 ## Backup e Restore
 

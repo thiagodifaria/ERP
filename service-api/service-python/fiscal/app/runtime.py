@@ -17,6 +17,7 @@ IN_MEMORY_STATE = {
     "consents": [],
     "privacyRequests": [],
     "auditEvents": [],
+    "deepRecords": [],
 }
 
 
@@ -1434,3 +1435,98 @@ def build_compliance_summary(tenant_slug: str | None = None) -> dict:
                 },
                 "providers": provider_readiness,
             }
+
+
+def list_fiscal_deep_records(collection: str, tenant_slug: str | None = None, status: str | None = None) -> list[dict]:
+    slug = _tenant_slug(tenant_slug)
+    normalized_status = (status or "").strip().lower()
+    if settings.repository_driver != "postgres":
+        records = [item for item in IN_MEMORY_STATE["deepRecords"] if item["tenantSlug"] == slug and item["collection"] == collection]
+        if normalized_status:
+            records = [item for item in records if item["status"] == normalized_status]
+        return records
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            clauses = ["tenant.slug = %s"]
+            params: list[object] = [slug]
+            if normalized_status:
+                clauses.append("record.status = %s")
+                params.append(normalized_status)
+            cursor.execute(
+                f"""
+                SELECT record.public_id, record.collection, record.record_key, record.name, record.status,
+                       record.payload_json, record.created_at, record.updated_at
+                FROM fiscal.deep_operations AS record
+                JOIN identity.tenants AS tenant ON tenant.id = record.tenant_id
+                WHERE record.collection = %s AND {" AND ".join(clauses)}
+                ORDER BY record.created_at DESC
+                """,
+                [collection, *params],
+            )
+            return [_map_fiscal_deep_record(row, slug) for row in cursor.fetchall()]
+
+
+def create_fiscal_deep_record(collection: str, payload: dict) -> dict:
+    slug = _tenant_slug(payload.get("tenantSlug"))
+    record = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "collection": collection,
+        "recordKey": str(payload.get("recordKey") or payload.get("key") or uuid.uuid4()).strip(),
+        "name": str(payload.get("name") or payload.get("description") or collection).strip(),
+        "status": str(payload.get("status") or "queued").strip().lower(),
+        "payload": {key: value for key, value in payload.items() if key not in {"tenantSlug", "recordKey", "key", "name", "description", "status"}},
+        "createdAt": utc_now(),
+        "updatedAt": utc_now(),
+    }
+    if settings.repository_driver != "postgres":
+        IN_MEMORY_STATE["deepRecords"].append(record)
+        return record
+
+    with connect() as connection:
+        with connection.cursor() as cursor:
+            tenant_id = _find_tenant_id(cursor, slug)
+            cursor.execute(
+                """
+                INSERT INTO fiscal.deep_operations (tenant_id, public_id, collection, record_key, name, status, payload_json)
+                VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb)
+                RETURNING created_at, updated_at
+                """,
+                (tenant_id, record["publicId"], collection, record["recordKey"], record["name"], record["status"], json.dumps(record["payload"])),
+            )
+            row = cursor.fetchone()
+            connection.commit()
+            record["createdAt"] = row["created_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            record["updatedAt"] = row["updated_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+            return record
+
+
+def reconcile_fiscal_finance(payload: dict) -> dict:
+    fiscal_amount = int(payload.get("fiscalAmountCents") or 0)
+    finance_amount = int(payload.get("financeAmountCents") or 0)
+    divergence = fiscal_amount - finance_amount
+    return create_fiscal_deep_record(
+        "fiscal_finance_reconciliations",
+        {
+            **payload,
+            "recordKey": payload.get("recordKey") or payload.get("fiscalDocumentPublicId") or uuid.uuid4(),
+            "name": payload.get("name") or "Fiscal vs finance reconciliation",
+            "status": "matched" if divergence == 0 else "divergent",
+            "divergenceCents": abs(divergence),
+        },
+    )
+
+
+def _map_fiscal_deep_record(row: dict, tenant_slug: str) -> dict:
+    return {
+        "publicId": str(row["public_id"]),
+        "tenantSlug": tenant_slug,
+        "collection": row["collection"],
+        "recordKey": row["record_key"],
+        "name": row["name"],
+        "status": row["status"],
+        "payload": row["payload_json"] or {},
+        "createdAt": row["created_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "updatedAt": row["updated_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }

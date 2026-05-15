@@ -6,32 +6,44 @@ Este documento descreve os servicos do ERP: ownership, stack, caminho de impleme
 
 | Servico | Stack | Caminho | Contrato | Endpoints |
 |---------|-------|---------|----------|-----------|
-| `analytics` | Python | `service-api/service-python/analytics` | `docs/contracts/http/analytics.openapi.yaml` | 9 |
-| `billing` | .NET | `service-api/service-csharp/billing` | `docs/contracts/http/billing.openapi.yaml` | 28 |
-| `catalog` | Python | `service-api/service-python/catalog` | `docs/contracts/http/catalog.openapi.yaml` | 9 |
-| `crm` | Go | `service-api/service-golang/crm` | `docs/contracts/http/crm.openapi.yaml` | 20 |
-| `documents` | Go | `service-api/service-golang/documents` | `docs/contracts/http/documents.openapi.yaml` | 8 |
-| `edge` | Go | `service-api/service-golang/edge` | `docs/contracts/http/edge.openapi.yaml` | 8 |
+| `accounting` | Python | `service-api/service-python/accounting` | `docs/contracts/http/accounting.openapi.yaml` | 25 |
+| `analytics` | Python | `service-api/service-python/analytics` | `docs/contracts/http/analytics.openapi.yaml` | 25 |
+| `banking` | Python | `service-api/service-python/banking` | `docs/contracts/http/banking.openapi.yaml` | 33 |
+| `billing` | .NET | `service-api/service-csharp/billing` | `docs/contracts/http/billing.openapi.yaml` | 31 |
+| `catalog` | Python | `service-api/service-python/catalog` | `docs/contracts/http/catalog.openapi.yaml` | 12 |
+| `crm` | Go | `service-api/service-golang/crm` | `docs/contracts/http/crm.openapi.yaml` | 26 |
+| `documents` | Go | `service-api/service-golang/documents` | `docs/contracts/http/documents.openapi.yaml` | 19 |
+| `edge` | Go | `service-api/service-golang/edge` | `docs/contracts/http/edge.openapi.yaml` | 19 |
 | `engagement` | TypeScript | `service-api/service-typescript/engagement` | `docs/contracts/http/engagement.openapi.yaml` | 9 |
-| `finance` | .NET | `service-api/service-csharp/finance` | `docs/contracts/http/finance.openapi.yaml` | 22 |
-| `fiscal` | Python | `service-api/service-python/fiscal` | `docs/contracts/http/fiscal.openapi.yaml` | 21 |
-| `identity` | .NET | `service-api/service-csharp/identity` | `docs/contracts/http/identity.openapi.yaml` | 35 |
-| `notification` | Python | `service-api/service-python/notification` | `docs/contracts/http/notification.openapi.yaml` | 6 |
-| `platform-control` | Python | `service-api/service-python/platform-control` | `docs/contracts/http/platform-control.openapi.yaml` | 39 |
-| `rentals` | Go | `service-api/service-golang/rentals` | `docs/contracts/http/rentals.openapi.yaml` | 9 |
-| `sales` | Go | `service-api/service-golang/sales` | `docs/contracts/http/sales.openapi.yaml` | 30 |
+| `finance` | .NET | `service-api/service-csharp/finance` | `docs/contracts/http/finance.openapi.yaml` | 26 |
+| `fiscal` | Python | `service-api/service-python/fiscal` | `docs/contracts/http/fiscal.openapi.yaml` | 37 |
+| `identity` | .NET | `service-api/service-csharp/identity` | `docs/contracts/http/identity.openapi.yaml` | 46 |
+| `inventory` | Python | `service-api/service-python/inventory` | `docs/contracts/http/inventory.openapi.yaml` | 23 |
+| `notification` | Python | `service-api/service-python/notification` | `docs/contracts/http/notification.openapi.yaml` | 8 |
+| `platform-control` | Python | `service-api/service-python/platform-control` | `docs/contracts/http/platform-control.openapi.yaml` | 40 |
+| `procurement` | Python | `service-api/service-python/procurement` | `docs/contracts/http/procurement.openapi.yaml` | 25 |
+| `rentals` | Go | `service-api/service-golang/rentals` | `docs/contracts/http/rentals.openapi.yaml` | 12 |
+| `sales` | Go | `service-api/service-golang/sales` | `docs/contracts/http/sales.openapi.yaml` | 37 |
 | `simulation` | Python | `service-api/service-python/simulation` | `docs/contracts/http/simulation.openapi.yaml` | 6 |
-| `supplier` | Python | `service-api/service-python/supplier` | `docs/contracts/http/supplier.openapi.yaml` | 8 |
-| `support` | Python | `service-api/service-python/support` | `docs/contracts/http/support.openapi.yaml` | 10 |
-| `webhook-hub` | Rust | `service-api/service-rust/webhook-hub` | `docs/contracts/http/webhook-hub.openapi.yaml` | 10 |
-| `workflow-control` | TypeScript | `service-api/service-typescript/workflow-control` | `docs/contracts/http/workflow-control.openapi.yaml` | 20 |
-| `workflow-runtime` | Elixir | `service-api/service-elixir/workflow-runtime` | `docs/contracts/http/workflow-runtime.openapi.yaml` | 14 |
+| `supplier` | Python | `service-api/service-python/supplier` | `docs/contracts/http/supplier.openapi.yaml` | 10 |
+| `support` | Python | `service-api/service-python/support` | `docs/contracts/http/support.openapi.yaml` | 11 |
+| `webhook-hub` | Rust | `service-api/service-rust/webhook-hub` | `docs/contracts/http/webhook-hub.openapi.yaml` | 22 |
+| `workflow-control` | TypeScript | `service-api/service-typescript/workflow-control` | `docs/contracts/http/workflow-control.openapi.yaml` | 25 |
+| `workflow-runtime` | Elixir | `service-api/service-elixir/workflow-runtime` | `docs/contracts/http/workflow-runtime.openapi.yaml` | 15 |
 
 ## Ownership Por Servico
+
+### `accounting`
+
+Responsavel por plano de contas, contas gerenciais, lancamentos de diario imutaveis, regras de posting, fechamentos de periodo, demonstrativos e reconciliacao contabil com movimentos financeiros e fiscais.
 
 ### `analytics`
 
 Responsavel por reports executivos, governanca contratual, readiness de integracoes, hardening, compliance, custos e go-live. Deve agregar leituras; nao deve virar dono transacional dos dominios que observa.
+
+### `banking`
+
+Responsavel por arquivos CNAB, boletos, lifecycle de cobranca bancaria, extratos, conciliacao, Pix cobranca/devolucao/webhook e trilha opcional de Open Finance.
 
 ### `billing`
 
@@ -59,15 +71,19 @@ Responsavel por providers de comunicacao, inbound leads, callbacks, touchpoints,
 
 ### `finance`
 
-Responsavel por projecoes de recebiveis, atividade financeira, bloqueios/liberacao de comissao e consolidacao financeira de vendas, recorrencia e contratos.
+Responsavel por projecoes de recebiveis, atividade financeira, bloqueios/liberacao de comissao, contas a pagar, tesouraria e consolidacao financeira de vendas, recorrencia e contratos.
 
 ### `fiscal`
 
-Responsavel por perfil fiscal, politicas de retencao, documentos fiscais, eventos fiscais, consentimentos, privacidade, auditoria e resumo de compliance.
+Responsavel por perfil fiscal, politicas de retencao, documentos fiscais, fila de emissao, certificados, contingencia, eventos fiscais, SPED, consentimentos, privacidade, auditoria e resumo de compliance.
 
 ### `identity`
 
 Responsavel por tenants, companies, usuarios, roles, times, sessoes, convites, MFA e auditoria de acesso. Outros servicos nao devem duplicar modelo de identidade.
+
+### `inventory`
+
+Responsavel por locais, depositos, saldos por item, movimentos, reservas, custo, contagem ciclica e integracao operacional com compras, vendas, documentos e fiscal.
 
 ### `notification`
 
@@ -76,6 +92,10 @@ Responsavel por preferencias de notificacao, central interna de alertas, severid
 ### `platform-control`
 
 Responsavel por capabilities, providers, entitlements, feature flags, quotas, metering, tenant blocks, lifecycle e go-live. E o plano de governanca SaaS da plataforma.
+
+### `procurement`
+
+Responsavel por requisicoes de compra, RFQ/cotacoes, pedidos de compra, aprovacoes, recebimento, 3-way matching e relacionamento operacional com fornecedores.
 
 ### `rentals`
 
@@ -91,7 +111,7 @@ Responsavel por cenarios what-if e benchmarks de carga. Deve apoiar planejamento
 
 ### `supplier`
 
-Responsavel por categorias de fornecedores, diretorio de fornecedores e ownership de procurement.
+Responsavel por categorias de fornecedores, diretorio de fornecedores e dados administrativos de supplier.
 
 ### `support`
 
@@ -138,11 +158,13 @@ Quando um servico le dados derivados de outro contexto, essa leitura deve ser ju
 | onboarding de tenant | `identity`, `platform-control`, `analytics`, `edge` | tenancy nasce em identity e postura SaaS fica em platform-control |
 | pipeline comercial | `crm`, `sales`, `billing`, `finance` | cada etapa tem owner proprio |
 | recorrencia | `rentals`, `billing`, `finance` | contrato recorrente e consequencia financeira nao devem se confundir |
+| compras e estoque | `procurement`, `supplier`, `inventory`, `documents`, `fiscal` | compra, fornecedor, recebimento, anexo e documento fiscal tem ciclos separados |
+| contabilidade e bancos | `accounting`, `finance`, `billing`, `banking`, `fiscal` | ledger, tesouraria, cobranca bancaria e fiscal se reconciliam sem misturar ownership |
 | documentos e fiscal | `documents`, `fiscal` | anexo/assinatura e documento fiscal tem ownership separado |
 | comunicacao | `engagement`, `notification`, `webhook-hub` | provider event, alerta interno e webhook tem ciclos diferentes |
 | workflow | `workflow-control`, `workflow-runtime`, dominios | runtime executa, dominios validam regras |
 | go-live | `platform-control`, `analytics`, `edge` | controle operacional, report e cockpit |
-| suporte/procurement | `support`, `supplier`, `catalog` | dominios administrativos com contratos proprios |
+| administrativo | `support`, `supplier`, `catalog` | dominios administrativos com contratos proprios |
 
 ## Nivel de Maturidade Funcional
 
@@ -155,8 +177,12 @@ Esta tabela nao promete producao final; ela ajuda a entender o papel atual de ca
 | `sales` | oportunidade, proposta, conversao em venda, parcelas, comissao, pendencias, renegociacao, cancelamento, historico e outbox operacionais | evoluir politicas comerciais por segmento e aprovacao avancada |
 | `billing` | recorrencia, cobranca, pricing flat/hybrid/usage, idempotencia de tentativas, recovery e suspend/reactivate operacionais | conectar gateways reais e conciliacao externa controlada |
 | `finance` | recebiveis, liquidacao idempotente, comissoes, custos, contas a pagar, tesouraria, ledger de caixa, sync financeiro e fechamento de periodo operacionais | ampliar conciliacao bancaria/provider real e demonstrativos gerenciais |
+| `accounting` | plano de contas, centros de custo, diario imutavel, regras de posting, razao, DRE/balanco, fechamento de periodo e reconciliacao contabil operacionais | substituir regras genericas por politicas contabeis por regime, empresa e integracao de evento contabil |
+| `banking` | CNAB, boleto, extrato, conciliacao, Pix cobranca/devolucao/webhook e trilha de Open Finance operacionais | conectar bancos reais, assinatura de arquivos e conciliacao automatica por provider |
+| `inventory` | locais, saldos por SKU/local, ledger de movimentos, reservas, custo medio/FIFO, contagem ciclica e variancias operacionais | ampliar costing por metodo, integracao fisica com WMS e politicas de alocacao |
+| `procurement` | requisicao, cotacao, pedido de compra, aprovacao aplicada, recebimento e 3-way matching operacional | evoluir matriz de aprovacao, contratos de fornecimento e avaliacao continua |
 | `documents` | metadata, upload sessions, assinatura, versoes, retencao, arquivamento e links seguros operacionais | conectar storage real e varredura automatica de retencao |
-| `fiscal` | perfis fiscais, documentos, eventos, consentimentos, privacidade, retencao e auditoria operacional | conectar provider fiscal real, certificado digital e regras por regime |
+| `fiscal` | perfis fiscais, documentos, fila de emissao, certificados, contingencia, SPED, eventos, consentimentos, privacidade, retencao e auditoria operacional | conectar provider fiscal real, certificado digital gerenciado e regras por regime/UF/municipio |
 | `platform-control` | capabilities, entitlements, quotas, metering, provider defaults, blocks, lifecycle e go-live operacionais | evoluir enforcement distribuido de quotas e offboarding produtivo |
 | `analytics` | reports executivos, tenant 360, service pulse, hardening, simulacao, benchmark, estimativa de custo e read models operacionais quase em tempo real | evoluir streaming dedicado quando houver requisito comprovado de evento em baixa latencia |
 | `edge` | cockpits consolidados com auth, health, go-live, SaaS, contratos e visoes cross-service, apoiados por gateway local com cache, rate limit, timeouts e failover passivo | evoluir replicas produtivas e politicas de trafego por ambiente |
@@ -166,7 +192,7 @@ Esta tabela nao promete producao final; ela ajuda a entender o papel atual de ca
 | `webhook-hub` | inbound/outbound, assinatura preparada, retries, DLQ, requeue e ledger de transicoes operacionais | endurecer seguranca de endpoint e politicas por tenant |
 | `catalog` | itens, versoes imutaveis, consumers, contratos de consumo e governanca de produto operacionais | evoluir disponibilidade, pricing e politicas comerciais |
 | `support` | casos, filas, SLA, comentarios, exportacao/bulk e resumo operacional | evoluir automacoes de atendimento e escalonamento |
-| `supplier` | diretorio, categorias, exportacao/bulk e contratos administrativos operacionais | evoluir procurement workflow e avaliacao continua |
+| `supplier` | diretorio, categorias, exportacao/bulk e contratos administrativos operacionais | evoluir avaliacao continua e relacao com procurement sem duplicar ownership |
 | `notification` | preferencias, central, severidade, ciclo de vida e bulk operacional | conectar canais externos e templates avancados |
 | `simulation` | catalogo de cenarios, execucao what-if, listagem de runs, benchmark de carga e insumos de sizing operacionais | alimentar planejamento com series historicas reais |
 | `rentals` | contratos, charges, reajustes, encerramento, historico, outbox, anexos e contrato HTTP completo para operacao recorrente | evoluir regras avancadas de reajuste e integracao contabil/fiscal |

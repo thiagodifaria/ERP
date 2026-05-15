@@ -8,6 +8,8 @@ from psycopg.rows import dict_row
 
 from app.config.settings import settings
 
+MAX_REPORT_ROWS = 1000
+
 
 @contextmanager
 def connect() -> Iterator[psycopg.Connection]:
@@ -39,3 +41,10 @@ def postgres_ready() -> bool:
         return True
     except psycopg.Error:
         return False
+
+
+def fetch_limited(cursor: psycopg.Cursor, limit: int = MAX_REPORT_ROWS) -> list[dict]:
+    rows = cursor.fetchmany(limit + 1)
+    if len(rows) > limit:
+        raise ValueError("report_result_limit_exceeded")
+    return rows

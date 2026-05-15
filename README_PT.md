@@ -19,9 +19,9 @@ Este README traz uma visao completa, mas compacta. Os detalhes especificos ficam
 
 ## Estado Atual
 
-- 20 servicos HTTP com contratos OpenAPI.
-- 206 endpoints HTTP versionados.
-- 12 schemas de evento versionados.
+- 24 servicos HTTP com contratos OpenAPI.
+- 542 endpoints HTTP versionados.
+- 15 schemas de evento versionados.
 - Contratos em `docs/contracts/`.
 - Runtime em `infra/docker-compose.yml`.
 - Entrada operacional em `./scripts/build.sh`.
@@ -101,7 +101,9 @@ O console usa proxy local do Vite para chamar os servicos backend quando o stack
 
 | Servico | Stack | Caminho | Responsabilidade |
 |---------|-------|---------|------------------|
+| `accounting` | Python | `service-api/service-python/accounting` | contabilidade gerencial, centros de custo, regras de posting, razao, DRE, balanco e fechamento |
 | `analytics` | Python | `service-api/service-python/analytics` | relatorios executivos, governanca, readiness e leituras operacionais |
+| `banking` | Python | `service-api/service-python/banking` | CNAB, boletos, extratos, conciliacao, Pix cobranca/devolucao/webhooks e Open Finance |
 | `billing` | .NET | `service-api/service-csharp/billing` | planos, assinaturas, invoices, pricing por uso e tentativas de pagamento |
 | `catalog` | Python | `service-api/service-python/catalog` | categorias, itens, historico de versoes, bulk e contratos de consumo |
 | `crm` | Go | `service-api/service-golang/crm` | leads, customers, pipeline e enriquecimento de CNPJ |
@@ -109,10 +111,12 @@ O console usa proxy local do Vite para chamar os servicos backend quando o stack
 | `edge` | Go | `service-api/service-golang/edge` | entrada publica e cockpits cross-service |
 | `engagement` | TypeScript | `service-api/service-typescript/engagement` | providers, eventos inbound, touchpoints e conversas |
 | `finance` | .NET | `service-api/service-csharp/finance` | recebiveis, projecoes, bloqueios de comissao e atividade financeira |
-| `fiscal` | Python | `service-api/service-python/fiscal` | perfil fiscal, documentos fiscais, retencao, consentimento, privacidade e auditoria |
+| `fiscal` | Python | `service-api/service-python/fiscal` | perfil fiscal, emissao, certificados, contingencia, SPED, documentos fiscais, privacidade e auditoria |
 | `identity` | .NET | `service-api/service-csharp/identity` | tenants, usuarios, sessoes, convites, roles e MFA |
+| `inventory` | Python | `service-api/service-python/inventory` | saldos por local, movimentos, reservas, custo medio/FIFO e contagem ciclica |
 | `notification` | Python | `service-api/service-python/notification` | preferencias, central de notificacoes e estado de entrega |
 | `platform-control` | Python | `service-api/service-python/platform-control` | capabilities, providers, entitlements, quotas, lifecycle e go-live |
+| `procurement` | Python | `service-api/service-python/procurement` | requisicoes, cotacoes, pedidos de compra, aprovacoes, recebimento e 3-way matching real |
 | `rentals` | Go | `service-api/service-golang/rentals` | contratos recorrentes e ciclo de cobrancas |
 | `sales` | Go | `service-api/service-golang/sales` | oportunidades, propostas, vendas, invoices e comissoes |
 | `simulation` | Python | `service-api/service-python/simulation` | cenarios e benchmarks de carga |

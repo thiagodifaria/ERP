@@ -168,6 +168,24 @@ Servico: `webhook-hub`.
 - Existe teste proporcional ao risco?
 - A documentacao alterada esta no arquivo certo?
 
+## Checklist Para Novo Servico
+
+Este conteudo substitui checklists soltos que antes ficavam fora do fluxo principal de documentacao; agora o criterio oficial fica aqui.
+
+- A responsabilidade funcional nao pertence claramente a servico existente.
+- O runtime define `ERP_ENV`, `ERP_AUTH_ENFORCEMENT`, `ERP_JWT_HS256_SECRET`, `ERP_INTERNAL_SERVICE_TOKEN`, `ERP_OPENFGA_ENFORCEMENT` e `OPENFGA_STORE_ID`.
+- Auth middleware valida JWT/service account e chama OpenFGA quando habilitado.
+- Tenant resolver e erro `tenant_slug_required` quando aplicavel.
+- Mutacoes exigem `X-Correlation-Id` e idempotencia quando sensiveis.
+- Erros publicos usam `code`, `message` e `details` sem segredo.
+- `/health/live`, `/health/ready` e `/health/details` existem quando o servico participa do runtime.
+- OpenAPI registra security, erros, idempotencia e rotas internas quando houver.
+- Eventos usam envelope padrao e schema versionado.
+- Logs nao imprimem senha, token, access link, documento fiscal ou provider secret.
+- Testes cobrem unauthorized, forbidden, tenant mismatch, idempotencia e contrato publico.
+- Dockerfile usa imagem versionada e compose recebe env comum de seguranca.
+- Hooks de logs, metricas e traces propagam `X-Correlation-Id` e `traceparent`.
+
 ## Padroes de Nome
 
 Use nomes estaveis e explicitos:

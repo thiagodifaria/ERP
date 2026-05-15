@@ -13,3 +13,12 @@ trim_trailing_whitespace = false
 
 [Makefile]
 indent_style = tab
+
+[*.go]
+indent_style = tab
+
+[*.cs]
+indent_size = 4
+
+[*.{ex,exs}]
+indent_size = 2

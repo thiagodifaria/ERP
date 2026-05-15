@@ -21,9 +21,9 @@ This repository is a polyglot, container-first backend platform. The root README
 
 | Item | Value |
 |------|-------|
-| HTTP services with OpenAPI contracts | 20 |
-| Versioned HTTP endpoints | 206 |
-| Event schemas | 12 |
+| HTTP services with OpenAPI contracts | 24 |
+| Versioned HTTP endpoints | 542 |
+| Event schemas | 15 |
 | Contract catalog | `docs/contracts/` |
 | Runtime command | `./scripts/build.sh` |
 | Validation command | `./scripts/test.sh` |
@@ -72,7 +72,9 @@ service-api/               backend services and PostgreSQL contexts
 
 | Service | Stack | Main responsibility |
 |---------|-------|---------------------|
+| `accounting` | Python | management accounting, cost centers, posting rules, ledger, statements and close |
 | `analytics` | Python | executive reports, governance and operational reads |
+| `banking` | Python | CNAB, boletos, bank statements, reconciliation, Pix charges/refunds/webhooks and Open Finance |
 | `billing` | .NET | plans, subscriptions, invoices and payment attempts |
 | `catalog` | Python | categories, items, versions and consumer contracts |
 | `crm` | Go | leads, customers, pipeline and enrichment |
@@ -80,10 +82,12 @@ service-api/               backend services and PostgreSQL contexts
 | `edge` | Go | public entrypoint and cross-service cockpits |
 | `engagement` | TypeScript | campaigns, touchpoints, conversations and callbacks |
 | `finance` | .NET | receivables, payables, treasury and commissions |
-| `fiscal` | Python | fiscal documents, retention, privacy and audit |
+| `fiscal` | Python | fiscal documents, issuance, certificates, contingency, SPED, privacy and audit |
 | `identity` | .NET | tenants, users, roles, sessions, invites and MFA |
+| `inventory` | Python | location balances, movements, reservations, FIFO/average costing and cycle counts |
 | `notification` | Python | preferences and internal notification center |
 | `platform-control` | Python | capabilities, quotas, lifecycle and go-live |
+| `procurement` | Python | requisitions, quotations, purchase orders, approvals, receiving and 3-way matching |
 | `rentals` | Go | recurring contracts and rental charges |
 | `sales` | Go | opportunities, proposals, sales and invoices |
 | `simulation` | Python | scenarios and load benchmarks |

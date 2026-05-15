@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 from app.config.settings import settings
-from app.infrastructure.postgres import connect
+from app.infrastructure.postgres import connect, fetch_limited
 
 
 def build_delivery_reliability(provider: str | None = None) -> dict:
@@ -138,7 +138,7 @@ def fetch_transition_load(connection, provider_filter_sql: str, params: list[str
 
     with connection.cursor() as cursor:
         cursor.execute(query, params)
-        rows = cursor.fetchall()
+        rows = fetch_limited(cursor)
 
     metrics = {status: 0 for status in ["received", "validated", "queued", "processing", "forwarded", "failed", "rejected", "dead_letter"]}
     for row in rows:
@@ -163,7 +163,7 @@ def fetch_provider_leaderboard(connection, provider_filter_sql: str, params: lis
 
     with connection.cursor() as cursor:
         cursor.execute(query, params)
-        rows = cursor.fetchall()
+        rows = fetch_limited(cursor)
 
     return [
         {

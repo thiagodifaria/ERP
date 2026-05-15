@@ -1,0 +1,175 @@
+openapi: 3.1.0
+info:
+  title: ERP Inventory API
+  version: 0.1.0
+  description: Inventory balances, warehouse locations, movements, reservations and cycle counts
+security:
+  - bearerAuth: []
+paths:
+  /api/inventory/capabilities:
+    get:
+      summary: Read inventory capability catalog
+      responses:
+        "200":
+          description: Capability catalog
+  /api/inventory/summary:
+    get:
+      summary: Read inventory operational summary
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Operational summary
+  /api/inventory/locations:
+    get:
+      summary: List locations
+      x-tenant-required: true
+      responses:
+        "200":
+          description: locations list
+    post:
+      summary: Create location
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created location
+  /api/inventory/locations/{publicId}:
+    get:
+      summary: Read one location
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Location detail
+  /api/inventory/locations/{publicId}/status:
+    patch:
+      summary: Transition location status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned location
+  /api/inventory/movements:
+    get:
+      summary: List movements
+      x-tenant-required: true
+      responses:
+        "200":
+          description: movements list
+    post:
+      summary: Create movement
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created movement
+  /api/inventory/movements/{publicId}:
+    get:
+      summary: Read one movement
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Movement detail
+  /api/inventory/movements/{publicId}/status:
+    patch:
+      summary: Transition movement status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned movement
+  /api/inventory/reservations:
+    get:
+      summary: List reservations
+      x-tenant-required: true
+      responses:
+        "200":
+          description: reservations list
+    post:
+      summary: Create reservation
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created reservation
+  /api/inventory/reservations/{publicId}:
+    get:
+      summary: Read one reservation
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Reservation detail
+  /api/inventory/reservations/{publicId}/status:
+    patch:
+      summary: Transition reservation status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned reservation
+  /api/inventory/balances:
+    get:
+      summary: GET Inventory Balances
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/inventory/costing/summary:
+    get:
+      summary: GET Costing Summary
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/inventory/cycle-counts/variances:
+    get:
+      summary: GET Cycle Counts Variances
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/inventory/cycle-counts:
+    get:
+      summary: GET Inventory Cycle Counts
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create cycle count
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+
+  /api/inventory/cycle-counts/{publicId}:
+    get:
+      summary: GET Cycle Counts
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/inventory/cycle-counts/{publicId}/status:
+    patch:
+      summary: PATCH Status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/inventory/cost-layers:
+    get:
+      summary: GET Inventory Cost Layers
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create cost layer
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

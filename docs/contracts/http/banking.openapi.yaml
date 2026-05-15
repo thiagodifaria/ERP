@@ -1,0 +1,243 @@
+openapi: 3.1.0
+info:
+  title: ERP Banking API
+  version: 0.1.0
+  description: Brazilian banking hub for bank accounts, CNAB, boleto, Pix, statements and reconciliation
+security:
+  - bearerAuth: []
+paths:
+  /api/banking/capabilities:
+    get:
+      summary: Read banking capability catalog
+      responses:
+        "200":
+          description: Capability catalog
+  /api/banking/reconciliation/summary:
+    get:
+      summary: Read banking operational summary
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Operational summary
+  /api/banking/bank-accounts:
+    get:
+      summary: List bank-accounts
+      x-tenant-required: true
+      responses:
+        "200":
+          description: bank-accounts list
+    post:
+      summary: Create bank account
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created bank account
+  /api/banking/bank-accounts/{publicId}:
+    get:
+      summary: Read one bank account
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Bank Account detail
+  /api/banking/bank-accounts/{publicId}/status:
+    patch:
+      summary: Transition bank account status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned bank account
+  /api/banking/cnab-files:
+    get:
+      summary: List cnab-files
+      x-tenant-required: true
+      responses:
+        "200":
+          description: cnab-files list
+    post:
+      summary: Create cnab file
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created cnab file
+  /api/banking/cnab-files/{publicId}:
+    get:
+      summary: Read one cnab file
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Cnab File detail
+  /api/banking/cnab-files/{publicId}/status:
+    patch:
+      summary: Transition cnab file status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned cnab file
+  /api/banking/boletos:
+    get:
+      summary: List boletos
+      x-tenant-required: true
+      responses:
+        "200":
+          description: boletos list
+    post:
+      summary: Create boleto
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created boleto
+  /api/banking/boletos/{publicId}:
+    get:
+      summary: Read one boleto
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Boleto detail
+  /api/banking/boletos/{publicId}/status:
+    patch:
+      summary: Transition boleto status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned boleto
+  /api/banking/pix-charges:
+    get:
+      summary: List pix-charges
+      x-tenant-required: true
+      responses:
+        "200":
+          description: pix-charges list
+    post:
+      summary: Create pix charge
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created pix charge
+  /api/banking/pix-charges/{publicId}:
+    get:
+      summary: Read one pix charge
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Pix Charge detail
+  /api/banking/pix-charges/{publicId}/status:
+    patch:
+      summary: Transition pix charge status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned pix charge
+  /api/banking/reconciliations:
+    get:
+      summary: List reconciliations
+      x-tenant-required: true
+      responses:
+        "200":
+          description: reconciliations list
+    post:
+      summary: Create reconciliation
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created reconciliation
+  /api/banking/reconciliations/{publicId}:
+    get:
+      summary: Read one reconciliation
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Reconciliation detail
+  /api/banking/reconciliations/{publicId}/status:
+    patch:
+      summary: Transition reconciliation status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned reconciliation
+  /api/banking/cnab-files/parse-return:
+    post:
+      summary: POST Cnab Files Parse Return
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/banking/reconciliations/run:
+    post:
+      summary: POST Reconciliations Run
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/banking/bank-statements:
+    get:
+      summary: GET Banking Bank Statements
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create bank statement
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+
+  /api/banking/bank-statements/{publicId}:
+    get:
+      summary: GET Bank Statements
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/banking/pix-refunds:
+    get:
+      summary: GET Banking Pix Refunds
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create Pix refund
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+
+  /api/banking/pix-webhooks:
+    get:
+      summary: GET Banking Pix Webhooks
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Ingest Pix webhook
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+
+  /api/banking/open-finance-connections:
+    get:
+      summary: GET Banking Open Finance Connections
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create Open Finance connection
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

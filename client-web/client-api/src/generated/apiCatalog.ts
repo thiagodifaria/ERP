@@ -34,6 +34,15 @@ export type EventSchemaContract = {
 
 export const services: ServiceContract[] = [
   {
+    "slug": "accounting",
+    "name": "Accounting",
+    "title": "ERP Accounting API",
+    "version": "0.1.0",
+    "description": "Managerial accounting, chart of accounts, immutable journal entries and accounting close",
+    "contractFile": "docs/contracts/http/accounting.openapi.yaml",
+    "endpointCount": 25
+  },
+  {
     "slug": "analytics",
     "name": "Analytics",
     "title": "ERP Analytics API",
@@ -41,6 +50,15 @@ export const services: ServiceContract[] = [
     "description": "Executive reports, adapter catalog, SaaS control and contract governance.",
     "contractFile": "docs/contracts/http/analytics.openapi.yaml",
     "endpointCount": 25
+  },
+  {
+    "slug": "banking",
+    "name": "Banking",
+    "title": "ERP Banking API",
+    "version": "0.1.0",
+    "description": "Brazilian banking hub for bank accounts, CNAB, boleto, Pix, statements and reconciliation",
+    "contractFile": "docs/contracts/http/banking.openapi.yaml",
+    "endpointCount": 33
   },
   {
     "slug": "billing",
@@ -112,7 +130,7 @@ export const services: ServiceContract[] = [
     "version": "0.1.0",
     "description": "Fiscal profile, document operations, privacy rights and compliance governance.",
     "contractFile": "docs/contracts/http/fiscal.openapi.yaml",
-    "endpointCount": 25
+    "endpointCount": 37
   },
   {
     "slug": "identity",
@@ -122,6 +140,15 @@ export const services: ServiceContract[] = [
     "description": "Tenancy, access, sessions, invitations, MFA, recovery and tenant-scoped identity governance.",
     "contractFile": "docs/contracts/http/identity.openapi.yaml",
     "endpointCount": 46
+  },
+  {
+    "slug": "inventory",
+    "name": "Inventory",
+    "title": "ERP Inventory API",
+    "version": "0.1.0",
+    "description": "Inventory balances, warehouse locations, movements, reservations and cycle counts",
+    "contractFile": "docs/contracts/http/inventory.openapi.yaml",
+    "endpointCount": 23
   },
   {
     "slug": "notification",
@@ -140,6 +167,15 @@ export const services: ServiceContract[] = [
     "description": "Tenant capabilities, entitlements, quotas, metering, lifecycle jobs and SaaS governance.",
     "contractFile": "docs/contracts/http/platform-control.openapi.yaml",
     "endpointCount": 40
+  },
+  {
+    "slug": "procurement",
+    "name": "Procurement",
+    "title": "ERP Procurement API",
+    "version": "0.1.0",
+    "description": "Purchase requisitions, quotations, purchase orders, receipts and three-way matching",
+    "contractFile": "docs/contracts/http/procurement.openapi.yaml",
+    "endpointCount": 25
   },
   {
     "slug": "rentals",
@@ -216,6 +252,364 @@ export const services: ServiceContract[] = [
 ];
 
 export const endpoints: EndpointContract[] = [
+  {
+    "id": "accounting:GET:/health/live",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/health/live",
+    "tag": "Health",
+    "description": "Health live do serviço accounting.",
+    "summary": "Health live",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:GET:/health/ready",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/health/ready",
+    "tag": "Health",
+    "description": "Health ready do serviço accounting.",
+    "summary": "Health ready",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:GET:/health/details",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/health/details",
+    "tag": "Health",
+    "description": "Health details do serviço accounting.",
+    "summary": "Health details",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:GET:/api/accounting/capabilities",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/capabilities",
+    "tag": "Accounting",
+    "description": "Read accounting capability catalog",
+    "summary": "Read accounting capability catalog",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:GET:/api/accounting/statements/management-summary",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/statements/management-summary",
+    "tag": "Accounting",
+    "description": "Read accounting operational summary",
+    "summary": "Read accounting operational summary",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:GET:/api/accounting/accounts",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/accounts",
+    "tag": "Accounting",
+    "description": "List accounts",
+    "summary": "List accounts",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:POST:/api/accounting/accounts",
+    "service": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/accounts",
+    "tag": "Accounting",
+    "description": "Create account",
+    "summary": "Create account",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:GET:/api/accounting/accounts/{publicId}",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/accounts/{publicId}",
+    "tag": "Accounting",
+    "description": "Read one account",
+    "summary": "Read one account",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "accounting:PATCH:/api/accounting/accounts/{publicId}/status",
+    "service": "accounting",
+    "method": "PATCH",
+    "path": "/api/accounting/accounts/{publicId}/status",
+    "tag": "Accounting",
+    "description": "Transition account status",
+    "summary": "Transition account status",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "accounting:GET:/api/accounting/journal-entries",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/journal-entries",
+    "tag": "Accounting",
+    "description": "List journal-entries",
+    "summary": "List journal-entries",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:POST:/api/accounting/journal-entries",
+    "service": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/journal-entries",
+    "tag": "Accounting",
+    "description": "Create journal entry",
+    "summary": "Create journal entry",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:GET:/api/accounting/journal-entries/{publicId}",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/journal-entries/{publicId}",
+    "tag": "Accounting",
+    "description": "Read one journal entry",
+    "summary": "Read one journal entry",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "accounting:PATCH:/api/accounting/journal-entries/{publicId}/status",
+    "service": "accounting",
+    "method": "PATCH",
+    "path": "/api/accounting/journal-entries/{publicId}/status",
+    "tag": "Accounting",
+    "description": "Transition journal entry status",
+    "summary": "Transition journal entry status",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "accounting:GET:/api/accounting/period-closes",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/period-closes",
+    "tag": "Accounting",
+    "description": "List period-closes",
+    "summary": "List period-closes",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:POST:/api/accounting/period-closes",
+    "service": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/period-closes",
+    "tag": "Accounting",
+    "description": "Create period close",
+    "summary": "Create period close",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:GET:/api/accounting/period-closes/{publicId}",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/period-closes/{publicId}",
+    "tag": "Accounting",
+    "description": "Read one period close",
+    "summary": "Read one period close",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "accounting:PATCH:/api/accounting/period-closes/{publicId}/status",
+    "service": "accounting",
+    "method": "PATCH",
+    "path": "/api/accounting/period-closes/{publicId}/status",
+    "tag": "Accounting",
+    "description": "Transition period close status",
+    "summary": "Transition period close status",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "accounting:GET:/api/accounting/ledger",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/ledger",
+    "tag": "Accounting",
+    "description": "GET Accounting Ledger",
+    "summary": "GET Accounting Ledger",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:GET:/api/accounting/statements/{statement_kind}",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/statements/{statement_kind}",
+    "tag": "Accounting",
+    "description": "GET Statements",
+    "summary": "GET Statements",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "statement_kind"
+    ]
+  },
+  {
+    "id": "accounting:POST:/api/accounting/posting-rules/apply",
+    "service": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/posting-rules/apply",
+    "tag": "Accounting",
+    "description": "POST Posting Rules Apply",
+    "summary": "POST Posting Rules Apply",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:GET:/api/accounting/cost-centers",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/cost-centers",
+    "tag": "Accounting",
+    "description": "GET Accounting Cost Centers",
+    "summary": "GET Accounting Cost Centers",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:POST:/api/accounting/cost-centers",
+    "service": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/cost-centers",
+    "tag": "Accounting",
+    "description": "Create cost center",
+    "summary": "Create cost center",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:GET:/api/accounting/cost-centers/{publicId}",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/cost-centers/{publicId}",
+    "tag": "Accounting",
+    "description": "GET Cost Centers",
+    "summary": "GET Cost Centers",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "accounting:PATCH:/api/accounting/cost-centers/{publicId}/status",
+    "service": "accounting",
+    "method": "PATCH",
+    "path": "/api/accounting/cost-centers/{publicId}/status",
+    "tag": "Accounting",
+    "description": "PATCH Status",
+    "summary": "PATCH Status",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "accounting:GET:/api/accounting/posting-rules",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/posting-rules",
+    "tag": "Accounting",
+    "description": "GET Accounting Posting Rules",
+    "summary": "GET Accounting Posting Rules",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:POST:/api/accounting/posting-rules",
+    "service": "accounting",
+    "method": "POST",
+    "path": "/api/accounting/posting-rules",
+    "tag": "Accounting",
+    "description": "Create posting rule",
+    "summary": "Create posting rule",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "accounting:GET:/api/accounting/posting-rules/{publicId}",
+    "service": "accounting",
+    "method": "GET",
+    "path": "/api/accounting/posting-rules/{publicId}",
+    "tag": "Accounting",
+    "description": "GET Posting Rules",
+    "summary": "GET Posting Rules",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "accounting:PATCH:/api/accounting/posting-rules/{publicId}/status",
+    "service": "accounting",
+    "method": "PATCH",
+    "path": "/api/accounting/posting-rules/{publicId}/status",
+    "tag": "Accounting",
+    "description": "PATCH Status",
+    "summary": "PATCH Status",
+    "source": "docs/contracts/http/accounting.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
   {
     "id": "analytics:GET:/health/live",
     "service": "analytics",
@@ -550,6 +944,460 @@ export const endpoints: EndpointContract[] = [
     "summary": "Read go-live rollout control",
     "source": "docs/contracts/http/analytics.openapi.yaml",
     "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/health/live",
+    "service": "banking",
+    "method": "GET",
+    "path": "/health/live",
+    "tag": "Health",
+    "description": "Health live do serviço banking.",
+    "summary": "Health live",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/health/ready",
+    "service": "banking",
+    "method": "GET",
+    "path": "/health/ready",
+    "tag": "Health",
+    "description": "Health ready do serviço banking.",
+    "summary": "Health ready",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/health/details",
+    "service": "banking",
+    "method": "GET",
+    "path": "/health/details",
+    "tag": "Health",
+    "description": "Health details do serviço banking.",
+    "summary": "Health details",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/api/banking/capabilities",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/capabilities",
+    "tag": "Banking",
+    "description": "Read banking capability catalog",
+    "summary": "Read banking capability catalog",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/api/banking/reconciliation/summary",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/reconciliation/summary",
+    "tag": "Banking",
+    "description": "Read banking operational summary",
+    "summary": "Read banking operational summary",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/api/banking/bank-accounts",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/bank-accounts",
+    "tag": "Banking",
+    "description": "List bank-accounts",
+    "summary": "List bank-accounts",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:POST:/api/banking/bank-accounts",
+    "service": "banking",
+    "method": "POST",
+    "path": "/api/banking/bank-accounts",
+    "tag": "Banking",
+    "description": "Create bank account",
+    "summary": "Create bank account",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/api/banking/bank-accounts/{publicId}",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/bank-accounts/{publicId}",
+    "tag": "Banking",
+    "description": "Read one bank account",
+    "summary": "Read one bank account",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "banking:PATCH:/api/banking/bank-accounts/{publicId}/status",
+    "service": "banking",
+    "method": "PATCH",
+    "path": "/api/banking/bank-accounts/{publicId}/status",
+    "tag": "Banking",
+    "description": "Transition bank account status",
+    "summary": "Transition bank account status",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "banking:GET:/api/banking/cnab-files",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/cnab-files",
+    "tag": "Banking",
+    "description": "List cnab-files",
+    "summary": "List cnab-files",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:POST:/api/banking/cnab-files",
+    "service": "banking",
+    "method": "POST",
+    "path": "/api/banking/cnab-files",
+    "tag": "Banking",
+    "description": "Create cnab file",
+    "summary": "Create cnab file",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/api/banking/cnab-files/{publicId}",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/cnab-files/{publicId}",
+    "tag": "Banking",
+    "description": "Read one cnab file",
+    "summary": "Read one cnab file",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "banking:PATCH:/api/banking/cnab-files/{publicId}/status",
+    "service": "banking",
+    "method": "PATCH",
+    "path": "/api/banking/cnab-files/{publicId}/status",
+    "tag": "Banking",
+    "description": "Transition cnab file status",
+    "summary": "Transition cnab file status",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "banking:GET:/api/banking/boletos",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/boletos",
+    "tag": "Banking",
+    "description": "List boletos",
+    "summary": "List boletos",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:POST:/api/banking/boletos",
+    "service": "banking",
+    "method": "POST",
+    "path": "/api/banking/boletos",
+    "tag": "Banking",
+    "description": "Create boleto",
+    "summary": "Create boleto",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/api/banking/boletos/{publicId}",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/boletos/{publicId}",
+    "tag": "Banking",
+    "description": "Read one boleto",
+    "summary": "Read one boleto",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "banking:PATCH:/api/banking/boletos/{publicId}/status",
+    "service": "banking",
+    "method": "PATCH",
+    "path": "/api/banking/boletos/{publicId}/status",
+    "tag": "Banking",
+    "description": "Transition boleto status",
+    "summary": "Transition boleto status",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "banking:GET:/api/banking/pix-charges",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/pix-charges",
+    "tag": "Banking",
+    "description": "List pix-charges",
+    "summary": "List pix-charges",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:POST:/api/banking/pix-charges",
+    "service": "banking",
+    "method": "POST",
+    "path": "/api/banking/pix-charges",
+    "tag": "Banking",
+    "description": "Create pix charge",
+    "summary": "Create pix charge",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/api/banking/pix-charges/{publicId}",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/pix-charges/{publicId}",
+    "tag": "Banking",
+    "description": "Read one pix charge",
+    "summary": "Read one pix charge",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "banking:PATCH:/api/banking/pix-charges/{publicId}/status",
+    "service": "banking",
+    "method": "PATCH",
+    "path": "/api/banking/pix-charges/{publicId}/status",
+    "tag": "Banking",
+    "description": "Transition pix charge status",
+    "summary": "Transition pix charge status",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "banking:GET:/api/banking/reconciliations",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/reconciliations",
+    "tag": "Banking",
+    "description": "List reconciliations",
+    "summary": "List reconciliations",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:POST:/api/banking/reconciliations",
+    "service": "banking",
+    "method": "POST",
+    "path": "/api/banking/reconciliations",
+    "tag": "Banking",
+    "description": "Create reconciliation",
+    "summary": "Create reconciliation",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/api/banking/reconciliations/{publicId}",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/reconciliations/{publicId}",
+    "tag": "Banking",
+    "description": "Read one reconciliation",
+    "summary": "Read one reconciliation",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "banking:PATCH:/api/banking/reconciliations/{publicId}/status",
+    "service": "banking",
+    "method": "PATCH",
+    "path": "/api/banking/reconciliations/{publicId}/status",
+    "tag": "Banking",
+    "description": "Transition reconciliation status",
+    "summary": "Transition reconciliation status",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "banking:POST:/api/banking/cnab-files/parse-return",
+    "service": "banking",
+    "method": "POST",
+    "path": "/api/banking/cnab-files/parse-return",
+    "tag": "Banking",
+    "description": "POST Cnab Files Parse Return",
+    "summary": "POST Cnab Files Parse Return",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "banking:POST:/api/banking/reconciliations/run",
+    "service": "banking",
+    "method": "POST",
+    "path": "/api/banking/reconciliations/run",
+    "tag": "Banking",
+    "description": "POST Reconciliations Run",
+    "summary": "POST Reconciliations Run",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/api/banking/bank-statements",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/bank-statements",
+    "tag": "Banking",
+    "description": "GET Banking Bank Statements",
+    "summary": "GET Banking Bank Statements",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:POST:/api/banking/bank-statements",
+    "service": "banking",
+    "method": "POST",
+    "path": "/api/banking/bank-statements",
+    "tag": "Banking",
+    "description": "Create bank statement",
+    "summary": "Create bank statement",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/api/banking/bank-statements/{publicId}",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/bank-statements/{publicId}",
+    "tag": "Banking",
+    "description": "GET Bank Statements",
+    "summary": "GET Bank Statements",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "banking:GET:/api/banking/pix-refunds",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/pix-refunds",
+    "tag": "Banking",
+    "description": "GET Banking Pix Refunds",
+    "summary": "GET Banking Pix Refunds",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:POST:/api/banking/pix-refunds",
+    "service": "banking",
+    "method": "POST",
+    "path": "/api/banking/pix-refunds",
+    "tag": "Banking",
+    "description": "Create Pix refund",
+    "summary": "Create Pix refund",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/api/banking/pix-webhooks",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/pix-webhooks",
+    "tag": "Banking",
+    "description": "GET Banking Pix Webhooks",
+    "summary": "GET Banking Pix Webhooks",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:POST:/api/banking/pix-webhooks",
+    "service": "banking",
+    "method": "POST",
+    "path": "/api/banking/pix-webhooks",
+    "tag": "Banking",
+    "description": "Ingest Pix webhook",
+    "summary": "Ingest Pix webhook",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "banking:GET:/api/banking/open-finance-connections",
+    "service": "banking",
+    "method": "GET",
+    "path": "/api/banking/open-finance-connections",
+    "tag": "Banking",
+    "description": "GET Banking Open Finance Connections",
+    "summary": "GET Banking Open Finance Connections",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "banking:POST:/api/banking/open-finance-connections",
+    "service": "banking",
+    "method": "POST",
+    "path": "/api/banking/open-finance-connections",
+    "tag": "Banking",
+    "description": "Create Open Finance connection",
+    "summary": "Create Open Finance connection",
+    "source": "docs/contracts/http/banking.openapi.yaml",
+    "hasBody": true,
     "pathParams": []
   },
   {
@@ -2920,6 +3768,150 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
+    "id": "fiscal:GET:/api/fiscal/issuance-queue",
+    "service": "fiscal",
+    "method": "GET",
+    "path": "/api/fiscal/issuance-queue",
+    "tag": "Fiscal",
+    "description": "List NF-e/NFS-e issuance queue items",
+    "summary": "List NF-e/NFS-e issuance queue items",
+    "source": "docs/contracts/http/fiscal.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "fiscal:POST:/api/fiscal/issuance-queue",
+    "service": "fiscal",
+    "method": "POST",
+    "path": "/api/fiscal/issuance-queue",
+    "tag": "Fiscal",
+    "description": "Create NF-e/NFS-e issuance queue item",
+    "summary": "Create NF-e/NFS-e issuance queue item",
+    "source": "docs/contracts/http/fiscal.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "fiscal:GET:/api/fiscal/certificates",
+    "service": "fiscal",
+    "method": "GET",
+    "path": "/api/fiscal/certificates",
+    "tag": "Fiscal",
+    "description": "List fiscal certificate vault posture records",
+    "summary": "List fiscal certificate vault posture records",
+    "source": "docs/contracts/http/fiscal.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "fiscal:POST:/api/fiscal/certificates",
+    "service": "fiscal",
+    "method": "POST",
+    "path": "/api/fiscal/certificates",
+    "tag": "Fiscal",
+    "description": "Register fiscal certificate vault posture record",
+    "summary": "Register fiscal certificate vault posture record",
+    "source": "docs/contracts/http/fiscal.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "fiscal:GET:/api/fiscal/sped-exports",
+    "service": "fiscal",
+    "method": "GET",
+    "path": "/api/fiscal/sped-exports",
+    "tag": "Fiscal",
+    "description": "List SPED/EFD export jobs",
+    "summary": "List SPED/EFD export jobs",
+    "source": "docs/contracts/http/fiscal.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "fiscal:POST:/api/fiscal/sped-exports",
+    "service": "fiscal",
+    "method": "POST",
+    "path": "/api/fiscal/sped-exports",
+    "tag": "Fiscal",
+    "description": "Create SPED/EFD export job",
+    "summary": "Create SPED/EFD export job",
+    "source": "docs/contracts/http/fiscal.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "fiscal:GET:/api/fiscal/contingency-plans",
+    "service": "fiscal",
+    "method": "GET",
+    "path": "/api/fiscal/contingency-plans",
+    "tag": "Fiscal",
+    "description": "List fiscal contingency plans",
+    "summary": "List fiscal contingency plans",
+    "source": "docs/contracts/http/fiscal.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "fiscal:POST:/api/fiscal/contingency-plans",
+    "service": "fiscal",
+    "method": "POST",
+    "path": "/api/fiscal/contingency-plans",
+    "tag": "Fiscal",
+    "description": "Create fiscal contingency plan",
+    "summary": "Create fiscal contingency plan",
+    "source": "docs/contracts/http/fiscal.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "fiscal:GET:/api/fiscal/artifacts",
+    "service": "fiscal",
+    "method": "GET",
+    "path": "/api/fiscal/artifacts",
+    "tag": "Fiscal",
+    "description": "GET Fiscal Artifacts",
+    "summary": "GET Fiscal Artifacts",
+    "source": "docs/contracts/http/fiscal.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "fiscal:POST:/api/fiscal/artifacts",
+    "service": "fiscal",
+    "method": "POST",
+    "path": "/api/fiscal/artifacts",
+    "tag": "Fiscal",
+    "description": "Register XML/PDF fiscal artifact",
+    "summary": "Register XML/PDF fiscal artifact",
+    "source": "docs/contracts/http/fiscal.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "fiscal:GET:/api/fiscal/reconciliations",
+    "service": "fiscal",
+    "method": "GET",
+    "path": "/api/fiscal/reconciliations",
+    "tag": "Fiscal",
+    "description": "GET Fiscal Reconciliations",
+    "summary": "GET Fiscal Reconciliations",
+    "source": "docs/contracts/http/fiscal.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "fiscal:POST:/api/fiscal/reconciliations",
+    "service": "fiscal",
+    "method": "POST",
+    "path": "/api/fiscal/reconciliations",
+    "tag": "Fiscal",
+    "description": "Run fiscal finance reconciliation",
+    "summary": "Run fiscal finance reconciliation",
+    "source": "docs/contracts/http/fiscal.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
     "id": "identity:POST:/api/identity/invites/{inviteToken}/accept",
     "service": "identity",
     "method": "POST",
@@ -3567,6 +4559,334 @@ export const endpoints: EndpointContract[] = [
     "summary": "Read health ready",
     "source": "docs/contracts/http/identity.openapi.yaml",
     "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:GET:/health/live",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/health/live",
+    "tag": "Health",
+    "description": "Health live do serviço inventory.",
+    "summary": "Health live",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:GET:/health/ready",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/health/ready",
+    "tag": "Health",
+    "description": "Health ready do serviço inventory.",
+    "summary": "Health ready",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:GET:/health/details",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/health/details",
+    "tag": "Health",
+    "description": "Health details do serviço inventory.",
+    "summary": "Health details",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:GET:/api/inventory/capabilities",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/capabilities",
+    "tag": "Inventory",
+    "description": "Read inventory capability catalog",
+    "summary": "Read inventory capability catalog",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:GET:/api/inventory/summary",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/summary",
+    "tag": "Inventory",
+    "description": "Read inventory operational summary",
+    "summary": "Read inventory operational summary",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:GET:/api/inventory/locations",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/locations",
+    "tag": "Inventory",
+    "description": "List locations",
+    "summary": "List locations",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:POST:/api/inventory/locations",
+    "service": "inventory",
+    "method": "POST",
+    "path": "/api/inventory/locations",
+    "tag": "Inventory",
+    "description": "Create location",
+    "summary": "Create location",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:GET:/api/inventory/locations/{publicId}",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/locations/{publicId}",
+    "tag": "Inventory",
+    "description": "Read one location",
+    "summary": "Read one location",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "inventory:PATCH:/api/inventory/locations/{publicId}/status",
+    "service": "inventory",
+    "method": "PATCH",
+    "path": "/api/inventory/locations/{publicId}/status",
+    "tag": "Inventory",
+    "description": "Transition location status",
+    "summary": "Transition location status",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "inventory:GET:/api/inventory/movements",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/movements",
+    "tag": "Inventory",
+    "description": "List movements",
+    "summary": "List movements",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:POST:/api/inventory/movements",
+    "service": "inventory",
+    "method": "POST",
+    "path": "/api/inventory/movements",
+    "tag": "Inventory",
+    "description": "Create movement",
+    "summary": "Create movement",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:GET:/api/inventory/movements/{publicId}",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/movements/{publicId}",
+    "tag": "Inventory",
+    "description": "Read one movement",
+    "summary": "Read one movement",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "inventory:PATCH:/api/inventory/movements/{publicId}/status",
+    "service": "inventory",
+    "method": "PATCH",
+    "path": "/api/inventory/movements/{publicId}/status",
+    "tag": "Inventory",
+    "description": "Transition movement status",
+    "summary": "Transition movement status",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "inventory:GET:/api/inventory/reservations",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/reservations",
+    "tag": "Inventory",
+    "description": "List reservations",
+    "summary": "List reservations",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:POST:/api/inventory/reservations",
+    "service": "inventory",
+    "method": "POST",
+    "path": "/api/inventory/reservations",
+    "tag": "Inventory",
+    "description": "Create reservation",
+    "summary": "Create reservation",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:GET:/api/inventory/reservations/{publicId}",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/reservations/{publicId}",
+    "tag": "Inventory",
+    "description": "Read one reservation",
+    "summary": "Read one reservation",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "inventory:PATCH:/api/inventory/reservations/{publicId}/status",
+    "service": "inventory",
+    "method": "PATCH",
+    "path": "/api/inventory/reservations/{publicId}/status",
+    "tag": "Inventory",
+    "description": "Transition reservation status",
+    "summary": "Transition reservation status",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "inventory:GET:/api/inventory/balances",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/balances",
+    "tag": "Inventory",
+    "description": "GET Inventory Balances",
+    "summary": "GET Inventory Balances",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:GET:/api/inventory/costing/summary",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/costing/summary",
+    "tag": "Inventory",
+    "description": "GET Costing Summary",
+    "summary": "GET Costing Summary",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:GET:/api/inventory/cycle-counts/variances",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/cycle-counts/variances",
+    "tag": "Inventory",
+    "description": "GET Cycle Counts Variances",
+    "summary": "GET Cycle Counts Variances",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:GET:/api/inventory/cycle-counts",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/cycle-counts",
+    "tag": "Inventory",
+    "description": "GET Inventory Cycle Counts",
+    "summary": "GET Inventory Cycle Counts",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:POST:/api/inventory/cycle-counts",
+    "service": "inventory",
+    "method": "POST",
+    "path": "/api/inventory/cycle-counts",
+    "tag": "Inventory",
+    "description": "Create cycle count",
+    "summary": "Create cycle count",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:GET:/api/inventory/cycle-counts/{publicId}",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/cycle-counts/{publicId}",
+    "tag": "Inventory",
+    "description": "GET Cycle Counts",
+    "summary": "GET Cycle Counts",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "inventory:PATCH:/api/inventory/cycle-counts/{publicId}/status",
+    "service": "inventory",
+    "method": "PATCH",
+    "path": "/api/inventory/cycle-counts/{publicId}/status",
+    "tag": "Inventory",
+    "description": "PATCH Status",
+    "summary": "PATCH Status",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "inventory:GET:/api/inventory/cost-layers",
+    "service": "inventory",
+    "method": "GET",
+    "path": "/api/inventory/cost-layers",
+    "tag": "Inventory",
+    "description": "GET Inventory Cost Layers",
+    "summary": "GET Inventory Cost Layers",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "inventory:POST:/api/inventory/cost-layers",
+    "service": "inventory",
+    "method": "POST",
+    "path": "/api/inventory/cost-layers",
+    "tag": "Inventory",
+    "description": "Create cost layer",
+    "summary": "Create cost layer",
+    "source": "docs/contracts/http/inventory.openapi.yaml",
+    "hasBody": true,
     "pathParams": []
   },
   {
@@ -4310,6 +5630,362 @@ export const endpoints: EndpointContract[] = [
     "hasBody": true,
     "pathParams": [
       "tenantSlug",
+      "publicId"
+    ]
+  },
+  {
+    "id": "procurement:GET:/health/live",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/health/live",
+    "tag": "Health",
+    "description": "Health live do serviço procurement.",
+    "summary": "Health live",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:GET:/health/ready",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/health/ready",
+    "tag": "Health",
+    "description": "Health ready do serviço procurement.",
+    "summary": "Health ready",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:GET:/health/details",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/health/details",
+    "tag": "Health",
+    "description": "Health details do serviço procurement.",
+    "summary": "Health details",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:GET:/api/procurement/capabilities",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/api/procurement/capabilities",
+    "tag": "Procurement",
+    "description": "Read procurement capability catalog",
+    "summary": "Read procurement capability catalog",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:GET:/api/procurement/matching/summary",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/api/procurement/matching/summary",
+    "tag": "Procurement",
+    "description": "Read procurement operational summary",
+    "summary": "Read procurement operational summary",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:GET:/api/procurement/requisitions",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/api/procurement/requisitions",
+    "tag": "Procurement",
+    "description": "List requisitions",
+    "summary": "List requisitions",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:POST:/api/procurement/requisitions",
+    "service": "procurement",
+    "method": "POST",
+    "path": "/api/procurement/requisitions",
+    "tag": "Procurement",
+    "description": "Create requisition",
+    "summary": "Create requisition",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:GET:/api/procurement/requisitions/{publicId}",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/api/procurement/requisitions/{publicId}",
+    "tag": "Procurement",
+    "description": "Read one requisition",
+    "summary": "Read one requisition",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "procurement:PATCH:/api/procurement/requisitions/{publicId}/status",
+    "service": "procurement",
+    "method": "PATCH",
+    "path": "/api/procurement/requisitions/{publicId}/status",
+    "tag": "Procurement",
+    "description": "Transition requisition status",
+    "summary": "Transition requisition status",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "procurement:GET:/api/procurement/quotations",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/api/procurement/quotations",
+    "tag": "Procurement",
+    "description": "List quotations",
+    "summary": "List quotations",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:POST:/api/procurement/quotations",
+    "service": "procurement",
+    "method": "POST",
+    "path": "/api/procurement/quotations",
+    "tag": "Procurement",
+    "description": "Create quotation",
+    "summary": "Create quotation",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:GET:/api/procurement/quotations/{publicId}",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/api/procurement/quotations/{publicId}",
+    "tag": "Procurement",
+    "description": "Read one quotation",
+    "summary": "Read one quotation",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "procurement:PATCH:/api/procurement/quotations/{publicId}/status",
+    "service": "procurement",
+    "method": "PATCH",
+    "path": "/api/procurement/quotations/{publicId}/status",
+    "tag": "Procurement",
+    "description": "Transition quotation status",
+    "summary": "Transition quotation status",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "procurement:GET:/api/procurement/purchase-orders",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/api/procurement/purchase-orders",
+    "tag": "Procurement",
+    "description": "List purchase-orders",
+    "summary": "List purchase-orders",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:POST:/api/procurement/purchase-orders",
+    "service": "procurement",
+    "method": "POST",
+    "path": "/api/procurement/purchase-orders",
+    "tag": "Procurement",
+    "description": "Create purchase order",
+    "summary": "Create purchase order",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:GET:/api/procurement/purchase-orders/{publicId}",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/api/procurement/purchase-orders/{publicId}",
+    "tag": "Procurement",
+    "description": "Read one purchase order",
+    "summary": "Read one purchase order",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "procurement:PATCH:/api/procurement/purchase-orders/{publicId}/status",
+    "service": "procurement",
+    "method": "PATCH",
+    "path": "/api/procurement/purchase-orders/{publicId}/status",
+    "tag": "Procurement",
+    "description": "Transition purchase order status",
+    "summary": "Transition purchase order status",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "procurement:GET:/api/procurement/receipts",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/api/procurement/receipts",
+    "tag": "Procurement",
+    "description": "List receipts",
+    "summary": "List receipts",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:POST:/api/procurement/receipts",
+    "service": "procurement",
+    "method": "POST",
+    "path": "/api/procurement/receipts",
+    "tag": "Procurement",
+    "description": "Create receipt",
+    "summary": "Create receipt",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:GET:/api/procurement/receipts/{publicId}",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/api/procurement/receipts/{publicId}",
+    "tag": "Procurement",
+    "description": "Read one receipt",
+    "summary": "Read one receipt",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "procurement:PATCH:/api/procurement/receipts/{publicId}/status",
+    "service": "procurement",
+    "method": "PATCH",
+    "path": "/api/procurement/receipts/{publicId}/status",
+    "tag": "Procurement",
+    "description": "Transition receipt status",
+    "summary": "Transition receipt status",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "procurement:POST:/api/procurement/approvals/apply",
+    "service": "procurement",
+    "method": "POST",
+    "path": "/api/procurement/approvals/apply",
+    "tag": "Procurement",
+    "description": "POST Approvals Apply",
+    "summary": "POST Approvals Apply",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:POST:/api/procurement/matching/three-way",
+    "service": "procurement",
+    "method": "POST",
+    "path": "/api/procurement/matching/three-way",
+    "tag": "Procurement",
+    "description": "POST Matching Three Way",
+    "summary": "POST Matching Three Way",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:GET:/api/procurement/approvals",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/api/procurement/approvals",
+    "tag": "Procurement",
+    "description": "GET Procurement Approvals",
+    "summary": "GET Procurement Approvals",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:POST:/api/procurement/approvals",
+    "service": "procurement",
+    "method": "POST",
+    "path": "/api/procurement/approvals",
+    "tag": "Procurement",
+    "description": "Create approval",
+    "summary": "Create approval",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:GET:/api/procurement/approvals/{publicId}",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/api/procurement/approvals/{publicId}",
+    "tag": "Procurement",
+    "description": "GET Approvals",
+    "summary": "GET Approvals",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "procurement:GET:/api/procurement/three-way-matches",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/api/procurement/three-way-matches",
+    "tag": "Procurement",
+    "description": "GET Procurement Three Way Matches",
+    "summary": "GET Procurement Three Way Matches",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "procurement:GET:/api/procurement/three-way-matches/{publicId}",
+    "service": "procurement",
+    "method": "GET",
+    "path": "/api/procurement/three-way-matches/{publicId}",
+    "tag": "Procurement",
+    "description": "GET Three Way Matches",
+    "summary": "GET Three Way Matches",
+    "source": "docs/contracts/http/procurement.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
       "publicId"
     ]
   },

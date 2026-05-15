@@ -164,6 +164,86 @@ paths:
       responses:
         "200":
           description: Compliance summary
+  /api/fiscal/issuance-queue:
+    get:
+      summary: List NF-e/NFS-e issuance queue items
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Issuance queue
+    post:
+      summary: Create NF-e/NFS-e issuance queue item
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created issuance item
+  /api/fiscal/certificates:
+    get:
+      summary: List fiscal certificate vault posture records
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Certificate records
+    post:
+      summary: Register fiscal certificate vault posture record
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created certificate record
+  /api/fiscal/sped-exports:
+    get:
+      summary: List SPED/EFD export jobs
+      x-tenant-required: true
+      responses:
+        "200":
+          description: SPED export jobs
+    post:
+      summary: Create SPED/EFD export job
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created SPED export job
+  /api/fiscal/contingency-plans:
+    get:
+      summary: List fiscal contingency plans
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Fiscal contingency plans
+    post:
+      summary: Create fiscal contingency plan
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created fiscal contingency plan
+  /api/fiscal/artifacts:
+    get:
+      summary: GET Fiscal Artifacts
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Register XML/PDF fiscal artifact
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+
+  /api/fiscal/reconciliations:
+    get:
+      summary: GET Fiscal Reconciliations
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Run fiscal finance reconciliation
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+
 components:
   securitySchemes:
     bearerAuth:

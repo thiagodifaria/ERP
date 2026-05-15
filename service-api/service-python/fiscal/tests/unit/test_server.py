@@ -153,3 +153,67 @@ def test_capabilities_and_audit_routes_return_operational_payload() -> None:
     assert consent_response.status_code == 200
     assert any(item["capabilityKey"] == "fiscal.nfe" for item in capabilities_response.json()["capabilities"])
     assert any(item["capabilityKey"] == "fiscal.certificate.a1" for item in capabilities_response.json()["capabilities"])
+
+
+def test_deep_fiscal_queue_certificates_artifacts_contingency_sped_and_reconciliation() -> None:
+    issuance = client.post(
+        "/api/fiscal/issuance-queue",
+        json={
+            "tenantSlug": "bootstrap-ops",
+            "recordKey": "ISS-001",
+            "name": "NF-e 1001",
+            "status": "queued",
+            "documentKind": "nfe",
+        },
+    )
+    certificate = client.post(
+        "/api/fiscal/certificates",
+        json={
+            "tenantSlug": "bootstrap-ops",
+            "recordKey": "CERT-A1",
+            "name": "Certificado A1",
+            "status": "active",
+            "certificateType": "a1",
+            "vaultKey": "vault://fiscal/a1",
+        },
+    )
+    artifact = client.post(
+        "/api/fiscal/artifacts",
+        json={
+            "tenantSlug": "bootstrap-ops",
+            "recordKey": "XML-NFE-1001",
+            "name": "XML/PDF NF-e 1001",
+            "status": "stored",
+            "xmlStorageKey": "fiscal/xml/nfe-1001.xml",
+            "pdfStorageKey": "fiscal/pdf/nfe-1001.pdf",
+        },
+    )
+    sped = client.post(
+        "/api/fiscal/sped-exports",
+        json={"tenantSlug": "bootstrap-ops", "recordKey": "SPED-2026-05", "name": "SPED maio", "status": "queued"},
+    )
+    contingency = client.post(
+        "/api/fiscal/contingency-plans",
+        json={"tenantSlug": "bootstrap-ops", "recordKey": "SVC-AN", "name": "Contingencia SVC-AN", "status": "ready"},
+    )
+    reconciliation = client.post(
+        "/api/fiscal/reconciliations",
+        json={
+            "tenantSlug": "bootstrap-ops",
+            "recordKey": "FISC-FIN-001",
+            "fiscalDocumentPublicId": "fiscal-doc-001",
+            "financeMovementPublicId": "finance-001",
+            "fiscalAmountCents": 10000,
+            "financeAmountCents": 10000,
+        },
+    )
+
+    assert issuance.status_code == 200
+    assert certificate.status_code == 200
+    assert artifact.status_code == 200
+    assert sped.status_code == 200
+    assert contingency.status_code == 200
+    assert reconciliation.status_code == 200
+    assert reconciliation.json()["status"] == "matched"
+    assert client.get("/api/fiscal/artifacts?tenant_slug=bootstrap-ops").json()[0]["payload"]["xmlStorageKey"].endswith(".xml")
+    assert client.get("/api/fiscal/reconciliations?tenant_slug=bootstrap-ops").status_code == 200

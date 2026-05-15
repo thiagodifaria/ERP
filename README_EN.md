@@ -19,9 +19,9 @@ This README gives a complete but compact view of the project. Topic-specific det
 
 ## Project Shape
 
-- 20 HTTP services with OpenAPI contracts.
-- 206 versioned HTTP endpoints.
-- 12 versioned event schemas.
+- 24 HTTP services with OpenAPI contracts.
+- 542 versioned HTTP endpoints.
+- 15 versioned event schemas.
 - Contracts under `docs/contracts/`.
 - Container runtime through `infra/docker-compose.yml`.
 - Operational entrypoint through `./scripts/build.sh`.
@@ -101,7 +101,9 @@ The console uses the local Vite proxy to call backend services when the stack is
 
 | Service | Stack | Path | Responsibility |
 |---------|-------|------|----------------|
+| `accounting` | Python | `service-api/service-python/accounting` | management accounting, cost centers, posting rules, ledger, statements and close |
 | `analytics` | Python | `service-api/service-python/analytics` | executive reports, contract governance, readiness and operational views |
+| `banking` | Python | `service-api/service-python/banking` | CNAB, boletos, bank statements, reconciliation, Pix charges/refunds/webhooks and Open Finance |
 | `billing` | .NET | `service-api/service-csharp/billing` | plans, subscriptions, invoices, usage pricing and payment attempts |
 | `catalog` | Python | `service-api/service-python/catalog` | categories, items, version history, bulk creation and consumer contracts |
 | `crm` | Go | `service-api/service-golang/crm` | leads, customers, pipeline configuration and CNPJ enrichment |
@@ -109,10 +111,12 @@ The console uses the local Vite proxy to call backend services when the stack is
 | `edge` | Go | `service-api/service-golang/edge` | public operational cockpit and cross-service reads |
 | `engagement` | TypeScript | `service-api/service-typescript/engagement` | provider capabilities, inbound events, touchpoints and conversations |
 | `finance` | .NET | `service-api/service-csharp/finance` | receivables, projections, commission holds and financial activity |
-| `fiscal` | Python | `service-api/service-python/fiscal` | fiscal profiles, tax documents, retention, consent, privacy and audit |
+| `fiscal` | Python | `service-api/service-python/fiscal` | fiscal profiles, issuance, certificates, contingency, SPED, tax documents, privacy and audit |
 | `identity` | .NET | `service-api/service-csharp/identity` | tenants, users, sessions, invitations, roles and MFA posture |
+| `inventory` | Python | `service-api/service-python/inventory` | location balances, stock movements, reservations, FIFO/average costing and cycle counts |
 | `notification` | Python | `service-api/service-python/notification` | preferences, notification center and delivery state |
 | `platform-control` | Python | `service-api/service-python/platform-control` | capabilities, providers, entitlements, quotas, lifecycle and go-live |
+| `procurement` | Python | `service-api/service-python/procurement` | requisitions, quotations, purchase orders, approvals, receiving and 3-way matching |
 | `rentals` | Go | `service-api/service-golang/rentals` | recurring contracts and charge lifecycle |
 | `sales` | Go | `service-api/service-golang/sales` | opportunities, proposals, sales, invoices and commissions |
 | `simulation` | Python | `service-api/service-python/simulation` | scenario runs and load benchmarks |

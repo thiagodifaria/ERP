@@ -16,6 +16,19 @@ Este documento consolida os controles de seguranca verificaveis do ERP.
 - Access links de documents sao assinados, expiraveis, revogaveis e auditados com persistencia relacional de revogacoes e eventos.
 - Uploads com assinatura maliciosa conhecida sao bloqueados antes de virarem attachment.
 - Logs, contratos e portal nao devem expor segredo, token, senha ou provider credential.
+- Exportacao, portabilidade e anonimizacao passam por politica de dominio, preservando evidencias fiscais, financeiras e auditorias com obrigacao legal de retencao.
+- Novas features com dado pessoal precisam declarar finalidade, retencao e exposicao em contrato/evento/log antes de entrar na superficie publica.
+
+## Inventario LGPD
+
+| Dominio | Dados pessoais | Sensibilidade | Finalidade |
+| --- | --- | --- | --- |
+| `identity` | nome, e-mail, papeis, sessoes, MFA, auditoria | alta | autenticacao, autorizacao e trilha de acesso |
+| `crm` | leads, clientes, contatos, notas, anexos vinculados | alta | relacionamento comercial e funil |
+| `engagement` | touchpoints, entregas, callbacks e respostas | alta | comunicacao transacional/comercial |
+| `support` | casos, comentarios, filas e SLA | media/alta | atendimento e evidencias de suporte |
+| `billing`/`finance` | cobranca, recebiveis, caixa, movimentos e reconciliacao | alta | controle financeiro e auditoria |
+| `documents`/`fiscal` | arquivos, documentos fiscais, consentimentos e privacy requests | critica | guarda documental, compliance e retencao legal |
 
 ## Suite De Seguranca
 
@@ -29,5 +42,5 @@ Este documento consolida os controles de seguranca verificaveis do ERP.
 - envelope/event registry;
 - portal de integracao;
 - inventario LGPD;
-- SRE/runbooks;
+- SLOs/runbooks em `docs/OPERACOES.md`;
 - guardrails de poliglotismo.

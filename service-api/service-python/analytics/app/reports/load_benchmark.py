@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import json
 
 from app.config.settings import settings
-from app.infrastructure.postgres import connect
+from app.infrastructure.postgres import connect, fetch_limited
 
 
 def build_load_benchmark(tenant_slug: str | None = None) -> dict:
@@ -60,7 +60,7 @@ def build_postgres_load_benchmark(tenant_slug: str | None = None) -> dict:
                 """,
                 params,
             )
-            rows = cursor.fetchall()
+            rows = fetch_limited(cursor)
 
     recent = []
     stable = 0

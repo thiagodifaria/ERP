@@ -22,14 +22,18 @@ const serviceTargets: Record<string, string> = {
   support: "http://localhost:8099",
   supplier: "http://localhost:8100",
   notification: "http://localhost:8101",
-  fiscal: "http://localhost:8102"
+  fiscal: "http://localhost:8102",
+  accounting: "http://localhost:8103",
+  inventory: "http://localhost:8104",
+  procurement: "http://localhost:8105",
+  banking: "http://localhost:8106"
 };
 
 export default defineConfig({
   plugins: [react()],
   server: {
     fs: {
-      allow: [path.resolve(__dirname, "../..")]
+      allow: [path.resolve(__dirname)]
     },
     proxy: Object.fromEntries(
       Object.entries(serviceTargets).map(([service, target]) => [

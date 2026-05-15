@@ -1,0 +1,188 @@
+openapi: 3.1.0
+info:
+  title: ERP Procurement API
+  version: 0.1.0
+  description: Purchase requisitions, quotations, purchase orders, receipts and three-way matching
+security:
+  - bearerAuth: []
+paths:
+  /api/procurement/capabilities:
+    get:
+      summary: Read procurement capability catalog
+      responses:
+        "200":
+          description: Capability catalog
+  /api/procurement/matching/summary:
+    get:
+      summary: Read procurement operational summary
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Operational summary
+  /api/procurement/requisitions:
+    get:
+      summary: List requisitions
+      x-tenant-required: true
+      responses:
+        "200":
+          description: requisitions list
+    post:
+      summary: Create requisition
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created requisition
+  /api/procurement/requisitions/{publicId}:
+    get:
+      summary: Read one requisition
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Requisition detail
+  /api/procurement/requisitions/{publicId}/status:
+    patch:
+      summary: Transition requisition status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned requisition
+  /api/procurement/quotations:
+    get:
+      summary: List quotations
+      x-tenant-required: true
+      responses:
+        "200":
+          description: quotations list
+    post:
+      summary: Create quotation
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created quotation
+  /api/procurement/quotations/{publicId}:
+    get:
+      summary: Read one quotation
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Quotation detail
+  /api/procurement/quotations/{publicId}/status:
+    patch:
+      summary: Transition quotation status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned quotation
+  /api/procurement/purchase-orders:
+    get:
+      summary: List purchase-orders
+      x-tenant-required: true
+      responses:
+        "200":
+          description: purchase-orders list
+    post:
+      summary: Create purchase order
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created purchase order
+  /api/procurement/purchase-orders/{publicId}:
+    get:
+      summary: Read one purchase order
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Purchase Order detail
+  /api/procurement/purchase-orders/{publicId}/status:
+    patch:
+      summary: Transition purchase order status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned purchase order
+  /api/procurement/receipts:
+    get:
+      summary: List receipts
+      x-tenant-required: true
+      responses:
+        "200":
+          description: receipts list
+    post:
+      summary: Create receipt
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created receipt
+  /api/procurement/receipts/{publicId}:
+    get:
+      summary: Read one receipt
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Receipt detail
+  /api/procurement/receipts/{publicId}/status:
+    patch:
+      summary: Transition receipt status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned receipt
+  /api/procurement/approvals/apply:
+    post:
+      summary: POST Approvals Apply
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/procurement/matching/three-way:
+    post:
+      summary: POST Matching Three Way
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/procurement/approvals:
+    get:
+      summary: GET Procurement Approvals
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create approval
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+
+  /api/procurement/approvals/{publicId}:
+    get:
+      summary: GET Approvals
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/procurement/three-way-matches:
+    get:
+      summary: GET Procurement Three Way Matches
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/procurement/three-way-matches/{publicId}:
+    get:
+      summary: GET Three Way Matches
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

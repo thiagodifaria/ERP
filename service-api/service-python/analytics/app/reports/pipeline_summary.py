@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 import psycopg
 
 from app.config.settings import settings
-from app.infrastructure.postgres import connect
+from app.infrastructure.postgres import connect, fetch_limited
 
 
 def build_pipeline_summary(tenant_slug: str | None = None) -> dict:
@@ -113,7 +113,7 @@ def fetch_source_rows(connection: psycopg.Connection, tenant_slug: str | None) -
 
     with connection.cursor() as cursor:
         cursor.execute(query, params)
-        rows = cursor.fetchall()
+        rows = fetch_limited(cursor)
 
     return [{"source": row["source"], "total": int(row["total"] or 0)} for row in rows]
 

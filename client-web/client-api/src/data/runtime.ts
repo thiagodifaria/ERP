@@ -39,6 +39,10 @@ export const servicesList = [
   "platform-control",
   "support",
   "supplier",
+  "accounting",
+  "inventory",
+  "procurement",
+  "banking",
   "notification",
   "fiscal",
   "webhook-hub"
@@ -64,7 +68,11 @@ export const localBaseUrls: Record<string, string> = {
   support: "http://localhost:8099",
   supplier: "http://localhost:8100",
   notification: "http://localhost:8101",
-  fiscal: "http://localhost:8102"
+  fiscal: "http://localhost:8102",
+  accounting: "http://localhost:8103",
+  inventory: "http://localhost:8104",
+  procurement: "http://localhost:8105",
+  banking: "http://localhost:8106"
 };
 
 export const defaultEnvironment: RuntimeEnvironment = {

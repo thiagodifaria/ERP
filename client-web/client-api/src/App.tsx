@@ -36,6 +36,30 @@ type Page = "home" | "api" | "docs" | "contracts" | "env" | "journeys" | "ops";
 type Method = EndpointContract["method"];
 
 const storageKey = "erp-control-console-env";
+const tokenStorageKey = "erp-control-console-token";
+
+function persistedEnvironment(environment: RuntimeEnvironment): RuntimeEnvironment {
+  return { ...environment, bearerToken: "" };
+}
+
+function loadEnvironment(): RuntimeEnvironment {
+  try {
+    const stored = localStorage.getItem(storageKey);
+    const bearerToken = sessionStorage.getItem(tokenStorageKey) ?? "";
+    return stored ? { ...defaultEnvironment, ...JSON.parse(stored), bearerToken } : { ...defaultEnvironment, bearerToken };
+  } catch {
+    return defaultEnvironment;
+  }
+}
+
+function saveEnvironment(environment: RuntimeEnvironment): void {
+  localStorage.setItem(storageKey, JSON.stringify(persistedEnvironment(environment)));
+  if (environment.bearerToken.trim()) {
+    sessionStorage.setItem(tokenStorageKey, environment.bearerToken.trim());
+  } else {
+    sessionStorage.removeItem(tokenStorageKey);
+  }
+}
 
 function MethodBadge({ method }: { method: string }) {
   const colors: Record<string, string> = {
@@ -547,7 +571,7 @@ function EnvironmentsPage({ environment, setEnvironment }: { environment: Runtim
         </div>
         <div className="flex gap-3">
           <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50" onClick={() => setEnvironment(defaultEnvironment)} type="button">Resetar</button>
-          <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2" onClick={() => localStorage.setItem(storageKey, JSON.stringify(environment))} type="button"><Check size={16} /> Salvar</button>
+          <button className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 flex items-center gap-2" onClick={() => saveEnvironment(environment)} type="button"><Check size={16} /> Salvar</button>
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -686,13 +710,10 @@ function OperationsPage({ environment }: { environment: RuntimeEnvironment }) {
 
 export default function App() {
   const [currentPath, setCurrentPath] = useState<Page>("home");
-  const [environment, setEnvironment] = useState<RuntimeEnvironment>(() => {
-    const stored = localStorage.getItem(storageKey);
-    return stored ? { ...defaultEnvironment, ...JSON.parse(stored) } : defaultEnvironment;
-  });
+  const [environment, setEnvironment] = useState<RuntimeEnvironment>(loadEnvironment);
 
   useEffect(() => {
-    localStorage.setItem(storageKey, JSON.stringify(environment));
+    saveEnvironment(environment);
   }, [environment]);
 
   return (

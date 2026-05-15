@@ -45,12 +45,17 @@ MIGRATION_DOMAINS=(
   platform-control
   support
   supplier
+  accounting
+  inventory
+  procurement
+  banking
   notification
   fiscal
   engagement
   webhook-hub
   workflow-control
   workflow-runtime
+  tenant-security
 )
 SEED_DOMAINS=(
   identity
@@ -152,6 +157,10 @@ prepare_runtime_ports() {
   remap_host_port_if_needed "SUPPLIER_HTTP_PORT" "supplier"
   remap_host_port_if_needed "NOTIFICATION_HTTP_PORT" "notification"
   remap_host_port_if_needed "FISCAL_HTTP_PORT" "fiscal"
+  remap_host_port_if_needed "ACCOUNTING_HTTP_PORT" "accounting"
+  remap_host_port_if_needed "INVENTORY_HTTP_PORT" "inventory"
+  remap_host_port_if_needed "PROCUREMENT_HTTP_PORT" "procurement"
+  remap_host_port_if_needed "BANKING_HTTP_PORT" "banking"
   export ERP_HOST_PORTS_LOCKED=1
 }
 

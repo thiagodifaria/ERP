@@ -13,6 +13,7 @@ from app.runtime import (
     create_consent,
     create_correction_letter,
     create_document,
+    create_fiscal_deep_record,
     create_invalidation,
     create_privacy_request,
     execute_privacy_request,
@@ -25,6 +26,8 @@ from app.runtime import (
     list_consents,
     list_document_events,
     list_documents,
+    list_fiscal_deep_records,
+    reconcile_fiscal_finance,
     list_privacy_requests,
     list_retention_policies,
     transition_consent,
@@ -248,3 +251,87 @@ def audit_events(tenant_slug: str | None = None) -> list[dict]:
 @app.get("/api/fiscal/compliance/summary")
 def compliance_summary(tenant_slug: str | None = None) -> dict:
     return build_compliance_summary(tenant_slug)
+
+
+@app.get("/api/fiscal/issuance-queue")
+def issuance_queue(tenant_slug: str | None = None, status: str | None = None) -> list[dict]:
+    return list_fiscal_deep_records("issuance_queue", tenant_slug, status)
+
+
+@app.post("/api/fiscal/issuance-queue")
+def post_issuance_queue(payload: dict) -> dict:
+    try:
+        return create_fiscal_deep_record("issuance_queue", payload)
+    except ValueError as error:
+        status_code = 404 if str(error) == "tenant_not_found" else 400
+        raise HTTPException(status_code=status_code, detail={"code": str(error), "message": "Fiscal issuance queue payload is invalid."}) from error
+
+
+@app.get("/api/fiscal/certificates")
+def certificates(tenant_slug: str | None = None, status: str | None = None) -> list[dict]:
+    return list_fiscal_deep_records("certificates", tenant_slug, status)
+
+
+@app.post("/api/fiscal/certificates")
+def post_certificate(payload: dict) -> dict:
+    try:
+        return create_fiscal_deep_record("certificates", payload)
+    except ValueError as error:
+        status_code = 404 if str(error) == "tenant_not_found" else 400
+        raise HTTPException(status_code=status_code, detail={"code": str(error), "message": "Fiscal certificate payload is invalid."}) from error
+
+
+@app.get("/api/fiscal/sped-exports")
+def sped_exports(tenant_slug: str | None = None, status: str | None = None) -> list[dict]:
+    return list_fiscal_deep_records("sped_exports", tenant_slug, status)
+
+
+@app.post("/api/fiscal/sped-exports")
+def post_sped_export(payload: dict) -> dict:
+    try:
+        return create_fiscal_deep_record("sped_exports", payload)
+    except ValueError as error:
+        status_code = 404 if str(error) == "tenant_not_found" else 400
+        raise HTTPException(status_code=status_code, detail={"code": str(error), "message": "Fiscal SPED export payload is invalid."}) from error
+
+
+@app.get("/api/fiscal/contingency-plans")
+def contingency_plans(tenant_slug: str | None = None, status: str | None = None) -> list[dict]:
+    return list_fiscal_deep_records("contingency_plans", tenant_slug, status)
+
+
+@app.post("/api/fiscal/contingency-plans")
+def post_contingency_plan(payload: dict) -> dict:
+    try:
+        return create_fiscal_deep_record("contingency_plans", payload)
+    except ValueError as error:
+        status_code = 404 if str(error) == "tenant_not_found" else 400
+        raise HTTPException(status_code=status_code, detail={"code": str(error), "message": "Fiscal contingency payload is invalid."}) from error
+
+
+@app.get("/api/fiscal/artifacts")
+def fiscal_artifacts(tenant_slug: str | None = None, status: str | None = None) -> list[dict]:
+    return list_fiscal_deep_records("artifacts", tenant_slug, status)
+
+
+@app.post("/api/fiscal/artifacts")
+def post_fiscal_artifact(payload: dict) -> dict:
+    try:
+        return create_fiscal_deep_record("artifacts", payload)
+    except ValueError as error:
+        status_code = 404 if str(error) == "tenant_not_found" else 400
+        raise HTTPException(status_code=status_code, detail={"code": str(error), "message": "Fiscal artifact payload is invalid."}) from error
+
+
+@app.get("/api/fiscal/reconciliations")
+def fiscal_reconciliations(tenant_slug: str | None = None, status: str | None = None) -> list[dict]:
+    return list_fiscal_deep_records("fiscal_finance_reconciliations", tenant_slug, status)
+
+
+@app.post("/api/fiscal/reconciliations")
+def post_fiscal_reconciliation(payload: dict) -> dict:
+    try:
+        return reconcile_fiscal_finance(payload)
+    except ValueError as error:
+        status_code = 404 if str(error) == "tenant_not_found" else 400
+        raise HTTPException(status_code=status_code, detail={"code": str(error), "message": "Fiscal reconciliation payload is invalid."}) from error

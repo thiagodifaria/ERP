@@ -1,0 +1,189 @@
+openapi: 3.1.0
+info:
+  title: ERP Accounting API
+  version: 0.1.0
+  description: Managerial accounting, chart of accounts, immutable journal entries and accounting close
+security:
+  - bearerAuth: []
+paths:
+  /api/accounting/capabilities:
+    get:
+      summary: Read accounting capability catalog
+      responses:
+        "200":
+          description: Capability catalog
+  /api/accounting/statements/management-summary:
+    get:
+      summary: Read accounting operational summary
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Operational summary
+  /api/accounting/accounts:
+    get:
+      summary: List accounts
+      x-tenant-required: true
+      responses:
+        "200":
+          description: accounts list
+    post:
+      summary: Create account
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created account
+  /api/accounting/accounts/{publicId}:
+    get:
+      summary: Read one account
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Account detail
+  /api/accounting/accounts/{publicId}/status:
+    patch:
+      summary: Transition account status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned account
+  /api/accounting/journal-entries:
+    get:
+      summary: List journal-entries
+      x-tenant-required: true
+      responses:
+        "200":
+          description: journal-entries list
+    post:
+      summary: Create journal entry
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created journal entry
+  /api/accounting/journal-entries/{publicId}:
+    get:
+      summary: Read one journal entry
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Journal Entry detail
+  /api/accounting/journal-entries/{publicId}/status:
+    patch:
+      summary: Transition journal entry status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned journal entry
+  /api/accounting/period-closes:
+    get:
+      summary: List period-closes
+      x-tenant-required: true
+      responses:
+        "200":
+          description: period-closes list
+    post:
+      summary: Create period close
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Created period close
+  /api/accounting/period-closes/{publicId}:
+    get:
+      summary: Read one period close
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Period Close detail
+  /api/accounting/period-closes/{publicId}/status:
+    patch:
+      summary: Transition period close status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: Transitioned period close
+  /api/accounting/ledger:
+    get:
+      summary: GET Accounting Ledger
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/accounting/statements/{statement_kind}:
+    get:
+      summary: GET Statements
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/accounting/posting-rules/apply:
+    post:
+      summary: POST Posting Rules Apply
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/accounting/cost-centers:
+    get:
+      summary: GET Accounting Cost Centers
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create cost center
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+
+  /api/accounting/cost-centers/{publicId}:
+    get:
+      summary: GET Cost Centers
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/accounting/cost-centers/{publicId}/status:
+    patch:
+      summary: PATCH Status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/accounting/posting-rules:
+    get:
+      summary: GET Accounting Posting Rules
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create posting rule
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+
+  /api/accounting/posting-rules/{publicId}:
+    get:
+      summary: GET Posting Rules
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+  /api/accounting/posting-rules/{publicId}/status:
+    patch:
+      summary: PATCH Status
+      x-tenant-required: true
+      responses:
+        "200":
+          description: OK
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

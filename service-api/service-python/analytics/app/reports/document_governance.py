@@ -3,7 +3,7 @@
 from datetime import datetime, timezone
 
 from app.config.settings import settings
-from app.infrastructure.postgres import connect
+from app.infrastructure.postgres import connect, fetch_limited
 from app.reports.pipeline_summary import tenant_filter
 
 
@@ -182,7 +182,7 @@ def fetch_storage(connection, tenant_slug: str | None) -> dict:
     drivers: dict[str, int] = {}
     with connection.cursor() as cursor:
         cursor.execute(query, params)
-        rows = cursor.fetchall() or []
+        rows = fetch_limited(cursor) or []
 
     for row in rows:
         drivers[str(row.get("storage_driver", "") or "")] = int(row.get("total", 0) or 0)
@@ -236,7 +236,7 @@ def fetch_ownership(connection, tenant_slug: str | None) -> dict:
     ownership: dict[str, int] = {}
     with connection.cursor() as cursor:
         cursor.execute(query, params)
-        rows = cursor.fetchall() or []
+        rows = fetch_limited(cursor) or []
 
     for row in rows:
         ownership[str(row.get("owner_type", "") or "")] = int(row.get("total", 0) or 0)

@@ -85,6 +85,18 @@ services:
   fiscal:
     ports: !reset []
 
+  accounting:
+    ports: !reset []
+
+  inventory:
+    ports: !reset []
+
+  procurement:
+    ports: !reset []
+
+  banking:
+    ports: !reset []
+
   identity:
     ports: !reset []
 

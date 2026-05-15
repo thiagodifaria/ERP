@@ -105,6 +105,10 @@ prepare_runtime_ports() {
   remap_host_port_if_needed "SUPPLIER_HTTP_PORT" "supplier"
   remap_host_port_if_needed "NOTIFICATION_HTTP_PORT" "notification"
   remap_host_port_if_needed "FISCAL_HTTP_PORT" "fiscal"
+  remap_host_port_if_needed "ACCOUNTING_HTTP_PORT" "accounting"
+  remap_host_port_if_needed "INVENTORY_HTTP_PORT" "inventory"
+  remap_host_port_if_needed "PROCUREMENT_HTTP_PORT" "procurement"
+  remap_host_port_if_needed "BANKING_HTTP_PORT" "banking"
 }
 
 prepare_runtime_ports
@@ -186,16 +190,34 @@ run_elixir_unit() {
 
 run_python_unit() {
   docker run --rm \
+    -v "$ROOT_DIR/service-api/service-python/accounting:/workspace" \
+    -w /workspace \
+    python:3.12-slim \
+    sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache accounting.egg-info"
+
+  docker run --rm \
     -v "$ROOT_DIR/service-api/service-python/analytics:/workspace" \
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache analytics.egg-info"
 
   docker run --rm \
+    -v "$ROOT_DIR/service-api/service-python/banking:/workspace" \
+    -w /workspace \
+    python:3.12-slim \
+    sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache banking.egg-info"
+
+  docker run --rm \
     -v "$ROOT_DIR/service-api/service-python/simulation:/workspace" \
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache simulation.egg-info"
+
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-python/inventory:/workspace" \
+    -w /workspace \
+    python:3.12-slim \
+    sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache inventory.egg-info"
 
   docker run --rm \
     -v "$ROOT_DIR/service-api/service-python/catalog:/workspace" \
@@ -208,6 +230,12 @@ run_python_unit() {
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache platform_control.egg-info"
+
+  docker run --rm \
+    -v "$ROOT_DIR/service-api/service-python/procurement:/workspace" \
+    -w /workspace \
+    python:3.12-slim \
+    sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache procurement.egg-info"
 
   docker run --rm \
     -v "$ROOT_DIR/service-api/service-python/support:/workspace" \
@@ -319,7 +347,7 @@ security_markers = {
     "elixir/workflow-runtime": root / "service-api" / "service-elixir" / "workflow-runtime" / "lib" / "workflow_runtime" / "api" / "router.ex",
 }
 
-for service in ["analytics", "catalog", "fiscal", "notification", "platform-control", "simulation", "supplier", "support"]:
+for service in ["analytics", "banking", "accounting", "catalog", "fiscal", "inventory", "notification", "platform-control", "procurement", "simulation", "supplier", "support"]:
     security_markers[f"python/{service}"] = root / "service-api" / "service-python" / service / "app" / "security.py"
 
 for label, marker_path in security_markers.items():
@@ -414,7 +442,7 @@ for service, source_path in go_services.items():
     }
     compare_routes(service, implemented)
 
-python_services = ["analytics", "catalog", "fiscal", "notification", "platform-control", "simulation", "supplier", "support"]
+python_services = ["accounting", "analytics", "banking", "catalog", "fiscal", "inventory", "notification", "platform-control", "procurement", "simulation", "supplier", "support"]
 for service in python_services:
     source_text = (root / "service-api" / "service-python" / service / "app" / "server.py").read_text(encoding="utf-8")
     implemented = {
@@ -551,7 +579,7 @@ security_files = [
     "service-api/service-rust/webhook-hub/src/api/router.rs",
     "service-api/service-elixir/workflow-runtime/lib/workflow_runtime/api/router.ex",
 ]
-for service in ["analytics", "catalog", "fiscal", "notification", "platform-control", "simulation", "supplier", "support"]:
+for service in ["analytics", "banking", "accounting", "catalog", "fiscal", "inventory", "notification", "platform-control", "procurement", "simulation", "supplier", "support"]:
     security_files.append(f"service-api/service-python/{service}/app/security.py")
 for path in security_files:
     require_file(path, "ERP_JWT_HS256_SECRET", "ERP_OPENFGA_ENFORCEMENT")
@@ -565,21 +593,10 @@ require_file("service-api/service-postgresql/documents/migrations/000007_documen
 require_file("service-api/service-csharp/finance/src/Finance.Api/FinancePolicies.cs", "RequiresIdempotencyKey", "IsImmutableLedgerOperation", "RequiresPciScopeReview")
 require_file("docs/contracts/events/event-envelope.schema.json", "eventId", "correlationId", "schemaRef")
 require_file("docs/contracts/portal/index.html", "Auth model", "Idempotency", "Breaking changes", "Events")
-require_file("docs/SEGURANCA.md", "JWT", "OpenFGA", "security")
-require_file("docs/SRE.md", "SLO", "Runbooks", "DLQ")
-require_file("docs/DADOS_LGPD.md", "identity", "documents", "privacy")
-require_file("docs/POLIGLOTISMO.md", "Licenca Arquitetural", "Checklist De Novo Servico")
-require_file("docs/templates/SERVICE_STARTER_CHECKLIST.md", "Auth middleware", "OpenAPI", "Eventos")
-require_file("docs/templates/stacks/README.md", "middleware", "traceparent", "Dockerfile")
-for starter in [
-    "docs/templates/stacks/go/security.go",
-    "docs/templates/stacks/python/security.py",
-    "docs/templates/stacks/typescript/security.ts",
-    "docs/templates/stacks/csharp/ApiSecurityMiddleware.cs",
-    "docs/templates/stacks/rust/security.rs",
-    "docs/templates/stacks/elixir/security.ex",
-]:
-    require_file(starter, "correlation", "unauthorized", "forbidden")
+require_file("docs/SEGURANCA.md", "JWT", "OpenFGA", "Inventario LGPD")
+require_file("docs/OPERACOES.md", "SLOs E Alertas", "DLQ ou retry crescendo", "Divergencia financeira")
+require_file("docs/ARQUITETURA.md", "Poliglotismo orientado por dominio", "Nova linguagem")
+require_file("docs/PADROES.md", "Checklist Para Novo Servico", "Auth middleware", "traceparent")
 require_file("scripts/build.sh", "database_backup_encrypted", "database_restore_encrypted", "ERP_BACKUP_ENCRYPTION_KEY")
 
 registry = json.loads((root / "docs/contracts/registry.json").read_text(encoding="utf-8"))
@@ -588,7 +605,7 @@ if "event-envelope.schema.json" not in registry.get("events", []):
     errors.append("event envelope missing from contract registry")
 if not any(item.get("key") == "event-envelope" for item in schema_registry.get("schemas", [])):
     errors.append("event envelope missing from schema registry")
-for doc in ["docs/SEGURANCA.md", "docs/SRE.md", "docs/DADOS_LGPD.md", "docs/POLIGLOTISMO.md"]:
+for doc in ["docs/SEGURANCA.md", "docs/OPERACOES.md", "docs/ARQUITETURA.md", "docs/PADROES.md"]:
     if doc not in registry.get("docs", []):
         errors.append(f"{doc} missing from docs registry")
 
@@ -603,7 +620,7 @@ if errors:
         print(f"[security] {error}")
     sys.exit(1)
 
-print("[security] static security, data, event, SRE and polyglot guardrails validated")
+print("[security] static security, data, event, operational and architecture guardrails validated")
 PY
   run_hardening_secrets
 }
