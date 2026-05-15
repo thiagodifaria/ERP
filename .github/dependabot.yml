@@ -1,0 +1,230 @@
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: npm
+    directory: /client-web/client-api
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:10"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: npm
+    directory: /service-api/service-typescript/engagement
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:20"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: npm
+    directory: /service-api/service-typescript/workflow-control
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:30"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: gomod
+    directory: /service-api/service-golang/crm
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:40"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: gomod
+    directory: /service-api/service-golang/documents
+    schedule:
+      interval: weekly
+      day: monday
+      time: "08:50"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: gomod
+    directory: /service-api/service-golang/edge
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: gomod
+    directory: /service-api/service-golang/rentals
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:10"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: gomod
+    directory: /service-api/service-golang/sales
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:20"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: cargo
+    directory: /service-api/service-rust/webhook-hub
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:30"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: mix
+    directory: /service-api/service-elixir/workflow-runtime
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:40"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: nuget
+    directory: /service-api/service-csharp/billing
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:50"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: nuget
+    directory: /service-api/service-csharp/finance
+    schedule:
+      interval: weekly
+      day: monday
+      time: "10:00"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: nuget
+    directory: /service-api/service-csharp/identity
+    schedule:
+      interval: weekly
+      day: monday
+      time: "10:10"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: pip
+    directories:
+      - /service-api/service-python/accounting
+      - /service-api/service-python/analytics
+      - /service-api/service-python/banking
+      - /service-api/service-python/catalog
+      - /service-api/service-python/fiscal
+      - /service-api/service-python/inventory
+      - /service-api/service-python/notification
+      - /service-api/service-python/platform-control
+      - /service-api/service-python/procurement
+      - /service-api/service-python/simulation
+      - /service-api/service-python/supplier
+      - /service-api/service-python/support
+    schedule:
+      interval: weekly
+      day: monday
+      time: "10:20"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 4
+    commit-message:
+      prefix: chore
+      include: scope
+
+  - package-ecosystem: docker
+    directories:
+      - /service-api/service-csharp/billing
+      - /service-api/service-csharp/finance
+      - /service-api/service-csharp/identity
+      - /service-api/service-elixir/workflow-runtime
+      - /service-api/service-golang/crm
+      - /service-api/service-golang/documents
+      - /service-api/service-golang/edge
+      - /service-api/service-golang/rentals
+      - /service-api/service-golang/sales
+      - /service-api/service-python/accounting
+      - /service-api/service-python/analytics
+      - /service-api/service-python/banking
+      - /service-api/service-python/catalog
+      - /service-api/service-python/fiscal
+      - /service-api/service-python/inventory
+      - /service-api/service-python/notification
+      - /service-api/service-python/platform-control
+      - /service-api/service-python/procurement
+      - /service-api/service-python/simulation
+      - /service-api/service-python/supplier
+      - /service-api/service-python/support
+      - /service-api/service-rust/webhook-hub
+      - /service-api/service-typescript/engagement
+      - /service-api/service-typescript/workflow-control
+    schedule:
+      interval: weekly
+      day: monday
+      time: "10:30"
+      timezone: America/Sao_Paulo
+    open-pull-requests-limit: 4
+    commit-message:
+      prefix: chore
+      include: scope
