@@ -13,5 +13,5 @@ dependencies = [
 dev = ["httpx>=0.28.0,<0.29.0", "pytest>=8.4.0,<8.5.0"]
 
 [build-system]
-requires = ["setuptools>=75.0"]
+requires = ["setuptools>=82.0.1"]
 build-backend = "setuptools.build_meta"
