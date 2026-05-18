@@ -242,8 +242,7 @@ export class PostgresWorkflowRunRepository implements WorkflowRunRepository {
   public async nextId(): Promise<number> {
     const result = await this.pool.query<{ next_id: number }>(
       `
-        SELECT COALESCE(MAX(id), 0) + 1 AS next_id
-        FROM workflow_control.workflow_runs
+        SELECT nextval(pg_get_serial_sequence('workflow_control.workflow_runs', 'id')) AS next_id
       `
     );
 

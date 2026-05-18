@@ -1,6 +1,6 @@
-openapi: 3.1.0
+﻿openapi: 3.1.0
 info:
-  title: ERP Catalog API
+  title: Business Operating System Catalog API
   version: 0.2.0
   description: Product and service catalog with categories, activation, versioned items, cursor pagination and bulk creation.
 security:

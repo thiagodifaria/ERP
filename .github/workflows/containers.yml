@@ -32,10 +32,18 @@ jobs:
             context: service-api/service-golang/sales
           - image: rentals
             context: service-api/service-golang/rentals
+          - image: documents
+            context: service-api/service-golang/documents
           - image: identity
             context: service-api/service-csharp/identity
+          - image: billing
+            context: service-api/service-csharp/billing
+          - image: finance
+            context: service-api/service-csharp/finance
           - image: workflow-control
             context: service-api/service-typescript/workflow-control
+          - image: engagement
+            context: service-api/service-typescript/engagement
           - image: workflow-runtime
             context: service-api/service-elixir/workflow-runtime
           - image: analytics
@@ -46,6 +54,10 @@ jobs:
             context: service-api/service-python/catalog
           - image: platform-control
             context: service-api/service-python/platform-control
+          - image: search
+            context: service-api/service-python/search
+          - image: ai-governance
+            context: service-api/service-python/ai-governance
           - image: support
             context: service-api/service-python/support
           - image: supplier
@@ -87,7 +99,6 @@ jobs:
             type=ref,event=branch
             type=ref,event=tag
             type=sha,prefix=sha-
-            type=raw,value=latest,enable={{is_default_branch}}
 
       - name: Build and push image
         id: build

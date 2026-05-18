@@ -1,7 +1,7 @@
-{
+﻿{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "erp://contracts/events/event-envelope.schema.json",
-  "title": "ERP Event Envelope",
+  "title": "Business Operating System event envelope",
   "type": "object",
   "required": [
     "eventId",

@@ -1,0 +1,16 @@
+﻿{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://erp.local/contracts/events/documents.extraction-requested.schema.json",
+  "title": "Document Extraction Requested",
+  "type": "object",
+  "required": ["tenantSlug", "documentPublicId", "provider", "requestedBy", "occurredAt"],
+  "properties": {
+    "tenantSlug": { "type": "string", "minLength": 1 },
+    "documentPublicId": { "type": "string", "minLength": 1 },
+    "provider": { "type": "string", "minLength": 2 },
+    "requestedBy": { "type": "string", "minLength": 1 },
+    "extractionType": { "type": "string", "enum": ["invoice", "fiscal_document", "contract", "receipt", "generic"] },
+    "occurredAt": { "type": "string", "format": "date-time" }
+  },
+  "additionalProperties": false
+}

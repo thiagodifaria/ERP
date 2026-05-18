@@ -613,7 +613,7 @@ func retentionExpired(attachment entity.Attachment, now time.Time) bool {
 
 func (handler AttachmentHandler) tokenSecret() string {
 	if strings.TrimSpace(handler.accessTokenSecret) == "" && localRuntimeMode() {
-		return "documents-local-secret"
+		return "change-me-unsafe-local-only-documents"
 	}
 	if strings.TrimSpace(handler.accessTokenSecret) == "" {
 		panic("DOCUMENTS_ACCESS_TOKEN_SECRET is required outside local/test environments")

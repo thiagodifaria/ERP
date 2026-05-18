@@ -54,6 +54,13 @@ jobs:
       - name: Run contract suite
         run: bash scripts/test.sh contract
 
+      - name: Validate generated client-api catalog
+        working-directory: client-web/client-api
+        run: |
+          npm ci
+          npm run generate
+          git diff --exit-code -- src/generated/apiCatalog.ts
+
   security:
     name: Security
     runs-on: ubuntu-latest

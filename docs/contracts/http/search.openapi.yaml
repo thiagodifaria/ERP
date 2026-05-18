@@ -1,0 +1,72 @@
+﻿openapi: 3.1.0
+info:
+  title: Business Operating System Operational Search API
+  version: 0.1.0
+  description: Unified operational search, audit, legal hold and e-discovery workflows.
+security:
+  - bearerAuth: []
+paths:
+  /api/search/capabilities:
+    get:
+      summary: Read searchable domains and e-discovery capabilities
+      responses:
+        "200":
+          description: Search capability catalog
+  /api/search/query:
+    get:
+      summary: Query operational records with tenant filtering and redaction
+      responses:
+        "200":
+          description: Search results
+  /api/search/facets:
+    get:
+      summary: Read search facets by entity type and source service
+      responses:
+        "200":
+          description: Search facets
+  /api/search/saved-queries:
+    post:
+      summary: Create a governed saved query
+      responses:
+        "200":
+          description: Saved query
+  /api/search/audit-events:
+    get:
+      summary: List query audit events
+      responses:
+        "200":
+          description: Search audit events
+  /api/search/discovery-cases:
+    post:
+      summary: Create an e-discovery case
+      responses:
+        "200":
+          description: Discovery case
+  /api/search/discovery-cases/{publicId}/items:
+    post:
+      summary: Add a record to an e-discovery case
+      responses:
+        "200":
+          description: Discovery case item
+  /api/search/legal-holds:
+    post:
+      summary: Create a legal hold over an entity selector
+      responses:
+        "200":
+          description: Legal hold
+  /api/search/exports:
+    post:
+      summary: Create a controlled export request
+      responses:
+        "200":
+          description: Export request
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

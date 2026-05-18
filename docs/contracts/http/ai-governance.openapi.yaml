@@ -1,0 +1,54 @@
+﻿openapi: 3.1.0
+info:
+  title: Business Operating System AI Governance API
+  version: 0.1.0
+  description: Governed assistant runs, tool registry, policy enforcement and prompt audit.
+security:
+  - bearerAuth: []
+paths:
+  /api/ai-governance/tools:
+    get:
+      summary: List approved assistant tools
+      responses:
+        "200":
+          description: Approved tool registry
+  /api/ai-governance/policies:
+    get:
+      summary: List AI governance policies
+      responses:
+        "200":
+          description: Policy catalog
+  /api/ai-governance/runs:
+    post:
+      summary: Create a governed assistant run
+      responses:
+        "200":
+          description: Assistant run
+  /api/ai-governance/runs/{publicId}:
+    get:
+      summary: Read one assistant run and tool decisions
+      responses:
+        "200":
+          description: Assistant run detail
+  /api/ai-governance/audit-events:
+    get:
+      summary: List AI governance audit events
+      responses:
+        "200":
+          description: AI audit events
+  /api/ai-governance/redaction/preview:
+    post:
+      summary: Preview prompt redaction before assistant execution
+      responses:
+        "200":
+          description: Redaction preview
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    internalServiceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: service-account-jwt

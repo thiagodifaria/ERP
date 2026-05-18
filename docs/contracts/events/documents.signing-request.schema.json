@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "erp://contracts/events/documents.signing-request.schema.json",
   "title": "Documents Signing Request",

@@ -51,7 +51,13 @@ spec:
               app.kubernetes.io/part-of: erp-platform
       ports:
         - protocol: TCP
-          port: 8000
+          port: 8086
+        - protocol: TCP
+          port: 8098
+        - protocol: TCP
+          port: 8107
+        - protocol: TCP
+          port: 8108
         - protocol: TCP
           port: 8080
   egress:

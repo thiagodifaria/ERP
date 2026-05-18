@@ -1,6 +1,7 @@
-{
+﻿{
   "http": [
     "accounting.openapi.yaml",
+    "ai-governance.openapi.yaml",
     "analytics.openapi.yaml",
     "banking.openapi.yaml",
     "billing.openapi.yaml",
@@ -18,6 +19,7 @@
     "procurement.openapi.yaml",
     "rentals.openapi.yaml",
     "sales.openapi.yaml",
+    "search.openapi.yaml",
     "simulation.openapi.yaml",
     "supplier.openapi.yaml",
     "support.openapi.yaml",
@@ -29,6 +31,8 @@
     "catalog.item.schema.json",
     "crm.cnpj-enrichment.schema.json",
     "crm.outbox-event.schema.json",
+    "documents.extraction-completed.schema.json",
+    "documents.extraction-requested.schema.json",
     "documents.signing-request.schema.json",
     "engagement.provider-event.schema.json",
     "event-envelope.schema.json",

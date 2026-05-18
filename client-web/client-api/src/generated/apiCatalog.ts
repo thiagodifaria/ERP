@@ -35,26 +35,35 @@ export type EventSchemaContract = {
 export const services: ServiceContract[] = [
   {
     "slug": "accounting",
-    "name": "Accounting",
-    "title": "ERP Accounting API",
+    "name": "Business Operating System Accounting",
+    "title": "Business Operating System Accounting API",
     "version": "0.1.0",
     "description": "Managerial accounting, chart of accounts, immutable journal entries and accounting close",
     "contractFile": "docs/contracts/http/accounting.openapi.yaml",
     "endpointCount": 25
   },
   {
+    "slug": "ai-governance",
+    "name": "Business Operating System AI Governance",
+    "title": "Business Operating System AI Governance API",
+    "version": "0.1.0",
+    "description": "Governed assistant runs, tool registry, policy enforcement and prompt audit.",
+    "contractFile": "docs/contracts/http/ai-governance.openapi.yaml",
+    "endpointCount": 6
+  },
+  {
     "slug": "analytics",
-    "name": "Analytics",
-    "title": "ERP Analytics API",
+    "name": "Business Operating System Analytics",
+    "title": "Business Operating System Analytics API",
     "version": "0.1.0",
     "description": "Executive reports, adapter catalog, SaaS control and contract governance.",
     "contractFile": "docs/contracts/http/analytics.openapi.yaml",
-    "endpointCount": 26
+    "endpointCount": 62
   },
   {
     "slug": "banking",
-    "name": "Banking",
-    "title": "ERP Banking API",
+    "name": "Business Operating System Banking",
+    "title": "Business Operating System Banking API",
     "version": "0.1.0",
     "description": "Brazilian banking hub for bank accounts, CNAB, boleto, Pix, statements and reconciliation",
     "contractFile": "docs/contracts/http/banking.openapi.yaml",
@@ -62,8 +71,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "billing",
-    "name": "Billing",
-    "title": "ERP Billing API",
+    "name": "Business Operating System Billing",
+    "title": "Business Operating System Billing API",
     "version": "1.0.0",
     "description": "Subscription billing, invoices, gateway capabilities, payment attempts, webhooks and recovery operations.",
     "contractFile": "docs/contracts/http/billing.openapi.yaml",
@@ -71,8 +80,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "catalog",
-    "name": "Catalog",
-    "title": "ERP Catalog API",
+    "name": "Business Operating System Catalog",
+    "title": "Business Operating System Catalog API",
     "version": "0.2.0",
     "description": "Product and service catalog with categories, activation, versioned items, cursor pagination and bulk creation.",
     "contractFile": "docs/contracts/http/catalog.openapi.yaml",
@@ -80,8 +89,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "crm",
-    "name": "CRM",
-    "title": "ERP CRM API",
+    "name": "Business Operating System CRM",
+    "title": "Business Operating System CRM API",
     "version": "1.0.0",
     "description": "Leads, customers, ownership, history, attachments, pipeline intelligence and CRM outbox.",
     "contractFile": "docs/contracts/http/crm.openapi.yaml",
@@ -89,8 +98,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "documents",
-    "name": "Documents",
-    "title": "ERP Documents API",
+    "name": "Business Operating System Documents",
+    "title": "Business Operating System Documents API",
     "version": "0.9.7",
     "description": "Attachment governance, upload orchestration and storage capabilities.",
     "contractFile": "docs/contracts/http/documents.openapi.yaml",
@@ -98,8 +107,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "edge",
-    "name": "Edge",
-    "title": "ERP Edge API",
+    "name": "Business Operating System Edge",
+    "title": "Business Operating System Edge API",
     "version": "0.1.0",
     "description": "Aggregated operational cockpits for tenants, contracts and SaaS control.",
     "contractFile": "docs/contracts/http/edge.openapi.yaml",
@@ -107,8 +116,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "engagement",
-    "name": "Engagement",
-    "title": "ERP Engagement API",
+    "name": "Business Operating System Engagement",
+    "title": "Business Operating System Engagement API",
     "version": "0.9.7",
     "description": "Omnichannel engagement, provider callbacks and campaign operations.",
     "contractFile": "docs/contracts/http/engagement.openapi.yaml",
@@ -116,8 +125,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "finance",
-    "name": "Finance",
-    "title": "ERP Finance API",
+    "name": "Business Operating System Finance",
+    "title": "Business Operating System Finance API",
     "version": "1.0.0",
     "description": "Receivables, projections, settlements, commission lifecycle, payables, costs, treasury, period closures and financial activity.",
     "contractFile": "docs/contracts/http/finance.openapi.yaml",
@@ -125,8 +134,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "fiscal",
-    "name": "Fiscal",
-    "title": "ERP Fiscal API",
+    "name": "Business Operating System Fiscal",
+    "title": "Business Operating System Fiscal API",
     "version": "0.1.0",
     "description": "Fiscal profile, document operations, privacy rights and compliance governance.",
     "contractFile": "docs/contracts/http/fiscal.openapi.yaml",
@@ -134,8 +143,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "identity",
-    "name": "Identity",
-    "title": "ERP Identity API",
+    "name": "Business Operating System Identity",
+    "title": "Business Operating System Identity API",
     "version": "0.9.0",
     "description": "Tenancy, access, sessions, invitations, MFA, recovery and tenant-scoped identity governance.",
     "contractFile": "docs/contracts/http/identity.openapi.yaml",
@@ -143,8 +152,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "inventory",
-    "name": "Inventory",
-    "title": "ERP Inventory API",
+    "name": "Business Operating System Inventory",
+    "title": "Business Operating System Inventory API",
     "version": "0.1.0",
     "description": "Inventory balances, warehouse locations, movements, reservations and cycle counts",
     "contractFile": "docs/contracts/http/inventory.openapi.yaml",
@@ -152,8 +161,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "notification",
-    "name": "Notification",
-    "title": "ERP Notification API",
+    "name": "Business Operating System Notification",
+    "title": "Business Operating System Notification API",
     "version": "0.1.0",
     "description": "Internal notification center, preferences and reusable dispatch shape.",
     "contractFile": "docs/contracts/http/notification.openapi.yaml",
@@ -161,17 +170,17 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "platform-control",
-    "name": "Platform Control",
-    "title": "ERP Platform Control API",
+    "name": "Business Operating System Platform Control",
+    "title": "Business Operating System Platform Control API",
     "version": "0.2.0",
     "description": "Tenant capabilities, entitlements, quotas, metering, lifecycle jobs and SaaS governance.",
     "contractFile": "docs/contracts/http/platform-control.openapi.yaml",
-    "endpointCount": 40
+    "endpointCount": 92
   },
   {
     "slug": "procurement",
-    "name": "Procurement",
-    "title": "ERP Procurement API",
+    "name": "Business Operating System Procurement",
+    "title": "Business Operating System Procurement API",
     "version": "0.1.0",
     "description": "Purchase requisitions, quotations, purchase orders, receipts and three-way matching",
     "contractFile": "docs/contracts/http/procurement.openapi.yaml",
@@ -179,8 +188,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "rentals",
-    "name": "Rentals",
-    "title": "ERP Rentals API",
+    "name": "Business Operating System Rentals",
+    "title": "Business Operating System Rentals API",
     "version": "0.9.0",
     "description": "Rental contracts, recurring charges, adjustments, rescission and attachment linkage.",
     "contractFile": "docs/contracts/http/rentals.openapi.yaml",
@@ -188,17 +197,26 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "sales",
-    "name": "Sales",
-    "title": "ERP Sales API",
+    "name": "Business Operating System Sales",
+    "title": "Business Operating System Sales API",
     "version": "1.0.0",
     "description": "Opportunities, proposals, sales, invoices, installments, commissions, pending items, renegotiations and commercial outbox.",
     "contractFile": "docs/contracts/http/sales.openapi.yaml",
     "endpointCount": 37
   },
   {
+    "slug": "search",
+    "name": "Business Operating System Operational Search",
+    "title": "Business Operating System Operational Search API",
+    "version": "0.1.0",
+    "description": "Unified operational search, audit, legal hold and e-discovery workflows.",
+    "contractFile": "docs/contracts/http/search.openapi.yaml",
+    "endpointCount": 9
+  },
+  {
     "slug": "simulation",
-    "name": "Simulation",
-    "title": "ERP Simulation API",
+    "name": "Business Operating System Simulation",
+    "title": "Business Operating System Simulation API",
     "version": "0.8.0",
     "description": "Scenario simulation, load benchmark and cost estimation runtime.",
     "contractFile": "docs/contracts/http/simulation.openapi.yaml",
@@ -206,8 +224,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "supplier",
-    "name": "Supplier",
-    "title": "ERP Supplier API",
+    "name": "Business Operating System Supplier",
+    "title": "Business Operating System Supplier API",
     "version": "0.1.0",
     "description": "Supplier directory, categories and payables-oriented vendor governance.",
     "contractFile": "docs/contracts/http/supplier.openapi.yaml",
@@ -215,8 +233,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "support",
-    "name": "Support",
-    "title": "ERP Support API",
+    "name": "Business Operating System Support",
+    "title": "Business Operating System Support API",
     "version": "0.1.0",
     "description": "Queue-based support cases with SLA, comments and lifecycle history.",
     "contractFile": "docs/contracts/http/support.openapi.yaml",
@@ -224,8 +242,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "webhook-hub",
-    "name": "Webhook Hub",
-    "title": "ERP Webhook Hub API",
+    "name": "Business Operating System Webhook Hub",
+    "title": "Business Operating System Webhook Hub API",
     "version": "0.9.7",
     "description": "Inbound webhook intake, DLQ and operator recovery surface.",
     "contractFile": "docs/contracts/http/webhook-hub.openapi.yaml",
@@ -233,8 +251,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "workflow-control",
-    "name": "Workflow Control",
-    "title": "ERP Workflow Control API",
+    "name": "Business Operating System Workflow Control",
+    "title": "Business Operating System Workflow Control API",
     "version": "0.9.0",
     "description": "Workflow definition catalog, publication, versioning, execution control and audit events.",
     "contractFile": "docs/contracts/http/workflow-control.openapi.yaml",
@@ -242,8 +260,8 @@ export const services: ServiceContract[] = [
   },
   {
     "slug": "workflow-runtime",
-    "name": "Workflow Runtime",
-    "title": "ERP Workflow Runtime API",
+    "name": "Business Operating System Workflow Runtime",
+    "title": "Business Operating System Workflow Runtime API",
     "version": "0.9.0",
     "description": "Workflow execution runtime with transitions, action snapshots, retries, delays and compensations.",
     "contractFile": "docs/contracts/http/workflow-runtime.openapi.yaml",
@@ -611,6 +629,116 @@ export const endpoints: EndpointContract[] = [
     ]
   },
   {
+    "id": "ai-governance:GET:/health/live",
+    "service": "ai-governance",
+    "method": "GET",
+    "path": "/health/live",
+    "tag": "Health",
+    "description": "Health live do serviço ai-governance.",
+    "summary": "Health live",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "ai-governance:GET:/health/ready",
+    "service": "ai-governance",
+    "method": "GET",
+    "path": "/health/ready",
+    "tag": "Health",
+    "description": "Health ready do serviço ai-governance.",
+    "summary": "Health ready",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "ai-governance:GET:/health/details",
+    "service": "ai-governance",
+    "method": "GET",
+    "path": "/health/details",
+    "tag": "Health",
+    "description": "Health details do serviço ai-governance.",
+    "summary": "Health details",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "ai-governance:GET:/api/ai-governance/tools",
+    "service": "ai-governance",
+    "method": "GET",
+    "path": "/api/ai-governance/tools",
+    "tag": "Ai Governance",
+    "description": "List approved assistant tools",
+    "summary": "List approved assistant tools",
+    "source": "docs/contracts/http/ai-governance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "ai-governance:GET:/api/ai-governance/policies",
+    "service": "ai-governance",
+    "method": "GET",
+    "path": "/api/ai-governance/policies",
+    "tag": "Ai Governance",
+    "description": "List AI governance policies",
+    "summary": "List AI governance policies",
+    "source": "docs/contracts/http/ai-governance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "ai-governance:POST:/api/ai-governance/runs",
+    "service": "ai-governance",
+    "method": "POST",
+    "path": "/api/ai-governance/runs",
+    "tag": "Ai Governance",
+    "description": "Create a governed assistant run",
+    "summary": "Create a governed assistant run",
+    "source": "docs/contracts/http/ai-governance.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "ai-governance:GET:/api/ai-governance/runs/{publicId}",
+    "service": "ai-governance",
+    "method": "GET",
+    "path": "/api/ai-governance/runs/{publicId}",
+    "tag": "Ai Governance",
+    "description": "Read one assistant run and tool decisions",
+    "summary": "Read one assistant run and tool decisions",
+    "source": "docs/contracts/http/ai-governance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "ai-governance:GET:/api/ai-governance/audit-events",
+    "service": "ai-governance",
+    "method": "GET",
+    "path": "/api/ai-governance/audit-events",
+    "tag": "Ai Governance",
+    "description": "List AI governance audit events",
+    "summary": "List AI governance audit events",
+    "source": "docs/contracts/http/ai-governance.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "ai-governance:POST:/api/ai-governance/redaction/preview",
+    "service": "ai-governance",
+    "method": "POST",
+    "path": "/api/ai-governance/redaction/preview",
+    "tag": "Ai Governance",
+    "description": "Preview prompt redaction before assistant execution",
+    "summary": "Preview prompt redaction before assistant execution",
+    "source": "docs/contracts/http/ai-governance.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
     "id": "analytics:GET:/health/live",
     "service": "analytics",
     "method": "GET",
@@ -952,8 +1080,450 @@ export const endpoints: EndpointContract[] = [
     "method": "GET",
     "path": "/api/analytics/reports/production-readiness",
     "tag": "Analytics",
-    "description": "Read production readiness 1.0.0 release gate",
-    "summary": "Read production readiness 1.0.0 release gate",
+    "description": "Read production readiness for version 1.4.6",
+    "summary": "Read production readiness for version 1.4.6",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/metrics",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/metrics",
+    "tag": "Analytics",
+    "description": "List semantic metric definitions",
+    "summary": "List semantic metric definitions",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/metrics/{code}",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/metrics/{code}",
+    "tag": "Analytics",
+    "description": "Read one semantic metric definition",
+    "summary": "Read one semantic metric definition",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "code"
+    ]
+  },
+  {
+    "id": "analytics:GET:/api/analytics/metrics/{code}/snapshots",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/metrics/{code}/snapshots",
+    "tag": "Analytics",
+    "description": "List semantic metric snapshots",
+    "summary": "List semantic metric snapshots",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "code"
+    ]
+  },
+  {
+    "id": "analytics:GET:/api/analytics/datasets/freshness",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/datasets/freshness",
+    "tag": "Analytics",
+    "description": "List dataset freshness posture",
+    "summary": "List dataset freshness posture",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/data-quality",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/data-quality",
+    "tag": "Analytics",
+    "description": "List semantic data quality checks",
+    "summary": "List semantic data quality checks",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/lineage",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/lineage",
+    "tag": "Analytics",
+    "description": "Read semantic metric lineage graph",
+    "summary": "Read semantic metric lineage graph",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/risk/tenant-score",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/risk/tenant-score",
+    "tag": "Analytics",
+    "description": "Read tenant risk and compliance score",
+    "summary": "Read tenant risk and compliance score",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/risk/domain-scores",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/risk/domain-scores",
+    "tag": "Analytics",
+    "description": "Read domain risk scores",
+    "summary": "Read domain risk scores",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/risk/service-scores",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/risk/service-scores",
+    "tag": "Analytics",
+    "description": "Read service risk scores",
+    "summary": "Read service risk scores",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/risk/compliance-posture",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/risk/compliance-posture",
+    "tag": "Analytics",
+    "description": "Read compliance posture",
+    "summary": "Read compliance posture",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/risk/recommendations",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/risk/recommendations",
+    "tag": "Analytics",
+    "description": "Read risk recommendations",
+    "summary": "Read risk recommendations",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/reconciliation/findings",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/reconciliation/findings",
+    "tag": "Analytics",
+    "description": "List reconciliation findings",
+    "summary": "List reconciliation findings",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:POST:/api/analytics/reconciliation/run",
+    "service": "analytics",
+    "method": "POST",
+    "path": "/api/analytics/reconciliation/run",
+    "tag": "Analytics",
+    "description": "Run operational reconciliation",
+    "summary": "Run operational reconciliation",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/financial-close/periods",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/financial-close/periods",
+    "tag": "Analytics",
+    "description": "List financial close periods",
+    "summary": "List financial close periods",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:POST:/api/analytics/financial-close/periods",
+    "service": "analytics",
+    "method": "POST",
+    "path": "/api/analytics/financial-close/periods",
+    "tag": "Analytics",
+    "description": "Create one financial close period",
+    "summary": "Create one financial close period",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:POST:/api/analytics/financial-close/periods/{publicId}/close",
+    "service": "analytics",
+    "method": "POST",
+    "path": "/api/analytics/financial-close/periods/{publicId}/close",
+    "tag": "Analytics",
+    "description": "Close one financial period",
+    "summary": "Close one financial period",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "analytics:GET:/api/analytics/financial-close/periods/{publicId}/snapshot",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/financial-close/periods/{publicId}/snapshot",
+    "tag": "Analytics",
+    "description": "Read financial close snapshot",
+    "summary": "Read financial close snapshot",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "analytics:GET:/api/analytics/financial-close/readiness",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/financial-close/readiness",
+    "tag": "Analytics",
+    "description": "Read financial close readiness",
+    "summary": "Read financial close readiness",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/master-data/entities",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/master-data/entities",
+    "tag": "Analytics",
+    "description": "List master data entities",
+    "summary": "List master data entities",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/master-data/quality-score",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/master-data/quality-score",
+    "tag": "Analytics",
+    "description": "Read master data quality score",
+    "summary": "Read master data quality score",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/master-data/duplicates",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/master-data/duplicates",
+    "tag": "Analytics",
+    "description": "List master data duplicate candidates",
+    "summary": "List master data duplicate candidates",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:POST:/api/analytics/master-data/merge-proposals",
+    "service": "analytics",
+    "method": "POST",
+    "path": "/api/analytics/master-data/merge-proposals",
+    "tag": "Analytics",
+    "description": "Create one master data merge proposal",
+    "summary": "Create one master data merge proposal",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/data-quality/rules",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/data-quality/rules",
+    "tag": "Analytics",
+    "description": "List data quality rules",
+    "summary": "List data quality rules",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/data-quality/findings",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/data-quality/findings",
+    "tag": "Analytics",
+    "description": "List data quality findings",
+    "summary": "List data quality findings",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/lakehouse/datasets",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/lakehouse/datasets",
+    "tag": "Analytics",
+    "description": "List lakehouse datasets",
+    "summary": "List lakehouse datasets",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/lakehouse/datasets/{datasetKey}",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/lakehouse/datasets/{datasetKey}",
+    "tag": "Analytics",
+    "description": "Read one lakehouse dataset",
+    "summary": "Read one lakehouse dataset",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "datasetKey"
+    ]
+  },
+  {
+    "id": "analytics:GET:/api/analytics/lakehouse/lineage",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/lakehouse/lineage",
+    "tag": "Analytics",
+    "description": "Read lakehouse lineage",
+    "summary": "Read lakehouse lineage",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/lakehouse/export-policies",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/lakehouse/export-policies",
+    "tag": "Analytics",
+    "description": "List lakehouse export policies",
+    "summary": "List lakehouse export policies",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/lakehouse/readiness",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/lakehouse/readiness",
+    "tag": "Analytics",
+    "description": "Read lakehouse readiness",
+    "summary": "Read lakehouse readiness",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/enterprise-runtime/readiness",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/enterprise-runtime/readiness",
+    "tag": "Analytics",
+    "description": "Read enterprise runtime readiness",
+    "summary": "Read enterprise runtime readiness",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/external-intelligence/readiness",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/external-intelligence/readiness",
+    "tag": "Analytics",
+    "description": "Read external intelligence and verification readiness",
+    "summary": "Read external intelligence and verification readiness",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/document-intelligence/readiness",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/document-intelligence/readiness",
+    "tag": "Analytics",
+    "description": "Read OCR and document intelligence provider readiness",
+    "summary": "Read OCR and document intelligence provider readiness",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/fiscal-brazil/readiness",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/fiscal-brazil/readiness",
+    "tag": "Analytics",
+    "description": "Read Brazilian fiscal provider readiness",
+    "summary": "Read Brazilian fiscal provider readiness",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/registry-enrichment/brazil",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/registry-enrichment/brazil",
+    "tag": "Analytics",
+    "description": "Read Brazilian registry enrichment posture",
+    "summary": "Read Brazilian registry enrichment posture",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/market-macro-risk",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/market-macro-risk",
+    "tag": "Analytics",
+    "description": "Read FX, market and macro risk provider posture",
+    "summary": "Read FX, market and macro risk provider posture",
+    "source": "docs/contracts/http/analytics.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "analytics:GET:/api/analytics/external-risk-feed",
+    "service": "analytics",
+    "method": "GET",
+    "path": "/api/analytics/external-risk-feed",
+    "tag": "Analytics",
+    "description": "Read external news and risk feed posture",
+    "summary": "Read external news and risk feed posture",
     "source": "docs/contracts/http/analytics.openapi.yaml",
     "hasBody": false,
     "pathParams": []
@@ -5100,6 +5670,47 @@ export const endpoints: EndpointContract[] = [
     "pathParams": []
   },
   {
+    "id": "platform-control:GET:/api/platform-control/providers/activation/catalog",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/providers/activation/catalog",
+    "tag": "Platform Control",
+    "description": "List BYOK external provider activation catalog",
+    "summary": "List BYOK external provider activation catalog",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/providers/activation/runs",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/providers/activation/runs",
+    "tag": "Platform Control",
+    "description": "List external provider activation runs for one tenant",
+    "summary": "List external provider activation runs for one tenant",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/providers/activation/{provider_key}/test",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/providers/activation/{provider_key}/test",
+    "tag": "Platform Control",
+    "description": "Execute a BYOK provider activation test or supported provider action",
+    "summary": "Execute a BYOK provider activation test or supported provider action",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug",
+      "provider_key"
+    ]
+  },
+  {
     "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/entitlements",
     "service": "platform-control",
     "method": "GET",
@@ -5643,6 +6254,688 @@ export const endpoints: EndpointContract[] = [
     "pathParams": [
       "tenantSlug",
       "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/incidents",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/incidents",
+    "tag": "Platform Control",
+    "description": "List operational incidents by tenant",
+    "summary": "List operational incidents by tenant",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/incidents",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/incidents",
+    "tag": "Platform Control",
+    "description": "Open one operational incident",
+    "summary": "Open one operational incident",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/incident-command/readiness",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/incident-command/readiness",
+    "tag": "Platform Control",
+    "description": "Read incident command readiness",
+    "summary": "Read incident command readiness",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/incidents/{publicId}",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/incidents/{publicId}",
+    "tag": "Platform Control",
+    "description": "Read one incident with timeline, actions and postmortem",
+    "summary": "Read one incident with timeline, actions and postmortem",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug",
+      "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/incidents/{publicId}/timeline",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/incidents/{publicId}/timeline",
+    "tag": "Platform Control",
+    "description": "Append one incident timeline event",
+    "summary": "Append one incident timeline event",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug",
+      "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/incidents/{publicId}/actions",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/incidents/{publicId}/actions",
+    "tag": "Platform Control",
+    "description": "Create one incident action item",
+    "summary": "Create one incident action item",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug",
+      "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/incidents/{publicId}/resolve",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/incidents/{publicId}/resolve",
+    "tag": "Platform Control",
+    "description": "Resolve one incident",
+    "summary": "Resolve one incident",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug",
+      "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/incidents/{publicId}/postmortem",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/incidents/{publicId}/postmortem",
+    "tag": "Platform Control",
+    "description": "Create one incident postmortem",
+    "summary": "Create one incident postmortem",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug",
+      "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/policies/catalog",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/policies/catalog",
+    "tag": "Platform Control",
+    "description": "List policy catalog",
+    "summary": "List policy catalog",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/policies/evaluate",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/policies/evaluate",
+    "tag": "Platform Control",
+    "description": "Evaluate one policy decision",
+    "summary": "Evaluate one policy decision",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/policies/decisions",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/policies/decisions",
+    "tag": "Platform Control",
+    "description": "List policy decisions",
+    "summary": "List policy decisions",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/timeline",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/timeline",
+    "tag": "Platform Control",
+    "description": "List operational timeline events",
+    "summary": "List operational timeline events",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/timeline",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/timeline",
+    "tag": "Platform Control",
+    "description": "Record one operational timeline event",
+    "summary": "Record one operational timeline event",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/approvals",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/approvals",
+    "tag": "Platform Control",
+    "description": "List command approvals",
+    "summary": "List command approvals",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/approvals",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/approvals",
+    "tag": "Platform Control",
+    "description": "Create one command approval request",
+    "summary": "Create one command approval request",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/approvals/{publicId}/approve",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/approvals/{publicId}/approve",
+    "tag": "Platform Control",
+    "description": "Approve one command approval request",
+    "summary": "Approve one command approval request",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug",
+      "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/approvals/{publicId}/reject",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/approvals/{publicId}/reject",
+    "tag": "Platform Control",
+    "description": "Reject one command approval request",
+    "summary": "Reject one command approval request",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug",
+      "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/approvals/{publicId}/execute",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/approvals/{publicId}/execute",
+    "tag": "Platform Control",
+    "description": "Execute one approved command request",
+    "summary": "Execute one approved command request",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug",
+      "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/runbooks/catalog",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/runbooks/catalog",
+    "tag": "Platform Control",
+    "description": "List runbook catalog",
+    "summary": "List runbook catalog",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/runbooks",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/runbooks",
+    "tag": "Platform Control",
+    "description": "List runbook runs",
+    "summary": "List runbook runs",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/runbooks",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/runbooks",
+    "tag": "Platform Control",
+    "description": "Create one runbook run",
+    "summary": "Create one runbook run",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/runbooks/{publicId}/start",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/runbooks/{publicId}/start",
+    "tag": "Platform Control",
+    "description": "Start one approved runbook run",
+    "summary": "Start one approved runbook run",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug",
+      "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/runbooks/{publicId}/complete-step",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/runbooks/{publicId}/complete-step",
+    "tag": "Platform Control",
+    "description": "Complete current runbook step",
+    "summary": "Complete current runbook step",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug",
+      "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/runbooks/{publicId}/cancel",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/runbooks/{publicId}/cancel",
+    "tag": "Platform Control",
+    "description": "Cancel one runbook run",
+    "summary": "Cancel one runbook run",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug",
+      "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/evidence",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/evidence",
+    "tag": "Platform Control",
+    "description": "List audit evidence records",
+    "summary": "List audit evidence records",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/evidence",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/evidence",
+    "tag": "Platform Control",
+    "description": "Register one audit evidence record",
+    "summary": "Register one audit evidence record",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/evidence/{publicId}",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/evidence/{publicId}",
+    "tag": "Platform Control",
+    "description": "Read one audit evidence record",
+    "summary": "Read one audit evidence record",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug",
+      "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/autonomous-governance/readiness",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/autonomous-governance/readiness",
+    "tag": "Platform Control",
+    "description": "Read governance readiness",
+    "summary": "Read governance readiness",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/event-mesh/catalog",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/event-mesh/catalog",
+    "tag": "Platform Control",
+    "description": "List enterprise event mesh streams",
+    "summary": "List enterprise event mesh streams",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/event-mesh/events",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/event-mesh/events",
+    "tag": "Platform Control",
+    "description": "List tenant event mesh events",
+    "summary": "List tenant event mesh events",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/event-mesh/events",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/event-mesh/events",
+    "tag": "Platform Control",
+    "description": "Publish one tenant event mesh event",
+    "summary": "Publish one tenant event mesh event",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/event-mesh/dead-letters",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/event-mesh/dead-letters",
+    "tag": "Platform Control",
+    "description": "List tenant event mesh dead letters",
+    "summary": "List tenant event mesh dead letters",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/event-mesh/dead-letters/{publicId}/replay",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/event-mesh/dead-letters/{publicId}/replay",
+    "tag": "Platform Control",
+    "description": "Replay one event mesh dead letter",
+    "summary": "Replay one event mesh dead letter",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug",
+      "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/event-mesh/lineage",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/event-mesh/lineage",
+    "tag": "Platform Control",
+    "description": "Read event mesh lineage",
+    "summary": "Read event mesh lineage",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/runtime/profile",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/runtime/profile",
+    "tag": "Platform Control",
+    "description": "Read tenant runtime profile",
+    "summary": "Read tenant runtime profile",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:PUT:/api/platform-control/tenants/{tenantSlug}/runtime/profile",
+    "service": "platform-control",
+    "method": "PUT",
+    "path": "/api/platform-control/tenants/{tenantSlug}/runtime/profile",
+    "tag": "Platform Control",
+    "description": "Update tenant runtime profile",
+    "summary": "Update tenant runtime profile",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/runtime/health-score",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/runtime/health-score",
+    "tag": "Platform Control",
+    "description": "Read tenant runtime health score",
+    "summary": "Read tenant runtime health score",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/runtime/quotas",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/runtime/quotas",
+    "tag": "Platform Control",
+    "description": "List tenant runtime quotas",
+    "summary": "List tenant runtime quotas",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:PUT:/api/platform-control/tenants/{tenantSlug}/runtime/quotas/{metricKey}",
+    "service": "platform-control",
+    "method": "PUT",
+    "path": "/api/platform-control/tenants/{tenantSlug}/runtime/quotas/{metricKey}",
+    "tag": "Platform Control",
+    "description": "Upsert one tenant runtime quota",
+    "summary": "Upsert one tenant runtime quota",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug",
+      "metricKey"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/runtime/maintenance-windows",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/runtime/maintenance-windows",
+    "tag": "Platform Control",
+    "description": "List tenant maintenance windows",
+    "summary": "List tenant maintenance windows",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/tenants/{tenantSlug}/runtime/maintenance-windows",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/tenants/{tenantSlug}/runtime/maintenance-windows",
+    "tag": "Platform Control",
+    "description": "Schedule one tenant maintenance window",
+    "summary": "Schedule one tenant maintenance window",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "tenantSlug"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/contracts/evolution",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/contracts/evolution",
+    "tag": "Platform Control",
+    "description": "List contract evolution catalog",
+    "summary": "List contract evolution catalog",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/contracts/evolution/snapshots",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/contracts/evolution/snapshots",
+    "tag": "Platform Control",
+    "description": "Create one contract snapshot",
+    "summary": "Create one contract snapshot",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/contracts/evolution/diffs",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/contracts/evolution/diffs",
+    "tag": "Platform Control",
+    "description": "List contract diffs",
+    "summary": "List contract diffs",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/contracts/evolution/diffs",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/contracts/evolution/diffs",
+    "tag": "Platform Control",
+    "description": "Create one contract diff",
+    "summary": "Create one contract diff",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/contracts/evolution/breaking-changes",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/contracts/evolution/breaking-changes",
+    "tag": "Platform Control",
+    "description": "List contract breaking changes",
+    "summary": "List contract breaking changes",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "platform-control:POST:/api/platform-control/contracts/evolution/breaking-changes/{publicId}/approve",
+    "service": "platform-control",
+    "method": "POST",
+    "path": "/api/platform-control/contracts/evolution/breaking-changes/{publicId}/approve",
+    "tag": "Platform Control",
+    "description": "Approve one contract breaking change",
+    "summary": "Approve one contract breaking change",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/contracts/evolution/compatibility-matrix",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/contracts/evolution/compatibility-matrix",
+    "tag": "Platform Control",
+    "description": "Read contract compatibility matrix",
+    "summary": "Read contract compatibility matrix",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "platform-control:GET:/api/platform-control/tenants/{tenantSlug}/enterprise-runtime/readiness",
+    "service": "platform-control",
+    "method": "GET",
+    "path": "/api/platform-control/tenants/{tenantSlug}/enterprise-runtime/readiness",
+    "tag": "Platform Control",
+    "description": "Read enterprise runtime readiness",
+    "summary": "Read enterprise runtime readiness",
+    "source": "docs/contracts/http/platform-control.openapi.yaml",
+    "hasBody": false,
+    "pathParams": [
+      "tenantSlug"
     ]
   },
   {
@@ -6739,6 +8032,152 @@ export const endpoints: EndpointContract[] = [
     "summary": "List pending sales outbox events",
     "source": "docs/contracts/http/sales.openapi.yaml",
     "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "search:GET:/health/live",
+    "service": "search",
+    "method": "GET",
+    "path": "/health/live",
+    "tag": "Health",
+    "description": "Health live do serviço search.",
+    "summary": "Health live",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "search:GET:/health/ready",
+    "service": "search",
+    "method": "GET",
+    "path": "/health/ready",
+    "tag": "Health",
+    "description": "Health ready do serviço search.",
+    "summary": "Health ready",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "search:GET:/health/details",
+    "service": "search",
+    "method": "GET",
+    "path": "/health/details",
+    "tag": "Health",
+    "description": "Health details do serviço search.",
+    "summary": "Health details",
+    "source": "runtime",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "search:GET:/api/search/capabilities",
+    "service": "search",
+    "method": "GET",
+    "path": "/api/search/capabilities",
+    "tag": "Search",
+    "description": "Read searchable domains and e-discovery capabilities",
+    "summary": "Read searchable domains and e-discovery capabilities",
+    "source": "docs/contracts/http/search.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "search:GET:/api/search/query",
+    "service": "search",
+    "method": "GET",
+    "path": "/api/search/query",
+    "tag": "Search",
+    "description": "Query operational records with tenant filtering and redaction",
+    "summary": "Query operational records with tenant filtering and redaction",
+    "source": "docs/contracts/http/search.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "search:GET:/api/search/facets",
+    "service": "search",
+    "method": "GET",
+    "path": "/api/search/facets",
+    "tag": "Search",
+    "description": "Read search facets by entity type and source service",
+    "summary": "Read search facets by entity type and source service",
+    "source": "docs/contracts/http/search.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "search:POST:/api/search/saved-queries",
+    "service": "search",
+    "method": "POST",
+    "path": "/api/search/saved-queries",
+    "tag": "Search",
+    "description": "Create a governed saved query",
+    "summary": "Create a governed saved query",
+    "source": "docs/contracts/http/search.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "search:GET:/api/search/audit-events",
+    "service": "search",
+    "method": "GET",
+    "path": "/api/search/audit-events",
+    "tag": "Search",
+    "description": "List query audit events",
+    "summary": "List query audit events",
+    "source": "docs/contracts/http/search.openapi.yaml",
+    "hasBody": false,
+    "pathParams": []
+  },
+  {
+    "id": "search:POST:/api/search/discovery-cases",
+    "service": "search",
+    "method": "POST",
+    "path": "/api/search/discovery-cases",
+    "tag": "Search",
+    "description": "Create an e-discovery case",
+    "summary": "Create an e-discovery case",
+    "source": "docs/contracts/http/search.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "search:POST:/api/search/discovery-cases/{publicId}/items",
+    "service": "search",
+    "method": "POST",
+    "path": "/api/search/discovery-cases/{publicId}/items",
+    "tag": "Search",
+    "description": "Add a record to an e-discovery case",
+    "summary": "Add a record to an e-discovery case",
+    "source": "docs/contracts/http/search.openapi.yaml",
+    "hasBody": true,
+    "pathParams": [
+      "publicId"
+    ]
+  },
+  {
+    "id": "search:POST:/api/search/legal-holds",
+    "service": "search",
+    "method": "POST",
+    "path": "/api/search/legal-holds",
+    "tag": "Search",
+    "description": "Create a legal hold over an entity selector",
+    "summary": "Create a legal hold over an entity selector",
+    "source": "docs/contracts/http/search.openapi.yaml",
+    "hasBody": true,
+    "pathParams": []
+  },
+  {
+    "id": "search:POST:/api/search/exports",
+    "service": "search",
+    "method": "POST",
+    "path": "/api/search/exports",
+    "tag": "Search",
+    "description": "Create a controlled export request",
+    "summary": "Create a controlled export request",
+    "source": "docs/contracts/http/search.openapi.yaml",
+    "hasBody": true,
     "pathParams": []
   },
   {
@@ -8131,6 +9570,16 @@ export const eventSchemas: EventSchemaContract[] = [
     "fileName": "crm.outbox-event.schema.json",
     "name": "crm.outbox-event",
     "source": "docs/contracts/events/crm.outbox-event.schema.json"
+  },
+  {
+    "fileName": "documents.extraction-completed.schema.json",
+    "name": "documents.extraction-completed",
+    "source": "docs/contracts/events/documents.extraction-completed.schema.json"
+  },
+  {
+    "fileName": "documents.extraction-requested.schema.json",
+    "name": "documents.extraction-requested",
+    "source": "docs/contracts/events/documents.extraction-requested.schema.json"
   },
   {
     "fileName": "documents.signing-request.schema.json",

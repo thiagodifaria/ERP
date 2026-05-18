@@ -10,7 +10,10 @@ resources:
   - edge-deployment.yaml
   - analytics-deployment.yaml
   - platform-control-deployment.yaml
+  - search-deployment.yaml
+  - ai-governance-deployment.yaml
   - services.yaml
   - ingress.yaml
   - network-policy.yaml
+  - deployability-matrix.yaml
   - hpa.yaml

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: erp-deployability-matrix
+  labels:
+    app.kubernetes.io/name: erp
+data:
+  services.json: |
+    {
+      "release": "1.4.6",
+      "policy": "Kubernetes base ships the production control-plane subset; all domain services remain deployable by the same image/env/probe contract and are blocked from being claimed as fully covered until a Deployment, Service, HPA/PDB and NetworkPolicy entry exist.",
+      "fullyManaged": ["edge", "analytics", "platform-control", "search", "ai-governance"],
+      "migrationManaged": ["postgres-migrations"],
+      "composeManaged": ["identity", "webhook-hub", "crm", "documents", "sales", "finance", "billing", "rentals", "workflow-control", "workflow-runtime", "engagement", "simulation", "catalog", "support", "supplier", "notification", "fiscal", "accounting", "inventory", "procurement", "banking"],
+      "requiredPerService": ["Deployment", "Service", "ConfigMap/Secret references", "readinessProbe", "livenessProbe", "resources", "PodDisruptionBudget", "HorizontalPodAutoscaler", "NetworkPolicy"],
+      "validation": ["kubectl apply --dry-run=server -k infra/kubernetes/overlays/production", "./scripts/test.sh security"]
+    }

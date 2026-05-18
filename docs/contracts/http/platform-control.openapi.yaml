@@ -1,6 +1,6 @@
-openapi: 3.1.0
+﻿openapi: 3.1.0
 info:
-  title: ERP Platform Control API
+  title: Business Operating System Platform Control API
   version: 0.2.0
   description: Tenant capabilities, entitlements, quotas, metering, lifecycle jobs and SaaS governance.
 security:
@@ -18,6 +18,65 @@ paths:
       responses:
         "200":
           description: Provider catalog
+  /api/platform-control/providers/activation/catalog:
+    get:
+      summary: List BYOK external provider activation catalog
+      responses:
+        "200":
+          description: External provider activation catalog with credential posture and supported actions
+  /api/platform-control/tenants/{tenantSlug}/providers/activation/runs:
+    get:
+      summary: List external provider activation runs for one tenant
+      parameters:
+        - in: path
+          name: tenantSlug
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: provider_key
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Provider activation audit run list
+  /api/platform-control/tenants/{tenantSlug}/providers/activation/{provider_key}/test:
+    post:
+      summary: Execute a BYOK provider activation test or supported provider action
+      parameters:
+        - in: path
+          name: tenantSlug
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: provider_key
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  default: connection_test
+                actor:
+                  type: string
+                payload:
+                  type: object
+                  additionalProperties: true
+      responses:
+        "200":
+          description: Provider activation execution result, or unavailable when the credential is not configured
+        "400":
+          description: Unsupported provider action
+        "404":
+          description: Provider activation not found
   /api/platform-control/tenants/{tenantSlug}/entitlements:
     get:
       summary: List tenant entitlements with cursor pagination
@@ -279,6 +338,291 @@ paths:
       responses:
         "200":
           description: Rolled back go-live rollout
+  /api/platform-control/tenants/{tenantSlug}/incidents:
+    get:
+      summary: List operational incidents by tenant
+      responses:
+        "200":
+          description: Incident list
+    post:
+      summary: Open one operational incident
+      responses:
+        "200":
+          description: Created incident
+  /api/platform-control/tenants/{tenantSlug}/incident-command/readiness:
+    get:
+      summary: Read incident command readiness
+      responses:
+        "200":
+          description: Incident command readiness
+  /api/platform-control/tenants/{tenantSlug}/incidents/{publicId}:
+    get:
+      summary: Read one incident with timeline, actions and postmortem
+      responses:
+        "200":
+          description: Incident detail
+  /api/platform-control/tenants/{tenantSlug}/incidents/{publicId}/timeline:
+    post:
+      summary: Append one incident timeline event
+      responses:
+        "200":
+          description: Incident timeline event
+  /api/platform-control/tenants/{tenantSlug}/incidents/{publicId}/actions:
+    post:
+      summary: Create one incident action item
+      responses:
+        "200":
+          description: Incident action
+  /api/platform-control/tenants/{tenantSlug}/incidents/{publicId}/resolve:
+    post:
+      summary: Resolve one incident
+      responses:
+        "200":
+          description: Resolved incident
+  /api/platform-control/tenants/{tenantSlug}/incidents/{publicId}/postmortem:
+    post:
+      summary: Create one incident postmortem
+      responses:
+        "200":
+          description: Incident postmortem
+  /api/platform-control/policies/catalog:
+    get:
+      summary: List policy catalog
+      responses:
+        "200":
+          description: Policy catalog
+  /api/platform-control/tenants/{tenantSlug}/policies/evaluate:
+    post:
+      summary: Evaluate one policy decision
+      responses:
+        "200":
+          description: Policy decision
+  /api/platform-control/tenants/{tenantSlug}/policies/decisions:
+    get:
+      summary: List policy decisions
+      responses:
+        "200":
+          description: Policy decision list
+  /api/platform-control/tenants/{tenantSlug}/timeline:
+    get:
+      summary: List operational timeline events
+      responses:
+        "200":
+          description: Timeline event list
+    post:
+      summary: Record one operational timeline event
+      responses:
+        "200":
+          description: Timeline event
+  /api/platform-control/tenants/{tenantSlug}/approvals:
+    get:
+      summary: List command approvals
+      responses:
+        "200":
+          description: Approval list
+    post:
+      summary: Create one command approval request
+      responses:
+        "200":
+          description: Approval request
+  /api/platform-control/tenants/{tenantSlug}/approvals/{publicId}/approve:
+    post:
+      summary: Approve one command approval request
+      responses:
+        "200":
+          description: Approved request
+  /api/platform-control/tenants/{tenantSlug}/approvals/{publicId}/reject:
+    post:
+      summary: Reject one command approval request
+      responses:
+        "200":
+          description: Rejected request
+  /api/platform-control/tenants/{tenantSlug}/approvals/{publicId}/execute:
+    post:
+      summary: Execute one approved command request
+      responses:
+        "200":
+          description: Executed request
+  /api/platform-control/runbooks/catalog:
+    get:
+      summary: List runbook catalog
+      responses:
+        "200":
+          description: Runbook catalog
+  /api/platform-control/tenants/{tenantSlug}/runbooks:
+    get:
+      summary: List runbook runs
+      responses:
+        "200":
+          description: Runbook run list
+    post:
+      summary: Create one runbook run
+      responses:
+        "200":
+          description: Runbook run
+  /api/platform-control/tenants/{tenantSlug}/runbooks/{publicId}/start:
+    post:
+      summary: Start one approved runbook run
+      responses:
+        "200":
+          description: Running runbook
+  /api/platform-control/tenants/{tenantSlug}/runbooks/{publicId}/complete-step:
+    post:
+      summary: Complete current runbook step
+      responses:
+        "200":
+          description: Updated runbook
+  /api/platform-control/tenants/{tenantSlug}/runbooks/{publicId}/cancel:
+    post:
+      summary: Cancel one runbook run
+      responses:
+        "200":
+          description: Cancelled runbook
+  /api/platform-control/tenants/{tenantSlug}/evidence:
+    get:
+      summary: List audit evidence records
+      responses:
+        "200":
+          description: Evidence record list
+    post:
+      summary: Register one audit evidence record
+      responses:
+        "200":
+          description: Evidence record
+  /api/platform-control/tenants/{tenantSlug}/evidence/{publicId}:
+    get:
+      summary: Read one audit evidence record
+      responses:
+        "200":
+          description: Evidence detail
+  /api/platform-control/tenants/{tenantSlug}/autonomous-governance/readiness:
+    get:
+      summary: Read governance readiness
+      responses:
+        "200":
+          description: Governance readiness
+  /api/platform-control/event-mesh/catalog:
+    get:
+      summary: List enterprise event mesh streams
+      responses:
+        "200":
+          description: Event mesh catalog
+  /api/platform-control/tenants/{tenantSlug}/event-mesh/events:
+    get:
+      summary: List tenant event mesh events
+      responses:
+        "200":
+          description: Event mesh event list
+    post:
+      summary: Publish one tenant event mesh event
+      responses:
+        "200":
+          description: Event mesh event
+  /api/platform-control/tenants/{tenantSlug}/event-mesh/dead-letters:
+    get:
+      summary: List tenant event mesh dead letters
+      responses:
+        "200":
+          description: Dead letter list
+  /api/platform-control/tenants/{tenantSlug}/event-mesh/dead-letters/{publicId}/replay:
+    post:
+      summary: Replay one event mesh dead letter
+      responses:
+        "200":
+          description: Replayed dead letter
+  /api/platform-control/tenants/{tenantSlug}/event-mesh/lineage:
+    get:
+      summary: Read event mesh lineage
+      responses:
+        "200":
+          description: Event mesh lineage
+  /api/platform-control/tenants/{tenantSlug}/runtime/profile:
+    get:
+      summary: Read tenant runtime profile
+      responses:
+        "200":
+          description: Runtime profile
+    put:
+      summary: Update tenant runtime profile
+      responses:
+        "200":
+          description: Updated runtime profile
+  /api/platform-control/tenants/{tenantSlug}/runtime/health-score:
+    get:
+      summary: Read tenant runtime health score
+      responses:
+        "200":
+          description: Runtime health score
+  /api/platform-control/tenants/{tenantSlug}/runtime/quotas:
+    get:
+      summary: List tenant runtime quotas
+      responses:
+        "200":
+          description: Runtime quota list
+  /api/platform-control/tenants/{tenantSlug}/runtime/quotas/{metricKey}:
+    put:
+      summary: Upsert one tenant runtime quota
+      responses:
+        "200":
+          description: Runtime quota
+  /api/platform-control/tenants/{tenantSlug}/runtime/maintenance-windows:
+    get:
+      summary: List tenant maintenance windows
+      responses:
+        "200":
+          description: Maintenance window list
+    post:
+      summary: Schedule one tenant maintenance window
+      responses:
+        "200":
+          description: Maintenance window
+  /api/platform-control/contracts/evolution:
+    get:
+      summary: List contract evolution catalog
+      responses:
+        "200":
+          description: Contract evolution catalog
+  /api/platform-control/contracts/evolution/snapshots:
+    post:
+      summary: Create one contract snapshot
+      responses:
+        "200":
+          description: Contract snapshot
+  /api/platform-control/contracts/evolution/diffs:
+    get:
+      summary: List contract diffs
+      responses:
+        "200":
+          description: Contract diff list
+    post:
+      summary: Create one contract diff
+      responses:
+        "200":
+          description: Contract diff
+  /api/platform-control/contracts/evolution/breaking-changes:
+    get:
+      summary: List contract breaking changes
+      responses:
+        "200":
+          description: Breaking change list
+  /api/platform-control/contracts/evolution/breaking-changes/{publicId}/approve:
+    post:
+      summary: Approve one contract breaking change
+      responses:
+        "200":
+          description: Approved breaking change
+  /api/platform-control/contracts/evolution/compatibility-matrix:
+    get:
+      summary: Read contract compatibility matrix
+      responses:
+        "200":
+          description: Compatibility matrix
+  /api/platform-control/tenants/{tenantSlug}/enterprise-runtime/readiness:
+    get:
+      summary: Read enterprise runtime readiness
+      responses:
+        "200":
+          description: Enterprise runtime readiness
 components:
   securitySchemes:
     bearerAuth:

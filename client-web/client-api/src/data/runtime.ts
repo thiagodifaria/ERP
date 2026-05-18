@@ -18,6 +18,7 @@ export type RequestResult = {
   headers: Record<string, string>;
   body: unknown;
   url: string;
+  errorKind?: "auth" | "http" | "network" | "timeout" | "validation";
   error?: string;
 };
 
@@ -43,6 +44,8 @@ export const servicesList = [
   "inventory",
   "procurement",
   "banking",
+  "search",
+  "ai-governance",
   "notification",
   "fiscal",
   "webhook-hub"
@@ -72,7 +75,9 @@ export const localBaseUrls: Record<string, string> = {
   accounting: "http://localhost:8103",
   inventory: "http://localhost:8104",
   procurement: "http://localhost:8105",
-  banking: "http://localhost:8106"
+  banking: "http://localhost:8106",
+  search: "http://localhost:8107",
+  "ai-governance": "http://localhost:8108"
 };
 
 export const defaultEnvironment: RuntimeEnvironment = {
@@ -115,6 +120,14 @@ export function defaultBodyFor(endpoint: EndpointContract, tenantSlug: string): 
   }
 
   if (path.includes("/api/platform-control")) {
+    if (path.includes("/providers/activation/")) {
+      return stringify({
+        actor: "console@bootstrap-ops.local",
+        action: "connection_test",
+        payload: { source: "api-console" }
+      });
+    }
+
     return stringify({
       requestedBy: "console@bootstrap-ops.local",
       payload: { source: "api-console" }

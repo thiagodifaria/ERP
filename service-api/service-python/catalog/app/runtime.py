@@ -183,6 +183,25 @@ def create_category(payload: dict) -> dict:
             tenant_id = _find_tenant_id(cursor, slug)
             cursor.execute(
                 """
+                SELECT public_id, category_key, name, active, created_at
+                FROM catalog.categories
+                WHERE tenant_id = %s AND category_key = %s
+                """,
+                (tenant_id, category_key),
+            )
+            existing = cursor.fetchone()
+            if existing is not None:
+                return {
+                    "publicId": existing["public_id"],
+                    "tenantSlug": slug,
+                    "key": existing["category_key"],
+                    "name": existing["name"],
+                    "active": existing["active"],
+                    "createdAt": existing["created_at"].astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                }
+
+            cursor.execute(
+                """
                 INSERT INTO catalog.categories (tenant_id, public_id, category_key, name, active)
                 VALUES (%s, %s, %s, %s, %s)
                 RETURNING created_at
@@ -371,6 +390,21 @@ def create_item(payload: dict) -> dict:
     with connect() as connection:
         with connection.cursor() as cursor:
             tenant_id = _find_tenant_id(cursor, slug)
+            cursor.execute(
+                """
+                SELECT item.public_id, item.sku, item.name, item.item_type, item.unit_code, item.price_base_cents,
+                       item.currency_code, item.active, item.version_number, item.attributes_json, item.created_at,
+                       item.updated_at, category.public_id AS category_public_id, category.name AS category_name
+                FROM catalog.items AS item
+                LEFT JOIN catalog.categories AS category ON category.id = item.category_id
+                WHERE item.tenant_id = %s AND item.sku = %s
+                """,
+                (tenant_id, sku),
+            )
+            existing = cursor.fetchone()
+            if existing is not None:
+                return _map_item_row(existing, slug)
+
             category_id = None
             category_name = None
             if category_public_id != "":

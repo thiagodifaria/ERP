@@ -20,6 +20,12 @@ def build_adapter_catalog() -> dict:
     signing = build_document_signing_capabilities()
     enrichment = build_enrichment_capabilities()
     webhook_hub = build_webhook_hub_capabilities()
+    ai_governance = build_ai_governance_capabilities()
+    document_intelligence = build_document_intelligence_capabilities()
+    fiscal_brazil = build_fiscal_brazil_capabilities()
+    registry_enrichment = build_registry_enrichment_capabilities()
+    market_data = build_market_data_capabilities()
+    external_risk_feed = build_external_risk_feed_capabilities()
     contracts = build_contract_catalog()
 
     configured = (
@@ -28,6 +34,12 @@ def build_adapter_catalog() -> dict:
         + documents["summary"]["configured"]
         + signing["summary"]["configured"]
         + enrichment["summary"]["configured"]
+        + ai_governance["summary"]["configured"]
+        + document_intelligence["summary"]["configured"]
+        + fiscal_brazil["summary"]["configured"]
+        + registry_enrichment["summary"]["configured"]
+        + market_data["summary"]["configured"]
+        + external_risk_feed["summary"]["configured"]
     )
     fallback = (
         engagement["summary"]["fallback"]
@@ -35,6 +47,12 @@ def build_adapter_catalog() -> dict:
         + documents["summary"]["fallback"]
         + signing["summary"]["fallback"]
         + enrichment["summary"]["fallback"]
+        + ai_governance["summary"]["fallback"]
+        + document_intelligence["summary"]["fallback"]
+        + fiscal_brazil["summary"]["fallback"]
+        + registry_enrichment["summary"]["fallback"]
+        + market_data["summary"]["fallback"]
+        + external_risk_feed["summary"]["fallback"]
     )
     critical_unconfigured = (
         billing["summary"]["criticalUnconfigured"]
@@ -55,6 +73,12 @@ def build_adapter_catalog() -> dict:
         "documentSigning": signing,
         "crmEnrichment": enrichment,
         "webhookHub": webhook_hub,
+        "aiGovernance": ai_governance,
+        "documentIntelligence": document_intelligence,
+        "fiscalBrazil": fiscal_brazil,
+        "registryEnrichmentBrazil": registry_enrichment,
+        "marketMacroRisk": market_data,
+        "externalRiskFeed": external_risk_feed,
         "contracts": contracts,
     }
 
@@ -241,6 +265,188 @@ def build_webhook_hub_capabilities() -> dict:
     }
 
 
+def build_ai_governance_capabilities() -> dict:
+    capabilities = [
+        capability(
+            provider="openai",
+            scope="llm_assistant",
+            configured=bool(settings.openai_api_key.strip()),
+            credential_key="OPENAI_API_KEY",
+            fallback_viable=True,
+            critical=False,
+            model=settings.openai_model,
+        )
+    ]
+    report = summarize_capabilities("ai-governance", capabilities)
+    report["policy"] = "LLM externo so executa em modo BYOK; sem OPENAI_API_KEY o assistente permanece deterministico e somente leitura."
+    return report
+
+
+def build_document_intelligence_capabilities() -> dict:
+    capabilities = [
+        capability(
+            provider="aws_textract",
+            scope="ocr_document_intelligence",
+            configured=bool(settings.aws_textract_access_key_id.strip() and settings.aws_textract_secret_access_key.strip() and settings.aws_textract_region.strip()),
+            credential_key="AWS_TEXTRACT_ACCESS_KEY_ID",
+            fallback_viable=False,
+            critical=False,
+            modeDetail="sdk_or_sigv4_required_for_runtime_extraction",
+        ),
+        capability(
+            provider="google_document_ai",
+            scope="ocr_document_intelligence",
+            configured=bool(settings.google_document_ai_processor.strip() and settings.google_document_ai_credentials_json.strip()),
+            credential_key="GOOGLE_DOCUMENT_AI_CREDENTIALS_JSON",
+            fallback_viable=False,
+            critical=False,
+            modeDetail="oauth_service_account_required_for_runtime_extraction",
+        ),
+    ]
+    return summarize_capabilities("document-intelligence", capabilities)
+
+
+def build_fiscal_brazil_capabilities() -> dict:
+    capabilities = [
+        capability(
+            provider="focus_nfe",
+            scope="fiscal_issuance",
+            configured=bool(settings.fiscal_focus_nfe_api_key.strip()),
+            credential_key="FISCAL_FOCUS_NFE_API_KEY",
+            fallback_viable=False,
+            critical=False,
+        ),
+        capability(
+            provider="enotas",
+            scope="fiscal_issuance",
+            configured=bool(settings.fiscal_enotas_api_key.strip()),
+            credential_key="FISCAL_ENOTAS_API_KEY",
+            fallback_viable=False,
+            critical=False,
+        ),
+        capability(
+            provider="certificate_a1",
+            scope="digital_certificate",
+            configured=bool(settings.fiscal_certificate_a1_secret.strip()),
+            credential_key="FISCAL_CERTIFICATE_A1_SECRET",
+            fallback_viable=False,
+            critical=False,
+        ),
+        capability(
+            provider="certificate_a3",
+            scope="digital_certificate",
+            configured=bool(settings.fiscal_certificate_a3_provider.strip()),
+            credential_key="FISCAL_CERTIFICATE_A3_PROVIDER",
+            fallback_viable=False,
+            critical=False,
+        ),
+    ]
+    return summarize_capabilities("fiscal-brazil", capabilities)
+
+
+def build_registry_enrichment_capabilities() -> dict:
+    capabilities = [
+        capability(
+            provider="serpro_cnpj",
+            scope="cnpj_enrichment",
+            configured=bool(settings.crm_serpro_client_id.strip() and settings.crm_serpro_client_secret.strip()),
+            credential_key="CRM_SERPRO_CLIENT_SECRET",
+            fallback_viable=False,
+            critical=False,
+        ),
+        capability(
+            provider="brasilapi",
+            scope="cnpj_enrichment",
+            configured=True,
+            credential_key=None,
+            fallback_viable=True,
+            critical=False,
+            publicApi=True,
+        ),
+        capability(
+            provider="viacep",
+            scope="cep_enrichment",
+            configured=True,
+            credential_key=None,
+            fallback_viable=True,
+            critical=False,
+            publicApi=True,
+        ),
+    ]
+    return summarize_capabilities("registry-enrichment-brazil", capabilities)
+
+
+def build_market_data_capabilities() -> dict:
+    capabilities = [
+        capability(
+            provider="alpha_vantage",
+            scope="market_data",
+            configured=bool(settings.market_alpha_vantage_api_key.strip()),
+            credential_key="MARKET_ALPHA_VANTAGE_API_KEY",
+            fallback_viable=False,
+            critical=False,
+        ),
+        capability(
+            provider="fixer",
+            scope="fx_rates",
+            configured=bool(settings.market_fixer_api_key.strip()),
+            credential_key="MARKET_FIXER_API_KEY",
+            fallback_viable=False,
+            critical=False,
+        ),
+        capability(
+            provider="bcb_sgs",
+            scope="macro_rates",
+            configured=True,
+            credential_key=None,
+            fallback_viable=True,
+            critical=False,
+            publicApi=True,
+        ),
+        capability(
+            provider="bcb_ptax",
+            scope="fx_reference",
+            configured=True,
+            credential_key=None,
+            fallback_viable=True,
+            critical=False,
+            publicApi=True,
+        ),
+    ]
+    return summarize_capabilities("market-macro-risk", capabilities)
+
+
+def build_external_risk_feed_capabilities() -> dict:
+    capabilities = [
+        capability(
+            provider="newsapi",
+            scope="news_risk_feed",
+            configured=bool(settings.newsapi_key.strip()),
+            credential_key="NEWSAPI_KEY",
+            fallback_viable=False,
+            critical=False,
+        ),
+        capability(
+            provider="gdelt",
+            scope="news_risk_feed",
+            configured=bool(settings.gdelt_base_url.strip()),
+            credential_key=None,
+            fallback_viable=True,
+            critical=False,
+            publicApi=True,
+        ),
+        capability(
+            provider="alpha_vantage_news",
+            scope="market_news_sentiment",
+            configured=bool(settings.market_alpha_vantage_api_key.strip()),
+            credential_key="MARKET_ALPHA_VANTAGE_API_KEY",
+            fallback_viable=False,
+            critical=False,
+        ),
+    ]
+    return summarize_capabilities("external-risk-feed", capabilities)
+
+
 def build_contract_catalog() -> dict:
     root = try_resolve_repo_root(Path(__file__))
     if root is not None:
@@ -279,6 +485,7 @@ def capability(
     credential_key: str | None,
     fallback_viable: bool,
     critical: bool,
+    **extra: object,
 ) -> dict:
     if configured:
         mode = "configured"
@@ -299,7 +506,7 @@ def capability(
         "fallbackViable": fallback_viable,
         "mode": mode,
         "status": status,
-    }
+    } | extra
 
 
 def summarize_capabilities(service: str, capabilities: list[dict]) -> dict:

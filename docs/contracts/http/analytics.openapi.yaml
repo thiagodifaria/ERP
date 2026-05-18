@@ -1,6 +1,6 @@
-openapi: 3.1.0
+﻿openapi: 3.1.0
 info:
-  title: ERP Analytics API
+  title: Business Operating System Analytics API
   version: 0.1.0
   description: Executive reports, adapter catalog, SaaS control and contract governance.
 security:
@@ -158,10 +158,225 @@ paths:
           description: Go-live control report
   /api/analytics/reports/production-readiness:
     get:
-      summary: Read production readiness 1.0.0 release gate
+      summary: Read production readiness for version 1.4.6
       responses:
         "200":
-          description: Production readiness release gate
+          description: Production readiness report
+  /api/analytics/metrics:
+    get:
+      summary: List semantic metric definitions
+      responses:
+        "200":
+          description: Semantic metric catalog
+  /api/analytics/metrics/{code}:
+    get:
+      summary: Read one semantic metric definition
+      responses:
+        "200":
+          description: Semantic metric definition
+  /api/analytics/metrics/{code}/snapshots:
+    get:
+      summary: List semantic metric snapshots
+      responses:
+        "200":
+          description: Semantic metric snapshots
+  /api/analytics/datasets/freshness:
+    get:
+      summary: List dataset freshness posture
+      responses:
+        "200":
+          description: Dataset freshness posture
+  /api/analytics/data-quality:
+    get:
+      summary: List semantic data quality checks
+      responses:
+        "200":
+          description: Data quality checks
+  /api/analytics/lineage:
+    get:
+      summary: Read semantic metric lineage graph
+      responses:
+        "200":
+          description: Metric lineage graph
+  /api/analytics/risk/tenant-score:
+    get:
+      summary: Read tenant risk and compliance score
+      responses:
+        "200":
+          description: Tenant risk score
+  /api/analytics/risk/domain-scores:
+    get:
+      summary: Read domain risk scores
+      responses:
+        "200":
+          description: Domain risk scores
+  /api/analytics/risk/service-scores:
+    get:
+      summary: Read service risk scores
+      responses:
+        "200":
+          description: Service risk scores
+  /api/analytics/risk/compliance-posture:
+    get:
+      summary: Read compliance posture
+      responses:
+        "200":
+          description: Compliance posture
+  /api/analytics/risk/recommendations:
+    get:
+      summary: Read risk recommendations
+      responses:
+        "200":
+          description: Risk recommendations
+  /api/analytics/reconciliation/findings:
+    get:
+      summary: List reconciliation findings
+      responses:
+        "200":
+          description: Reconciliation findings
+  /api/analytics/reconciliation/run:
+    post:
+      summary: Run operational reconciliation
+      responses:
+        "200":
+          description: Reconciliation run
+  /api/analytics/financial-close/periods:
+    get:
+      summary: List financial close periods
+      responses:
+        "200":
+          description: Financial close periods
+    post:
+      summary: Create one financial close period
+      responses:
+        "200":
+          description: Financial close period
+  /api/analytics/financial-close/periods/{publicId}/close:
+    post:
+      summary: Close one financial period
+      responses:
+        "200":
+          description: Closed financial period
+  /api/analytics/financial-close/periods/{publicId}/snapshot:
+    get:
+      summary: Read financial close snapshot
+      responses:
+        "200":
+          description: Financial close snapshot
+  /api/analytics/financial-close/readiness:
+    get:
+      summary: Read financial close readiness
+      responses:
+        "200":
+          description: Financial close readiness
+  /api/analytics/master-data/entities:
+    get:
+      summary: List master data entities
+      responses:
+        "200":
+          description: Master data entities
+  /api/analytics/master-data/quality-score:
+    get:
+      summary: Read master data quality score
+      responses:
+        "200":
+          description: Master data quality score
+  /api/analytics/master-data/duplicates:
+    get:
+      summary: List master data duplicate candidates
+      responses:
+        "200":
+          description: Duplicate candidates
+  /api/analytics/master-data/merge-proposals:
+    post:
+      summary: Create one master data merge proposal
+      responses:
+        "200":
+          description: Merge proposal
+  /api/analytics/data-quality/rules:
+    get:
+      summary: List data quality rules
+      responses:
+        "200":
+          description: Data quality rules
+  /api/analytics/data-quality/findings:
+    get:
+      summary: List data quality findings
+      responses:
+        "200":
+          description: Data quality findings
+  /api/analytics/lakehouse/datasets:
+    get:
+      summary: List lakehouse datasets
+      responses:
+        "200":
+          description: Lakehouse dataset list
+  /api/analytics/lakehouse/datasets/{datasetKey}:
+    get:
+      summary: Read one lakehouse dataset
+      responses:
+        "200":
+          description: Lakehouse dataset
+  /api/analytics/lakehouse/lineage:
+    get:
+      summary: Read lakehouse lineage
+      responses:
+        "200":
+          description: Lakehouse lineage
+  /api/analytics/lakehouse/export-policies:
+    get:
+      summary: List lakehouse export policies
+      responses:
+        "200":
+          description: Lakehouse export policies
+  /api/analytics/lakehouse/readiness:
+    get:
+      summary: Read lakehouse readiness
+      responses:
+        "200":
+          description: Lakehouse readiness
+  /api/analytics/enterprise-runtime/readiness:
+    get:
+      summary: Read enterprise runtime readiness
+      responses:
+        "200":
+          description: Enterprise runtime readiness
+  /api/analytics/external-intelligence/readiness:
+    get:
+      summary: Read external intelligence and verification readiness
+      responses:
+        "200":
+          description: External intelligence readiness
+  /api/analytics/document-intelligence/readiness:
+    get:
+      summary: Read OCR and document intelligence provider readiness
+      responses:
+        "200":
+          description: Document intelligence readiness
+  /api/analytics/fiscal-brazil/readiness:
+    get:
+      summary: Read Brazilian fiscal provider readiness
+      responses:
+        "200":
+          description: Fiscal Brazil readiness
+  /api/analytics/registry-enrichment/brazil:
+    get:
+      summary: Read Brazilian registry enrichment posture
+      responses:
+        "200":
+          description: Registry enrichment Brazil report
+  /api/analytics/market-macro-risk:
+    get:
+      summary: Read FX, market and macro risk provider posture
+      responses:
+        "200":
+          description: Market macro risk report
+  /api/analytics/external-risk-feed:
+    get:
+      summary: Read external news and risk feed posture
+      responses:
+        "200":
+          description: External risk feed report
 components:
   securitySchemes:
     bearerAuth:

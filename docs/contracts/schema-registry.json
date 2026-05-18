@@ -1,4 +1,4 @@
-{
+﻿{
   "version": "0.1.0",
   "schemas": [
     {
@@ -18,6 +18,18 @@
       "path": "docs/contracts/events/crm.outbox-event.schema.json",
       "format": "json-schema",
       "domain": "crm"
+    },
+    {
+      "key": "documents.extraction-requested",
+      "path": "docs/contracts/events/documents.extraction-requested.schema.json",
+      "format": "json-schema",
+      "domain": "documents"
+    },
+    {
+      "key": "documents.extraction-completed",
+      "path": "docs/contracts/events/documents.extraction-completed.schema.json",
+      "format": "json-schema",
+      "domain": "documents"
     },
     {
       "key": "documents.signing-request",

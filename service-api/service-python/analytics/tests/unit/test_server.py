@@ -400,14 +400,14 @@ def test_go_live_control_returns_rollout_and_adoption_payload() -> None:
     assert payload["goLiveClosure"]["acceptanceReady"] is True
 
 
-def test_production_readiness_returns_1_0_release_gate() -> None:
+def test_production_readiness_returns_1_4_version_gate() -> None:
     response = client.get("/api/analytics/reports/production-readiness?tenant_slug=bootstrap-ops")
     payload = response.json()
 
     assert response.status_code == 200
     assert payload["tenantSlug"] == "bootstrap-ops"
-    assert payload["release"]["version"] == "1.0.0"
-    assert payload["release"]["name"] == "Production Readiness & Enterprise Deployment"
+    assert payload["release"]["version"] == "1.4.6"
+    assert "name" not in payload["release"]
     assert payload["release"]["releaseReady"] is True
     assert payload["release"]["blockingGates"] == []
     assert "contract" in payload["evidence"]["requiredSuites"]
@@ -417,7 +417,164 @@ def test_production_readiness_returns_1_0_release_gate() -> None:
     assert payload["gates"]["deployArtifacts"]["status"] == "ready"
     assert payload["gates"]["edgeSecurity"]["status"] == "ready"
     assert payload["gates"]["workloadSecurity"]["status"] == "ready"
+    assert payload["gates"]["operationalSearch"]["status"] == "ready"
+    assert payload["gates"]["semanticBi"]["status"] == "ready"
+    assert payload["gates"]["aiGovernance"]["status"] == "ready"
+    assert payload["gates"]["incidentCommand"]["status"] == "ready"
+    assert payload["gates"]["policyDecisionCenter"]["status"] == "ready"
+    assert payload["gates"]["operationalTimeline"]["status"] == "ready"
+    assert payload["gates"]["commandApprovals"]["status"] == "ready"
+    assert payload["gates"]["runbookAutomation"]["status"] == "ready"
+    assert payload["gates"]["auditEvidenceVault"]["status"] == "ready"
+    assert payload["gates"]["riskComplianceScoring"]["status"] == "ready"
+    assert payload["gates"]["enterpriseEventMesh"]["status"] == "ready"
+    assert payload["gates"]["reconciliationCenter"]["status"] == "ready"
+    assert payload["gates"]["financialCloseCenter"]["status"] == "ready"
+    assert payload["gates"]["masterDataQuality"]["status"] == "ready"
+    assert payload["gates"]["lakehouseManifest"]["status"] == "ready"
+    assert payload["gates"]["tenantRuntimeControlPlane"]["status"] == "ready"
+    assert payload["gates"]["contractSchemaEvolution"]["status"] == "ready"
+    assert payload["gates"]["externalProviderActivation"]["status"] == "ready"
+    assert payload["gates"]["llmProviderByok"]["status"] == "ready"
+    assert payload["gates"]["documentIntelligence"]["status"] == "ready"
+    assert payload["gates"]["fiscalProviderReadiness"]["status"] == "ready"
+    assert payload["gates"]["brazilRegistryEnrichment"]["status"] == "ready"
+    assert payload["gates"]["marketMacroRisk"]["status"] == "ready"
+    assert payload["gates"]["externalRiskFeed"]["status"] == "ready"
+    assert payload["gates"]["providerActivationV14"]["status"] == "ready"
+    assert payload["gates"]["opsConsoleV14"]["status"] == "ready"
+    assert payload["gates"]["staticPolicy"]["status"] == "ready"
+    assert payload["gates"]["transactionalIdGeneration"]["status"] == "ready"
+    assert payload["gates"]["authConformance"]["status"] == "ready"
+    assert payload["gates"]["apiConsoleSecurity"]["status"] == "ready"
     assert payload["gates"]["providers"]["blockingForRelease"] is False
     assert "infra/kubernetes/base" in payload["gates"]["deployArtifacts"]["evidence"]
     assert payload["closures"]["productionMaturity"]["acceptanceReady"] is True
-    assert "marketplace de extensoes" in payload["nonGoals"]
+    assert payload["closures"]["enterpriseRuntimeFabric"]["acceptanceReady"] is True
+    assert "externalProviders" in payload["closures"]
+    assert "risk-compliance-scoring" in payload["productionCapabilities"]
+    assert "enterprise-event-mesh" in payload["productionCapabilities"]
+    assert "external-provider-activation" in payload["productionCapabilities"]
+    assert "document-intelligence" in payload["productionCapabilities"]
+    assert "external-risk-feed" in payload["productionCapabilities"]
+
+
+def test_external_intelligence_reports_return_v14_domains() -> None:
+    client = TestClient(app)
+
+    readiness = client.get("/api/analytics/external-intelligence/readiness?tenant_slug=bootstrap-ops")
+    document = client.get("/api/analytics/document-intelligence/readiness?tenant_slug=bootstrap-ops")
+    fiscal = client.get("/api/analytics/fiscal-brazil/readiness?tenant_slug=bootstrap-ops")
+    registry = client.get("/api/analytics/registry-enrichment/brazil?tenant_slug=bootstrap-ops")
+    market = client.get("/api/analytics/market-macro-risk?tenant_slug=bootstrap-ops")
+    news = client.get("/api/analytics/external-risk-feed?tenant_slug=bootstrap-ops")
+
+    assert readiness.status_code == 200
+    assert readiness.json()["release"] == "1.4.6"
+    assert "documentIntelligence" in readiness.json()["domains"]
+    assert document.status_code == 200
+    assert any(item["provider"] == "aws_textract" for item in document.json()["providers"])
+    assert fiscal.status_code == 200
+    assert any(item["provider"] == "focus_nfe" for item in fiscal.json()["providers"])
+    assert registry.status_code == 200
+    assert any(item["provider"] == "viacep" for item in registry.json()["providers"])
+    assert market.status_code == 200
+    assert any(item["provider"] == "bcb_sgs" for item in market.json()["providers"])
+    assert news.status_code == 200
+    assert any(item["provider"] == "gdelt" for item in news.json()["providers"])
+
+
+def test_semantic_metrics_catalog_returns_definitions_quality_and_lineage() -> None:
+    client = TestClient(app)
+
+    metrics = client.get("/api/analytics/metrics")
+    assert metrics.status_code == 200
+    assert metrics.json()["summary"]["metrics"] >= 3
+
+    detail = client.get("/api/analytics/metrics/revenue.net_operational_margin")
+    assert detail.status_code == 200
+    assert detail.json()["owner"] == "finance-control"
+
+    snapshots = client.get("/api/analytics/metrics/revenue.net_operational_margin/snapshots")
+    assert snapshots.status_code == 200
+    assert snapshots.json()["latest"]["quality"] == "passed"
+
+    freshness = client.get("/api/analytics/datasets/freshness")
+    assert freshness.status_code == 200
+    assert freshness.json()["summary"]["attention"] == 1
+
+    quality = client.get("/api/analytics/data-quality")
+    assert quality.status_code == 200
+    assert quality.json()["summary"]["failed"] == 0
+
+    lineage = client.get("/api/analytics/lineage")
+    assert lineage.status_code == 200
+    assert lineage.json()["edges"]
+
+
+def test_risk_and_compliance_scoring_returns_operational_posture() -> None:
+    tenant_score = client.get("/api/analytics/risk/tenant-score?tenant_slug=bootstrap-ops")
+    domain_scores = client.get("/api/analytics/risk/domain-scores?tenant_slug=bootstrap-ops")
+    service_scores = client.get("/api/analytics/risk/service-scores?tenant_slug=bootstrap-ops")
+    compliance = client.get("/api/analytics/risk/compliance-posture?tenant_slug=bootstrap-ops")
+    recommendations = client.get("/api/analytics/risk/recommendations?tenant_slug=bootstrap-ops")
+
+    assert tenant_score.status_code == 200
+    assert tenant_score.json()["score"] >= 80
+    assert "policy-decision-center" in tenant_score.json()["controls"]
+    assert domain_scores.status_code == 200
+    assert domain_scores.json()["summary"]["domains"] >= 5
+    assert service_scores.status_code == 200
+    assert service_scores.json()["summary"]["averageScore"] >= 80
+    assert compliance.status_code == 200
+    assert compliance.json()["status"] == "stable"
+    assert recommendations.status_code == 200
+    assert recommendations.json()["summary"]["high"] == 2
+
+
+def test_enterprise_runtime_fabric_returns_reconciliation_close_master_data_and_lakehouse() -> None:
+    reconciliation = client.post("/api/analytics/reconciliation/run", json={"tenantSlug": "bootstrap-ops"})
+    findings = client.get("/api/analytics/reconciliation/findings?tenant_slug=bootstrap-ops")
+    periods = client.get("/api/analytics/financial-close/periods?tenant_slug=bootstrap-ops")
+    created_period = client.post("/api/analytics/financial-close/periods", json={"tenantSlug": "bootstrap-ops", "period": "2026-05"})
+    closed_period = client.post("/api/analytics/financial-close/periods/close-2026-05/close", json={"tenantSlug": "bootstrap-ops"})
+    snapshot = client.get("/api/analytics/financial-close/periods/close-2026-05/snapshot?tenant_slug=bootstrap-ops")
+    close_readiness = client.get("/api/analytics/financial-close/readiness?tenant_slug=bootstrap-ops")
+    entities = client.get("/api/analytics/master-data/entities?tenant_slug=bootstrap-ops")
+    quality_score = client.get("/api/analytics/master-data/quality-score?tenant_slug=bootstrap-ops")
+    duplicates = client.get("/api/analytics/master-data/duplicates?tenant_slug=bootstrap-ops")
+    merge = client.post("/api/analytics/master-data/merge-proposals", json={"tenantSlug": "bootstrap-ops", "entityType": "customer", "sourceRecords": ["cust_123", "cust_456"]})
+    rules = client.get("/api/analytics/data-quality/rules")
+    quality_findings = client.get("/api/analytics/data-quality/findings?tenant_slug=bootstrap-ops")
+    datasets = client.get("/api/analytics/lakehouse/datasets")
+    dataset = client.get("/api/analytics/lakehouse/datasets/finance.close_snapshots")
+    lineage = client.get("/api/analytics/lakehouse/lineage")
+    policies = client.get("/api/analytics/lakehouse/export-policies")
+    lakehouse_readiness = client.get("/api/analytics/lakehouse/readiness")
+    enterprise_readiness = client.get("/api/analytics/enterprise-runtime/readiness")
+
+    assert reconciliation.status_code == 200
+    assert reconciliation.json()["snapshotHash"]
+    assert findings.status_code == 200
+    assert periods.status_code == 200
+    assert created_period.status_code == 200
+    assert closed_period.status_code == 200
+    assert snapshot.status_code == 200
+    assert snapshot.json()["snapshotHash"]
+    assert close_readiness.status_code == 200
+    assert close_readiness.json()["acceptanceReady"] is True
+    assert entities.status_code == 200
+    assert quality_score.status_code == 200
+    assert quality_score.json()["score"] >= 90
+    assert duplicates.status_code == 200
+    assert merge.status_code == 200
+    assert merge.json()["proposalHash"]
+    assert rules.status_code == 200
+    assert quality_findings.status_code == 200
+    assert datasets.status_code == 200
+    assert dataset.status_code == 200
+    assert lineage.status_code == 200
+    assert policies.status_code == 200
+    assert lakehouse_readiness.status_code == 200
+    assert enterprise_readiness.status_code == 200
+    assert "ops-console-v1.2" in enterprise_readiness.json()["controls"]

@@ -26,7 +26,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: edge
-          image: ghcr.io/thiagodifaria/erp-edge:1.0.0
+          image: ghcr.io/thiagodifaria/erp-edge:1.4.6
           imagePullPolicy: IfNotPresent
           ports:
             - name: http

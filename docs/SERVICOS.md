@@ -1,13 +1,14 @@
-# SERVICOS
+﻿# serviços
 
-Este documento descreve os servicos do ERP: ownership, stack, caminho de implementacao e responsabilidade. Ele nao lista todos os endpoints; para isso, use `docs/API.md` e os OpenAPI em `docs/contracts/http/`.
+Este documento descreve os serviços do projeto: ownership, stack, caminho de implementação e responsabilidade. Ele não lista todos os endpoints; para isso, use `docs/API.md` e os OpenAPI em `docs/contracts/http/`.
 
-## Inventario
+## inventário
 
-| Servico | Stack | Caminho | Contrato | Endpoints |
+| serviço | Stack | Caminho | Contrato | Endpoints |
 |---------|-------|---------|----------|-----------|
 | `accounting` | Python | `service-api/service-python/accounting` | `docs/contracts/http/accounting.openapi.yaml` | 25 |
-| `analytics` | Python | `service-api/service-python/analytics` | `docs/contracts/http/analytics.openapi.yaml` | 26 |
+| `ai-governance` | Python | `service-api/service-python/ai-governance` | `docs/contracts/http/ai-governance.openapi.yaml` | 6 |
+| `analytics` | Python | `service-api/service-python/analytics` | `docs/contracts/http/analytics.openapi.yaml` | 56 |
 | `banking` | Python | `service-api/service-python/banking` | `docs/contracts/http/banking.openapi.yaml` | 33 |
 | `billing` | .NET | `service-api/service-csharp/billing` | `docs/contracts/http/billing.openapi.yaml` | 31 |
 | `catalog` | Python | `service-api/service-python/catalog` | `docs/contracts/http/catalog.openapi.yaml` | 12 |
@@ -20,10 +21,11 @@ Este documento descreve os servicos do ERP: ownership, stack, caminho de impleme
 | `identity` | .NET | `service-api/service-csharp/identity` | `docs/contracts/http/identity.openapi.yaml` | 46 |
 | `inventory` | Python | `service-api/service-python/inventory` | `docs/contracts/http/inventory.openapi.yaml` | 23 |
 | `notification` | Python | `service-api/service-python/notification` | `docs/contracts/http/notification.openapi.yaml` | 8 |
-| `platform-control` | Python | `service-api/service-python/platform-control` | `docs/contracts/http/platform-control.openapi.yaml` | 40 |
+| `platform-control` | Python | `service-api/service-python/platform-control` | `docs/contracts/http/platform-control.openapi.yaml` | 89 |
 | `procurement` | Python | `service-api/service-python/procurement` | `docs/contracts/http/procurement.openapi.yaml` | 25 |
 | `rentals` | Go | `service-api/service-golang/rentals` | `docs/contracts/http/rentals.openapi.yaml` | 12 |
 | `sales` | Go | `service-api/service-golang/sales` | `docs/contracts/http/sales.openapi.yaml` | 37 |
+| `search` | Python | `service-api/service-python/search` | `docs/contracts/http/search.openapi.yaml` | 9 |
 | `simulation` | Python | `service-api/service-python/simulation` | `docs/contracts/http/simulation.openapi.yaml` | 6 |
 | `supplier` | Python | `service-api/service-python/supplier` | `docs/contracts/http/supplier.openapi.yaml` | 10 |
 | `support` | Python | `service-api/service-python/support` | `docs/contracts/http/support.openapi.yaml` | 11 |
@@ -31,202 +33,213 @@ Este documento descreve os servicos do ERP: ownership, stack, caminho de impleme
 | `workflow-control` | TypeScript | `service-api/service-typescript/workflow-control` | `docs/contracts/http/workflow-control.openapi.yaml` | 25 |
 | `workflow-runtime` | Elixir | `service-api/service-elixir/workflow-runtime` | `docs/contracts/http/workflow-runtime.openapi.yaml` | 15 |
 
-## Ownership Por Servico
+## Ownership Por serviço
 
 ### `accounting`
 
-Responsavel por plano de contas, contas gerenciais, lancamentos de diario imutaveis, regras de posting, fechamentos de periodo, demonstrativos e reconciliacao contabil com movimentos financeiros e fiscais.
+Responsável por plano de contas, contas gerenciais, lançamentos de diário imutáveis, regras de posting, fechamentos de período, demonstrativos e reconciliação contábil com movimentos financeiros e fiscais.
+
+### `ai-governance`
+
+Responsável por governança de uso de IA/LLM: catálogo de ferramentas aprovadas, políticas de uso, runs auditáveis, redação de prompt/resposta e bloqueio de ferramentas mutantes ou não registradas.
 
 ### `analytics`
 
-Responsavel por reports executivos, governanca contratual, readiness de integracoes, hardening, compliance, custos, production-readiness e go-live. Deve agregar leituras; nao deve virar dono transacional dos dominios que observa.
+Responsável por reports executivos, governança contratual, readiness de integrações, hardening, compliance, custos, production-readiness, go-live, BI semântico, risk/compliance scoring, reconciliação, fechamento financeiro, qualidade de dados mestres e manifesto lakehouse. Deve agregar leituras; não deve virar dono transacional dos domínios que observa.
 
 ### `banking`
 
-Responsavel por arquivos CNAB, boletos, lifecycle de cobranca bancaria, extratos, conciliacao, Pix cobranca/devolucao/webhook e trilha opcional de Open Finance.
+Responsável por arquivos CNAB, boletos, lifecycle de cobrança bancária, extratos, conciliação, Pix cobrança/devolução/webhook e trilha opcional de Open Finance.
 
 ### `billing`
 
-Responsavel por planos, assinaturas, invoices recorrentes, pricing por uso, tentativas de cobranca e recovery. Mutacoes financeiras sensiveis devem ser idempotentes.
+Responsável por planos, assinaturas, invoices recorrentes, pricing por uso, tentativas de cobrança e recovery. Mutações financeiras sensíveis devem ser idempotentes.
 
 ### `catalog`
 
-Responsavel por categorias, itens, historico de versoes, criacao em lote e contratos de consumo entre dominios. Deve preservar versionamento de item e leitura por consumidores.
+Responsável por categorias, itens, histórico de versões, criação em lote e contratos de consumo entre domínios. Deve preservar versionamento de item e leitura por consumidores.
 
 ### `crm`
 
-Responsavel por leads, customers, pipeline, ownership, historico e enriquecimento de CNPJ. E a origem operacional da relacao comercial antes da venda.
+Responsável por leads, customers, pipeline, ownership, histórico e enriquecimento de CNPJ. É a origem operacional da relação comercial antes da venda.
 
 ### `documents`
 
-Responsavel por anexos, storage posture, assinatura digital, versoes e metadata documental. Deve separar metadata de documento de armazenamento fisico real.
+Responsável por anexos, storage posture, assinatura digital, versões e metadata documental. Deve separar metadata de documento de armazenamento físico real.
 
 ### `edge`
 
-Responsavel por entrada publica e cockpits cross-service. Deve orquestrar leitura e exposicao, nao concentrar regra transacional de dominio.
+Responsável por entrada pública e cockpits cross-service. Deve orquestrar leitura e exposição, não concentrar regra transacional de domínio.
 
 ### `engagement`
 
-Responsavel por providers de comunicacao, inbound leads, callbacks, touchpoints, conversations e provider events. Deve normalizar eventos externos sem vazar detalhe de provider para outros dominios.
+Responsável por providers de comunicação, inbound leads, callbacks, touchpoints, conversations e provider events. Deve normalizar eventos externos sem vazar detalhe de provider para outros domínios.
 
 ### `finance`
 
-Responsavel por projecoes de recebiveis, atividade financeira, bloqueios/liberacao de comissao, contas a pagar, tesouraria e consolidacao financeira de vendas, recorrencia e contratos.
+Responsável por projeções de recebíveis, atividade financeira, bloqueios/liberação de comissao, contas a pagar, tesouraria e consolidação financeira de vendas, recorrência e contratos.
 
 ### `fiscal`
 
-Responsavel por perfil fiscal, politicas de retencao, documentos fiscais, fila de emissao, certificados, contingencia, eventos fiscais, SPED, consentimentos, privacidade, auditoria e resumo de compliance.
+Responsável por perfil fiscal, políticas de retenção, documentos fiscais, fila de emissão, certificados, contingência, eventos fiscais, SPED, consentimentos, privacidade, auditoria e resumo de compliance.
 
 ### `identity`
 
-Responsavel por tenants, companies, usuarios, roles, times, sessoes, convites, MFA e auditoria de acesso. Outros servicos nao devem duplicar modelo de identidade.
+Responsável por tenants, companies, usuários, roles, times, sessões, convites, MFA e auditoria de acesso. Outros serviços não devem duplicar modelo de identidade.
 
 ### `inventory`
 
-Responsavel por locais, depositos, saldos por item, movimentos, reservas, custo, contagem ciclica e integracao operacional com compras, vendas, documentos e fiscal.
+Responsável por locais, depósitos, saldos por item, movimentos, reservas, custo, contagem cíclica e integração operacional com compras, vendas, documentos e fiscal.
 
 ### `notification`
 
-Responsavel por preferencias de notificacao, central interna de alertas, severidade e lifecycle de notificacoes.
+Responsável por preferências de notificação, central interna de alertas, severidade e lifecycle de notificações.
 
 ### `platform-control`
 
-Responsavel por capabilities, providers, entitlements, feature flags, quotas, metering, tenant blocks, lifecycle e go-live. E o plano de governanca SaaS da plataforma.
+Responsável por capabilities, providers, entitlements, feature flags, quotas, metering, tenant blocks, lifecycle, go-live, incident command, policy decision center, command approvals, runbook automation, operational timeline e audit evidence vault. É o plano de governança SaaS e operacional da plataforma.
 
 ### `procurement`
 
-Responsavel por requisicoes de compra, RFQ/cotacoes, pedidos de compra, aprovacoes, recebimento, 3-way matching e relacionamento operacional com fornecedores.
+Responsável por requisições de compra, RFQ/cotações, pedidos de compra, aprovações, recebimento, 3-way matching e relacionamento operacional com fornecedores.
 
 ### `rentals`
 
-Responsavel por contratos recorrentes, cobrancas, reajustes, terminacoes e anexos contratuais ligados a locacao/recorrencia.
+Responsável por contratos recorrentes, cobranças, reajustes, terminações e anexos contratuais ligados a locação/recorrência.
 
 ### `sales`
 
-Responsavel por oportunidades, propostas, vendas, invoices comerciais, comissoes, renegociacoes e pendencias comerciais.
+Responsável por oportunidades, propostas, vendas, invoices comerciais, comissões, renegociações e pendências comerciais.
+
+### `search`
+
+Responsável por busca operacional unificada, facets, auditoria de consulta, saved queries, e-discovery, legal hold e exports controlados com redação de dados sensíveis.
 
 ### `simulation`
 
-Responsavel por cenarios what-if e benchmarks de carga. Deve apoiar planejamento e capacidade, nao substituir metricas reais de producao.
+Responsável por cenários what-if e benchmarks de carga. Deve apoiar planejamento e capacidade, não substituir métricas reais de produção.
 
 ### `supplier`
 
-Responsavel por categorias de fornecedores, diretorio de fornecedores e dados administrativos de supplier.
+Responsável por categorias de fornecedores, diretório de fornecedores e dados administrativos de supplier.
 
 ### `support`
 
-Responsavel por filas, casos, comentarios, SLA, operacoes em massa e resumo de atendimento.
+Responsável por filas, casos, comentários, SLA, operações em massa e resumo de atendimento.
 
 ### `webhook-hub`
 
-Responsavel por intake de webhooks, idempotencia, estado de processamento, outbound endpoints, delivery log, dead-letter e requeue.
+Responsável por intake de webhooks, idempotência, estado de processamento, outbound endpoints, delivery log, dead-letter e requeue.
 
 ### `workflow-control`
 
-Responsavel por definicoes, versoes publicadas, catalogos de trigger/action, runs e eventos do plano de controle de workflows.
+Responsável por definições, versões públicadas, catálogos de trigger/action, runs e eventos do plano de controle de workflows.
 
 ### `workflow-runtime`
 
-Responsavel por execucoes duraveis, timeline, actions, transicoes, retries, waits e compensacoes.
+Responsável por execuções duraveis, timeline, actions, transições, retries, waits e compensações.
 
-## Regras de Servico
+## Regras de serviço
 
-- Cada servico deve manter sua regra no proprio dominio.
-- Cada API publica deve ter OpenAPI em `docs/contracts/http/`.
+- Cada serviço deve manter sua regra no próprio domínio.
+- Cada API pública deve ter OpenAPI em `docs/contracts/http/`.
 - Cada evento compartilhado deve ter JSON Schema em `docs/contracts/events/`.
 - Cada contexto persistente deve ter migration em `service-api/service-postgresql/<contexto>/migrations`.
-- Seeds devem ser dados de bootstrap, referencia ou smoke, nao substituto de configuracao real.
-- Health deve refletir processo, readiness e diagnostico sem expor segredo.
+- Seeds devem ser dados de bootstrap, referência ou smoke, não substituto de configuração real.
+- Health deve refletir processo, readiness e diagnóstico sem expor segredo.
 - Providers externos devem declarar postura: `configured`, `fallback`, `manual`, `disabled` ou `unconfigured`.
-- Mudancas cross-service devem atualizar contrato, teste e documentacao correspondente.
+- mudanças cross-service devem atualizar contrato, teste e documentação correspondente.
 
 ## Banco Por Contexto
 
-O diretorio `service-api/service-postgresql/` guarda os contextos persistentes. O nome do contexto deve acompanhar o dono logico sempre que possivel:
+O diretório `service-api/service-postgresql/` guarda os contextos persistentes. O nome do contexto deve acompanhar o dono lógico sempre que possivel:
 
 ```text
 service-api/service-postgresql/<contexto>/migrations
 service-api/service-postgresql/<contexto>/seeds
 ```
 
-Quando um servico le dados derivados de outro contexto, essa leitura deve ser justificada pela arquitetura de report/operacao, nao por conveniencia de escrita.
+Quando um serviço le dados derivados de outro contexto, essa leitura deve ser justificada pela arquitetura de report/operação, não por conveniencia de escrita.
 
-## Relacao Entre Servicos
+## relação Entre serviços
 
-| Fluxo | Servicos envolvidos | Observacao |
+| Fluxo | serviços envolvidos | Observação |
 |-------|---------------------|------------|
 | onboarding de tenant | `identity`, `platform-control`, `analytics`, `edge` | tenancy nasce em identity e postura SaaS fica em platform-control |
-| pipeline comercial | `crm`, `sales`, `billing`, `finance` | cada etapa tem owner proprio |
-| recorrencia | `rentals`, `billing`, `finance` | contrato recorrente e consequencia financeira nao devem se confundir |
+| pipeline comercial | `crm`, `sales`, `billing`, `finance` | cada etapa tem owner próprio |
+| recorrência | `rentals`, `billing`, `finance` | contrato recorrente e consequência financeira não devem se confundir |
 | compras e estoque | `procurement`, `supplier`, `inventory`, `documents`, `fiscal` | compra, fornecedor, recebimento, anexo e documento fiscal tem ciclos separados |
-| contabilidade e bancos | `accounting`, `finance`, `billing`, `banking`, `fiscal` | ledger, tesouraria, cobranca bancaria e fiscal se reconciliam sem misturar ownership |
+| contábilidade e bancos | `accounting`, `finance`, `billing`, `banking`, `fiscal` | ledger, tesouraria, cobrança bancária e fiscal se reconciliam sem misturar ownership |
 | documentos e fiscal | `documents`, `fiscal` | anexo/assinatura e documento fiscal tem ownership separado |
-| comunicacao | `engagement`, `notification`, `webhook-hub` | provider event, alerta interno e webhook tem ciclos diferentes |
-| workflow | `workflow-control`, `workflow-runtime`, dominios | runtime executa, dominios validam regras |
-| go-live | `platform-control`, `analytics`, `edge` | controle operacional, report e cockpit |
-| administrativo | `support`, `supplier`, `catalog` | dominios administrativos com contratos proprios |
+| comunicação | `engagement`, `notification`, `webhook-hub` | provider event, alerta interno e webhook tem ciclos diferentes |
+| workflow | `workflow-control`, `workflow-runtime`, domínios | runtime executa, domínios validam regras |
+| go-live, incidentes e enterprise runtime | `platform-control`, `analytics`, `edge` | controle operacional, incident command, policy decisions, approvals, runbooks, event mesh, tenant runtime, contract evolution, financial close, risk scoring, evidence vault, report e cockpit |
+| descoberta operacional | `search`, `ai-governance`, `analytics` | busca auditada, e-discovery, governança de IA e catálogo semântico |
+| administrativo | `support`, `supplier`, `catalog` | domínios administrativos com contratos próprios |
 
 ## Nivel de Maturidade Funcional
 
-Esta tabela nao promete producao final; ela ajuda a entender o papel atual de cada modulo.
+está tabela não promete produção final; ela ajuda a entender o papel atual de cada módulo.
 
-| Servico | Estado atual | Proximo cuidado natural |
+| serviço | Estado atual | próximo cuidado natural |
 |---------|--------------|-------------------------|
-| `identity` | tenancy, empresas, usuarios, times, roles, convites, MFA, sessoes, recuperacao de senha, resolucao de acesso, Keycloak/OpenFGA e auditoria operacionais | modelar novas politicas de negocio por dominio conforme surgirem regras mais especificas |
-| `crm` | relacao comercial, pipeline, deduplicacao por email, bulk/import, export filtrado, historico e outbox operacional | evoluir scoring preditivo e enriquecimento externo real |
-| `sales` | oportunidade, proposta, conversao em venda, parcelas, comissao, pendencias, renegociacao, cancelamento, historico e outbox operacionais | evoluir politicas comerciais por segmento e aprovacao avancada |
-| `billing` | recorrencia, cobranca, pricing flat/hybrid/usage, idempotencia de tentativas, recovery e suspend/reactivate operacionais | conectar gateways reais e conciliacao externa controlada |
-| `finance` | recebiveis, liquidacao idempotente, comissoes, custos, contas a pagar, tesouraria, ledger de caixa, sync financeiro e fechamento de periodo operacionais | ampliar conciliacao bancaria/provider real e demonstrativos gerenciais |
-| `accounting` | plano de contas, centros de custo, diario imutavel, regras de posting, razao, DRE/balanco, fechamento de periodo e reconciliacao contabil operacionais | substituir regras genericas por politicas contabeis por regime, empresa e integracao de evento contabil |
-| `banking` | CNAB, boleto, extrato, conciliacao, Pix cobranca/devolucao/webhook e trilha de Open Finance operacionais | conectar bancos reais, assinatura de arquivos e conciliacao automatica por provider |
-| `inventory` | locais, saldos por SKU/local, ledger de movimentos, reservas, custo medio/FIFO, contagem ciclica e variancias operacionais | ampliar costing por metodo, integracao fisica com WMS e politicas de alocacao |
-| `procurement` | requisicao, cotacao, pedido de compra, aprovacao aplicada, recebimento e 3-way matching operacional | evoluir matriz de aprovacao, contratos de fornecimento e avaliacao continua |
-| `documents` | metadata, upload sessions, assinatura, versoes, retencao, arquivamento e links seguros operacionais | conectar storage real e varredura automatica de retencao |
-| `fiscal` | perfis fiscais, documentos, fila de emissao, certificados, contingencia, SPED, eventos, consentimentos, privacidade, retencao e auditoria operacional | conectar provider fiscal real, certificado digital gerenciado e regras por regime/UF/municipio |
-| `platform-control` | capabilities, entitlements, quotas, metering, provider defaults, blocks, lifecycle e go-live operacionais | evoluir enforcement distribuido de quotas e offboarding produtivo |
-| `analytics` | reports executivos, tenant 360, service pulse, hardening, production-readiness, simulacao, benchmark, estimativa de custo e read models operacionais quase em tempo real | evoluir streaming dedicado quando houver requisito comprovado de evento em baixa latencia |
-| `edge` | cockpits consolidados com auth, health, go-live, SaaS, contratos e visoes cross-service, apoiados por gateway local com cache, rate limit, timeouts e failover passivo | evoluir replicas produtivas e politicas de trafego por ambiente |
-| `workflow-control` | definicoes, catalogos, versionamento, publish/restore, runs, eventos, ledger e diagnostico por workflow operacionais | melhorar autoria visual e validacao pre-publicacao |
-| `workflow-runtime` | execucao duravel, timeline, transicoes, delays, retries, capacidades e compensacoes basicas operacionais | ampliar observabilidade de execucoes longas e cargas concorrentes |
+| `identity` | tenancy, empresas, usuários, times, roles, convites, MFA, sessões, recuperação de senha, resolução de acesso, Keycloak/OpenFGA e auditoria operacionais | modelar novas políticas de negocio por domínio conforme surgirem regras mais especificas |
+| `crm` | relação comercial, pipeline, deduplicação por email, bulk/import, export filtrado, histórico e outbox operacional | evoluir scoring preditivo e enriquecimento externo real |
+| `sales` | oportunidade, proposta, conversão em venda, parcelas, comissao, pendências, renegociação, cancelamento, histórico e outbox operacionais | evoluir políticas comerciais por segmento e aprovação avancada |
+| `billing` | recorrência, cobrança, pricing flat/hybrid/usage, idempotência de tentativas, recovery e suspend/reactivate operacionais | conectar gateways reais e conciliação externa controlada |
+| `finance` | recebíveis, liquidação idempotente, comissões, custos, contas a pagar, tesouraria, ledger de caixa, sync financeiro e fechamento de período operacionais | ampliar conciliação bancária/provider real e demonstrativos gerenciais |
+| `accounting` | plano de contas, centros de custo, diário imutavel, regras de posting, razão, DRE/balanço, fechamento de período e reconciliação contábil operacionais | substituir regras genericas por políticas contábeis por regime, empresa e integração de evento contábil |
+| `banking` | CNAB, boleto, extrato, conciliação, Pix cobrança/devolução/webhook e trilha de Open Finance operacionais | conectar bancos reais, assinatura de arquivos e conciliação automatica por provider |
+| `inventory` | locais, saldos por SKU/local, ledger de movimentos, reservas, custo medio/FIFO, contagem cíclica e variancias operacionais | ampliar costing por metodo, integração fisica com WMS e políticas de alocação |
+| `procurement` | requisição, cotação, pedido de compra, aprovação aplicada, recebimento e 3-way matching operacional | evoluir matriz de aprovação, contratos de fornecimento e avaliação continua |
+| `documents` | metadata, upload sessions, assinatura, versões, retenção, arquivamento e links seguros operacionais | conectar storage real e varredura automatica de retenção |
+| `fiscal` | perfis fiscais, documentos, fila de emissão, certificados, contingência, SPED, eventos, consentimentos, privacidade, retenção e auditoria operacional | conectar provider fiscal real, certificado digital gerenciado e regras por regime/UF/municipio |
+| `platform-control` | capabilities, entitlements, quotas, metering, provider defaults, blocks, lifecycle, go-live, incident command, policies, approvals, runbooks, timeline, evidence vault, event mesh, tenant runtime e contract evolution operacionais | evoluir enforcement distribuido de quotas e automações de incidente por SLO real |
+| `search` | busca operacional, facets, saved queries, auditoria, discovery cases, legal hold e exports controlados | conectar indexador incremental a eventos reais de todos os domínios |
+| `ai-governance` | ferramentas aprovadas, políticas, runs auditáveis, redação e bloqueio de ferramentas mutantes/não registradas | conectar providers LLM reais mantendo policy enforcement e auditoria |
+| `analytics` | reports executivos, tenant 360, service pulse, hardening, production-readiness, BI semântico, risk/compliance scoring, conciliação, fechamento financeiro, dados mestres, lakehouse, simulação, benchmark, estimativa de custo e read models operacionais quase em tempo real | evoluir streaming dedicado quando houver requisito comprovado de evento em baixa latencia |
+| `edge` | cockpits consolidados com auth, health, go-live, SaaS, contratos e visoes cross-service, apoiados por gateway local com cache, rate limit, timeouts e failover passivo | evoluir replicas produtivas e políticas de tráfego por ambiente |
+| `workflow-control` | definições, catálogos, versionamento, publish/restore, runs, eventos, ledger e diagnóstico por workflow operacionais | melhorar autoria visual e validação pre-públicação |
+| `workflow-runtime` | execução durável, timeline, transições, delays, retries, capacidades e compensações basicas operacionais | ampliar observabilidade de execuções longas e cargas concorrentes |
 | `engagement` | campanhas, templates, callbacks idempotentes, touchpoints, deliveries, provider events e conversas estruturadas operacionais | conectar adapters externos reais por canal |
-| `webhook-hub` | inbound/outbound, assinatura preparada, retries, DLQ, requeue e ledger de transicoes operacionais | endurecer seguranca de endpoint e politicas por tenant |
-| `catalog` | itens, versoes imutaveis, consumers, contratos de consumo e governanca de produto operacionais | evoluir disponibilidade, pricing e politicas comerciais |
-| `support` | casos, filas, SLA, comentarios, exportacao/bulk e resumo operacional | evoluir automacoes de atendimento e escalonamento |
-| `supplier` | diretorio, categorias, exportacao/bulk e contratos administrativos operacionais | evoluir avaliacao continua e relacao com procurement sem duplicar ownership |
-| `notification` | preferencias, central, severidade, ciclo de vida e bulk operacional | conectar canais externos e templates avancados |
-| `simulation` | catalogo de cenarios, execucao what-if, listagem de runs, benchmark de carga e insumos de sizing operacionais | alimentar planejamento com series historicas reais |
-| `rentals` | contratos, charges, reajustes, encerramento, historico, outbox, anexos e contrato HTTP completo para operacao recorrente | evoluir regras avancadas de reajuste e integracao contabil/fiscal |
+| `webhook-hub` | inbound/outbound, assinatura preparada, retries, DLQ, requeue e ledger de transições operacionais | endurecer segurança de endpoint e políticas por tenant |
+| `catalog` | itens, versões imutáveis, consumers, contratos de consumo e governança de produto operacionais | evoluir disponibilidade, pricing e políticas comerciais |
+| `support` | casos, filas, SLA, comentários, exportação/bulk e resumo operacional | evoluir automações de atendimento e escalonamento |
+| `supplier` | diretório, categorias, exportação/bulk e contratos administrativos operacionais | evoluir avaliação continua e relação com procurement sem duplicar ownership |
+| `notification` | preferências, central, severidade, ciclo de vida e bulk operacional | conectar canais externos e templates avancados |
+| `simulation` | catálogo de cenários, execução what-if, listagem de runs, benchmark de carga e insumos de sizing operacionais | alimentar planejamento com series históricas reais |
+| `rentals` | contratos, charges, reajustes, encerramento, histórico, outbox, anexos e contrato HTTP completo para operação recorrente | evoluir regras avancadas de reajuste e integração contábil/fiscal |
 
-## Checklist Para Novo Servico
+## Checklist Para Novo serviço
 
-Um servico novo so deve entrar no monorepo se houver:
+Um serviço novo só deve entrar no monorepo se houver:
 
-- responsabilidade funcional que nao pertence claramente a servico existente;
-- contrato HTTP ou evento quando tiver consumidor externo ao modulo;
-- caminho de codigo em `service-api/<stack>/<servico>`;
-- contexto PostgreSQL quando houver persistencia;
+- responsabilidade funcional que não pertence claramente a serviço existente;
+- contrato HTTP ou evento quando tiver consumidor externo ao módulo;
+- caminho de código em `service-api/<stack>/<serviço>`;
+- contexto PostgreSQL quando houver persistência;
 - health/readiness quando exposto no runtime;
 - teste unitario minimo;
 - entrada no compose quando participar do stack local;
-- entrada em `docs/SERVICOS.md`, `docs/API.md` e `docs/contracts/registry.json` quando aplicavel.
+- entrada em `docs/SERVICOS.md`, `docs/API.md` e `docs/contracts/registry.json` quando aplicável.
 
-## Checklist Para Evoluir Servico Existente
+## Checklist Para Evoluir serviço Existente
 
-- A mudanca respeita ownership?
+- A mudança respeita ownership?
 - O OpenAPI foi atualizado?
 - O banco mudou? Se sim, ha migration?
 - Existe seed ou fixture afetada?
 - O smoke precisa conhecer o novo comportamento?
 - O `edge` ou `analytics` precisam refletir novo sinal?
-- O `client-api` precisa regenerar catalogo?
-- A documentacao alterada esta no arquivo certo?
+- O `client-api` precisa regenerar catálogo?
+- A documentação alterada está no arquivo certo?
 
-## Sinais de Que a Fronteira Esta Errada
+## Sinais de Que a Fronteira está Errada
 
-- O endpoint precisa consultar muitas tabelas de dominios diferentes para escrever um recurso.
-- O servico passa a conhecer detalhes internos de provider que outro servico ja encapsula.
-- A alteracao exige mudar varios servicos sem mudar contrato algum.
+- O endpoint precisa consultar muitas tabelas de domínios diferentes para escrever um recurso.
+- O serviço passa a conhecer detalhes internos de provider que outro serviço já encapsula.
+- A alteração exige mudar varios serviços sem mudar contrato algum.
 - Um report vira fonte de verdade.
-- Uma tela nova dita o modelo de dominio sem contrato.
+- Uma tela nova dita o modelo de domínio sem contrato.
 
-Quando isso acontecer, reavalie se a responsabilidade deveria estar em outro servico, em `analytics`, em `edge`, ou em um contrato/evento novo.
+Quando isso acontecer, reavalie se a responsabilidade deveria estar em outro serviço, em `analytics`, em `edge`, ou em um contrato/evento novo.

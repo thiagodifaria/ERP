@@ -15,7 +15,7 @@ func NewRouter(logger *telemetry.Logger, attachmentRepository repository.Attachm
 		uploadSessionRepository,
 		config.Config{
 			RepositoryDriver:  "memory",
-			AccessTokenSecret: "documents-local-secret",
+			AccessTokenSecret: "change-me-unsafe-local-only-documents",
 			StorageDriver:     "local",
 		},
 	)

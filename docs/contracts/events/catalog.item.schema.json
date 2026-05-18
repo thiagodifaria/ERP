@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "erp/contracts/events/catalog.item.schema.json",
   "title": "catalog.item",

@@ -25,7 +25,7 @@ public sealed class IdentityInfrastructureOptions : IIdentityAccessSettings
 
   public string KeycloakAdminPassword { get; init; } = "admin";
 
-  public string BootstrapPassword { get; init; } = "Change.Me123!";
+  public string BootstrapPassword { get; init; } = "change-me-unsafe-local-only-bootstrap";
 
   public string OpenFgaBaseUrl { get; init; } = "http://localhost:8080";
 
@@ -35,7 +35,7 @@ public sealed class IdentityInfrastructureOptions : IIdentityAccessSettings
 
   public static IdentityInfrastructureOptions Load()
   {
-    return new IdentityInfrastructureOptions
+    var options = new IdentityInfrastructureOptions
     {
       RepositoryDriver = GetEnvironment("IDENTITY_REPOSITORY_DRIVER", "memory"),
       IdentityProviderDriver = GetEnvironment("IDENTITY_PROVIDER_DRIVER", "memory"),
@@ -45,12 +45,17 @@ public sealed class IdentityInfrastructureOptions : IIdentityAccessSettings
       KeycloakRealm = GetEnvironment("KEYCLOAK_REALM", "erp-local"),
       KeycloakClientId = GetEnvironment("KEYCLOAK_IDENTITY_CLIENT_ID", "erp-identity"),
       KeycloakAdminUsername = GetEnvironment("KEYCLOAK_ADMIN_USER", "admin"),
-      KeycloakAdminPassword = GetEnvironment("KEYCLOAK_ADMIN_PASSWORD", "admin"),
-      BootstrapPassword = GetEnvironment("IDENTITY_BOOTSTRAP_PASSWORD", "Change.Me123!"),
+      KeycloakAdminPassword = GetEnvironment("KEYCLOAK_ADMIN_PASSWORD", "change-me-unsafe-local-only-keycloak"),
+      BootstrapPassword = GetEnvironment("IDENTITY_BOOTSTRAP_PASSWORD", "change-me-unsafe-local-only-bootstrap"),
       OpenFgaBaseUrl = GetEnvironment("OPENFGA_BASE_URL", "http://localhost:8080"),
       OpenFgaStoreName = GetEnvironment("OPENFGA_STORE_NAME", "erp-local-store"),
       MfaIssuer = GetEnvironment("IDENTITY_MFA_ISSUER", "ERP")
     };
+
+    ValidateNonLocalSecret("KEYCLOAK_ADMIN_PASSWORD", options.KeycloakAdminPassword);
+    ValidateNonLocalSecret("IDENTITY_BOOTSTRAP_PASSWORD", options.BootstrapPassword);
+
+    return options;
   }
 
   private static string ResolvePostgresConnectionString()
@@ -67,11 +72,35 @@ public sealed class IdentityInfrastructureOptions : IIdentityAccessSettings
       Port = int.Parse(GetEnvironment("IDENTITY_POSTGRES_PORT", "5432")),
       Database = GetEnvironment("IDENTITY_POSTGRES_DB", GetEnvironment("ERP_POSTGRES_DB", "erp")),
       Username = GetEnvironment("IDENTITY_POSTGRES_USER", GetEnvironment("ERP_POSTGRES_USER", "erp")),
-      Password = GetEnvironment("IDENTITY_POSTGRES_PASSWORD", GetEnvironment("ERP_POSTGRES_PASSWORD", "erp")),
+      Password = GetEnvironment("IDENTITY_POSTGRES_PASSWORD", GetEnvironment("ERP_POSTGRES_PASSWORD", "change-me-unsafe-local-only-postgres")),
       SslMode = Enum.Parse<SslMode>(GetEnvironment("IDENTITY_POSTGRES_SSL_MODE", "Disable"), ignoreCase: true)
     };
 
+    ValidateNonLocalSecret("IDENTITY_POSTGRES_PASSWORD/ERP_POSTGRES_PASSWORD", builder.Password);
+
     return builder.ConnectionString;
+  }
+
+  private static void ValidateNonLocalSecret(string key, string value)
+  {
+    if (IsLocalRuntime())
+    {
+      return;
+    }
+
+    if (string.IsNullOrWhiteSpace(value)
+      || value is "erp" or "admin" or "Change.Me123!" or "local-jwt-secret" or "local-service-token" or "documents-local-secret"
+      || value.StartsWith("change-me-unsafe-local-only", StringComparison.Ordinal)
+      || value.Length < 32)
+    {
+      throw new InvalidOperationException($"{key} must be provided by a secret manager outside local/test environments.");
+    }
+  }
+
+  private static bool IsLocalRuntime()
+  {
+    var environment = GetEnvironment("ERP_ENV", "local").ToLowerInvariant();
+    return environment is "local" or "dev" or "development" or "test";
   }
 
   private static string GetEnvironment(string key, string fallback)

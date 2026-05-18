@@ -1,71 +1,98 @@
-# ERP
+﻿# Business Operating System
 
-ERP is a backend-first, multi-tenant and polyglot ERP platform. It is organized around bounded services, explicit contracts, local container execution and automated validation.
+![Business Operating System](https://img.shields.io/badge/Business%20Operating%20System-Platform-111827?style=for-the-badge&logo=github&logoColor=white)
 
-This README gives a complete but compact view of the project. Topic-specific details live in `docs/`.
+**A complete operating ecosystem for companies that need sales, customers, billing, finance, fiscal routines, documents, reports, automated processes and external services working as one business platform.**
 
-## Documentation Map
+[![Version](https://img.shields.io/badge/Version-1.4.6-2563EB?style=flat)](docs/CHANGELOG.md)
+[![OpenAPI](https://img.shields.io/badge/OpenAPI-contracts-6BA539?style=flat&logo=openapiinitiative&logoColor=white)](docs/contracts/http)
+[![Services](https://img.shields.io/badge/Services-26%20HTTP%20APIs-111827?style=flat)](docs/SERVICOS.md)
+[![Console](https://img.shields.io/badge/API%20Console-client--api-2563EB?style=flat)](client-web/client-api)
+[![Runtime](https://img.shields.io/badge/Runtime-Docker%20Compose-2496ED?style=flat&logo=docker&logoColor=white)](infra)
+
+## Documentation
 
 | File | Purpose |
 |------|---------|
-| `docs/ARQUITETURA.md` | Architecture, boundaries, data ownership and runtime topology |
-| `docs/API.md` | HTTP conventions, endpoint index and API usage rules |
-| `docs/SERVICOS.md` | Service inventory, ownership and implementation paths |
-| `docs/CONTRATOS.md` | OpenAPI, event schemas, registry and compatibility policy |
-| `docs/INTEGRACOES.md` | Providers, webhooks, events and cross-context integration |
-| `docs/OPERACOES.md` | Local runtime, scripts, database, validation and troubleshooting |
-| `docs/PADROES.md` | Engineering standards for backend, tests and documentation |
-| `docs/CHANGELOG.md` | Chronological change history |
+| [README.md](README.md) | concise repository overview |
+| [README_PT.md](README_PT.md) | detailed Portuguese overview |
+| [docs/ARQUITETURA.md](docs/ARQUITETURA.md) | architecture, boundaries, data ownership and runtime topology |
+| [docs/API.md](docs/API.md) | HTTP conventions, endpoint index and API usage rules |
+| [docs/SERVICOS.md](docs/SERVICOS.md) | service inventory, ownership and implementation paths |
+| [docs/CONTRATOS.md](docs/CONTRATOS.md) | OpenAPI, event schemas, registry and compatibility policy |
+| [docs/INTEGRACOES.md](docs/INTEGRACOES.md) | providers, webhooks, events and cross context integration |
+| [docs/OPERACOES.md](docs/OPERACOES.md) | local runtime, scripts, database, validation and troubleshooting |
+| [docs/PADROES.md](docs/PADROES.md) | engineering standards for backend, tests, contracts and docs |
+| [docs/CHANGELOG.md](docs/CHANGELOG.md) | chronological history by version |
 
-## Project Shape
+## What Is The Project?
 
-- Version 1.0.0 production-readiness gate.
-- 24 HTTP services with OpenAPI contracts.
-- 543 versioned HTTP endpoints.
-- 15 versioned event schemas.
-- Contracts under `docs/contracts/`.
-- Container runtime through `infra/docker-compose.yml`.
-- Enterprise deployment artifacts under `infra/kubernetes/`.
-- Operational entrypoint through `./scripts/build.sh`.
-- Validation entrypoint through `./scripts/test.sh`.
-- Technical API console under `client-web/client-api`.
+The project is more than a traditional ERP module set. It is a business operating system for running company operations from the first customer contact to billing, finance, documents, reports and audit trails.
 
-## Version 1.0.0
+The project brings together capabilities that normally live across several tools. It helps manage customers, sales, contracts, subscriptions, invoices, payments, documents, fiscal routines, reports and controlled communication with external services.
 
-Version 1.0.0 is the ERP production-readiness release. It consolidates gateway/edge-only corporate topology, security enforcement, versioned contracts, supply-chain checks, backup/restore evidence, tenant go-live controls, provider readiness and Kubernetes deployment artifacts.
+The goal is to support complete business journeys. A commercial opportunity can become a proposal, generate a contract, create billing obligations, affect finance, attach documents, trigger workflows, emit webhooks and appear in operational reports.
 
-Official gate:
+## Product Scope
+
+This repository models the operating core of a company. It can represent acquisition, sales, recurring contracts, invoicing, receivables, payables, fiscal obligations, procurement, inventory, documents, workflows, support, search, analytics and provider governance.
+
+The system also prepares optional external integrations. Payment gateways, banking providers, AI services, document reading tools, company lookup services, news feeds, signing tools and communication providers can be connected when the user supplies the required credentials. When a credential is missing, the platform should show that clearly instead of pretending the integration is active.
+
+## Core Capabilities
+
+| Capability | Description |
+|------------|-------------|
+| Commercial operation | Leads, customers, opportunities, proposals, recurring contracts and commercial catalog. |
+| Billing and finance | Subscriptions, invoices, payment attempts, money to receive, money to pay, treasury, commissions and reconciliation. |
+| Fiscal and banking | Fiscal documents, certificates, SPED posture, Pix, boletos, Open Finance, statements and banking reconciliation. |
+| Documents | Attachments, versions, storage posture, signing, document intelligence and audit trails. |
+| Workflows | Step by step business processes that the system can execute and track. |
+| Reports and analysis | Operational reports, quality indicators, risk views, financial close and platform health. |
+| External integrations | Payment gateways, AI tools, document reading, company lookup, market data, news, communication and digital signing. |
+| Governance | Users, permissions, limits, activation status, lifecycle and operational evidence. |
+| Search and evidence | Operational search, information discovery, legal holds, controlled exports and audit evidence. |
+
+## Main Modules
+
+| Area | Services | Responsibility |
+|------|----------|----------------|
+| Identity and tenancy | `identity`, `platform-control` | tenants, users, sessions, roles, MFA, capabilities, quotas, lifecycle and go live |
+| Commercial operation | `crm`, `sales`, `rentals`, `catalog` | leads, customers, opportunities, proposals, recurring contracts and commercial catalog |
+| Billing and finance | `billing`, `finance`, `accounting`, `banking` | subscriptions, invoices, receivables, payables, treasury, commissions, ledger views and reconciliation |
+| Fiscal and procurement | `fiscal`, `procurement`, `supplier`, `inventory` | fiscal documents, certificates, SPED posture, requisitions, purchase orders, supplier records and inventory |
+| Documents and workflows | `documents`, `workflow-control`, `workflow-runtime` | attachments, storage posture, signing, workflow definitions, executions, retries and compensations |
+| Integrations | `webhook-hub`, `engagement`, `notification`, `ai-governance` | webhooks, provider callbacks, touchpoints, notifications, approved AI tools and redaction |
+| Intelligence and operations | `analytics`, `search`, `simulation`, `edge`, `support` | reports, operational search, e discovery, scenarios, technical gateway and support operations |
+
+## Business Flows
+
+1. Commercial flow. CRM qualifies demand, Sales manages opportunities and proposals, Billing converts contracts into recurring obligations, and Finance follows projections, receivables and commissions.
+
+2. Financial flow. Billing, Finance, Accounting and Banking connect invoices, payments, statements, reconciliation, ledger views and financial close.
+
+3. Document flow. Documents manages attachments, versions, signing and document intelligence, while Fiscal and Procurement use those records for formal obligations and evidence.
+
+4. Automation flow. Workflow Control defines processes, Workflow Runtime executes steps, and domain services expose the resources used in each journey.
+
+5. Integration flow. External providers enter through adapters, webhooks or specific APIs. The platform keeps BYOK posture and shows whether each capability is configured, manual, in fallback or unavailable.
+
+6. Governance flow. Platform Control, Analytics and Edge consolidate tenants, quotas, providers, readiness, go live, incidents, risks and operational evidence.
+
+## Technical API Console
+
+`client-web/client-api` is a technical control console for the API. It is closer to a modern, project specific Swagger UI than to the future business application. Its role is to document, inspect and exercise the platform from one place.
+
+The console provides a platform overview, endpoint catalog generated from OpenAPI contracts, request builder, local environments, documentation reader, contract views, test journeys and operational screens.
 
 ```bash
-./scripts/test.sh production-readiness
+cd client-web/client-api
+npm install
+npm run generate
+npm run dev
 ```
 
-Runtime evidence:
-
-```http
-GET /api/analytics/reports/production-readiness
-```
-
-## Private Ownership
-
-This repository is privately maintained. External write workflow, public merge flow, community triage and unsolicited patches are outside the project model. Code changes are controlled directly by the maintainer.
-
-## Architecture Summary
-
-The system is split into service ownership boundaries instead of being a single modular monolith. Each service owns its public API contract, runtime implementation and persistence context where applicable.
-
-Main architectural rules:
-
-- tenant context must be explicit in tenant-aware operations;
-- public contracts live in `docs/contracts/`;
-- implementation lives under `service-api/`;
-- runtime infrastructure lives under `infra/`;
-- database ownership is split by PostgreSQL schema/context;
-- cross-service aggregation belongs to `analytics` or `edge`;
-- external callbacks and webhook delivery belong to `webhook-hub` or a provider-facing adapter;
-- long-running operations should expose a job, rollout or execution resource instead of blocking the request.
-
-## Runtime
+## Local Runtime
 
 ```bash
 ./scripts/build.sh
@@ -75,83 +102,19 @@ Main architectural rules:
 ./scripts/build.sh down
 ```
 
-Database operations:
+Database:
 
 ```bash
 ./scripts/build.sh migrate all
 ./scripts/build.sh seed all
+./scripts/build.sh psql
 ./scripts/build.sh backup /tmp/erp-local-backup.sql
 ./scripts/build.sh restore /tmp/erp-local-backup.sql
-./scripts/build.sh psql
 ```
 
-Validation:
+## Contracts And Governance
 
-```bash
-./scripts/test.sh unit
-./scripts/test.sh integration
-./scripts/test.sh contract
-./scripts/test.sh platform
-./scripts/test.sh smoke
-./scripts/test.sh performance
-./scripts/test.sh backup-restore
-./scripts/test.sh hardening
-./scripts/test.sh production-readiness
-```
-
-## API Console
-
-`client-web/client-api` is the technical console for the backend API. It is separate from any future business-facing frontend.
-
-It provides:
-
-- API overview;
-- generated endpoint catalog from OpenAPI files;
-- request builder with headers, params and JSON body;
-- documentation reader backed by the markdown files in this repository;
-- contract, environment, journey and operations views.
-
-```bash
-cd client-web/client-api
-npm install
-npm run generate
-npm run dev
-```
-
-The console uses the local Vite proxy to call backend services when the stack is running.
-
-## Service Inventory
-
-| Service | Stack | Path | Responsibility |
-|---------|-------|------|----------------|
-| `accounting` | Python | `service-api/service-python/accounting` | management accounting, cost centers, posting rules, ledger, statements and close |
-| `analytics` | Python | `service-api/service-python/analytics` | executive reports, contract governance, readiness and operational views |
-| `banking` | Python | `service-api/service-python/banking` | CNAB, boletos, bank statements, reconciliation, Pix charges/refunds/webhooks and Open Finance |
-| `billing` | .NET | `service-api/service-csharp/billing` | plans, subscriptions, invoices, usage pricing and payment attempts |
-| `catalog` | Python | `service-api/service-python/catalog` | categories, items, version history, bulk creation and consumer contracts |
-| `crm` | Go | `service-api/service-golang/crm` | leads, customers, pipeline configuration and CNPJ enrichment |
-| `documents` | Go | `service-api/service-golang/documents` | attachments, storage capabilities, signing and version history |
-| `edge` | Go | `service-api/service-golang/edge` | public operational cockpit and cross-service reads |
-| `engagement` | TypeScript | `service-api/service-typescript/engagement` | provider capabilities, inbound events, touchpoints and conversations |
-| `finance` | .NET | `service-api/service-csharp/finance` | receivables, projections, commission holds and financial activity |
-| `fiscal` | Python | `service-api/service-python/fiscal` | fiscal profiles, issuance, certificates, contingency, SPED, tax documents, privacy and audit |
-| `identity` | .NET | `service-api/service-csharp/identity` | tenants, users, sessions, invitations, roles and MFA posture |
-| `inventory` | Python | `service-api/service-python/inventory` | location balances, stock movements, reservations, FIFO/average costing and cycle counts |
-| `notification` | Python | `service-api/service-python/notification` | preferences, notification center and delivery state |
-| `platform-control` | Python | `service-api/service-python/platform-control` | capabilities, providers, entitlements, quotas, lifecycle and go-live |
-| `procurement` | Python | `service-api/service-python/procurement` | requisitions, quotations, purchase orders, approvals, receiving and 3-way matching |
-| `rentals` | Go | `service-api/service-golang/rentals` | recurring contracts and charge lifecycle |
-| `sales` | Go | `service-api/service-golang/sales` | opportunities, proposals, sales, invoices and commissions |
-| `simulation` | Python | `service-api/service-python/simulation` | scenario runs and load benchmarks |
-| `supplier` | Python | `service-api/service-python/supplier` | supplier categories, supplier directory and summary |
-| `support` | Python | `service-api/service-python/support` | queues, cases, SLA, comments and support summary |
-| `webhook-hub` | Rust | `service-api/service-rust/webhook-hub` | inbound webhooks, outbound endpoints, delivery log and DLQ |
-| `workflow-control` | TypeScript | `service-api/service-typescript/workflow-control` | workflow definitions, catalogs and control-plane state |
-| `workflow-runtime` | Elixir | `service-api/service-elixir/workflow-runtime` | executions, actions, transitions, retries and compensations |
-
-## Contract Catalog
-
-Contracts are source-controlled engineering artifacts:
+Contracts are versioned engineering artifacts. They define the public API surface, shared events, compatibility rules and the source used by the technical console.
 
 ```text
 docs/contracts/http/              OpenAPI files
@@ -161,93 +124,27 @@ docs/contracts/schema-registry.json
 docs/contracts/portal/index.html
 ```
 
-Use `./scripts/test.sh contract` before changing public API shape.
+Before changing public API shape, run:
 
-## Development Rules
-
-- Keep service behavior inside the owning service.
-- Update OpenAPI when changing public HTTP shape.
-- Update event schemas when publishing or consuming shared events.
-- Keep docs scoped: architecture in architecture docs, API rules in API docs, operations in operations docs.
-- Prefer small, explicit runtime flows over hidden coupling.
-- Add tests proportional to the blast radius.
-
-## Main Flows
-
-Commercial flow:
-
-`crm` creates qualified demand, `sales` manages proposals and sales, `billing` creates recurring commercial obligations, and `finance` consolidates projections, holds and activity.
-
-Recurring contract flow:
-
-`rentals` and `billing` represent recurring obligations while `finance` reads the financial consequences.
-
-Automation flow:
-
-`workflow-control` defines automation, `workflow-runtime` executes it, and domain services expose the resources that workflows operate on.
-
-Integration flow:
-
-Provider callbacks enter through provider-specific endpoints or `webhook-hub`, are normalized, and can be observed through `analytics` and `edge`.
-
-Go-live flow:
-
-`platform-control` owns lifecycle, quotas, blocks and rollout posture; `analytics` and `edge` expose executive views.
-
-## Repository Layout
-
-```text
-client-web/client-api/     technical API console
-docs/                      documentation
-docs/contracts/            contracts and schemas
-infra/                     Docker Compose and runtime assets
-scripts/                   build/runtime and validation entrypoints
-service-api/               backend services and PostgreSQL contexts
+```bash
+./scripts/test.sh contract
 ```
 
-## What This Repository Is
+## Validation
 
-This repository is the backend and technical platform layer of the ERP. It is not a marketing website, not a single CRUD API and not a frontend-first application. The main product surface today is the API, its contracts, its service boundaries and the local runtime used to validate the platform.
+| Scope | Command |
+|-------|---------|
+| unit tests | `./scripts/test.sh unit` |
+| integration tests | `./scripts/test.sh integration` |
+| HTTP and event contracts | `./scripts/test.sh contract` |
+| platform checks | `./scripts/test.sh platform` |
+| smoke tests | `./scripts/test.sh smoke` |
+| performance | `./scripts/test.sh performance` |
+| backup and restore | `./scripts/test.sh backup-restore` |
+| hardening | `./scripts/test.sh hardening` |
+| production readiness | `./scripts/test.sh production-readiness` |
 
-The project is intentionally backend-heavy because the hard part being modeled is not the screen layout. The hard part is keeping many business contexts consistent enough to evolve:
-
-- identity and tenancy;
-- commercial operation;
-- recurring contracts and billing;
-- finance and commissions;
-- document metadata and signing;
-- fiscal, privacy and audit;
-- workflow definition and execution;
-- provider callbacks and webhooks;
-- platform entitlements and go-live;
-- analytics and operational control.
-
-## Explicit Production Boundaries
-
-Version 1.0.0 closes operational posture, but local fallback behavior is not presented as a real external provider integration. Every external capability must expose whether it is `configured`, `manual`, `fallback` or `unconfigured`.
-
-The following are real integrations only when provider credentials and environment posture are configured:
-
-- real external payment, fiscal, communication and signing providers;
-- business-facing frontend separated from the technical API console.
-
-This distinction matters: the platform can be operationally ready without pretending that every provider is already homologated.
-
-## Quality Gates
-
-The project has several validation levels. Use the smallest suite that proves the change, then broaden when the blast radius grows.
-
-| Change | Recommended validation |
-|--------|------------------------|
-| local domain rule | `./scripts/test.sh unit` |
-| public HTTP shape | `./scripts/test.sh contract` |
-| cross-service behavior | `./scripts/test.sh smoke` |
-| provider/readiness/go-live posture | `./scripts/test.sh hardening` |
-| infrastructure/runtime change | `./scripts/test.sh platform` |
-| database migration risk | `./scripts/test.sh backup-restore` |
-| 1.0.0 acceptance | `./scripts/test.sh production-readiness` |
-
-For the API console:
+API console:
 
 ```bash
 cd client-web/client-api
@@ -256,31 +153,25 @@ npm run typecheck
 npm run build
 ```
 
-## Documentation Principles
+## Repository Layout
 
-The documentation is split by responsibility:
+```text
+client-web/client-api/     technical API console
+docs/                      project documentation
+docs/contracts/            OpenAPI, events, registry and portal
+infra/                     Docker Compose and Kubernetes
+scripts/                   runtime, build and validation entrypoints
+service-api/               backend services and PostgreSQL contexts
+```
 
-- architecture explains boundaries and decisions;
-- API explains HTTP usage and conventions;
-- services explain ownership;
-- contracts explain compatibility;
-- integrations explain cross-context and provider flows;
-- operations explain how to run and diagnose;
-- standards explain engineering rules.
+## Private Ownership
 
-Avoid adding the same endpoint catalog to every file. If a change affects an endpoint, update the OpenAPI and the focused documentation that explains why the endpoint exists.
+This repository is privately maintained. Code changes are controlled directly by the maintainer.
 
-## Internal Change Flow
+## Contact
 
-1. Identify the owning service.
-2. Check its OpenAPI contract.
-3. Change implementation and tests together.
-4. Update migrations/seeds if persistence changed.
-5. Regenerate the API console catalog if HTTP contracts changed.
-6. Run the validation suite that matches the risk.
-7. Update the correct documentation file.
-8. Add changelog entries only when the change is ready to be recorded as progress.
+**Thiago Di Faria**  
+thiagodifaria@gmail.com
 
-## Maintainer
-
-Thiago Di Faria - thiagodifaria@gmail.com
+[GitHub](https://github.com/thiagodifaria)  
+[LinkedIn](https://linkedin.com/in/thiagodifaria)

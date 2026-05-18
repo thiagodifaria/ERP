@@ -4,6 +4,20 @@ set -euo pipefail
 # Este script centraliza validacoes tecnicas em modo container-first.
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DOCKER_ROOT_DIR="$ROOT_DIR"
+if command -v cygpath >/dev/null 2>&1; then
+  DOCKER_ROOT_DIR="$(cygpath -w "$ROOT_DIR" | tr '\\' '/')"
+fi
+
+docker() {
+  if [[ "${1:-}" == "run" && ( -n "${MSYSTEM:-}" || "${OSTYPE:-}" == msys* ) ]]; then
+    MSYS_NO_PATHCONV=1 command docker "$@"
+    return
+  fi
+
+  command docker "$@"
+}
+
 COMPOSE_FILE="$ROOT_DIR/infra/docker-compose.yml"
 ENV_FILE="$ROOT_DIR/.env"
 
@@ -109,6 +123,8 @@ prepare_runtime_ports() {
   remap_host_port_if_needed "INVENTORY_HTTP_PORT" "inventory"
   remap_host_port_if_needed "PROCUREMENT_HTTP_PORT" "procurement"
   remap_host_port_if_needed "BANKING_HTTP_PORT" "banking"
+  remap_host_port_if_needed "SEARCH_HTTP_PORT" "search"
+  remap_host_port_if_needed "AI_GOVERNANCE_HTTP_PORT" "ai-governance"
 }
 
 prepare_runtime_ports
@@ -122,31 +138,31 @@ PROMETHEUS_PROBE_MAX_ATTEMPTS="${ERP_PROMETHEUS_PROBE_MAX_ATTEMPTS:-90}"
 
 run_go_unit() {
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-golang/edge:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-golang/edge:/workspace" \
     -w /workspace \
     golang:1.24-alpine \
     go test ./...
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-golang/crm:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-golang/crm:/workspace" \
     -w /workspace \
     golang:1.24-alpine \
     go test ./...
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-golang/sales:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-golang/sales:/workspace" \
     -w /workspace \
     golang:1.24-alpine \
     go test ./...
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-golang/documents:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-golang/documents:/workspace" \
     -w /workspace \
     golang:1.24-alpine \
     go test ./...
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-golang/rentals:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-golang/rentals:/workspace" \
     -w /workspace \
     golang:1.24-alpine \
     go test ./...
@@ -154,13 +170,13 @@ run_go_unit() {
 
 run_typescript_unit() {
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-typescript/workflow-control:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-typescript/workflow-control:/workspace" \
     -w /workspace \
     node:22-alpine \
     sh -lc "npm install && npm run test:unit && rm -rf node_modules dist"
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-typescript/engagement:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-typescript/engagement:/workspace" \
     -w /workspace \
     node:22-alpine \
     sh -lc "npm install && npm run test:unit && rm -rf node_modules dist"
@@ -168,13 +184,13 @@ run_typescript_unit() {
 
 run_typescript_contract() {
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-typescript/workflow-control:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-typescript/workflow-control:/workspace" \
     -w /workspace \
     node:22-alpine \
     sh -lc "npm install && npm run test:contract && rm -rf node_modules dist"
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-typescript/engagement:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-typescript/engagement:/workspace" \
     -w /workspace \
     node:22-alpine \
     sh -lc "npm install && npm run test:contract && rm -rf node_modules dist"
@@ -182,7 +198,7 @@ run_typescript_contract() {
 
 run_elixir_unit() {
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-elixir/workflow-runtime:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-elixir/workflow-runtime:/workspace" \
     -w /workspace \
     elixir:1.17-alpine \
     sh -lc "apk add --no-cache build-base git >/dev/null && mix local.hex --force >/dev/null && mix local.rebar --force >/dev/null && mix deps.get >/dev/null && mix test"
@@ -190,73 +206,85 @@ run_elixir_unit() {
 
 run_python_unit() {
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-python/accounting:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-python/accounting:/workspace" \
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache accounting.egg-info"
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-python/analytics:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-python/analytics:/workspace" \
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache analytics.egg-info"
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-python/banking:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-python/banking:/workspace" \
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache banking.egg-info"
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-python/simulation:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-python/simulation:/workspace" \
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache simulation.egg-info"
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-python/inventory:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-python/inventory:/workspace" \
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache inventory.egg-info"
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-python/catalog:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-python/catalog:/workspace" \
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache catalog.egg-info"
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-python/platform-control:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-python/platform-control:/workspace" \
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache platform_control.egg-info"
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-python/procurement:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-python/search:/workspace" \
+    -w /workspace \
+    python:3.12-slim \
+    sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache search.egg-info"
+
+  docker run --rm \
+    -v "$DOCKER_ROOT_DIR/service-api/service-python/ai-governance:/workspace" \
+    -w /workspace \
+    python:3.12-slim \
+    sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache ai_governance.egg-info"
+
+  docker run --rm \
+    -v "$DOCKER_ROOT_DIR/service-api/service-python/procurement:/workspace" \
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache procurement.egg-info"
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-python/support:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-python/support:/workspace" \
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache support.egg-info"
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-python/supplier:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-python/supplier:/workspace" \
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache supplier.egg-info"
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-python/notification:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-python/notification:/workspace" \
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache notification.egg-info"
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-python/fiscal:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-python/fiscal:/workspace" \
     -w /workspace \
     python:3.12-slim \
     sh -lc "pip install --no-cache-dir -e .[dev] >/dev/null && pytest && rm -rf .pytest_cache fiscal.egg-info"
@@ -264,19 +292,19 @@ run_python_unit() {
 
 run_dotnet_build() {
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-csharp/identity:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-csharp/identity:/workspace" \
     -w /workspace \
     mcr.microsoft.com/dotnet/sdk:8.0 \
     dotnet test tests/Identity.UnitTests/Identity.UnitTests.csproj -c Release
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-csharp/finance:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-csharp/finance:/workspace" \
     -w /workspace \
     mcr.microsoft.com/dotnet/sdk:8.0 \
     dotnet test tests/Finance.UnitTests/Finance.UnitTests.csproj -c Release
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-csharp/billing:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-csharp/billing:/workspace" \
     -w /workspace \
     mcr.microsoft.com/dotnet/sdk:8.0 \
     dotnet build src/Billing.Api/Billing.Api.csproj -c Release
@@ -284,7 +312,7 @@ run_dotnet_build() {
 
 run_dotnet_integration() {
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-csharp/identity:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-csharp/identity:/workspace" \
     -w /workspace \
     mcr.microsoft.com/dotnet/sdk:8.0 \
     dotnet test tests/Identity.IntegrationTests/Identity.IntegrationTests.csproj -c Release
@@ -292,7 +320,7 @@ run_dotnet_integration() {
 
 run_dotnet_contract() {
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-csharp/identity:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-csharp/identity:/workspace" \
     -w /workspace \
     mcr.microsoft.com/dotnet/sdk:8.0 \
     dotnet test tests/Identity.ContractTests/Identity.ContractTests.csproj -c Release
@@ -310,8 +338,8 @@ registry_path = root / "docs" / "contracts" / "registry.json"
 schema_registry_path = root / "docs" / "contracts" / "schema-registry.json"
 portal_path = root / "docs" / "contracts" / "portal" / "index.html"
 
-registry = json.loads(registry_path.read_text(encoding="utf-8"))
-schema_registry = json.loads(schema_registry_path.read_text(encoding="utf-8"))
+registry = json.loads(registry_path.read_text(encoding="utf-8-sig"))
+schema_registry = json.loads(schema_registry_path.read_text(encoding="utf-8-sig"))
 
 errors: list[str] = []
 
@@ -328,7 +356,7 @@ check_entries("http", root / "docs" / "contracts" / "http")
 check_entries("events", root / "docs" / "contracts" / "events")
 
 for contract_path in (root / "docs" / "contracts" / "http").glob("*.openapi.yaml"):
-    contract_text = contract_path.read_text(encoding="utf-8")
+    contract_text = contract_path.read_text(encoding="utf-8-sig")
     if "\nsecurity:\n" not in f"\n{contract_text}" or "securitySchemes:" not in contract_text:
         errors.append(f"http contract missing security declaration: {contract_path.name}")
 
@@ -347,14 +375,14 @@ security_markers = {
     "elixir/workflow-runtime": root / "service-api" / "service-elixir" / "workflow-runtime" / "lib" / "workflow_runtime" / "api" / "router.ex",
 }
 
-for service in ["analytics", "banking", "accounting", "catalog", "fiscal", "inventory", "notification", "platform-control", "procurement", "simulation", "supplier", "support"]:
+for service in ["analytics", "banking", "accounting", "ai-governance", "catalog", "fiscal", "inventory", "notification", "platform-control", "procurement", "search", "simulation", "supplier", "support"]:
     security_markers[f"python/{service}"] = root / "service-api" / "service-python" / service / "app" / "security.py"
 
 for label, marker_path in security_markers.items():
     if not marker_path.is_file():
         errors.append(f"security middleware missing: {label}")
         continue
-    marker_text = marker_path.read_text(encoding="utf-8")
+    marker_text = marker_path.read_text(encoding="utf-8-sig")
     if "ERP_JWT_HS256_SECRET" not in marker_text or "ERP_OPENFGA_ENFORCEMENT" not in marker_text:
         errors.append(f"security middleware lacks JWT/OpenFGA enforcement markers: {label}")
 
@@ -365,13 +393,13 @@ dotnet_services = {
 }
 
 for service, source_path in dotnet_services.items():
-    source_text = source_path.read_text(encoding="utf-8")
+    source_text = source_path.read_text(encoding="utf-8-sig")
     implemented = {
         match.group(1).replace(":guid", "")
         for match in re.finditer(r'app\.Map(?:Get|Post|Put|Patch|Delete)\(\s*\n?\s*"([^"]+)"', source_text)
         if match.group(1).startswith("/api/")
     }
-    contract_text = (root / "docs" / "contracts" / "http" / f"{service}.openapi.yaml").read_text(encoding="utf-8")
+    contract_text = (root / "docs" / "contracts" / "http" / f"{service}.openapi.yaml").read_text(encoding="utf-8-sig")
     declared = {
         line.strip()[:-1]
         for line in contract_text.splitlines()
@@ -411,7 +439,7 @@ def normalize_route(path: str) -> str:
     return path
 
 def declared_routes(service: str) -> set[str]:
-    contract_text = (root / "docs" / "contracts" / "http" / f"{service}.openapi.yaml").read_text(encoding="utf-8")
+    contract_text = (root / "docs" / "contracts" / "http" / f"{service}.openapi.yaml").read_text(encoding="utf-8-sig")
     return {
         line.strip()[:-1]
         for line in contract_text.splitlines()
@@ -435,29 +463,29 @@ go_services = {
     "sales": root / "service-api" / "service-golang" / "sales" / "internal" / "api" / "router.go",
 }
 for service, source_path in go_services.items():
-    source_text = source_path.read_text(encoding="utf-8")
+    source_text = source_path.read_text(encoding="utf-8-sig")
     implemented = {
         normalize_route(match.group(1))
         for match in re.finditer(r'mux\.Handle(?:Func)?\("(?:[A-Z]+ )?(/api/[^"]+)"', source_text)
     }
     compare_routes(service, implemented)
 
-python_services = ["accounting", "analytics", "banking", "catalog", "fiscal", "inventory", "notification", "platform-control", "procurement", "simulation", "supplier", "support"]
+python_services = ["accounting", "ai-governance", "analytics", "banking", "catalog", "fiscal", "inventory", "notification", "platform-control", "procurement", "search", "simulation", "supplier", "support"]
 for service in python_services:
-    source_text = (root / "service-api" / "service-python" / service / "app" / "server.py").read_text(encoding="utf-8")
+    source_text = (root / "service-api" / "service-python" / service / "app" / "server.py").read_text(encoding="utf-8-sig")
     implemented = {
         normalize_route(match.group(1))
         for match in re.finditer(r'@app\.(?:get|post|put|patch|delete)\("(/api/[^"]+)"', source_text)
     }
     compare_routes(service, implemented)
 
-rust_text = (root / "service-api" / "service-rust" / "webhook-hub" / "src" / "api" / "router.rs").read_text(encoding="utf-8")
+rust_text = (root / "service-api" / "service-rust" / "webhook-hub" / "src" / "api" / "router.rs").read_text(encoding="utf-8-sig")
 compare_routes("webhook-hub", {
     normalize_route(match.group(1))
     for match in re.finditer(r'\.route\("(/api/[^"]+)"', rust_text)
 })
 
-elixir_text = (root / "service-api" / "service-elixir" / "workflow-runtime" / "lib" / "workflow_runtime" / "api" / "router.ex").read_text(encoding="utf-8")
+elixir_text = (root / "service-api" / "service-elixir" / "workflow-runtime" / "lib" / "workflow_runtime" / "api" / "router.ex").read_text(encoding="utf-8-sig")
 compare_routes("workflow-runtime", {
     normalize_route(match.group(1))
     for match in re.finditer(r'(?:get|post|put|patch|delete)\s+"(/api/[^"]+)"', elixir_text)
@@ -510,7 +538,15 @@ run_hardening_secrets() {
     local variable_name="$1"
     local value="${!variable_name:-}"
 
-    if [[ -z "$value" || "$value" == "erp" || "$value" == "admin" || "$value" == "Change.Me123!" || "$value" == "documents-local-secret" ]]; then
+    case "$value" in
+      ""|"erp"|"admin"|"Change.Me123!"|"local-jwt-secret"|"local-service-token"|"documents-local-secret"|change-me-unsafe-local-only*)
+        echo "[hardening-secrets] insecure or empty value for $variable_name"
+        failed=1
+        return
+        ;;
+    esac
+
+    if [[ ${#value} -lt 32 ]]; then
       echo "[hardening-secrets] insecure or empty value for $variable_name"
       failed=1
     fi
@@ -560,7 +596,7 @@ def require_file(path: str, *markers: str) -> None:
     if not file_path.is_file():
         errors.append(f"missing file: {path}")
         return
-    text = file_path.read_text(encoding="utf-8")
+    text = file_path.read_text(encoding="utf-8-sig")
     for marker in markers:
         if marker not in text:
             errors.append(f"{path} missing marker: {marker}")
@@ -579,7 +615,7 @@ security_files = [
     "service-api/service-rust/webhook-hub/src/api/router.rs",
     "service-api/service-elixir/workflow-runtime/lib/workflow_runtime/api/router.ex",
 ]
-for service in ["analytics", "banking", "accounting", "catalog", "fiscal", "inventory", "notification", "platform-control", "procurement", "simulation", "supplier", "support"]:
+for service in ["analytics", "banking", "accounting", "ai-governance", "catalog", "fiscal", "inventory", "notification", "platform-control", "procurement", "search", "simulation", "supplier", "support"]:
     security_files.append(f"service-api/service-python/{service}/app/security.py")
 for path in security_files:
     require_file(path, "ERP_JWT_HS256_SECRET", "ERP_OPENFGA_ENFORCEMENT")
@@ -603,17 +639,18 @@ require_file("service-api/service-postgresql/documents/migrations/000007_documen
 require_file("service-api/service-csharp/finance/src/Finance.Api/FinancePolicies.cs", "RequiresIdempotencyKey", "IsImmutableLedgerOperation", "RequiresPciScopeReview")
 require_file("docs/contracts/events/event-envelope.schema.json", "eventId", "correlationId", "schemaRef")
 require_file("docs/contracts/portal/index.html", "Auth model", "Idempotency", "Breaking changes", "Events")
-require_file("docs/SEGURANCA.md", "JWT", "OpenFGA", "Inventario LGPD")
-require_file("docs/OPERACOES.md", "SLOs E Alertas", "DLQ ou retry crescendo", "Divergencia financeira")
-require_file("docs/ARQUITETURA.md", "Poliglotismo orientado por dominio", "Nova linguagem")
-require_file("docs/PADROES.md", "Checklist Para Novo Servico", "Auth middleware", "traceparent")
+require_file("docs/SEGURANCA.md", "JWT", "OpenFGA", "inventário LGPD")
+require_file("docs/OPERACOES.md", "SLOs e Alertas", "DLQ ou retry crescendo", "Divergencia financeira")
+require_file("docs/ARQUITETURA.md", "Poliglotismo orientado por domínio", "Nova linguagem")
+require_file("docs/PADROES.md", "Checklist Para Novo serviço", "Auth middleware", "traceparent")
 require_file("scripts/build.sh", "database_backup_encrypted", "database_restore_encrypted", "ERP_BACKUP_ENCRYPTION_KEY")
 require_file("infra/kubernetes/base/namespace.yaml", "pod-security.kubernetes.io/enforce: restricted", "pod-security.kubernetes.io/audit: restricted")
 require_file("infra/kubernetes/base/network-policy.yaml", "erp-default-deny", "policyTypes", "Ingress", "Egress")
+require_file("infra/kubernetes/base/deployability-matrix.yaml", "fullyManaged", "composeManaged", "requiredPerService")
 require_file("infra/kubernetes/base/configmap.yaml", "ERP_SECURITY_LEVEL", "ERP_REQUIRE_REQUEST_SIGNATURE", "ERP_AUDIT_LOG_REDACTION")
 
-registry = json.loads((root / "docs/contracts/registry.json").read_text(encoding="utf-8"))
-schema_registry = json.loads((root / "docs/contracts/schema-registry.json").read_text(encoding="utf-8"))
+registry = json.loads((root / "docs/contracts/registry.json").read_text(encoding="utf-8-sig"))
+schema_registry = json.loads((root / "docs/contracts/schema-registry.json").read_text(encoding="utf-8-sig"))
 if "event-envelope.schema.json" not in registry.get("events", []):
     errors.append("event envelope missing from contract registry")
 if not any(item.get("key") == "event-envelope" for item in schema_registry.get("schemas", [])):
@@ -622,8 +659,8 @@ for doc in ["docs/SEGURANCA.md", "docs/OPERACOES.md", "docs/ARQUITETURA.md", "do
     if doc not in registry.get("docs", []):
         errors.append(f"{doc} missing from docs registry")
 
-env_example = (root / ".env.example").read_text(encoding="utf-8")
-env_prod = (root / ".env.production.example").read_text(encoding="utf-8")
+env_example = (root / ".env.example").read_text(encoding="utf-8-sig")
+env_prod = (root / ".env.production.example").read_text(encoding="utf-8-sig")
 for marker in [
     "ERP_AUTH_ENFORCEMENT",
     "ERP_SECURITY_LEVEL",
@@ -638,6 +675,35 @@ for marker in [
 ]:
     if marker not in env_example or marker not in env_prod:
         errors.append(f"security env marker missing: {marker}")
+
+for source_path in list((root / "service-api").rglob("*")):
+    if not source_path.is_file() or source_path.suffix.lower() not in {".cs", ".ts", ".js", ".go", ".rs", ".ex", ".py", ".sql"}:
+        continue
+    text = source_path.read_text(encoding="utf-8", errors="ignore")
+    if "COALESCE(MAX(id)" in text or "MAX(id), 0) + 1" in text:
+        errors.append(f"unsafe id generation with MAX(id)+1: {source_path.relative_to(root)}")
+
+http_client = (root / "client-web/client-api/src/lib/httpClient.ts").read_text(encoding="utf-8-sig")
+if "Bearer ${options.environment.bearerToken.trim()}" in http_client:
+    errors.append("client-api cURL generation must not expose bearer token by default")
+if "const readOnlyMethods = new Set([\"GET\", \"HEAD\", \"OPTIONS\"])" not in http_client:
+    errors.append("client-api retry policy must be constrained to read-only methods by default")
+
+for infra_path in [
+    root / "infra/docker-compose.yml",
+    root / ".github/workflows/containers.yml",
+    root / "infra/kubernetes/base",
+    root / "infra/kubernetes/overlays",
+]:
+    paths = infra_path.rglob("*") if infra_path.is_dir() else [infra_path]
+    for path in paths:
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8", errors="ignore")
+        if "openfga/openfga:latest" in text:
+            errors.append(f"OpenFGA latest tag is forbidden: {path.relative_to(root)}")
+        if "type=raw,value=latest" in text:
+            errors.append(f"container latest publication is forbidden: {path.relative_to(root)}")
 
 if errors:
     for error in errors:
@@ -664,7 +730,7 @@ def require_file(path: str, *markers: str) -> str:
     if not file_path.is_file():
         errors.append(f"missing file: {path}")
         return ""
-    text = file_path.read_text(encoding="utf-8")
+    text = file_path.read_text(encoding="utf-8-sig")
     for marker in markers:
         if marker not in text:
             errors.append(f"{path} missing marker: {marker}")
@@ -680,6 +746,8 @@ required_kubernetes = [
     "infra/kubernetes/base/edge-deployment.yaml",
     "infra/kubernetes/base/analytics-deployment.yaml",
     "infra/kubernetes/base/platform-control-deployment.yaml",
+    "infra/kubernetes/base/search-deployment.yaml",
+    "infra/kubernetes/base/ai-governance-deployment.yaml",
     "infra/kubernetes/base/services.yaml",
     "infra/kubernetes/base/ingress.yaml",
     "infra/kubernetes/base/network-policy.yaml",
@@ -695,28 +763,54 @@ require_file("infra/kubernetes/base/ingress.yaml", "tls:", "erp-edge", "ingressC
 require_file("infra/kubernetes/base/postgres-migration-job.yaml", "kind: Job", "erp-postgres-migrations", "readOnlyRootFilesystem")
 require_file("infra/kubernetes/base/edge-deployment.yaml", "readinessProbe", "livenessProbe", "allowPrivilegeEscalation: false")
 require_file("infra/kubernetes/base/hpa.yaml", "HorizontalPodAutoscaler", "maxReplicas")
-require_file("service-api/service-python/analytics/app/reports/production_readiness.py", "version\": \"1.0.0", "blockingGates", "infra/kubernetes/base")
-require_file("service-api/service-python/analytics/app/server.py", "/api/analytics/reports/production-readiness")
-require_file("service-api/service-python/analytics/tests/unit/test_server.py", "test_production_readiness_returns_1_0_release_gate")
-require_file("docs/OPERACOES.md", "Production Readiness 1.0.0", "production-readiness")
-require_file("docs/ARQUITETURA.md", "Release 1.0.0", "infra/kubernetes")
+require_file("service-api/service-python/analytics/app/reports/production_readiness.py", "version\": \"1.4.6", "blockingGates", "externalProviderActivation", "documentIntelligence", "externalRiskFeed", "staticPolicy", "transactionalIdGeneration", "authConformance", "apiConsoleSecurity")
+require_file("service-api/service-python/analytics/app/server.py", "/api/analytics/reports/production-readiness", "/api/analytics/metrics", "/api/analytics/data-quality", "/api/analytics/lineage", "/api/analytics/risk/tenant-score", "/api/analytics/financial-close/readiness", "/api/analytics/lakehouse/datasets", "/api/analytics/external-intelligence/readiness")
+require_file("service-api/service-python/analytics/tests/unit/test_server.py", "test_production_readiness_returns_1_4_version_gate", "test_external_intelligence_reports_return_v14_domains")
+require_file("service-api/service-python/search/app/server.py", "/api/search/query", "/api/search/legal-holds", "/api/search/exports")
+require_file("service-api/service-python/ai-governance/app/server.py", "/api/ai-governance/tools", "/api/ai-governance/runs", "/api/ai-governance/audit-events")
+require_file("service-api/service-python/ai-governance/app/runtime.py", "OPENAI_API_KEY", "https://api.openai.com/v1/responses", "deterministic-local")
+require_file("service-api/service-python/platform-control/app/server.py", "/api/platform-control/tenants/{tenant_slug}/incident-command/readiness", "/api/platform-control/tenants/{tenant_slug}/policies/evaluate", "/api/platform-control/tenants/{tenant_slug}/enterprise-runtime/readiness", "/api/platform-control/event-mesh/catalog", "/api/platform-control/providers/activation/catalog")
+require_file("docs/OPERACOES.md", "Production Readiness 1.4.6", "production-readiness")
+require_file("docs/ARQUITETURA.md", "Versão 1.4.6", "infra/kubernetes")
 require_file("docs/API.md", "production-readiness")
-require_file("docs/PADROES.md", "Controle Interno De Mudanca")
+require_file("docs/PADROES.md", "Controle Interno De mudança")
 require_file("docs/CONTRATOS.md", "Controle Interno De Contratos")
-require_file("README.md", "Version 1.0.0", "Private Ownership")
-require_file("README_PT.md", "Versao 1.0.0", "Ownership Privado")
-require_file("README_EN.md", "Version 1.0.0", "Private Ownership")
+require_file("README.md", "Business Operating System", "Private Ownership")
+require_file("README_PT.md", "Business Operating System", "Ownership Privado")
+require_file("README_EN.md", "Business Operating System", "Private Ownership")
 
-analytics_contract = yaml.safe_load((root / "docs/contracts/http/analytics.openapi.yaml").read_text(encoding="utf-8"))
+analytics_contract = yaml.safe_load((root / "docs/contracts/http/analytics.openapi.yaml").read_text(encoding="utf-8-sig"))
 if "/api/analytics/reports/production-readiness" not in analytics_contract.get("paths", {}):
     errors.append("analytics OpenAPI missing production-readiness route")
+if "/api/analytics/metrics" not in analytics_contract.get("paths", {}):
+    errors.append("analytics OpenAPI missing semantic metrics route")
+if "/api/analytics/risk/tenant-score" not in analytics_contract.get("paths", {}):
+    errors.append("analytics OpenAPI missing risk score route")
+if "/api/analytics/financial-close/readiness" not in analytics_contract.get("paths", {}):
+    errors.append("analytics OpenAPI missing financial close readiness route")
+if "/api/analytics/lakehouse/datasets" not in analytics_contract.get("paths", {}):
+    errors.append("analytics OpenAPI missing lakehouse datasets route")
+if "/api/analytics/external-intelligence/readiness" not in analytics_contract.get("paths", {}):
+    errors.append("analytics OpenAPI missing external intelligence readiness route")
+if "/api/analytics/external-risk-feed" not in analytics_contract.get("paths", {}):
+    errors.append("analytics OpenAPI missing external risk feed route")
 
-registry = json.loads((root / "docs/contracts/registry.json").read_text(encoding="utf-8"))
+platform_contract = yaml.safe_load((root / "docs/contracts/http/platform-control.openapi.yaml").read_text(encoding="utf-8-sig"))
+if "/api/platform-control/event-mesh/catalog" not in platform_contract.get("paths", {}):
+    errors.append("platform-control OpenAPI missing event mesh catalog route")
+if "/api/platform-control/tenants/{tenantSlug}/enterprise-runtime/readiness" not in platform_contract.get("paths", {}):
+    errors.append("platform-control OpenAPI missing enterprise runtime readiness route")
+if "/api/platform-control/providers/activation/catalog" not in platform_contract.get("paths", {}):
+    errors.append("platform-control OpenAPI missing provider activation catalog route")
+if "/api/platform-control/tenants/{tenantSlug}/providers/activation/{provider_key}/test" not in platform_contract.get("paths", {}):
+    errors.append("platform-control OpenAPI missing provider activation test route")
+
+registry = json.loads((root / "docs/contracts/registry.json").read_text(encoding="utf-8-sig"))
 if "docs/OPERACOES.md" not in registry.get("docs", []):
     errors.append("operations doc missing from contract registry")
 
 for doc_path in ["README.md", "README_PT.md", "README_EN.md", "docs/PADROES.md", "docs/CONTRATOS.md"]:
-    text = (root / doc_path).read_text(encoding="utf-8").lower()
+    text = (root / doc_path).read_text(encoding="utf-8-sig").lower()
     forbidden = ["pull request", "contribuicao", "contribuição", "contributing", "community contribution"]
     for marker in forbidden:
         if marker in text:
@@ -727,7 +821,7 @@ if errors:
         print(f"[production-readiness] {error}")
     sys.exit(1)
 
-print("[production-readiness] release 1.0.0 gate, kubernetes artifacts, docs and ownership posture validated")
+print("[production-readiness] release 1.4.6 external intelligence hardening gate, contracts, docs and ownership posture validated")
 PY
 }
 
@@ -756,7 +850,7 @@ for file_path in root.rglob("*"):
     if file_path.suffix.lower() in {".png", ".jpg", ".jpeg", ".gif", ".webp", ".ico", ".woff", ".woff2"}:
         continue
     try:
-        text = file_path.read_text(encoding="utf-8")
+        text = file_path.read_text(encoding="utf-8-sig")
     except UnicodeDecodeError:
         continue
     for pattern in secret_patterns:
@@ -768,7 +862,7 @@ if not dockerfiles:
     errors.append("no Dockerfiles found for container scan baseline")
 docker_images: list[dict[str, str]] = []
 for dockerfile in dockerfiles:
-    for line in dockerfile.read_text(encoding="utf-8").splitlines():
+    for line in dockerfile.read_text(encoding="utf-8-sig").splitlines():
         stripped = line.strip()
         if not stripped.startswith("FROM "):
             continue
@@ -834,13 +928,13 @@ PY
 
 run_go_contract() {
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-golang/crm:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-golang/crm:/workspace" \
     -w /workspace \
     golang:1.24-alpine \
     go test -tags=contract ./tests/contract/...
 
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-golang/sales:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-golang/sales:/workspace" \
     -w /workspace \
     golang:1.24-alpine \
     go test -tags=contract ./tests/contract/...
@@ -848,7 +942,7 @@ run_go_contract() {
 
 run_rust_unit() {
   docker run --rm \
-    -v "$ROOT_DIR/service-api/service-rust/webhook-hub:/workspace" \
+    -v "$DOCKER_ROOT_DIR/service-api/service-rust/webhook-hub:/workspace" \
     -w /workspace \
     rust:1 \
     cargo test
@@ -1272,6 +1366,11 @@ PY
 extract_json_field() {
   local field_path="$1"
 
+  if [[ "$field_path" == "publicId" ]]; then
+    grep -oE '"publicId"[[:space:]]*:[[:space:]]*"[^"]+"' | sed -nE '1s/.*"([^"]+)"$/\1/p'
+    return
+  fi
+
   if command -v python3 >/dev/null 2>&1; then
     python3 -c '
 import json
@@ -1289,19 +1388,7 @@ print(value)
     return
   fi
 
-  docker run --rm -i python:3.12-alpine python -c '
-import json
-import sys
-
-field_path = sys.argv[1].split(".")
-payload = json.load(sys.stdin)
-
-value = payload
-for field in field_path:
-    value = value[field]
-
-print(value)
-' "$field_path"
+  docker run --rm -i -e FIELD_PATH="$field_path" python:3.12-alpine python -c 'import json, operator, os, sys; from functools import reduce; print(reduce(operator.getitem, os.environ["FIELD_PATH"].split("."), json.load(sys.stdin)))'
 }
 
 run_documents_runtime_smoke() {
@@ -3366,7 +3453,7 @@ run_analytics_runtime_smoke() {
     exit 1
   fi
 
-  if [[ "$integration_readiness_response" != *'"tenantSlug":"bootstrap-ops"'* || "$integration_readiness_response" != *'"dataSource":"postgresql"'* || "$integration_readiness_response" != *'"configured":1'* || "$integration_readiness_response" != *'"activeInboundProviders":1'* || "$integration_readiness_response" != *'"activeOutboundProviders":1'* || "$integration_readiness_response" != *'"fallbackEnabled":false'* || "$integration_readiness_response" != *'"contractArtifacts":27'* || "$integration_readiness_response" != *'"criticalUnconfiguredCapabilities":4'* || "$integration_readiness_response" != *'"inboundLeads":0'* || "$integration_readiness_response" != *'"workflowDispatches":1'* || "$integration_readiness_response" != *'"responsesTracked":1'* || "$integration_readiness_response" != *'"conversionsTracked":0'* || "$integration_readiness_response" != *'"processedProviderEvents":3'* || "$integration_readiness_response" != *'"failedProviderEvents":0'* || "$integration_readiness_response" != *'"businessEntityLinkedEvents":3'* || "$integration_readiness_response" != *'"pendingEvents":0'* || "$integration_readiness_response" != *'"deadLetterEvents":1'* || "$integration_readiness_response" != *'"status":"attention"'* || "$integration_readiness_response" != *'"leadIntakeReady":false'* || "$integration_readiness_response" != *'"workflowDispatchReady":true'* || "$integration_readiness_response" != *'"callbackTraceabilityReady":true'* || "$integration_readiness_response" != *'"businessEntityLinkageReady":true'* || "$integration_readiness_response" != *'"externalAdaptersPrepared":false'* || "$integration_readiness_response" != *'"openProviderRisks":5'* || "$adapter_catalog_response" != *'"configuredCapabilities":3'* || "$adapter_catalog_response" != *'"fallbackCapabilities":10'* || "$adapter_catalog_response" != *'"criticalUnconfiguredCapabilities":4'* ]]; then
+  if [[ "$integration_readiness_response" != *'"tenantSlug":"bootstrap-ops"'* || "$integration_readiness_response" != *'"dataSource":"postgresql"'* || "$integration_readiness_response" != *'"configured":1'* || "$integration_readiness_response" != *'"activeInboundProviders":1'* || "$integration_readiness_response" != *'"activeOutboundProviders":1'* || "$integration_readiness_response" != *'"fallbackEnabled":false'* || "$integration_readiness_response" != *'"contractArtifacts":27'* || "$integration_readiness_response" != *'"criticalUnconfiguredCapabilities":4'* || "$integration_readiness_response" != *'"inboundLeads":0'* || "$integration_readiness_response" != *'"workflowDispatches":1'* || "$integration_readiness_response" != *'"responsesTracked":1'* || "$integration_readiness_response" != *'"conversionsTracked":0'* || "$integration_readiness_response" != *'"processedProviderEvents":3'* || "$integration_readiness_response" != *'"failedProviderEvents":0'* || "$integration_readiness_response" != *'"businessEntityLinkedEvents":3'* || "$integration_readiness_response" != *'"pendingEvents":0'* || "$integration_readiness_response" != *'"deadLetterEvents":1'* || "$integration_readiness_response" != *'"status":"attention"'* || "$integration_readiness_response" != *'"leadIntakeReady":false'* || "$integration_readiness_response" != *'"workflowDispatchReady":true'* || "$integration_readiness_response" != *'"callbackTraceabilityReady":true'* || "$integration_readiness_response" != *'"businessEntityLinkageReady":true'* || "$integration_readiness_response" != *'"externalAdaptersPrepared":false'* || "$integration_readiness_response" != *'"openProviderRisks":5'* || "$adapter_catalog_response" != *'"configuredCapabilities":8'* || "$adapter_catalog_response" != *'"fallbackCapabilities":11'* || "$adapter_catalog_response" != *'"criticalUnconfiguredCapabilities":4'* ]]; then
     echo "[test] analytics integration readiness report did not expose the expected payload"
     exit 1
   fi
@@ -4520,7 +4607,7 @@ run_edge_runtime_smoke() {
   session_response="$(curl -fsS \
     -X POST \
     -H "Content-Type: application/json" \
-    -d "{\"tenantSlug\":\"bootstrap-ops\",\"email\":\"owner@bootstrap-ops.local\",\"password\":\"${IDENTITY_BOOTSTRAP_PASSWORD:-Change.Me123!}\",\"otpCode\":null}" \
+    -d "{\"tenantSlug\":\"bootstrap-ops\",\"email\":\"owner@bootstrap-ops.local\",\"password\":\"${IDENTITY_BOOTSTRAP_PASSWORD:-change-me-unsafe-local-only-bootstrap}\",\"otpCode\":null}" \
     "http://localhost:${IDENTITY_HTTP_PORT:-8081}/api/identity/sessions/login")"
   session_token="$(echo "$session_response" | sed -n 's/.*"sessionToken":"\([^"]*\)".*/\1/p')"
   tenant_overview_unauthorized_response="$(curl -sS -w ' HTTP_STATUS:%{http_code}' "$base_url/api/edge/ops/tenant-overview?tenantSlug=bootstrap-ops")"
@@ -4777,6 +4864,8 @@ Usage:
   ./scripts/test.sh performance
   ./scripts/test.sh backup-restore
   ./scripts/test.sh security
+  ./scripts/test.sh auth-conformance
+  ./scripts/test.sh observability
   ./scripts/test.sh supply-chain
   ./scripts/test.sh production-readiness
   ./scripts/test.sh all
@@ -4833,6 +4922,12 @@ main() {
       run_hardening_suite
       ;;
     security)
+      run_security_suite
+      ;;
+    auth-conformance)
+      run_security_suite
+      ;;
+    observability)
       run_security_suite
       ;;
     supply-chain)

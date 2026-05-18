@@ -849,10 +849,19 @@ public sealed class PostgresIdentityRepositoryBundle :
 
   private long NextId(string tableName)
   {
-    var sql = $"SELECT COALESCE(MAX(id), 0) + 1 FROM {tableName};";
+    var safeTableName = tableName switch
+    {
+      "identity.tenants" => "identity.tenants",
+      "identity.companies" => "identity.companies",
+      "identity.users" => "identity.users",
+      "identity.teams" => "identity.teams",
+      "identity.team_memberships" => "identity.team_memberships",
+      "identity.user_roles" => "identity.user_roles",
+      _ => throw new InvalidOperationException($"Unsupported identity sequence table: {tableName}")
+    };
 
     using var connection = OpenConnection();
-    using var command = new NpgsqlCommand(sql, connection);
+    using var command = new NpgsqlCommand($"SELECT nextval(pg_get_serial_sequence('{safeTableName}', 'id'));", connection);
 
     return Convert.ToInt64(command.ExecuteScalar()!);
   }

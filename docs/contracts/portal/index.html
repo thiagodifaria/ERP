@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ERP API Portal</title>
+  <title>Business Operating System API Portal</title>
   <style>
     :root {
       --bg: #f6f1e8;
@@ -85,11 +85,11 @@
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="kicker">ERP Integration Portal</div>
+      <div class="kicker">Business Operating System Integration Portal</div>
       <h1>Central contract and API navigation surface</h1>
       <p>
         This portal is the central entrypoint for HTTP contracts, event schemas and governance
-        artifacts of the ERP platform. It is intentionally static and versioned with the monorepo,
+        artifacts of The project platform. It is intentionally static and versioned with the monorepo,
         so contract discovery stays aligned with the same commit that shipped the code.
       </p>
       <div class="meta">
@@ -104,8 +104,9 @@
         <div class="kicker">HTTP</div>
         <h2>Service specifications</h2>
         <ul>
-          <li><a href="../http/analytics.openapi.yaml">analytics.openapi.yaml</a></li>
           <li><a href="../http/accounting.openapi.yaml">accounting.openapi.yaml</a></li>
+          <li><a href="../http/ai-governance.openapi.yaml">ai-governance.openapi.yaml</a></li>
+          <li><a href="../http/analytics.openapi.yaml">analytics.openapi.yaml</a></li>
           <li><a href="../http/banking.openapi.yaml">banking.openapi.yaml</a></li>
           <li><a href="../http/billing.openapi.yaml">billing.openapi.yaml</a></li>
           <li><a href="../http/catalog.openapi.yaml">catalog.openapi.yaml</a></li>
@@ -122,6 +123,7 @@
           <li><a href="../http/procurement.openapi.yaml">procurement.openapi.yaml</a></li>
           <li><a href="../http/rentals.openapi.yaml">rentals.openapi.yaml</a></li>
           <li><a href="../http/sales.openapi.yaml">sales.openapi.yaml</a></li>
+          <li><a href="../http/search.openapi.yaml">search.openapi.yaml</a></li>
           <li><a href="../http/simulation.openapi.yaml">simulation.openapi.yaml</a></li>
           <li><a href="../http/supplier.openapi.yaml">supplier.openapi.yaml</a></li>
           <li><a href="../http/support.openapi.yaml">support.openapi.yaml</a></li>
@@ -177,7 +179,7 @@
           <li>Idempotency: sensitive mutations require stable keys.</li>
           <li>Error payload: stable <code>code</code> and concise <code>message</code>.</li>
           <li>Breaking changes: update OpenAPI, schema registry and changelog together.</li>
-          <li>Events: published and consumed payloads use the ERP event envelope.</li>
+          <li>Events: published and consumed payloads use The project event envelope.</li>
         </ul>
       </article>
     </section>

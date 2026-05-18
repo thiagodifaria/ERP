@@ -31,6 +31,36 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
+  name: erp-search
+  labels:
+    app.kubernetes.io/name: erp-search
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: erp-search
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: erp-ai-governance
+  labels:
+    app.kubernetes.io/name: erp-ai-governance
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: erp-ai-governance
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
   name: erp-platform-control
   labels:
     app.kubernetes.io/name: erp-platform-control

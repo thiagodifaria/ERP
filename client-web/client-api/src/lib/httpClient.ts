@@ -13,6 +13,7 @@ const retryableStatuses = new Set([408, 425, 429, 500, 502, 503, 504]);
 const maxAttempts = 3;
 const requestTimeoutMs = 15000;
 const bearerTokenPattern = /^[A-Za-z0-9._~+/=-]+$/;
+const readOnlyMethods = new Set(["GET", "HEAD", "OPTIONS"]);
 
 function applyPathValues(path: string, values: Record<string, string>): string {
   return path.replace(/\{([^}]+)\}/g, (_match, key: string) => {
@@ -64,7 +65,7 @@ function sanitizeBearerToken(token: string): string {
 
 function shouldRetry(method: string, response?: Response): boolean {
   if (response && !retryableStatuses.has(response.status)) return false;
-  return ["GET", "HEAD", "OPTIONS", "PUT", "PATCH", "DELETE"].includes(method);
+  return readOnlyMethods.has(method);
 }
 
 function wait(ms: number): Promise<void> {
@@ -98,21 +99,23 @@ export async function sendEndpointRequest(options: SendRequestOptions): Promise<
       headers.authorization = `Bearer ${bearerToken}`;
     }
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Token invalido";
     return {
       status: 0,
       statusText: "Invalid Request",
       durationMs: Math.round(performance.now() - started),
       headers: {},
       body: {
-        error: error instanceof Error ? error.message : "Token invalido",
+        error: message,
         hint: "Remova espacos, quebras de linha e caracteres de controle do token bearer."
       },
       url,
-      error: error instanceof Error ? error.message : "Token invalido"
+      errorKind: "auth",
+      error: message
     };
   }
 
-  if (!["GET", "HEAD", "OPTIONS"].includes(method)) {
+  if (!readOnlyMethods.has(method)) {
     headers["idempotency-key"] = buildRequestId(options.environment.idempotencyKey || "console");
   }
 
@@ -125,7 +128,7 @@ export async function sendEndpointRequest(options: SendRequestOptions): Promise<
         response = await fetchWithTimeout(url, {
           method,
           headers,
-          body: ["GET", "HEAD", "OPTIONS"].includes(method)
+          body: readOnlyMethods.has(method)
             ? undefined
             : options.bodyText.trim() || "{}"
         });
@@ -158,25 +161,32 @@ export async function sendEndpointRequest(options: SendRequestOptions): Promise<
       durationMs: Math.round(performance.now() - started),
       headers: responseHeaders,
       body: await parseBody(response),
-      url
+      url,
+      errorKind: response.ok ? undefined : "http"
     };
   } catch (error) {
+    const isTimeout = error instanceof DOMException && error.name === "AbortError";
+    const message = isTimeout
+      ? `Tempo limite de ${requestTimeoutMs}ms excedido`
+      : error instanceof Error ? error.message : "Falha desconhecida";
+
     return {
       status: 0,
-      statusText: "Network Error",
+      statusText: isTimeout ? "Timeout" : "Network Error",
       durationMs: Math.round(performance.now() - started),
       headers: {},
       body: {
-        error: error instanceof Error ? error.message : "Falha desconhecida",
+        error: message,
         hint: "Confirme se o stack do ERP esta rodando e se o modo proxy/direct esta adequado."
       },
       url,
-      error: error instanceof Error ? error.message : "Falha desconhecida"
+      errorKind: isTimeout ? "timeout" : "network",
+      error: message
     };
   }
 }
 
-export function curlFor(options: SendRequestOptions): string {
+export function curlFor(options: SendRequestOptions, includeBearerToken = false): string {
   const path = applyPathValues(options.endpoint.path, options.pathValues);
   const url = buildUrl(options.endpoint, options.environment, path, options.queryText);
   const idempotencyKey = buildRequestId(options.environment.idempotencyKey || "console");
@@ -187,10 +197,11 @@ export function curlFor(options: SendRequestOptions): string {
   ];
 
   if (options.environment.bearerToken.trim()) {
-    lines.push(`  -H 'authorization: Bearer ${options.environment.bearerToken.trim()}'`);
+    const token = includeBearerToken ? sanitizeBearerToken(options.environment.bearerToken) : "<redacted>";
+    lines.push(`  -H 'authorization: Bearer ${token}'`);
   }
 
-  if (!["GET", "HEAD", "OPTIONS"].includes(options.endpoint.method)) {
+  if (!readOnlyMethods.has(options.endpoint.method)) {
     lines.push(`  -H 'idempotency-key: ${idempotencyKey}'`);
     lines.push(`  -d '${options.bodyText.trim() || "{}"}'`);
   }

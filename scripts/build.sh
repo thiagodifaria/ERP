@@ -49,6 +49,8 @@ MIGRATION_DOMAINS=(
   inventory
   procurement
   banking
+  search
+  ai-governance
   notification
   fiscal
   engagement
@@ -161,6 +163,8 @@ prepare_runtime_ports() {
   remap_host_port_if_needed "INVENTORY_HTTP_PORT" "inventory"
   remap_host_port_if_needed "PROCUREMENT_HTTP_PORT" "procurement"
   remap_host_port_if_needed "BANKING_HTTP_PORT" "banking"
+  remap_host_port_if_needed "SEARCH_HTTP_PORT" "search"
+  remap_host_port_if_needed "AI_GOVERNANCE_HTTP_PORT" "ai-governance"
   export ERP_HOST_PORTS_LOCKED=1
 }
 

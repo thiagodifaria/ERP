@@ -1,6 +1,6 @@
-openapi: 3.1.0
+﻿openapi: 3.1.0
 info:
-  title: ERP Finance API
+  title: Business Operating System Finance API
   version: 1.0.0
   description: Receivables, projections, settlements, commission lifecycle, payables, costs, treasury, period closures and financial activity.
 security:

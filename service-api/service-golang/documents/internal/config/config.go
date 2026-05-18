@@ -81,7 +81,7 @@ func resolveAccessTokenSecret() string {
 
 	environment := strings.ToLower(strings.TrimSpace(os.Getenv("ERP_ENV")))
 	if environment == "" || environment == "local" || environment == "dev" || environment == "development" || environment == "test" {
-		return "documents-local-secret"
+		return "change-me-unsafe-local-only-documents"
 	}
 
 	panic("DOCUMENTS_ACCESS_TOKEN_SECRET is required outside local/test environments")

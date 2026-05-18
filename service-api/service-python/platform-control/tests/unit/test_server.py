@@ -280,3 +280,247 @@ def test_go_live_rollout_rejects_invalid_transition_and_supports_rollback() -> N
     assert rollback_response.status_code == 200
     assert rollback_response.json()["status"] == "rolled_back"
     assert any(event["status"] == "rolled_back" for event in rollback_response.json()["events"])
+
+
+def test_incident_command_center_supports_response_lifecycle() -> None:
+    create_response = client.post(
+        "/api/platform-control/tenants/bootstrap-ops/incidents",
+        json={
+            "title": "Gateway latency above SLO",
+            "service": "edge",
+            "severity": "sev2",
+            "impact": "API consumers observe elevated p95 latency.",
+            "owner": "sre@bootstrap-ops.local",
+        },
+    )
+    incident_public_id = create_response.json()["publicId"]
+    timeline_response = client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/incidents/{incident_public_id}/timeline",
+        json={"eventType": "mitigation", "summary": "Traffic shifted to fallback pool.", "actor": "sre@bootstrap-ops.local"},
+    )
+    action_response = client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/incidents/{incident_public_id}/actions",
+        json={"title": "Tune downstream timeout budget", "owner": "platform@bootstrap-ops.local"},
+    )
+    resolve_response = client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/incidents/{incident_public_id}/resolve",
+        json={"summary": "Latency returned to normal after pool rebalance.", "actor": "sre@bootstrap-ops.local"},
+    )
+    postmortem_response = client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/incidents/{incident_public_id}/postmortem",
+        json={
+            "rootCause": "Capacity skew in fallback pool.",
+            "impactSummary": "Short p95 latency breach.",
+            "preventiveActions": ["Add pool skew alert"],
+        },
+    )
+    detail_response = client.get(f"/api/platform-control/tenants/bootstrap-ops/incidents/{incident_public_id}")
+    readiness_response = client.get("/api/platform-control/tenants/bootstrap-ops/incident-command/readiness")
+
+    assert create_response.status_code == 200
+    assert timeline_response.status_code == 200
+    assert action_response.status_code == 200
+    assert resolve_response.status_code == 200
+    assert postmortem_response.status_code == 200
+    assert detail_response.status_code == 200
+    assert readiness_response.status_code == 200
+    assert detail_response.json()["status"] == "resolved"
+    assert len(detail_response.json()["timeline"]) >= 4
+    assert len(detail_response.json()["actions"]) == 1
+    assert detail_response.json()["postmortem"]["rootCause"] == "Capacity skew in fallback pool."
+    assert "incident-registry" in readiness_response.json()["controls"]
+
+
+def test_autonomous_governance_policy_approval_runbook_timeline_and_evidence() -> None:
+    policy_catalog = client.get("/api/platform-control/policies/catalog")
+    decision_response = client.post(
+        "/api/platform-control/tenants/bootstrap-ops/policies/evaluate",
+        json={
+            "domain": "search",
+            "action": "data.export",
+            "actor": "legal@bootstrap-ops.local",
+            "context": {"legalHoldActive": True},
+        },
+    )
+    approval_response = client.post(
+        "/api/platform-control/tenants/bootstrap-ops/approvals",
+        json={
+            "domain": "platform-control",
+            "commandType": "quota.change",
+            "requestedBy": "ops@bootstrap-ops.local",
+            "justification": "Temporary expansion for onboarding wave.",
+            "commandPayload": {"metricKey": "documents.storage_bytes", "newLimitValue": 4096},
+        },
+    )
+    approval_public_id = approval_response.json()["publicId"]
+    approve_response = client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/approvals/{approval_public_id}/approve",
+        json={"actor": "owner@bootstrap-ops.local"},
+    )
+    execute_response = client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/approvals/{approval_public_id}/execute",
+        json={"actor": "ops@bootstrap-ops.local"},
+    )
+    runbook_response = client.post(
+        "/api/platform-control/tenants/bootstrap-ops/runbooks",
+        json={
+            "runbookKey": "tenant-over-quota",
+            "requestedBy": "ops@bootstrap-ops.local",
+            "justification": "Tenant crossed quota threshold.",
+        },
+    )
+    runbook_public_id = runbook_response.json()["publicId"]
+    runbook_approval_id = runbook_response.json()["approvalPublicId"]
+    client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/approvals/{runbook_approval_id}/approve",
+        json={"actor": "owner@bootstrap-ops.local"},
+    )
+    start_runbook_response = client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/runbooks/{runbook_public_id}/start",
+        json={"actor": "ops@bootstrap-ops.local"},
+    )
+    complete_step_response = client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/runbooks/{runbook_public_id}/complete-step",
+        json={"actor": "ops@bootstrap-ops.local"},
+    )
+    timeline_response = client.get("/api/platform-control/tenants/bootstrap-ops/timeline?entity_type=runbook.run")
+    evidence_response = client.get("/api/platform-control/tenants/bootstrap-ops/evidence")
+    readiness_response = client.get("/api/platform-control/tenants/bootstrap-ops/autonomous-governance/readiness")
+
+    assert policy_catalog.status_code == 200
+    assert any(item["policyKey"] == "exports.require-review" for item in policy_catalog.json()["items"])
+    assert decision_response.status_code == 200
+    assert decision_response.json()["decision"] == "review"
+    assert approval_response.status_code == 200
+    assert approval_response.json()["status"] == "requested"
+    assert approve_response.status_code == 200
+    assert approve_response.json()["status"] == "approved"
+    assert execute_response.status_code == 200
+    assert execute_response.json()["status"] == "executed"
+    assert runbook_response.status_code == 200
+    assert runbook_response.json()["status"] == "waiting_approval"
+    assert start_runbook_response.status_code == 200
+    assert start_runbook_response.json()["status"] == "running"
+    assert complete_step_response.status_code == 200
+    assert any(step["status"] == "completed" for step in complete_step_response.json()["steps"])
+    assert timeline_response.status_code == 200
+    assert timeline_response.json()["items"]
+    assert evidence_response.status_code == 200
+    assert any(item["evidenceType"] == "policy-decision" for item in evidence_response.json()["items"])
+    assert readiness_response.status_code == 200
+    assert "audit-evidence-vault" in readiness_response.json()["controls"]
+
+
+def test_enterprise_runtime_event_mesh_tenant_runtime_and_contract_evolution() -> None:
+    catalog_response = client.get("/api/platform-control/event-mesh/catalog")
+    event_response = client.post(
+        "/api/platform-control/tenants/bootstrap-ops/event-mesh/events",
+        json={
+            "streamKey": "billing.invoice",
+            "eventType": "billing.invoice.payment_failed",
+            "producer": "billing",
+            "status": "dead_letter",
+            "reason": "consumer_timeout",
+            "payload": {"invoicePublicId": "inv_123", "amountCents": 4900},
+        },
+    )
+    dead_letters_response = client.get("/api/platform-control/tenants/bootstrap-ops/event-mesh/dead-letters")
+    dead_letter_public_id = dead_letters_response.json()["items"][0]["publicId"]
+    replay_response = client.post(
+        f"/api/platform-control/tenants/bootstrap-ops/event-mesh/dead-letters/{dead_letter_public_id}/replay",
+        json={"actor": "sre@bootstrap-ops.local"},
+    )
+    lineage_response = client.get("/api/platform-control/tenants/bootstrap-ops/event-mesh/lineage")
+
+    profile_response = client.get("/api/platform-control/tenants/bootstrap-ops/runtime/profile")
+    update_profile_response = client.put(
+        "/api/platform-control/tenants/bootstrap-ops/runtime/profile",
+        json={"actor": "ops@bootstrap-ops.local", "riskStatus": "stable", "modules": ["identity", "billing", "analytics"]},
+    )
+    quota_response = client.put(
+        "/api/platform-control/tenants/bootstrap-ops/runtime/quotas/api.requests.daily",
+        json={"limitValue": 300000, "usagePct": 41, "enforcementMode": "soft"},
+    )
+    health_response = client.get("/api/platform-control/tenants/bootstrap-ops/runtime/health-score")
+    window_response = client.post(
+        "/api/platform-control/tenants/bootstrap-ops/runtime/maintenance-windows",
+        json={"title": "Schema registry migration", "createdBy": "ops@bootstrap-ops.local"},
+    )
+
+    contracts_response = client.get("/api/platform-control/contracts/evolution")
+    snapshot_response = client.post(
+        "/api/platform-control/contracts/evolution/snapshots",
+        json={"contractKey": "platform-control.openapi", "version": "1.4.0", "payload": {"paths": ["/api/platform-control/event-mesh/catalog", "/api/platform-control/providers/activation/catalog"]}},
+    )
+    diff_response = client.post(
+        "/api/platform-control/contracts/evolution/diffs",
+        json={"contractKey": "platform-control.openapi", "fromVersion": "1.3.0", "toVersion": "1.4.0", "removedOperations": [], "changedSchemas": []},
+    )
+    matrix_response = client.get("/api/platform-control/contracts/evolution/compatibility-matrix")
+    readiness_response = client.get("/api/platform-control/tenants/bootstrap-ops/enterprise-runtime/readiness")
+
+    assert catalog_response.status_code == 200
+    assert catalog_response.json()["summary"]["streams"] >= 8
+    assert event_response.status_code == 200
+    assert event_response.json()["payloadHash"]
+    assert dead_letters_response.status_code == 200
+    assert replay_response.status_code == 200
+    assert replay_response.json()["status"] == "replayed"
+    assert lineage_response.status_code == 200
+    assert lineage_response.json()["summary"]["events"] >= 1
+    assert profile_response.status_code == 200
+    assert update_profile_response.status_code == 200
+    assert update_profile_response.json()["modules"] == ["identity", "billing", "analytics"]
+    assert quota_response.status_code == 200
+    assert health_response.status_code == 200
+    assert window_response.status_code == 200
+    assert contracts_response.status_code == 200
+    assert snapshot_response.status_code == 200
+    assert diff_response.status_code == 200
+    assert diff_response.json()["status"] == "compatible"
+    assert matrix_response.status_code == 200
+    assert readiness_response.status_code == 200
+    assert "enterprise-event-mesh" in readiness_response.json()["controls"]
+
+
+def test_external_provider_activation_catalog_and_missing_key_run() -> None:
+    for records in IN_MEMORY_STATE.values():
+        records.clear()
+
+    client = TestClient(app)
+
+    catalog_response = client.get("/api/platform-control/providers/activation/catalog")
+    catalog = catalog_response.json()
+    stripe = next(item for item in catalog["items"] if item["providerKey"] == "stripe")
+
+    run_response = client.post(
+        "/api/platform-control/tenants/bootstrap-ops/providers/activation/stripe/test",
+        json={"actor": "ops@bootstrap-ops.local", "action": "connection_test"},
+    )
+    runs_response = client.get("/api/platform-control/tenants/bootstrap-ops/providers/activation/runs?provider_key=stripe")
+
+    assert catalog_response.status_code == 200
+    assert catalog["version"] == "1.3.0"
+    assert stripe["credentialKey"] == "BILLING_STRIPE_SECRET_KEY"
+    assert stripe["secretValueExposed"] is False
+    assert run_response.status_code == 200
+    assert run_response.json()["status"] == "unavailable"
+    assert run_response.json()["credentialConfigured"] is False
+    assert run_response.json()["secretValueExposed"] is False
+    assert runs_response.status_code == 200
+    assert runs_response.json()["items"][0]["providerKey"] == "stripe"
+
+
+def test_external_intelligence_public_provider_activation() -> None:
+    for records in IN_MEMORY_STATE.values():
+        records.clear()
+
+    client = TestClient(app)
+    catalog_response = client.get("/api/platform-control/providers/activation/catalog")
+    gdelt = next(item for item in catalog_response.json()["items"] if item["providerKey"] == "gdelt")
+    viacep = next(item for item in catalog_response.json()["items"] if item["providerKey"] == "viacep")
+
+    assert gdelt["credentialRequired"] is False
+    assert gdelt["configured"] is True
+    assert viacep["credentialRequired"] is False
+    assert viacep["configured"] is True

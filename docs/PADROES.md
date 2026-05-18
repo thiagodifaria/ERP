@@ -1,47 +1,47 @@
-# PADROES
+﻿# padrões
 
-Este documento define padroes de engenharia do ERP. Ele nao descreve arquitetura completa, endpoints ou runbooks.
+Este documento define padrões de engenharia do projeto. Ele não descreve arquitetura completa, endpoints ou runbooks.
 
-## Organizacao
+## Organização
 
 - `README.md`: entrada curta do projeto.
-- `README_EN.md` e `README_PT.md`: visao detalhada em cada idioma.
+- `README_EN.md` e `README_PT.md`: visão detalhada em cada idioma.
 - `docs/ARQUITETURA.md`: arquitetura e fronteiras.
-- `docs/API.md`: convencoes HTTP e indice de API.
-- `docs/SERVICOS.md`: ownership de servicos.
-- `docs/CONTRATOS.md`: governanca contratual.
-- `docs/INTEGRACOES.md`: integracoes e providers.
-- `docs/OPERACOES.md`: execucao, validacao e troubleshooting.
+- `docs/API.md`: convenções HTTP e índice de API.
+- `docs/SERVICOS.md`: ownership de serviços.
+- `docs/CONTRATOS.md`: governança contratual.
+- `docs/INTEGRações.md`: integrações e providers.
+- `docs/OPERações.md`: execução, validação e troubleshooting.
 - `docs/contracts/`: contratos versionados.
-- `service-api/`: implementacao backend.
+- `service-api/`: implementação backend.
 - `infra/`: runtime e observabilidade.
 - `scripts/`: comandos oficiais.
 
-## Padroes Globais
+## padrões Globais
 
-- Tenant explicito em operacoes tenant-aware.
-- `publicId`, `slug` ou `key` para referencia publica de recurso.
-- Erro publico com `code`, `message` e `details` opcional.
-- Health com live, ready e details quando o servico participa do runtime HTTP.
-- Idempotencia para mutacao sensivel.
-- `202 Accepted` para operacao longa.
+- Tenant explícito em operações tenant-aware.
+- `publicId`, `slug` ou `key` para referência pública de recurso.
+- Erro público com `code`, `message` e `details` opcional.
+- Health com live, ready e details quando o serviço participa do runtime HTTP.
+- idempotência para mutação sensível.
+- `202 Accepted` para operação longa.
 - Cursor pagination para listagem de volume.
 - Bulk com partial success.
 - Adapter/capability registry para provider externo.
 - Migration por contexto persistente.
 - Smoke para fluxo cross-service relevante.
 
-## Padroes HTTP
+## padrões HTTP
 
-- `GET` nao deve produzir efeito colateral.
+- `GET` não deve produzir efeito colateral.
 - `POST` cria recurso, agenda trabalho ou executa comando.
 - `PUT` substitui/upserta recurso identificado.
 - `PATCH` altera parte do recurso ou transiciona status.
-- `DELETE` so deve existir quando houver semantica clara de remocao.
-- Mutacoes devem registrar ator, tenant e correlation id quando aplicavel.
-- Endpoints publicos precisam estar no OpenAPI correspondente.
+- `DELETE` só deve existir quando houver semantica clara de remocao.
+- Mutações devem registrar ator, tenant e correlation id quando aplicável.
+- Endpoints públicos precisam estar no OpenAPI correspondente.
 
-## Padroes de Erro
+## padrões de Erro
 
 Formato recomendado:
 
@@ -62,33 +62,33 @@ Regras:
 - `details` sem segredo;
 - status HTTP coerente com o problema.
 
-## Padroes de Persistencia
+## padrões de persistência
 
 - Cada contexto tem migrations em `service-api/service-postgresql/<contexto>/migrations`.
-- Seeds sao para bootstrap, dados de referencia ou smoke.
-- Servico nao deve escrever diretamente tabela de outro contexto.
-- Historico/auditoria deve existir para transicoes relevantes.
-- Dados externos devem guardar provider, external id e erro normalizado quando aplicavel.
+- Seeds são para bootstrap, dados de referência ou smoke.
+- serviço não deve escrever diretamente tabela de outro contexto.
+- histórico/auditoria deve existir para transições relevantes.
+- Dados externos devem guardar provider, external id e erro normalizado quando aplicável.
 
-## Padroes de Contrato
+## padrões de Contrato
 
-- OpenAPI muda junto da implementacao.
+- OpenAPI muda junto da implementação.
 - Event schema muda junto do produtor/consumidor.
 - Registry muda quando artefato contratual novo aparece.
-- Breaking change exige decisao explicita.
+- Breaking change exige decisão explicita.
 - Compatibilidade vale mais que conveniencia local.
 
-## Padroes de Teste
+## padrões de Teste
 
 Escolha cobertura pelo risco:
 
 - unidade para regra local;
-- contrato para superficie publica;
-- integracao para dependencia real;
+- contrato para superfície pública;
+- integração para dependência real;
 - smoke para fluxo cross-service;
-- hardening para readiness, provider e governanca;
+- hardening para readiness, provider e governança;
 - performance para carga/capacidade;
-- backup-restore para confianca operacional de banco.
+- backup-restore para confiança operacional de banco.
 
 Comandos:
 
@@ -98,99 +98,115 @@ Comandos:
 ./scripts/test.sh smoke
 ```
 
-## Padroes Por Stack
+## padrões Por Stack
 
 ### .NET
 
-Servicos: `identity`, `billing`, `finance`.
+serviços: `identity`, `billing`, `finance`.
 
-- Separar API, application/domain e infrastructure quando o modulo ja seguir esse desenho.
-- Manter DTO publico separado de entidade interna.
+- Separar API, application/domain e infrastructure quando o módulo já seguir esse desenho.
+- Manter DTO público separado de entidade interna.
 - Cobrir regra financeira/identidade com teste unitario.
 
 ### Go
 
-Servicos: `edge`, `crm`, `sales`, `documents`, `rentals`.
+serviços: `edge`, `crm`, `sales`, `documents`, `rentals`.
 
 - Handlers finos.
 - Regras em pacotes internos apropriados.
-- DTOs publicos claros.
+- DTOs públicos claros.
 - Testes para handler/regra quando alterar comportamento.
 
 ### Python
 
-Servicos: `analytics`, `catalog`, `simulation`, `platform-control`, `support`, `supplier`, `notification`, `fiscal`.
+serviços: `ai-governance`, `analytics`, `catalog`, `search`, `simulation`, `platform-control`, `support`, `supplier`, `notification`, `fiscal`.
+
+Na `v1.4.6`, comandos críticos, eventos operacionais, fechamento financeiro, mudanças breaking, chamadas reais a provider externo, sinais externos de risco/verificação e mudanças de hardening devem passar por policy decision, approval quando aplicável, timeline, evidence vault, event mesh, snapshot hash, contract evolution, provider activation ou static policy antes de serem tratados como finalizados.
 
 - FastAPI com rotas claras.
-- Modelos publicos separados de estrutura interna quando necessario.
-- Repository driver explicito (`memory`, PostgreSQL ou equivalente).
+- Modelos públicos separados de estrutura interna quando necessário.
+- Repository driver explícito (`memory`, PostgreSQL ou equivalente).
 - Pytest para regra e rota critica.
 
 ### TypeScript
 
-Servicos: `workflow-control`, `engagement`.
+serviços: `workflow-control`, `engagement`.
 
-- Separar runtime HTTP, dominio e adapters.
-- Manter tipos publicos estaveis.
-- Testes unitarios e de contrato via npm scripts do servico.
+- Separar runtime HTTP, domínio e adapters.
+- Manter tipos públicos estaveis.
+- Testes unitários e de contrato via npm scripts do serviço.
 
 ### Elixir
 
-Servico: `workflow-runtime`.
+serviço: `workflow-runtime`.
 
-- Modelar execucao como estado duravel.
+- Modelar execução como estado durável.
 - Registrar timeline e actions.
-- Tratar retry, wait e compensacao como comportamento de dominio.
+- Tratar retry, wait e compensação como comportamento de domínio.
 
 ### Rust
 
-Servico: `webhook-hub`.
+serviço: `webhook-hub`.
 
-- Tratar idempotencia e DLQ como regra central.
+- Tratar idempotência e DLQ como regra central.
 - Normalizar erros de provider.
-- Manter tipos de payload explicitos.
+- Manter tipos de payload explícitos.
 
-## Padroes de Documentacao
+## padrões de documentação
 
-- Cada arquivo deve ficar no proprio assunto.
-- Evite repetir catalogo de endpoint fora de `docs/API.md` ou OpenAPI.
-- Evite repetir inventario de servico fora de README e `docs/SERVICOS.md`.
-- Atualize docs junto da mudanca que altera contrato, runtime ou arquitetura.
-- Changelog registra evolucao cronologica; nao deve virar documentacao de uso.
+- Cada arquivo deve ficar no próprio assunto.
+- Evite repetir catálogo de endpoint fora de `docs/API.md` ou OpenAPI.
+- Evite repetir inventário de serviço fora de README e `docs/SERVICOS.md`.
+- Atualize docs junto da mudança que altera contrato, runtime ou arquitetura.
+- Changelog registra evolucao cronologica; não deve virar documentação de uso.
 
-## Controle Interno De Mudanca
+## Controle Interno De mudança
 
-- O servico dono esta correto?
+- O serviço dono está correto?
 - O contrato foi atualizado?
-- A mudanca preserva compatibilidade?
-- A operacao sensivel e idempotente?
+- A mudança preserva compatibilidade?
+- A operação sensível e idempotente?
 - Existe observabilidade minima?
 - Existe teste proporcional ao risco?
-- A documentacao alterada esta no arquivo certo?
+- A documentação alterada está no arquivo certo?
 
-## Checklist Para Novo Servico
+## Checklist Para Novo serviço
 
-Este conteudo substitui checklists soltos que antes ficavam fora do fluxo principal de documentacao; agora o criterio oficial fica aqui.
+Este conteudo substitui checklists soltos que antes ficavam fora do fluxo principal de documentação; agora o criterio oficial fica aqui.
 
-- A responsabilidade funcional nao pertence claramente a servico existente.
+- A responsabilidade funcional não pertence claramente a serviço existente.
 - O runtime define `ERP_ENV`, `ERP_AUTH_ENFORCEMENT`, `ERP_JWT_HS256_SECRET`, `ERP_INTERNAL_SERVICE_TOKEN`, `ERP_OPENFGA_ENFORCEMENT` e `OPENFGA_STORE_ID`.
 - Auth middleware valida JWT/service account e chama OpenFGA quando habilitado.
-- Tenant resolver e erro `tenant_slug_required` quando aplicavel.
-- Mutacoes exigem `X-Correlation-Id` e idempotencia quando sensiveis.
-- Erros publicos usam `code`, `message` e `details` sem segredo.
-- `/health/live`, `/health/ready` e `/health/details` existem quando o servico participa do runtime.
-- OpenAPI registra security, erros, idempotencia e rotas internas quando houver.
-- Eventos usam envelope padrao e schema versionado.
-- Logs nao imprimem senha, token, access link, documento fiscal ou provider secret.
-- Testes cobrem unauthorized, forbidden, tenant mismatch, idempotencia e contrato publico.
-- Dockerfile usa imagem versionada e compose recebe env comum de seguranca.
-- Hooks de logs, metricas e traces propagam `X-Correlation-Id` e `traceparent`.
+- Tenant resolver e erro `tenant_slug_required` quando aplicável.
+- Mutações exigem `X-Correlation-Id` e idempotência quando sensíveis.
+- Erros públicos usam `code`, `message` e `details` sem segredo.
+- `/health/live`, `/health/ready` e `/health/details` existem quando o serviço participa do runtime.
+- OpenAPI registra security, erros, idempotência e rotas internas quando houver.
+- Eventos usam envelope padrão e schema versionado.
+- Logs não imprimem senha, token, access link, documento fiscal ou provider secret.
+- Testes cobrem unauthorized, forbidden, tenant mismatch, idempotência e contrato público.
+- Dockerfile usa imagem versionada e compose recebe env comum de segurança.
+- Hooks de logs, métricas e traces propagam `X-Correlation-Id` e `traceparent`.
+- repositórios relacionais nunca calculam identificador por `MAX(id)+1`; use `BIGSERIAL`, identity column, sequence ou `RETURNING id`.
+- UI técnica nunca copia `Authorization: Bearer` real por padrão; cURL e histórico devem redigir segredo salvo ação explicita.
+- Imagem de runtime e dependência de infra devem ter versão explicita; `latest` não e artefato de deploy.
 
-## Padroes de Nome
+## Conformance De Plataforma
 
-Use nomes estaveis e explicitos:
+A linha `1.4.x` exige que todo serviço passe por conformance minima antes de ser tratado como produtivo:
 
-- `publicId` para identificador publico gerado;
+- Auth: JWT/service account, tenant explícito, actor quando houver usuário e OpenFGA quando habilitado.
+- observabilidade: `X-Correlation-Id`, `traceparent`, logs sem segredo, health endpoints e erro público consistente.
+- Dados: identificadores por sequence/identity, constraints de unicidade e FK quando houver relação transacional.
+- Contratos: OpenAPI atualizado, security schemes declarados e catálogo do `client-api` regenerado.
+- Infra: imagem versionada, env comum, probes, resources e documentação de cobertura Kubernetes/Compose.
+- segurança: secrets locais bloqueados fora de local/test e provider BYOK nunca mascarado como real sem credencial.
+
+## padrões de Nome
+
+Use nomes estaveis e explícitos:
+
+- `publicId` para identificador público gerado;
 - `tenantSlug` para tenant legivel;
 - `provider` para identificador de fornecedor externo;
 - `externalId` para id vindo de sistema externo;
@@ -200,14 +216,14 @@ Use nomes estaveis e explicitos:
 
 Evite:
 
-- abreviacao obscura;
-- nome que mistura dominio e apresentacao;
-- campo publico com nome de coluna interna;
+- abreviação obscura;
+- nome que mistura domínio e apresentação;
+- campo público com nome de coluna interna;
 - enum sem fallback operacional.
 
-## Padroes de Lifecycle
+## padrões de Lifecycle
 
-Recursos com transicao devem ter estados previsiveis. Exemplos:
+Recursos com transicao devem ter estados previsíveis. Exemplos:
 
 ```text
 queued -> running -> completed
@@ -217,11 +233,11 @@ running -> failed
 running -> completed
 ```
 
-Transicao invalida deve retornar erro claro, preferencialmente `409 Conflict` quando o problema for estado atual.
+Transicao invalida deve retornar erro claro, preferêncialmente `409 Conflict` quando o problema for estado atual.
 
-## Padroes de Bulk
+## padrões de Bulk
 
-Operacao bulk deve evitar "tudo ou nada" quando o dominio aceitar sucesso parcial.
+operação bulk deve evitar "tudo ou nada" quando o domínio aceitar sucesso parcial.
 
 Formato recomendado:
 
@@ -237,13 +253,13 @@ Formato recomendado:
 }
 ```
 
-Cada erro deve apontar o item afetado e um codigo estavel.
+Cada erro deve apontar o item afetado e um código estavel.
 
-## Padroes de Provider
+## padrões de Provider
 
-Provider externo deve ser tratado como dependencia falivel.
+Provider externo deve ser tratado como dependência falivel.
 
-Obrigatorio quando aplicavel:
+obrigatório quando aplicável:
 
 - capability catalog;
 - modo `configured`, `fallback`, `manual`, `disabled` ou `unconfigured`;
@@ -253,15 +269,15 @@ Obrigatorio quando aplicavel:
 - log sem segredo;
 - fallback local apenas quando documentado.
 
-## Padroes de Read Model
+## padrões de Read Model
 
-Read model deve deixar claro que e leitura derivada. Ele pode otimizar operacao, mas nao deve virar fonte transacional.
+Read model deve deixar claro que e leitura derivada. Ele pode otimizar operação, mas não deve virar fonte transacional.
 
 Bom uso:
 
 - dashboard executivo;
 - readiness;
-- governanca contratual;
+- governança contratual;
 - hardening;
 - compliance overview;
 - go-live overview.
@@ -272,46 +288,46 @@ Mau uso:
 - corrigir invoice dentro de analytics;
 - aplicar entitlement a partir de edge.
 
-## Padroes de Comentario
+## padrões de Comentario
 
-Comente quando o codigo expressa decisao que nao e obvia:
+Comente quando o código expressa decisão que não e obvia:
 
 - workaround temporario;
 - compatibilidade;
 - regra fiscal ou financeira;
-- retry/idempotencia;
+- retry/idempotência;
 - tradeoff de performance;
 - formato exigido por provider externo.
 
-Nao comente o obvio. Comentario ruim envelhece mais rapido que codigo.
+não comente o obvio. Comentario ruim envelhece mais rápido que código.
 
-## Checklist Por Tipo de Mudanca
+## Checklist Por Tipo de mudança
 
 ### Nova rota HTTP
 
-- pertence ao servico certo;
+- pertence ao serviço certo;
 - OpenAPI atualizado;
 - request/response com shape claro;
-- erro publico definido;
+- erro público definido;
 - teste unitario ou de handler;
 - contract validation;
-- doc especifica atualizada se necessario.
+- doc especifica atualizada se necessário.
 
 ### Nova tabela ou migration
 
 - contexto correto;
 - migration ordenada;
-- seed apenas se necessario;
+- seed apenas se necessário;
 - rollback manual entendido;
-- backup/restore considerado se mudar dado sensivel.
+- backup/restore considerado se mudar dado sensível.
 
 ### Novo provider
 
 - capability declarada;
-- configuracao sem segredo no repositorio;
+- configuração sem segredo no repositório;
 - fallback ou modo unconfigured;
 - timeout e erro normalizado;
-- teste sem chamar provider real por padrao.
+- teste sem chamar provider real por padrão.
 
 ### Novo fluxo cross-service
 
@@ -321,7 +337,7 @@ Nao comente o obvio. Comentario ruim envelhece mais rapido que codigo.
 - smoke ou teste integrado;
 - observabilidade minima.
 
-### Mudanca de documentacao
+### mudança de documentação
 
 - arquivo certo;
 - sem duplicar OpenAPI inteiro;

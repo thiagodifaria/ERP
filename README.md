@@ -1,75 +1,66 @@
-# ERP
+﻿# Business Operating System
 
-Backend-first ERP platform for tenancy, CRM, sales, finance, billing, documents, workflows, analytics, integrations and operational governance.
+![Business Operating System](https://img.shields.io/badge/Business%20Operating%20System-Platform-111827?style=for-the-badge&logo=github&logoColor=white)
 
-This repository is a polyglot, container-first backend platform. The root README is intentionally short; detailed reference lives in the language-specific READMEs and in `docs/`.
+**A complete operating ecosystem for companies that need sales, customers, billing, finance, fiscal routines, documents, reports, automated processes and external services working as one business platform.**
+
+[![Version](https://img.shields.io/badge/Version-1.4.6-2563EB?style=flat)](docs/CHANGELOG.md)
+[![OpenAPI](https://img.shields.io/badge/OpenAPI-contracts-6BA539?style=flat&logo=openapiinitiative&logoColor=white)](docs/contracts/http)
+[![Services](https://img.shields.io/badge/Services-26%20HTTP%20APIs-111827?style=flat)](docs/SERVICOS.md)
+[![Console](https://img.shields.io/badge/API%20Console-client--api-2563EB?style=flat)](client-web/client-api)
+[![Runtime](https://img.shields.io/badge/Runtime-Docker%20Compose-2496ED?style=flat&logo=docker&logoColor=white)](infra)
 
 ## Documentation
 
-- [README_EN.md](README_EN.md): detailed English overview.
-- [README_PT.md](README_PT.md): visao detalhada em Portugues.
-- [docs/ARQUITETURA.md](docs/ARQUITETURA.md): architecture, boundaries and runtime topology.
-- [docs/API.md](docs/API.md): HTTP API conventions and endpoint index.
-- [docs/SERVICOS.md](docs/SERVICOS.md): service ownership and implementation map.
-- [docs/CONTRATOS.md](docs/CONTRATOS.md): OpenAPI, event schemas and compatibility rules.
-- [docs/INTEGRACOES.md](docs/INTEGRACOES.md): providers, webhooks, events and cross-context integration.
-- [docs/OPERACOES.md](docs/OPERACOES.md): local runtime, validation, database and runbooks.
-- [docs/PADROES.md](docs/PADROES.md): engineering standards.
-- [docs/CHANGELOG.md](docs/CHANGELOG.md): chronological project history.
+**Leia em português:** [README_PT.md](README_PT.md)  
+**Read the detailed English README:** [README_EN.md](README_EN.md)  
+**Architecture:** [docs/ARQUITETURA.md](docs/ARQUITETURA.md)  
+**API:** [docs/API.md](docs/API.md)  
+**Services:** [docs/SERVICOS.md](docs/SERVICOS.md)  
+**Contracts:** [docs/CONTRATOS.md](docs/CONTRATOS.md)  
+**Integrations:** [docs/INTEGRACOES.md](docs/INTEGRACOES.md)  
+**Operations:** [docs/OPERACOES.md](docs/OPERACOES.md)  
+**Standards:** [docs/PADROES.md](docs/PADROES.md)  
+**Changelog:** [docs/CHANGELOG.md](docs/CHANGELOG.md)
 
-## Current Baseline
+## What Is The Project?
 
-| Item | Value |
-|------|-------|
-| Release posture | Version 1.0.0 production-readiness gate |
-| HTTP services with OpenAPI contracts | 24 |
-| Versioned HTTP endpoints | 543 |
-| Event schemas | 15 |
-| Contract catalog | `docs/contracts/` |
-| Runtime command | `./scripts/build.sh` |
-| Validation command | `./scripts/test.sh` |
-| API console | `client-web/client-api` |
-| Enterprise deploy artifacts | `infra/kubernetes/` |
+The project is more than a traditional ERP module set. It is a business operating system for running company operations from the first customer contact to billing, finance, documents, reports and audit trails.
 
-## Version 1.0.0
+The project brings together capabilities that normally live across several tools. It helps manage customers, sales, contracts, subscriptions, invoices, payments, documents, fiscal routines, reports and controlled communication with external services.
 
-The 1.0.0 release is the production-readiness release. It consolidates gateway-only corporate topology, security enforcement, contract governance, supply-chain checks, backup/restore evidence, go-live controls, provider readiness and Kubernetes deployment artifacts.
+The goal is to support complete business journeys. A commercial opportunity can become a proposal, generate a contract, create billing obligations, affect finance, attach documents, trigger workflows, emit webhooks and appear in operational reports.
 
-Official release gate:
+## Core Capabilities
 
-```bash
-./scripts/test.sh production-readiness
-```
+| Capability | Description |
+|------------|-------------|
+| Commercial operation | Leads, customers, opportunities, proposals, recurring contracts and commercial catalog. |
+| Billing and finance | Subscriptions, invoices, payment attempts, money to receive, money to pay, treasury, commissions and reconciliation. |
+| Fiscal and banking | Fiscal documents, certificates, SPED posture, Pix, boletos, Open Finance, statements and banking reconciliation. |
+| Documents | Attachments, versions, storage posture, signing, document intelligence and audit trails. |
+| Workflows | Step by step business processes that the system can execute and track. |
+| Reports and analysis | Operational reports, quality indicators, risk views, financial close and platform health. |
+| External integrations | Payment gateways, AI tools, document reading, company lookup, market data, news, communication and digital signing. |
+| Governance | Users, permissions, limits, activation status, lifecycle and operational evidence. |
 
-Runtime evidence:
+## Main Modules
 
-```http
-GET /api/analytics/reports/production-readiness
-```
+| Area | Services | Responsibility |
+|------|----------|----------------|
+| Identity and tenancy | `identity`, `platform-control` | tenants, users, sessions, roles, MFA, capabilities, quotas, lifecycle and go live |
+| Commercial operation | `crm`, `sales`, `rentals`, `catalog` | leads, customers, opportunities, proposals, recurring contracts and commercial catalog |
+| Billing and finance | `billing`, `finance`, `accounting`, `banking` | subscriptions, invoices, receivables, payables, treasury, commissions, ledger views and reconciliation |
+| Fiscal and procurement | `fiscal`, `procurement`, `supplier`, `inventory` | fiscal documents, certificates, SPED posture, requisitions, purchase orders, supplier records and inventory |
+| Documents and workflows | `documents`, `workflow-control`, `workflow-runtime` | attachments, storage posture, signing, workflow definitions, executions, retries and compensations |
+| Integrations | `webhook-hub`, `engagement`, `notification`, `ai-governance` | webhooks, provider callbacks, touchpoints, notifications, approved AI tools and redaction |
+| Intelligence and operations | `analytics`, `search`, `simulation`, `edge`, `support` | reports, operational search, e discovery, scenarios, technical gateway and support operations |
 
-## Private Ownership
+## Technical API Console
 
-This is a privately maintained codebase. External write workflow, public merge flow, community triage and unsolicited patches are outside the project model. Code changes are controlled directly by the maintainer.
+`client-web/client-api` is a technical control console for the API. It is closer to a modern, project specific Swagger UI than to the future business application. Its role is to document, inspect and exercise the platform from one place.
 
-## Quick Start
-
-```bash
-./scripts/build.sh
-./scripts/test.sh contract
-```
-
-Common local operations:
-
-```bash
-./scripts/build.sh up
-./scripts/build.sh ps
-./scripts/build.sh logs edge
-./scripts/build.sh migrate all
-./scripts/build.sh seed all
-./scripts/build.sh down
-```
-
-API console:
+The console provides a platform overview, endpoint catalog generated from OpenAPI contracts, request builder, local environments, documentation reader, contract views, test journeys and operational screens.
 
 ```bash
 cd client-web/client-api
@@ -78,61 +69,59 @@ npm run generate
 npm run dev
 ```
 
-## Repository Layout
+## Local Runtime
 
-```text
-client-web/client-api/     technical web console for API exploration
-docs/                      project documentation
-docs/contracts/            OpenAPI, event schemas, registry and portal
-infra/                     Docker Compose and runtime infrastructure
-scripts/build.sh           build, runtime, database, backup and restore
-scripts/test.sh            validation suites
-service-api/               backend services and PostgreSQL contexts
+```bash
+./scripts/build.sh
+./scripts/build.sh up
+./scripts/build.sh ps
+./scripts/build.sh logs edge
+./scripts/build.sh down
 ```
 
-## Service Map
+Database:
 
-| Service | Stack | Main responsibility |
-|---------|-------|---------------------|
-| `accounting` | Python | management accounting, cost centers, posting rules, ledger, statements and close |
-| `analytics` | Python | executive reports, governance and operational reads |
-| `banking` | Python | CNAB, boletos, bank statements, reconciliation, Pix charges/refunds/webhooks and Open Finance |
-| `billing` | .NET | plans, subscriptions, invoices and payment attempts |
-| `catalog` | Python | categories, items, versions and consumer contracts |
-| `crm` | Go | leads, customers, pipeline and enrichment |
-| `documents` | Go | attachments, storage posture, versions and signing |
-| `edge` | Go | public entrypoint and cross-service cockpits |
-| `engagement` | TypeScript | campaigns, touchpoints, conversations and callbacks |
-| `finance` | .NET | receivables, payables, treasury and commissions |
-| `fiscal` | Python | fiscal documents, issuance, certificates, contingency, SPED, privacy and audit |
-| `identity` | .NET | tenants, users, roles, sessions, invites and MFA |
-| `inventory` | Python | location balances, movements, reservations, FIFO/average costing and cycle counts |
-| `notification` | Python | preferences and internal notification center |
-| `platform-control` | Python | capabilities, quotas, lifecycle and go-live |
-| `procurement` | Python | requisitions, quotations, purchase orders, approvals, receiving and 3-way matching |
-| `rentals` | Go | recurring contracts and rental charges |
-| `sales` | Go | opportunities, proposals, sales and invoices |
-| `simulation` | Python | scenarios and load benchmarks |
-| `supplier` | Python | supplier categories and directory |
-| `support` | Python | queues, cases, SLA and comments |
-| `webhook-hub` | Rust | inbound/outbound webhooks, idempotency and DLQ |
-| `workflow-control` | TypeScript | workflow definitions and catalogs |
-| `workflow-runtime` | Elixir | durable executions, actions and transitions |
+```bash
+./scripts/build.sh migrate all
+./scripts/build.sh seed all
+./scripts/build.sh psql
+./scripts/build.sh backup /tmp/erp-local-backup.sql
+./scripts/build.sh restore /tmp/erp-local-backup.sql
+```
 
 ## Validation
 
-```bash
-./scripts/test.sh unit
-./scripts/test.sh contract
-./scripts/test.sh smoke
-./scripts/test.sh hardening
-./scripts/test.sh production-readiness
+| Scope | Command |
+|-------|---------|
+| Unit tests | `./scripts/test.sh unit` |
+| Integration tests | `./scripts/test.sh integration` |
+| HTTP and event contracts | `./scripts/test.sh contract` |
+| Platform checks | `./scripts/test.sh platform` |
+| Smoke tests | `./scripts/test.sh smoke` |
+| Performance checks | `./scripts/test.sh performance` |
+| Backup and restore | `./scripts/test.sh backup-restore` |
+| Hardening checks | `./scripts/test.sh hardening` |
+| Production readiness | `./scripts/test.sh production-readiness` |
+
+## Repository Layout
+
+```text
+client-web/client-api/     technical API console
+docs/                      project documentation
+docs/contracts/            OpenAPI, event schemas, registry and portal
+infra/                     Docker Compose and Kubernetes runtime assets
+scripts/                   build, runtime and validation entrypoints
+service-api/               backend services and PostgreSQL contexts
 ```
 
-Use the detailed READMEs for context and the files in `docs/` for focused reference.
+## Private Ownership
 
----
+This repository is privately maintained. Code changes are controlled directly by the maintainer.
 
-**Thiago Di Faria** - thiagodifaria@gmail.com
+## Contact
 
-[GitHub](https://github.com/thiagodifaria) · [LinkedIn](https://linkedin.com/in/thiagodifaria)
+**Thiago Di Faria**  
+thiagodifaria@gmail.com
+
+[GitHub](https://github.com/thiagodifaria)  
+[LinkedIn](https://linkedin.com/in/thiagodifaria)

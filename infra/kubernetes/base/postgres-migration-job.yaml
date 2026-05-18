@@ -22,7 +22,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: migrations
-          image: ghcr.io/thiagodifaria/erp-migrations:1.0.0
+          image: ghcr.io/thiagodifaria/erp-migrations:1.4.6
           imagePullPolicy: IfNotPresent
           envFrom:
             - configMapRef:

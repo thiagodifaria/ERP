@@ -1,4 +1,4 @@
-{
+﻿{
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "erp://contracts/events/crm.outbox-event.schema.json",
   "title": "CRM Outbox Event",

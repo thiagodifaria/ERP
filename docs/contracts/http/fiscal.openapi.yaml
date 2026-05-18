@@ -1,6 +1,6 @@
-openapi: 3.1.0
+﻿openapi: 3.1.0
 info:
-  title: ERP Fiscal API
+  title: Business Operating System Fiscal API
   version: 0.1.0
   description: Fiscal profile, document operations, privacy rights and compliance governance.
 security:

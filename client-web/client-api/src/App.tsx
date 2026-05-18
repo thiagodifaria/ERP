@@ -18,6 +18,7 @@ import {
   RefreshCw,
   Search,
   Server,
+  Shield,
   Terminal
 } from "lucide-react";
 import { docs, markdownHeadings, type DocArticle } from "./data/docs";
@@ -172,6 +173,26 @@ function HomePage({ setCurrentPath }: { setCurrentPath: (path: Page) => void }) 
         })}
       </section>
 
+      <section className="mb-16">
+        <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-6">Versao 1.4.6</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: "Provider Activation", value: endpoints.filter((endpoint) => endpoint.path.includes("/providers/activation")).length, icon: Key },
+            { label: "Inteligencia externa", value: endpoints.filter((endpoint) => endpoint.path.includes("/external-intelligence") || endpoint.path.includes("/external-risk-feed")).length, icon: Shield },
+            { label: "Document Intelligence", value: endpoints.filter((endpoint) => endpoint.path.includes("/document-intelligence")).length, icon: FileJson },
+            { label: "Market & Macro Risk", value: endpoints.filter((endpoint) => endpoint.path.includes("/market-macro-risk")).length, icon: Activity }
+          ].map((metric) => (
+            <button key={metric.label} onClick={() => setCurrentPath("api")} className="bg-white border border-gray-200 rounded-xl p-4 text-left hover:border-blue-200 hover:shadow-sm transition-all" type="button">
+              <div className="flex items-center justify-between mb-3">
+                <metric.icon size={18} className="text-blue-600" />
+                <span className="text-lg font-semibold text-gray-900">{metric.value}</span>
+              </div>
+              <div className="text-sm font-medium text-gray-700">{metric.label}</div>
+            </button>
+          ))}
+        </div>
+      </section>
+
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-12 mb-16">
         <div>
           <h3 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-6">Visão Geral da Plataforma</h3>
@@ -237,6 +258,7 @@ function ApiExplorerPage({ environment }: { environment: RuntimeEnvironment }) {
   const [response, setResponse] = useState<RequestResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<RequestResult[]>([]);
+  const [includeBearerInCurl, setIncludeBearerInCurl] = useState(false);
 
   useEffect(() => {
     setBodyText(defaultBodyFor(selectedEndpoint, environment.tenantSlug));
@@ -271,7 +293,7 @@ function ApiExplorerPage({ environment }: { environment: RuntimeEnvironment }) {
     setLoading(false);
   }
 
-  const requestCurl = curlFor({ endpoint: selectedEndpoint, environment, bodyText, pathValues, queryText });
+  const requestCurl = curlFor({ endpoint: selectedEndpoint, environment, bodyText, pathValues, queryText }, includeBearerInCurl);
 
   return (
     <div className="flex h-[calc(100vh-64px)] bg-white overflow-hidden">
@@ -321,6 +343,16 @@ function ApiExplorerPage({ environment }: { environment: RuntimeEnvironment }) {
           <div className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg border border-gray-200 font-mono text-sm mt-6">
             <MethodBadge method={selectedEndpoint.method} />
             <span className="text-gray-700 break-all">{environment.mode === "proxy" ? `/__erp/${selectedEndpoint.service}` : environment.baseUrls[selectedEndpoint.service]}{selectedEndpoint.path}</span>
+            {environment.bearerToken.trim() && (
+              <button
+                className={`text-xs border rounded-md px-2 py-1 ${includeBearerInCurl ? "border-amber-300 bg-amber-50 text-amber-700" : "border-gray-200 text-gray-500 hover:text-gray-800"}`}
+                title="Controla se o cURL copiado inclui o Bearer real"
+                onClick={() => setIncludeBearerInCurl((current) => !current)}
+                type="button"
+              >
+                {includeBearerInCurl ? "Token visivel" : "Token oculto"}
+              </button>
+            )}
             <button className="ml-auto text-gray-400 hover:text-gray-600" title="Copiar cURL" onClick={() => navigator.clipboard?.writeText(requestCurl)} type="button">
               <Copy size={16} />
             </button>
@@ -671,7 +703,9 @@ function JourneysPage() {
 
 function OperationsPage({ environment }: { environment: RuntimeEnvironment }) {
   const [checks, setChecks] = useState<Record<string, RequestResult>>({});
+  const [fabricChecks, setFabricChecks] = useState<Record<string, RequestResult>>({});
   const [loading, setLoading] = useState(false);
+  const [fabricLoading, setFabricLoading] = useState(false);
 
   async function runHealthChecks() {
     setLoading(true);
@@ -681,6 +715,33 @@ function OperationsPage({ environment }: { environment: RuntimeEnvironment }) {
     );
     setChecks(Object.fromEntries(results));
     setLoading(false);
+  }
+
+  async function runFabricChecks() {
+    setFabricLoading(true);
+    const paths = [
+      "/api/analytics/enterprise-runtime/readiness",
+      "/api/analytics/financial-close/readiness",
+      "/api/analytics/lakehouse/readiness",
+      "/api/platform-control/event-mesh/catalog",
+      "/api/platform-control/tenants/{tenantSlug}/enterprise-runtime/readiness",
+      "/api/platform-control/contracts/evolution/compatibility-matrix"
+    ];
+    const selected = paths.map((path) => endpoints.find((endpoint) => endpoint.method === "GET" && endpoint.path === path)).filter(Boolean) as EndpointContract[];
+    const results = await Promise.all(
+      selected.map(async (endpoint) => [
+        endpoint.path,
+        await sendEndpointRequest({
+          endpoint,
+          environment,
+          bodyText: "",
+          pathValues: { tenantSlug: environment.tenantSlug },
+          queryText: endpoint.service === "analytics" ? `tenant_slug=${encodeURIComponent(environment.tenantSlug)}` : ""
+        })
+      ] as const)
+    );
+    setFabricChecks(Object.fromEntries(results));
+    setFabricLoading(false);
   }
 
   return (
@@ -701,6 +762,42 @@ function OperationsPage({ environment }: { environment: RuntimeEnvironment }) {
             const check = checks[service.slug];
             const ok = check && check.status >= 200 && check.status < 300;
             return <div key={service.slug} className="p-4 flex items-center justify-between"><div><h4 className="font-medium text-gray-900 text-sm">{service.slug}</h4><p className="text-xs text-gray-500">{environment.mode === "proxy" ? `/__erp/${service.slug}/health/ready` : `${environment.baseUrls[service.slug]}/health/ready`}</p></div><span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded ${!check ? "text-gray-500 bg-gray-100" : ok ? "text-green-700 bg-green-50" : "text-red-700 bg-red-50"}`}>{!check ? "não testado" : `${check.status || "ERR"} ${check.durationMs}ms`}</span></div>;
+          })}
+        </div>
+      </div>
+      <div className="mt-8 bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="p-5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+          <div>
+            <h3 className="font-semibold text-gray-900">Runtime empresarial</h3>
+            <p className="text-xs text-gray-500 mt-1">Readiness, event mesh, lakehouse, financial close e contract evolution.</p>
+          </div>
+          <button onClick={runFabricChecks} className="bg-white border border-gray-300 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium hover:bg-gray-50 flex items-center gap-2" type="button">
+            {fabricLoading ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
+            Validar v1.2
+          </button>
+        </div>
+        <div className="divide-y divide-gray-100">
+          {[
+            "/api/analytics/enterprise-runtime/readiness",
+            "/api/analytics/financial-close/readiness",
+            "/api/analytics/lakehouse/readiness",
+            "/api/platform-control/event-mesh/catalog",
+            "/api/platform-control/tenants/{tenantSlug}/enterprise-runtime/readiness",
+            "/api/platform-control/contracts/evolution/compatibility-matrix"
+          ].map((path) => {
+            const check = fabricChecks[path];
+            const ok = check && check.status >= 200 && check.status < 300;
+            return (
+              <div key={path} className="p-4 flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <h4 className="font-medium text-gray-900 text-sm truncate">{path}</h4>
+                  <p className="text-xs text-gray-500">v1.2 control plane check</p>
+                </div>
+                <span className={`inline-flex shrink-0 items-center gap-1 text-xs font-medium px-2 py-1 rounded ${!check ? "text-gray-500 bg-gray-100" : ok ? "text-green-700 bg-green-50" : "text-red-700 bg-red-50"}`}>
+                  {!check ? "nao testado" : `${check.status || "ERR"} ${check.durationMs}ms`}
+                </span>
+              </div>
+            );
           })}
         </div>
       </div>

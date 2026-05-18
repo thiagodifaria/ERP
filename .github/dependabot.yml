@@ -172,6 +172,7 @@ updates:
   - package-ecosystem: pip
     directories:
       - /service-api/service-python/accounting
+      - /service-api/service-python/ai-governance
       - /service-api/service-python/analytics
       - /service-api/service-python/banking
       - /service-api/service-python/catalog
@@ -180,6 +181,7 @@ updates:
       - /service-api/service-python/notification
       - /service-api/service-python/platform-control
       - /service-api/service-python/procurement
+      - /service-api/service-python/search
       - /service-api/service-python/simulation
       - /service-api/service-python/supplier
       - /service-api/service-python/support
@@ -205,6 +207,7 @@ updates:
       - /service-api/service-golang/rentals
       - /service-api/service-golang/sales
       - /service-api/service-python/accounting
+      - /service-api/service-python/ai-governance
       - /service-api/service-python/analytics
       - /service-api/service-python/banking
       - /service-api/service-python/catalog
@@ -213,6 +216,7 @@ updates:
       - /service-api/service-python/notification
       - /service-api/service-python/platform-control
       - /service-api/service-python/procurement
+      - /service-api/service-python/search
       - /service-api/service-python/simulation
       - /service-api/service-python/supplier
       - /service-api/service-python/support

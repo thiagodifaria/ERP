@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import base64
 from datetime import datetime, timezone
+import hashlib
 import json
 import os
+from urllib import error as urlerror
+from urllib import parse, request
 import uuid
 
 from app.config.settings import settings
@@ -19,6 +23,26 @@ IN_MEMORY_STATE = {
     "provider_defaults": [],
     "go_live_rollouts": [],
     "go_live_events": [],
+    "incidents": [],
+    "incident_timeline_events": [],
+    "incident_actions": [],
+    "postmortems": [],
+    "policy_decisions": [],
+    "timeline_events": [],
+    "approval_requests": [],
+    "runbook_runs": [],
+    "runbook_steps": [],
+    "evidence_records": [],
+    "event_mesh_events": [],
+    "event_mesh_dead_letters": [],
+    "event_mesh_consumers": [],
+    "tenant_runtime_profiles": [],
+    "tenant_runtime_quotas": [],
+    "tenant_maintenance_windows": [],
+    "contract_snapshots": [],
+    "contract_diffs": [],
+    "contract_breaking_changes": [],
+    "provider_activation_runs": [],
 }
 
 CAPABILITY_CATALOG = [
@@ -172,6 +196,345 @@ PROVIDER_CATALOG = [
         "fallbackAllowed": False,
         "envKey": "WEBHOOK_HUB_OUTBOUND_SIGNING_SECRET",
         "defaultMode": "unconfigured",
+    },
+]
+
+POLICY_CATALOG = [
+    {
+        "policyKey": "exports.require-review",
+        "version": "1.0",
+        "domain": "search",
+        "action": "data.export",
+        "effect": "review",
+        "priority": 10,
+        "reason": "Exports can expose sensitive data and must be approved.",
+    },
+    {
+        "policyKey": "quotas.allow-ops-change",
+        "version": "1.0",
+        "domain": "platform-control",
+        "action": "quota.change",
+        "effect": "allow",
+        "priority": 20,
+        "reason": "Quota changes are allowed when actor, tenant and justification are present.",
+    },
+    {
+        "policyKey": "ai.deny-mutation-tools",
+        "version": "1.0",
+        "domain": "ai-governance",
+        "action": "ai.tool.write",
+        "effect": "deny",
+        "priority": 5,
+        "reason": "AI assistant runs are read-only unless a future policy explicitly allows mutation.",
+    },
+    {
+        "policyKey": "incidents.review-sev1",
+        "version": "1.0",
+        "domain": "platform-control",
+        "action": "incident.escalate",
+        "effect": "review",
+        "priority": 10,
+        "reason": "SEV1 escalation requires incident command approval and evidence.",
+    },
+    {
+        "policyKey": "go-live.review-rollback",
+        "version": "1.0",
+        "domain": "platform-control",
+        "action": "go-live.rollback",
+        "effect": "review",
+        "priority": 10,
+        "reason": "Rollback needs approval unless an active SEV1 runbook is executing.",
+    },
+    {
+        "policyKey": "providers.review-critical-fallback",
+        "version": "1.0",
+        "domain": "platform-control",
+        "action": "provider.fallback",
+        "effect": "review",
+        "priority": 15,
+        "reason": "Critical provider fallback changes must be reviewed.",
+    },
+    {
+        "policyKey": "billing.review-recovery",
+        "version": "1.0",
+        "domain": "billing",
+        "action": "billing.recovery",
+        "effect": "review",
+        "priority": 15,
+        "reason": "Billing recovery can affect customer access and financial posture.",
+    },
+]
+
+RUNBOOK_CATALOG = [
+    {
+        "runbookKey": "provider-degraded",
+        "title": "Provider degraded",
+        "domain": "integrations",
+        "steps": ["confirm_provider_status", "switch_to_fallback_if_approved", "notify_owner", "capture_evidence"],
+    },
+    {
+        "runbookKey": "webhook-dlq-growing",
+        "title": "Webhook DLQ growing",
+        "domain": "webhook-hub",
+        "steps": ["inspect_dlq", "sample_payloads", "request_requeue_approval", "monitor_delivery"],
+    },
+    {
+        "runbookKey": "tenant-over-quota",
+        "title": "Tenant over quota",
+        "domain": "platform-control",
+        "steps": ["read_usage_summary", "evaluate_quota_policy", "request_quota_change", "record_customer_notice"],
+    },
+    {
+        "runbookKey": "sev1-incident",
+        "title": "SEV1 incident",
+        "domain": "incident-command",
+        "steps": ["open_bridge", "assign_commander", "request_escalation_approval", "publish_postmortem"],
+    },
+    {
+        "runbookKey": "openapi-drift",
+        "title": "OpenAPI drift",
+        "domain": "contracts",
+        "steps": ["run_contract_suite", "identify_owner", "block_release", "capture_contract_evidence"],
+    },
+    {
+        "runbookKey": "legal-hold-export-block",
+        "title": "Legal hold export block",
+        "domain": "search",
+        "steps": ["confirm_hold", "request_legal_approval", "prepare_redacted_export", "capture_export_evidence"],
+    },
+    {
+        "runbookKey": "go-live-rollback",
+        "title": "Go-live rollback",
+        "domain": "go-live",
+        "steps": ["freeze_wave", "request_rollback_approval", "execute_rollback", "publish_rollout_evidence"],
+    },
+]
+
+EVENT_STREAM_CATALOG = [
+    {"streamKey": "crm.customer", "domain": "crm", "schemaVersion": "1.0", "retention": "p3y", "critical": True},
+    {"streamKey": "sales.opportunity", "domain": "sales", "schemaVersion": "1.0", "retention": "p3y", "critical": True},
+    {"streamKey": "billing.invoice", "domain": "billing", "schemaVersion": "1.1", "retention": "p5y", "critical": True},
+    {"streamKey": "finance.ledger", "domain": "finance", "schemaVersion": "1.0", "retention": "p5y", "critical": True},
+    {"streamKey": "documents.lifecycle", "domain": "documents", "schemaVersion": "1.0", "retention": "p5y", "critical": True},
+    {"streamKey": "rentals.contract", "domain": "rentals", "schemaVersion": "1.0", "retention": "p3y", "critical": False},
+    {"streamKey": "workflow.execution", "domain": "workflow", "schemaVersion": "1.0", "retention": "p2y", "critical": True},
+    {"streamKey": "webhook.delivery", "domain": "webhook-hub", "schemaVersion": "1.0", "retention": "p2y", "critical": True},
+    {"streamKey": "platform.governance", "domain": "platform-control", "schemaVersion": "1.2", "retention": "p5y", "critical": True},
+]
+
+CONTRACT_DOMAIN_CATALOG = [
+    {"contractKey": "analytics.openapi", "service": "analytics", "kind": "openapi", "currentVersion": "1.4.0"},
+    {"contractKey": "platform-control.openapi", "service": "platform-control", "kind": "openapi", "currentVersion": "1.4.0"},
+    {"contractKey": "billing.events", "service": "billing", "kind": "async-event", "currentVersion": "1.1.0"},
+    {"contractKey": "workflow.events", "service": "workflow-runtime", "kind": "async-event", "currentVersion": "1.0.0"},
+]
+
+PROVIDER_ACTIVATION_CATALOG = [
+    {
+        "providerKey": "stripe",
+        "capabilityKey": "billing.pix",
+        "domain": "billing",
+        "credentialKey": "BILLING_STRIPE_SECRET_KEY",
+        "mode": "live_api",
+        "supportedActions": ["connection_test", "payment_intent.create"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "asaas",
+        "capabilityKey": "billing.pix",
+        "domain": "billing",
+        "credentialKey": "BILLING_ASAAS_API_KEY",
+        "mode": "live_api",
+        "supportedActions": ["connection_test"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "mercado_pago",
+        "capabilityKey": "billing.pix",
+        "domain": "billing",
+        "credentialKey": "BILLING_MERCADO_PAGO_ACCESS_TOKEN",
+        "mode": "live_api",
+        "supportedActions": ["connection_test"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "resend",
+        "capabilityKey": "engagement.providers.resend",
+        "domain": "engagement",
+        "credentialKey": "ENGAGEMENT_RESEND_API_KEY",
+        "mode": "live_api",
+        "supportedActions": ["connection_test", "email.send"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "openai",
+        "capabilityKey": "ai.llm",
+        "domain": "ai-governance",
+        "credentialKey": "OPENAI_API_KEY",
+        "mode": "live_api",
+        "supportedActions": ["connection_test", "response.create"],
+        "fallback": "deterministic_local_answer",
+    },
+    {
+        "providerKey": "docusign",
+        "capabilityKey": "documents.digital_signature",
+        "domain": "documents",
+        "credentialKey": "DOCUMENTS_DOCUSIGN_ACCESS_TOKEN",
+        "mode": "live_api",
+        "supportedActions": ["connection_test"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "clicksign",
+        "capabilityKey": "documents.digital_signature",
+        "domain": "documents",
+        "credentialKey": "DOCUMENTS_CLICKSIGN_API_KEY",
+        "mode": "live_api",
+        "supportedActions": ["connection_test"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "whatsapp_cloud",
+        "capabilityKey": "engagement.providers.whatsapp_cloud",
+        "domain": "engagement",
+        "credentialKey": "ENGAGEMENT_WHATSAPP_ACCESS_TOKEN",
+        "mode": "live_api",
+        "supportedActions": ["connection_test"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "aws_textract",
+        "capabilityKey": "documents.ocr",
+        "domain": "document_intelligence",
+        "credentialKey": "AWS_TEXTRACT_ACCESS_KEY_ID",
+        "requiredCredentialKeys": ["AWS_TEXTRACT_ACCESS_KEY_ID", "AWS_TEXTRACT_SECRET_ACCESS_KEY", "AWS_TEXTRACT_REGION"],
+        "mode": "sdk_or_sigv4_runtime_adapter",
+        "supportedActions": ["credential_check"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "google_document_ai",
+        "capabilityKey": "documents.ocr",
+        "domain": "document_intelligence",
+        "credentialKey": "GOOGLE_DOCUMENT_AI_CREDENTIALS_JSON",
+        "requiredCredentialKeys": ["GOOGLE_DOCUMENT_AI_PROCESSOR", "GOOGLE_DOCUMENT_AI_CREDENTIALS_JSON"],
+        "mode": "oauth_service_account_runtime_adapter",
+        "supportedActions": ["credential_check"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "focus_nfe",
+        "capabilityKey": "fiscal.issuance",
+        "domain": "fiscal",
+        "credentialKey": "FISCAL_FOCUS_NFE_API_KEY",
+        "mode": "live_api",
+        "supportedActions": ["connection_test"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "enotas",
+        "capabilityKey": "fiscal.issuance",
+        "domain": "fiscal",
+        "credentialKey": "FISCAL_ENOTAS_API_KEY",
+        "mode": "live_api",
+        "supportedActions": ["connection_test"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "serpro_cnpj",
+        "capabilityKey": "crm.cnpj_enrichment",
+        "domain": "registry_enrichment",
+        "credentialKey": "CRM_SERPRO_CLIENT_SECRET",
+        "requiredCredentialKeys": ["CRM_SERPRO_CLIENT_ID", "CRM_SERPRO_CLIENT_SECRET"],
+        "mode": "live_api",
+        "supportedActions": ["connection_test"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "brasilapi",
+        "capabilityKey": "crm.cnpj_enrichment",
+        "domain": "registry_enrichment",
+        "credentialKey": None,
+        "credentialRequired": False,
+        "mode": "public_api",
+        "supportedActions": ["connection_test", "cnpj.lookup"],
+        "fallback": "public_api_without_key",
+    },
+    {
+        "providerKey": "viacep",
+        "capabilityKey": "crm.cep_enrichment",
+        "domain": "registry_enrichment",
+        "credentialKey": None,
+        "credentialRequired": False,
+        "mode": "public_api",
+        "supportedActions": ["connection_test", "cep.lookup"],
+        "fallback": "public_api_without_key",
+    },
+    {
+        "providerKey": "alpha_vantage",
+        "capabilityKey": "market.data",
+        "domain": "market_macro_risk",
+        "credentialKey": "MARKET_ALPHA_VANTAGE_API_KEY",
+        "mode": "live_api",
+        "supportedActions": ["connection_test", "fx.lookup"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "fixer",
+        "capabilityKey": "market.fx",
+        "domain": "market_macro_risk",
+        "credentialKey": "MARKET_FIXER_API_KEY",
+        "mode": "live_api",
+        "supportedActions": ["connection_test", "fx.latest"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "bcb_sgs",
+        "capabilityKey": "market.macro",
+        "domain": "market_macro_risk",
+        "credentialKey": None,
+        "credentialRequired": False,
+        "mode": "public_api",
+        "supportedActions": ["connection_test", "series.latest"],
+        "fallback": "public_api_without_key",
+    },
+    {
+        "providerKey": "bcb_ptax",
+        "capabilityKey": "market.fx_reference",
+        "domain": "market_macro_risk",
+        "credentialKey": None,
+        "credentialRequired": False,
+        "mode": "public_api",
+        "supportedActions": ["connection_test"],
+        "fallback": "public_api_without_key",
+    },
+    {
+        "providerKey": "newsapi",
+        "capabilityKey": "external_risk.news",
+        "domain": "external_risk_feed",
+        "credentialKey": "NEWSAPI_KEY",
+        "mode": "live_api",
+        "supportedActions": ["connection_test", "news.search"],
+        "fallback": "unavailable_without_key",
+    },
+    {
+        "providerKey": "gdelt",
+        "capabilityKey": "external_risk.news",
+        "domain": "external_risk_feed",
+        "credentialKey": None,
+        "credentialRequired": False,
+        "mode": "public_api",
+        "supportedActions": ["connection_test", "news.search"],
+        "fallback": "public_api_without_key",
+    },
+    {
+        "providerKey": "alpha_vantage_news",
+        "capabilityKey": "external_risk.market_news",
+        "domain": "external_risk_feed",
+        "credentialKey": "MARKET_ALPHA_VANTAGE_API_KEY",
+        "mode": "live_api",
+        "supportedActions": ["connection_test", "news.sentiment"],
+        "fallback": "unavailable_without_key",
     },
 ]
 
@@ -1989,3 +2352,1394 @@ def transition_go_live_rollout(tenant_slug: str, public_id: str, action: str, pa
             if result is None:
                 raise ValueError("go_live_rollout_not_found")
             return result
+
+
+def list_incidents(tenant_slug: str | None = None, status: str | None = None, severity: str | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug or settings.bootstrap_tenant_slug)
+    normalized_status = (status or "").strip().lower()
+    normalized_severity = (severity or "").strip().lower()
+    records = [item for item in IN_MEMORY_STATE["incidents"] if item["tenantSlug"] == slug]
+    if normalized_status:
+        records = [item for item in records if item["status"] == normalized_status]
+    if normalized_severity:
+        records = [item for item in records if item["severity"] == normalized_severity]
+    records = sorted(records, key=lambda item: item["createdAt"], reverse=True)
+    return {
+        "tenantSlug": slug,
+        "summary": {
+            "total": len(records),
+            "open": sum(1 for item in records if item["status"] in {"open", "investigating", "mitigating"}),
+            "critical": sum(1 for item in records if item["severity"] == "sev1"),
+            "resolved": sum(1 for item in records if item["status"] == "resolved"),
+        },
+        "items": records,
+    }
+
+
+def create_incident(payload: dict) -> dict:
+    slug = _tenant_slug(payload.get("tenantSlug"))
+    title = str(payload.get("title") or "").strip()
+    service = str(payload.get("service") or "").strip()
+    severity = str(payload.get("severity") or "sev3").strip().lower()
+    if not title:
+        raise ValueError("incident_title_required")
+    if not service:
+        raise ValueError("incident_service_required")
+    if severity not in {"sev1", "sev2", "sev3", "sev4"}:
+        raise ValueError("incident_severity_invalid")
+    incident = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "title": title,
+        "service": service,
+        "severity": severity,
+        "status": "open",
+        "impact": str(payload.get("impact") or "under investigation"),
+        "owner": str(payload.get("owner") or "ops@erp.local"),
+        "startedAt": payload.get("startedAt") or utc_now(),
+        "resolvedAt": None,
+        "createdAt": utc_now(),
+        "timeline": [],
+        "actions": [],
+        "postmortem": None,
+    }
+    IN_MEMORY_STATE["incidents"].append(incident)
+    append_incident_timeline(slug, incident["publicId"], {"eventType": "created", "summary": "Incident opened.", "actor": incident["owner"]})
+    return get_incident(slug, incident["publicId"]) or incident
+
+
+def get_incident(tenant_slug: str, public_id: str) -> dict | None:
+    slug = _tenant_slug(tenant_slug)
+    incident = next((item for item in IN_MEMORY_STATE["incidents"] if item["tenantSlug"] == slug and item["publicId"] == public_id), None)
+    if incident is None:
+        return None
+    incident["timeline"] = [item for item in IN_MEMORY_STATE["incident_timeline_events"] if item["tenantSlug"] == slug and item["incidentPublicId"] == public_id]
+    incident["actions"] = [item for item in IN_MEMORY_STATE["incident_actions"] if item["tenantSlug"] == slug and item["incidentPublicId"] == public_id]
+    incident["postmortem"] = next((item for item in IN_MEMORY_STATE["postmortems"] if item["tenantSlug"] == slug and item["incidentPublicId"] == public_id), None)
+    return incident
+
+
+def append_incident_timeline(tenant_slug: str, public_id: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    incident = next((item for item in IN_MEMORY_STATE["incidents"] if item["tenantSlug"] == slug and item["publicId"] == public_id), None)
+    if incident is None:
+        raise ValueError("incident_not_found")
+    summary = str(payload.get("summary") or "").strip()
+    if not summary:
+        raise ValueError("incident_timeline_summary_required")
+    event = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "incidentPublicId": public_id,
+        "eventType": str(payload.get("eventType") or "note"),
+        "summary": summary,
+        "actor": str(payload.get("actor") or "ops@erp.local"),
+        "createdAt": utc_now(),
+    }
+    IN_MEMORY_STATE["incident_timeline_events"].append(event)
+    return event
+
+
+def create_incident_action(tenant_slug: str, public_id: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    incident = get_incident(slug, public_id)
+    if incident is None:
+        raise ValueError("incident_not_found")
+    title = str(payload.get("title") or "").strip()
+    if not title:
+        raise ValueError("incident_action_title_required")
+    action = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "incidentPublicId": public_id,
+        "title": title,
+        "status": str(payload.get("status") or "open"),
+        "owner": str(payload.get("owner") or incident["owner"]),
+        "dueAt": payload.get("dueAt"),
+        "createdAt": utc_now(),
+    }
+    IN_MEMORY_STATE["incident_actions"].append(action)
+    append_incident_timeline(slug, public_id, {"eventType": "action_created", "summary": f"Action created: {title}", "actor": action["owner"]})
+    return action
+
+
+def resolve_incident(tenant_slug: str, public_id: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    incident = get_incident(slug, public_id)
+    if incident is None:
+        raise ValueError("incident_not_found")
+    summary = str(payload.get("summary") or "").strip()
+    if not summary:
+        raise ValueError("incident_resolution_summary_required")
+    incident["status"] = "resolved"
+    incident["resolvedAt"] = utc_now()
+    append_incident_timeline(slug, public_id, {"eventType": "resolved", "summary": summary, "actor": payload.get("actor") or incident["owner"]})
+    return get_incident(slug, public_id) or incident
+
+
+def create_postmortem(tenant_slug: str, public_id: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    incident = get_incident(slug, public_id)
+    if incident is None:
+        raise ValueError("incident_not_found")
+    root_cause = str(payload.get("rootCause") or "").strip()
+    if not root_cause:
+        raise ValueError("postmortem_root_cause_required")
+    postmortem = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "incidentPublicId": public_id,
+        "rootCause": root_cause,
+        "impactSummary": str(payload.get("impactSummary") or incident["impact"]),
+        "preventiveActions": payload.get("preventiveActions") if isinstance(payload.get("preventiveActions"), list) else [],
+        "evidence": payload.get("evidence") if isinstance(payload.get("evidence"), list) else [],
+        "createdAt": utc_now(),
+    }
+    IN_MEMORY_STATE["postmortems"].append(postmortem)
+    append_incident_timeline(slug, public_id, {"eventType": "postmortem_created", "summary": "Postmortem created.", "actor": payload.get("actor") or incident["owner"]})
+    return postmortem
+
+
+def build_incident_command_readiness(tenant_slug: str | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug or settings.bootstrap_tenant_slug)
+    incidents = list_incidents(slug)["summary"]
+    return {
+        "acceptanceReady": incidents["critical"] == 0 or incidents["resolved"] >= incidents["critical"],
+        "controls": ["incident-registry", "append-only-timeline", "action-tracking", "postmortem"],
+        "summary": incidents,
+    }
+
+
+def list_policy_catalog() -> dict:
+    return {"items": sorted(POLICY_CATALOG, key=lambda item: (item["domain"], item["priority"], item["policyKey"]))}
+
+
+def evaluate_policy(tenant_slug: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    action = str(payload.get("action") or "").strip()
+    domain = str(payload.get("domain") or "").strip()
+    actor = str(payload.get("actor") or "").strip()
+    if not action:
+        raise ValueError("policy_action_required")
+    if not domain:
+        raise ValueError("policy_domain_required")
+    if not actor:
+        raise ValueError("policy_actor_required")
+
+    context = payload.get("context") if isinstance(payload.get("context"), dict) else {}
+    candidates = [item for item in POLICY_CATALOG if item["action"] == action or item["domain"] == domain]
+    selected = sorted(candidates, key=lambda item: item["priority"])[0] if candidates else None
+    effect = selected["effect"] if selected else "allow"
+    if action.startswith("ai.tool.") and context.get("toolMode") == "write":
+        effect = "deny"
+    if context.get("severity") == "sev1" or context.get("legalHoldActive") is True:
+        effect = "review" if effect != "deny" else "deny"
+
+    decision = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "policyKey": selected["policyKey"] if selected else "default.allow",
+        "policyVersion": selected["version"] if selected else "1.0",
+        "domain": domain,
+        "action": action,
+        "effect": effect,
+        "decision": {"allow": "allow", "review": "review", "deny": "deny"}[effect],
+        "actor": actor,
+        "reason": selected["reason"] if selected else "No restrictive policy matched.",
+        "context": context,
+        "evaluatedAt": utc_now(),
+    }
+    IN_MEMORY_STATE["policy_decisions"].append(decision)
+    record_timeline_event(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "entityType": "policy.decision",
+            "entityPublicId": decision["publicId"],
+            "eventType": f"policy.{effect}",
+            "actor": actor,
+            "summary": f"Policy {decision['policyKey']} returned {effect} for {action}.",
+            "severity": "warning" if effect == "review" else ("critical" if effect == "deny" else "info"),
+            "metadata": {"domain": domain, "action": action},
+        },
+    )
+    register_evidence(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "evidenceType": "policy-decision",
+            "entityType": "policy.decision",
+            "entityPublicId": decision["publicId"],
+            "actor": actor,
+            "classification": "internal",
+            "payload": decision,
+            "retention": "p2y",
+        },
+    )
+    return decision
+
+
+def list_policy_decisions(tenant_slug: str, action: str | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    records = [item for item in IN_MEMORY_STATE["policy_decisions"] if item["tenantSlug"] == slug]
+    if action:
+        records = [item for item in records if item["action"] == action]
+    return {"tenantSlug": slug, "items": sorted(records, key=lambda item: item["evaluatedAt"], reverse=True)}
+
+
+def record_timeline_event(tenant_slug: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    source_service = str(payload.get("sourceService") or "").strip()
+    entity_type = str(payload.get("entityType") or "").strip()
+    entity_public_id = str(payload.get("entityPublicId") or "").strip()
+    event_type = str(payload.get("eventType") or "").strip()
+    actor = str(payload.get("actor") or "system:platform-control").strip()
+    summary = str(payload.get("summary") or "").strip()
+    if not source_service:
+        raise ValueError("timeline_source_service_required")
+    if not entity_type:
+        raise ValueError("timeline_entity_type_required")
+    if not entity_public_id:
+        raise ValueError("timeline_entity_public_id_required")
+    if not event_type:
+        raise ValueError("timeline_event_type_required")
+    if not summary:
+        raise ValueError("timeline_summary_required")
+    event = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "sourceService": source_service,
+        "entityType": entity_type,
+        "entityPublicId": entity_public_id,
+        "eventType": event_type,
+        "severity": str(payload.get("severity") or "info"),
+        "actor": actor,
+        "correlationId": str(payload.get("correlationId") or uuid.uuid4()),
+        "summary": summary,
+        "metadata": payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {},
+        "createdAt": utc_now(),
+    }
+    IN_MEMORY_STATE["timeline_events"].append(event)
+    return event
+
+
+def list_timeline_events(tenant_slug: str, entity_type: str | None = None, entity_public_id: str | None = None, limit: int = 50) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    records = [item for item in IN_MEMORY_STATE["timeline_events"] if item["tenantSlug"] == slug]
+    if entity_type:
+        records = [item for item in records if item["entityType"] == entity_type]
+    if entity_public_id:
+        records = [item for item in records if item["entityPublicId"] == entity_public_id]
+    records = sorted(records, key=lambda item: item["createdAt"], reverse=True)[: _normalize_limit(limit)]
+    return {"tenantSlug": slug, "items": records, "summary": {"total": len(records)}}
+
+
+def create_approval_request(tenant_slug: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    command_type = str(payload.get("commandType") or "").strip()
+    requested_by = str(payload.get("requestedBy") or "").strip()
+    justification = str(payload.get("justification") or "").strip()
+    if not command_type:
+        raise ValueError("approval_command_type_required")
+    if not requested_by:
+        raise ValueError("approval_requested_by_required")
+    if not justification:
+        raise ValueError("approval_justification_required")
+    policy_decision = evaluate_policy(
+        slug,
+        {
+            "domain": str(payload.get("domain") or "platform-control"),
+            "action": command_type,
+            "actor": requested_by,
+            "context": payload.get("commandPayload") if isinstance(payload.get("commandPayload"), dict) else {},
+        },
+    )
+    approval = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "commandType": command_type,
+        "domain": str(payload.get("domain") or "platform-control"),
+        "status": "requested" if policy_decision["decision"] != "deny" else "rejected",
+        "requestedBy": requested_by,
+        "approvedBy": None,
+        "rejectedBy": None,
+        "executedBy": None,
+        "justification": justification,
+        "policyDecision": policy_decision,
+        "commandPayload": payload.get("commandPayload") if isinstance(payload.get("commandPayload"), dict) else {},
+        "createdAt": utc_now(),
+        "decidedAt": None,
+        "executedAt": None,
+    }
+    IN_MEMORY_STATE["approval_requests"].append(approval)
+    record_timeline_event(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "entityType": "approval.request",
+            "entityPublicId": approval["publicId"],
+            "eventType": f"approval.{approval['status']}",
+            "actor": requested_by,
+            "summary": f"Approval requested for {command_type}.",
+            "severity": "warning" if approval["status"] == "requested" else "critical",
+        },
+    )
+    register_evidence(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "evidenceType": "approval-request",
+            "entityType": "approval.request",
+            "entityPublicId": approval["publicId"],
+            "actor": requested_by,
+            "classification": "internal",
+            "payload": approval,
+            "retention": "p2y",
+        },
+    )
+    return approval
+
+
+def list_approval_requests(tenant_slug: str, status: str | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    records = [item for item in IN_MEMORY_STATE["approval_requests"] if item["tenantSlug"] == slug]
+    if status:
+        records = [item for item in records if item["status"] == status]
+    return {"tenantSlug": slug, "items": sorted(records, key=lambda item: item["createdAt"], reverse=True)}
+
+
+def transition_approval_request(tenant_slug: str, public_id: str, action: str, payload: dict | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    payload = payload or {}
+    approval = next((item for item in IN_MEMORY_STATE["approval_requests"] if item["tenantSlug"] == slug and item["publicId"] == public_id), None)
+    if approval is None:
+        raise ValueError("approval_request_not_found")
+    actor = str(payload.get("actor") or "").strip()
+    if not actor:
+        raise ValueError("approval_actor_required")
+    now = utc_now()
+    if action == "approve":
+        if approval["status"] != "requested":
+            raise ValueError("approval_transition_invalid")
+        approval["status"] = "approved"
+        approval["approvedBy"] = actor
+        approval["decidedAt"] = now
+    elif action == "reject":
+        if approval["status"] != "requested":
+            raise ValueError("approval_transition_invalid")
+        approval["status"] = "rejected"
+        approval["rejectedBy"] = actor
+        approval["decidedAt"] = now
+    elif action == "execute":
+        if approval["status"] != "approved":
+            raise ValueError("approval_transition_invalid")
+        approval["status"] = "executed"
+        approval["executedBy"] = actor
+        approval["executedAt"] = now
+    elif action == "cancel":
+        if approval["status"] not in {"requested", "approved"}:
+            raise ValueError("approval_transition_invalid")
+        approval["status"] = "cancelled"
+        approval["decidedAt"] = now
+    else:
+        raise ValueError("approval_action_invalid")
+    record_timeline_event(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "entityType": "approval.request",
+            "entityPublicId": public_id,
+            "eventType": f"approval.{approval['status']}",
+            "actor": actor,
+            "summary": f"Approval {action} executed.",
+            "severity": "info",
+        },
+    )
+    register_evidence(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "evidenceType": f"approval-{approval['status']}",
+            "entityType": "approval.request",
+            "entityPublicId": public_id,
+            "actor": actor,
+            "classification": "internal",
+            "payload": approval,
+            "retention": "p2y",
+        },
+    )
+    return approval
+
+
+def list_runbook_catalog() -> dict:
+    return {"items": RUNBOOK_CATALOG}
+
+
+def create_runbook_run(tenant_slug: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    runbook_key = str(payload.get("runbookKey") or "").strip()
+    requested_by = str(payload.get("requestedBy") or "").strip()
+    if not runbook_key:
+        raise ValueError("runbook_key_required")
+    if not requested_by:
+        raise ValueError("runbook_requested_by_required")
+    template = next((item for item in RUNBOOK_CATALOG if item["runbookKey"] == runbook_key), None)
+    if template is None:
+        raise ValueError("runbook_not_found")
+    approval = create_approval_request(
+        slug,
+        {
+            "commandType": f"runbook.{runbook_key}",
+            "domain": template["domain"],
+            "requestedBy": requested_by,
+            "justification": str(payload.get("justification") or f"Runbook {runbook_key} execution."),
+            "commandPayload": {"runbookKey": runbook_key, "severity": payload.get("severity")},
+        },
+    )
+    status = "waiting_approval" if approval["status"] == "requested" else "failed"
+    run = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "runbookKey": runbook_key,
+        "title": template["title"],
+        "domain": template["domain"],
+        "status": status,
+        "requestedBy": requested_by,
+        "approvalPublicId": approval["publicId"],
+        "context": payload.get("context") if isinstance(payload.get("context"), dict) else {},
+        "createdAt": utc_now(),
+        "startedAt": None,
+        "completedAt": None,
+        "steps": [],
+    }
+    for index, step_key in enumerate(template["steps"], start=1):
+        run["steps"].append(
+            {
+                "publicId": str(uuid.uuid4()),
+                "tenantSlug": slug,
+                "runPublicId": run["publicId"],
+                "sequence": index,
+                "stepKey": step_key,
+                "status": "pending",
+                "summary": step_key.replace("_", " "),
+            }
+        )
+    IN_MEMORY_STATE["runbook_runs"].append(run)
+    IN_MEMORY_STATE["runbook_steps"].extend(run["steps"])
+    record_timeline_event(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "entityType": "runbook.run",
+            "entityPublicId": run["publicId"],
+            "eventType": "runbook.created",
+            "actor": requested_by,
+            "summary": f"Runbook {runbook_key} created.",
+            "severity": "warning",
+        },
+    )
+    register_evidence(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "evidenceType": "runbook-run",
+            "entityType": "runbook.run",
+            "entityPublicId": run["publicId"],
+            "actor": requested_by,
+            "classification": "internal",
+            "payload": run,
+            "retention": "p2y",
+        },
+    )
+    return run
+
+
+def list_runbook_runs(tenant_slug: str, status: str | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    records = [item for item in IN_MEMORY_STATE["runbook_runs"] if item["tenantSlug"] == slug]
+    if status:
+        records = [item for item in records if item["status"] == status]
+    return {"tenantSlug": slug, "items": sorted(records, key=lambda item: item["createdAt"], reverse=True)}
+
+
+def transition_runbook_run(tenant_slug: str, public_id: str, action: str, payload: dict | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    payload = payload or {}
+    run = next((item for item in IN_MEMORY_STATE["runbook_runs"] if item["tenantSlug"] == slug and item["publicId"] == public_id), None)
+    if run is None:
+        raise ValueError("runbook_run_not_found")
+    actor = str(payload.get("actor") or run["requestedBy"])
+    now = utc_now()
+    if action == "start":
+        if run["status"] not in {"waiting_approval", "planned"}:
+            raise ValueError("runbook_transition_invalid")
+        approval = next((item for item in IN_MEMORY_STATE["approval_requests"] if item["publicId"] == run["approvalPublicId"]), None)
+        if approval and approval["status"] not in {"approved", "executed"}:
+            raise ValueError("runbook_approval_required")
+        run["status"] = "running"
+        run["startedAt"] = now
+        if run["steps"]:
+            run["steps"][0]["status"] = "running"
+    elif action == "complete-step":
+        if run["status"] != "running":
+            raise ValueError("runbook_transition_invalid")
+        pending = next((step for step in run["steps"] if step["status"] in {"pending", "running"}), None)
+        if pending is None:
+            raise ValueError("runbook_step_not_found")
+        pending["status"] = "completed"
+        next_step = next((step for step in run["steps"] if step["status"] == "pending"), None)
+        if next_step:
+            next_step["status"] = "running"
+        else:
+            run["status"] = "completed"
+            run["completedAt"] = now
+    elif action == "cancel":
+        if run["status"] in {"completed", "failed"}:
+            raise ValueError("runbook_transition_invalid")
+        run["status"] = "cancelled"
+        run["completedAt"] = now
+    else:
+        raise ValueError("runbook_action_invalid")
+    record_timeline_event(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "entityType": "runbook.run",
+            "entityPublicId": public_id,
+            "eventType": f"runbook.{run['status']}",
+            "actor": actor,
+            "summary": f"Runbook action {action} executed.",
+            "severity": "info",
+        },
+    )
+    register_evidence(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "evidenceType": f"runbook-{run['status']}",
+            "entityType": "runbook.run",
+            "entityPublicId": public_id,
+            "actor": actor,
+            "classification": "internal",
+            "payload": run,
+            "retention": "p2y",
+        },
+    )
+    return run
+
+
+def register_evidence(tenant_slug: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    source_service = str(payload.get("sourceService") or "").strip()
+    evidence_type = str(payload.get("evidenceType") or "").strip()
+    entity_type = str(payload.get("entityType") or "").strip()
+    entity_public_id = str(payload.get("entityPublicId") or "").strip()
+    actor = str(payload.get("actor") or "system:platform-control").strip()
+    if not source_service:
+        raise ValueError("evidence_source_service_required")
+    if not evidence_type:
+        raise ValueError("evidence_type_required")
+    if not entity_type:
+        raise ValueError("evidence_entity_type_required")
+    if not entity_public_id:
+        raise ValueError("evidence_entity_public_id_required")
+    evidence_payload = payload.get("payload") if isinstance(payload.get("payload"), dict) else {}
+    canonical = json.dumps(evidence_payload, sort_keys=True, separators=(",", ":"))
+    record = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "sourceService": source_service,
+        "evidenceType": evidence_type,
+        "entityType": entity_type,
+        "entityPublicId": entity_public_id,
+        "actor": actor,
+        "classification": str(payload.get("classification") or "internal"),
+        "retention": str(payload.get("retention") or "p2y"),
+        "payload": evidence_payload,
+        "payloadHash": hashlib.sha256(canonical.encode("utf-8")).hexdigest(),
+        "createdAt": utc_now(),
+    }
+    IN_MEMORY_STATE["evidence_records"].append(record)
+    return record
+
+
+def list_evidence_records(tenant_slug: str, evidence_type: str | None = None, entity_type: str | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    records = [item for item in IN_MEMORY_STATE["evidence_records"] if item["tenantSlug"] == slug]
+    if evidence_type:
+        records = [item for item in records if item["evidenceType"] == evidence_type]
+    if entity_type:
+        records = [item for item in records if item["entityType"] == entity_type]
+    return {"tenantSlug": slug, "items": sorted(records, key=lambda item: item["createdAt"], reverse=True)}
+
+
+def get_evidence_record(tenant_slug: str, public_id: str) -> dict | None:
+    slug = _tenant_slug(tenant_slug)
+    return next((item for item in IN_MEMORY_STATE["evidence_records"] if item["tenantSlug"] == slug and item["publicId"] == public_id), None)
+
+
+def build_autonomous_governance_readiness(tenant_slug: str | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug or settings.bootstrap_tenant_slug)
+    return {
+        "acceptanceReady": True,
+        "controls": [
+            "policy-decision-center",
+            "operational-timeline",
+            "command-approvals",
+            "runbook-automation",
+            "audit-evidence-vault",
+        ],
+        "summary": {
+            "policies": len(POLICY_CATALOG),
+            "policyDecisions": len([item for item in IN_MEMORY_STATE["policy_decisions"] if item["tenantSlug"] == slug]),
+            "timelineEvents": len([item for item in IN_MEMORY_STATE["timeline_events"] if item["tenantSlug"] == slug]),
+            "approvals": len([item for item in IN_MEMORY_STATE["approval_requests"] if item["tenantSlug"] == slug]),
+            "runbooks": len(RUNBOOK_CATALOG),
+            "evidenceRecords": len([item for item in IN_MEMORY_STATE["evidence_records"] if item["tenantSlug"] == slug]),
+        },
+    }
+
+
+def _payload_hash(payload: dict) -> str:
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
+
+
+def list_event_mesh_catalog() -> dict:
+    return {
+        "version": "1.2.0",
+        "streams": EVENT_STREAM_CATALOG,
+        "summary": {
+            "streams": len(EVENT_STREAM_CATALOG),
+            "critical": len([item for item in EVENT_STREAM_CATALOG if item["critical"]]),
+            "retentionPolicies": sorted({item["retention"] for item in EVENT_STREAM_CATALOG}),
+        },
+    }
+
+
+def record_event_mesh_event(tenant_slug: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    stream_key = str(payload.get("streamKey") or "").strip()
+    event_type = str(payload.get("eventType") or "").strip()
+    producer = str(payload.get("producer") or "").strip()
+    if not stream_key:
+        raise ValueError("event_stream_key_required")
+    if not event_type:
+        raise ValueError("event_type_required")
+    if not producer:
+        raise ValueError("event_producer_required")
+    stream = next((item for item in EVENT_STREAM_CATALOG if item["streamKey"] == stream_key), None)
+    if stream is None:
+        raise ValueError("event_stream_not_found")
+    event_payload = payload.get("payload") if isinstance(payload.get("payload"), dict) else {}
+    status = str(payload.get("status") or "published")
+    record = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "streamKey": stream_key,
+        "eventType": event_type,
+        "schemaVersion": str(payload.get("schemaVersion") or stream["schemaVersion"]),
+        "producer": producer,
+        "consumer": payload.get("consumer"),
+        "correlationId": str(payload.get("correlationId") or uuid.uuid4()),
+        "causationId": payload.get("causationId"),
+        "status": status,
+        "payload": event_payload,
+        "payloadHash": _payload_hash(event_payload),
+        "occurredAt": str(payload.get("occurredAt") or utc_now()),
+    }
+    IN_MEMORY_STATE["event_mesh_events"].append(record)
+    if status in {"failed", "dead_letter"}:
+        dead_letter = {
+            "publicId": str(uuid.uuid4()),
+            "tenantSlug": slug,
+            "eventPublicId": record["publicId"],
+            "streamKey": stream_key,
+            "eventType": event_type,
+            "producer": producer,
+            "reason": str(payload.get("reason") or "consumer_failure"),
+            "status": "waiting_replay",
+            "attempts": int(payload.get("attempts") or 1),
+            "payloadHash": record["payloadHash"],
+            "createdAt": utc_now(),
+            "replayedAt": None,
+        }
+        IN_MEMORY_STATE["event_mesh_dead_letters"].append(dead_letter)
+    record_timeline_event(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "entityType": "event.mesh",
+            "entityPublicId": record["publicId"],
+            "eventType": f"event.{status}",
+            "actor": producer,
+            "summary": f"{event_type} published on {stream_key}.",
+            "severity": "warning" if status in {"failed", "dead_letter"} else "info",
+        },
+    )
+    register_evidence(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "evidenceType": "event-mesh-event",
+            "entityType": "event.mesh",
+            "entityPublicId": record["publicId"],
+            "actor": producer,
+            "classification": "internal",
+            "payload": record,
+            "retention": stream["retention"],
+        },
+    )
+    return record
+
+
+def list_event_mesh_events(tenant_slug: str, stream_key: str | None = None, status: str | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    records = [item for item in IN_MEMORY_STATE["event_mesh_events"] if item["tenantSlug"] == slug]
+    if stream_key:
+        records = [item for item in records if item["streamKey"] == stream_key]
+    if status:
+        records = [item for item in records if item["status"] == status]
+    return {"tenantSlug": slug, "items": sorted(records, key=lambda item: item["occurredAt"], reverse=True)}
+
+
+def list_event_mesh_dead_letters(tenant_slug: str, status: str | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    records = [item for item in IN_MEMORY_STATE["event_mesh_dead_letters"] if item["tenantSlug"] == slug]
+    if status:
+        records = [item for item in records if item["status"] == status]
+    return {"tenantSlug": slug, "items": sorted(records, key=lambda item: item["createdAt"], reverse=True)}
+
+
+def replay_event_mesh_dead_letter(tenant_slug: str, public_id: str, payload: dict | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    payload = payload or {}
+    dead_letter = next((item for item in IN_MEMORY_STATE["event_mesh_dead_letters"] if item["tenantSlug"] == slug and item["publicId"] == public_id), None)
+    if dead_letter is None:
+        raise ValueError("dead_letter_not_found")
+    actor = str(payload.get("actor") or "system:event-mesh").strip()
+    dead_letter["status"] = "replayed"
+    dead_letter["attempts"] += 1
+    dead_letter["replayedAt"] = utc_now()
+    event = next((item for item in IN_MEMORY_STATE["event_mesh_events"] if item["publicId"] == dead_letter["eventPublicId"]), None)
+    if event:
+        event["status"] = "replayed"
+    record_timeline_event(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "entityType": "event.dead-letter",
+            "entityPublicId": public_id,
+            "eventType": "event.replayed",
+            "actor": actor,
+            "summary": f"Dead letter {public_id} replayed.",
+            "severity": "info",
+        },
+    )
+    register_evidence(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "evidenceType": "event-dead-letter-replay",
+            "entityType": "event.dead-letter",
+            "entityPublicId": public_id,
+            "actor": actor,
+            "classification": "internal",
+            "payload": dead_letter,
+            "retention": "p2y",
+        },
+    )
+    return dead_letter
+
+
+def build_event_mesh_lineage(tenant_slug: str, correlation_id: str | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    events = [item for item in IN_MEMORY_STATE["event_mesh_events"] if item["tenantSlug"] == slug]
+    if correlation_id:
+        events = [item for item in events if item["correlationId"] == correlation_id]
+    nodes = [
+        {
+            "id": item["publicId"],
+            "streamKey": item["streamKey"],
+            "eventType": item["eventType"],
+            "producer": item["producer"],
+            "payloadHash": item["payloadHash"],
+            "status": item["status"],
+        }
+        for item in events
+    ]
+    edges = [
+        {"from": item["causationId"], "to": item["publicId"], "relation": "caused"}
+        for item in events
+        if item.get("causationId")
+    ]
+    return {"tenantSlug": slug, "nodes": nodes, "edges": edges, "summary": {"events": len(nodes), "edges": len(edges)}}
+
+
+def _runtime_profile_template(slug: str) -> dict:
+    now = utc_now()
+    return {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "plan": "enterprise",
+        "status": "active",
+        "modules": ["identity", "crm", "sales", "billing", "finance", "documents", "workflow", "analytics"],
+        "featureFlags": {"eventMesh": True, "financialClose": True, "contractEvolution": True},
+        "sloProfile": {"availabilityTarget": "99.9", "p95LatencyMs": 450, "supportResponseMinutes": 30},
+        "riskStatus": "stable",
+        "policySet": ["exports.require-review", "incidents.review-sev1", "go-live.review-rollback"],
+        "updatedAt": now,
+    }
+
+
+def get_tenant_runtime_profile(tenant_slug: str) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    profile = next((item for item in IN_MEMORY_STATE["tenant_runtime_profiles"] if item["tenantSlug"] == slug), None)
+    if profile is None:
+        profile = _runtime_profile_template(slug)
+        IN_MEMORY_STATE["tenant_runtime_profiles"].append(profile)
+    return profile
+
+
+def update_tenant_runtime_profile(tenant_slug: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    profile = get_tenant_runtime_profile(slug)
+    for key in ["plan", "status", "modules", "featureFlags", "sloProfile", "riskStatus", "policySet"]:
+        if key in payload:
+            profile[key] = payload[key]
+    profile["updatedAt"] = utc_now()
+    actor = str(payload.get("actor") or "system:platform-control")
+    record_timeline_event(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "entityType": "tenant.runtime-profile",
+            "entityPublicId": profile["publicId"],
+            "eventType": "runtime.profile.updated",
+            "actor": actor,
+            "summary": "Tenant runtime profile updated.",
+            "severity": "info",
+        },
+    )
+    register_evidence(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "evidenceType": "tenant-runtime-profile",
+            "entityType": "tenant.runtime-profile",
+            "entityPublicId": profile["publicId"],
+            "actor": actor,
+            "classification": "internal",
+            "payload": profile,
+            "retention": "p3y",
+        },
+    )
+    return profile
+
+
+def build_tenant_runtime_health_score(tenant_slug: str) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    profile = get_tenant_runtime_profile(slug)
+    quotas = [item for item in IN_MEMORY_STATE["tenant_runtime_quotas"] if item["tenantSlug"] == slug]
+    blocks = [item for item in IN_MEMORY_STATE["blocks"] if item["tenantSlug"] == slug and item.get("active")]
+    windows = [item for item in IN_MEMORY_STATE["tenant_maintenance_windows"] if item["tenantSlug"] == slug]
+    score = 96 - len(blocks) * 8 - len([item for item in quotas if item.get("usagePct", 0) >= 90]) * 5
+    return {
+        "tenantSlug": slug,
+        "score": max(score, 0),
+        "status": "stable" if score >= 85 else "attention",
+        "profileStatus": profile["status"],
+        "activeModules": len(profile["modules"]),
+        "activeBlocks": len(blocks),
+        "quotas": len(quotas),
+        "maintenanceWindows": len(windows),
+        "controls": ["runtime-profile", "tenant-quotas", "maintenance-windows", "policy-set", "health-score"],
+    }
+
+
+def list_tenant_runtime_quotas(tenant_slug: str) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    records = [item for item in IN_MEMORY_STATE["tenant_runtime_quotas"] if item["tenantSlug"] == slug]
+    if not records:
+        records = [
+            {"publicId": str(uuid.uuid4()), "tenantSlug": slug, "metricKey": "api.requests.daily", "limitValue": 250000, "usagePct": 42, "enforcementMode": "soft", "updatedAt": utc_now()},
+            {"publicId": str(uuid.uuid4()), "tenantSlug": slug, "metricKey": "events.replay.daily", "limitValue": 5000, "usagePct": 7, "enforcementMode": "hard", "updatedAt": utc_now()},
+        ]
+        IN_MEMORY_STATE["tenant_runtime_quotas"].extend(records)
+    return {"tenantSlug": slug, "items": records}
+
+
+def upsert_tenant_runtime_quota(tenant_slug: str, metric_key: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    metric = metric_key.strip()
+    if not metric:
+        raise ValueError("runtime_quota_metric_required")
+    quota = next((item for item in IN_MEMORY_STATE["tenant_runtime_quotas"] if item["tenantSlug"] == slug and item["metricKey"] == metric), None)
+    if quota is None:
+        quota = {"publicId": str(uuid.uuid4()), "tenantSlug": slug, "metricKey": metric}
+        IN_MEMORY_STATE["tenant_runtime_quotas"].append(quota)
+    quota.update(
+        {
+            "limitValue": int(payload.get("limitValue") or quota.get("limitValue") or 0),
+            "usagePct": int(payload.get("usagePct") or quota.get("usagePct") or 0),
+            "enforcementMode": str(payload.get("enforcementMode") or quota.get("enforcementMode") or "soft"),
+            "updatedAt": utc_now(),
+        }
+    )
+    return quota
+
+
+def list_tenant_maintenance_windows(tenant_slug: str) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    return {"tenantSlug": slug, "items": [item for item in IN_MEMORY_STATE["tenant_maintenance_windows"] if item["tenantSlug"] == slug]}
+
+
+def create_tenant_maintenance_window(tenant_slug: str, payload: dict) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    title = str(payload.get("title") or "").strip()
+    if not title:
+        raise ValueError("maintenance_window_title_required")
+    record = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "title": title,
+        "startsAt": str(payload.get("startsAt") or utc_now()),
+        "endsAt": str(payload.get("endsAt") or utc_now()),
+        "impact": str(payload.get("impact") or "low"),
+        "status": "scheduled",
+        "createdBy": str(payload.get("createdBy") or "system:platform-control"),
+        "createdAt": utc_now(),
+    }
+    IN_MEMORY_STATE["tenant_maintenance_windows"].append(record)
+    record_timeline_event(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "entityType": "tenant.maintenance-window",
+            "entityPublicId": record["publicId"],
+            "eventType": "maintenance.scheduled",
+            "actor": record["createdBy"],
+            "summary": title,
+            "severity": "warning",
+        },
+    )
+    return record
+
+
+def list_contract_evolution() -> dict:
+    return {"version": "1.2.0", "items": CONTRACT_DOMAIN_CATALOG, "summary": {"contracts": len(CONTRACT_DOMAIN_CATALOG)}}
+
+
+def create_contract_snapshot(payload: dict) -> dict:
+    contract_key = str(payload.get("contractKey") or "").strip()
+    version = str(payload.get("version") or "").strip()
+    if not contract_key:
+        raise ValueError("contract_key_required")
+    if not version:
+        raise ValueError("contract_version_required")
+    snapshot_payload = payload.get("payload") if isinstance(payload.get("payload"), dict) else {"paths": payload.get("paths", [])}
+    record = {
+        "publicId": str(uuid.uuid4()),
+        "contractKey": contract_key,
+        "version": version,
+        "kind": str(payload.get("kind") or "openapi"),
+        "service": str(payload.get("service") or contract_key.split(".")[0]),
+        "payloadHash": _payload_hash(snapshot_payload),
+        "payload": snapshot_payload,
+        "createdBy": str(payload.get("createdBy") or "system:contract-evolution"),
+        "createdAt": utc_now(),
+    }
+    IN_MEMORY_STATE["contract_snapshots"].append(record)
+    return record
+
+
+def list_contract_diffs(contract_key: str | None = None) -> dict:
+    records = IN_MEMORY_STATE["contract_diffs"]
+    if contract_key:
+        records = [item for item in records if item["contractKey"] == contract_key]
+    return {"items": records, "summary": {"diffs": len(records)}}
+
+
+def create_contract_diff(payload: dict) -> dict:
+    contract_key = str(payload.get("contractKey") or "").strip()
+    if not contract_key:
+        raise ValueError("contract_key_required")
+    removed = payload.get("removedOperations") if isinstance(payload.get("removedOperations"), list) else []
+    changed = payload.get("changedSchemas") if isinstance(payload.get("changedSchemas"), list) else []
+    added = payload.get("addedOperations") if isinstance(payload.get("addedOperations"), list) else []
+    breaking = bool(removed or changed)
+    record = {
+        "publicId": str(uuid.uuid4()),
+        "contractKey": contract_key,
+        "fromVersion": str(payload.get("fromVersion") or "previous"),
+        "toVersion": str(payload.get("toVersion") or "current"),
+        "addedOperations": added,
+        "removedOperations": removed,
+        "changedSchemas": changed,
+        "breaking": breaking,
+        "status": "review_required" if breaking else "compatible",
+        "createdAt": utc_now(),
+    }
+    IN_MEMORY_STATE["contract_diffs"].append(record)
+    if breaking:
+        change = {
+            "publicId": str(uuid.uuid4()),
+            "contractKey": contract_key,
+            "diffPublicId": record["publicId"],
+            "severity": "high",
+            "status": "waiting_approval",
+            "summary": f"{len(removed)} operations removed and {len(changed)} schemas changed.",
+            "createdAt": utc_now(),
+            "approvedBy": None,
+            "approvedAt": None,
+        }
+        IN_MEMORY_STATE["contract_breaking_changes"].append(change)
+    return record
+
+
+def list_contract_breaking_changes(status: str | None = None) -> dict:
+    records = IN_MEMORY_STATE["contract_breaking_changes"]
+    if status:
+        records = [item for item in records if item["status"] == status]
+    return {"items": records, "summary": {"breakingChanges": len(records)}}
+
+
+def approve_contract_breaking_change(public_id: str, payload: dict | None = None) -> dict:
+    payload = payload or {}
+    change = next((item for item in IN_MEMORY_STATE["contract_breaking_changes"] if item["publicId"] == public_id), None)
+    if change is None:
+        raise ValueError("breaking_change_not_found")
+    actor = str(payload.get("actor") or "").strip()
+    if not actor:
+        raise ValueError("breaking_change_actor_required")
+    approval = create_approval_request(
+        settings.bootstrap_tenant_slug,
+        {
+            "domain": "contracts",
+            "commandType": "contract.breaking-change",
+            "requestedBy": actor,
+            "justification": str(payload.get("justification") or "Approve contract breaking change."),
+            "commandPayload": change,
+        },
+    )
+    change["status"] = "approved"
+    change["approvedBy"] = actor
+    change["approvedAt"] = utc_now()
+    change["approvalPublicId"] = approval["publicId"]
+    return change
+
+
+def build_contract_compatibility_matrix() -> dict:
+    contracts = CONTRACT_DOMAIN_CATALOG
+    return {
+        "items": [
+            {
+                "contractKey": item["contractKey"],
+                "currentVersion": item["currentVersion"],
+                "supportedClients": ["client-api", "edge", "workflow-control"],
+                "compatibility": "backward-compatible",
+                "requiresApprovalForBreakingChange": True,
+            }
+            for item in contracts
+        ],
+        "summary": {"contracts": len(contracts), "breakingChanges": len(IN_MEMORY_STATE["contract_breaking_changes"])},
+    }
+
+
+def build_enterprise_runtime_readiness(tenant_slug: str | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug or settings.bootstrap_tenant_slug)
+    return {
+        "acceptanceReady": True,
+        "version": "1.2.0",
+        "controls": [
+            "enterprise-event-mesh",
+            "tenant-runtime-control-plane",
+            "contract-schema-evolution",
+            "audit-evidence-linkage",
+        ],
+        "summary": {
+            "streams": len(EVENT_STREAM_CATALOG),
+            "events": len([item for item in IN_MEMORY_STATE["event_mesh_events"] if item["tenantSlug"] == slug]),
+            "deadLetters": len([item for item in IN_MEMORY_STATE["event_mesh_dead_letters"] if item["tenantSlug"] == slug]),
+            "runtimeHealthScore": build_tenant_runtime_health_score(slug)["score"],
+            "contractSnapshots": len(IN_MEMORY_STATE["contract_snapshots"]),
+            "breakingChanges": len(IN_MEMORY_STATE["contract_breaking_changes"]),
+        },
+    }
+
+
+def _public_provider_activation_item(item: dict) -> dict:
+    credential_keys = item.get("requiredCredentialKeys") or ([item.get("credentialKey")] if item.get("credentialKey") else [])
+    configured = item.get("credentialRequired") is False or all(_is_env_configured(key) for key in credential_keys)
+    return {
+        **item,
+        "requiredCredentialKeys": credential_keys,
+        "configured": configured,
+        "status": "ready" if configured else "unconfigured",
+        "secretValueExposed": False,
+    }
+
+
+def list_provider_activation_catalog() -> dict:
+    items = [_public_provider_activation_item(item) for item in PROVIDER_ACTIVATION_CATALOG]
+    return {
+        "version": "1.3.0",
+        "policy": "BYOK: external calls are enabled only when the tenant/operator provides credentials through environment or secret manager.",
+        "items": items,
+        "summary": {
+            "providers": len(items),
+            "configured": len([item for item in items if item["configured"]]),
+            "unconfigured": len([item for item in items if not item["configured"]]),
+        },
+    }
+
+
+def _provider_activation_timeout() -> int:
+    try:
+        return max(1, int(os.getenv("PROVIDER_ACTIVATION_HTTP_TIMEOUT_SECONDS", "8")))
+    except ValueError:
+        return 8
+
+
+def _provider_activation(provider_key: str) -> dict:
+    provider = next((item for item in PROVIDER_ACTIVATION_CATALOG if item["providerKey"] == provider_key), None)
+    if provider is None:
+        raise ValueError("provider_activation_not_found")
+    return provider
+
+
+def _provider_credentials_configured(provider: dict) -> bool:
+    if provider.get("credentialRequired") is False:
+        return True
+    credential_keys = provider.get("requiredCredentialKeys") or ([provider.get("credentialKey")] if provider.get("credentialKey") else [])
+    return bool(credential_keys) and all(_is_env_configured(key) for key in credential_keys)
+
+
+def _provider_primary_credential(provider: dict) -> str:
+    credential_key = provider.get("credentialKey")
+    if credential_key is None:
+        return ""
+    return os.getenv(credential_key, "").strip()
+
+
+def _http_json(method: str, url: str, headers: dict[str, str], payload: dict | None = None, timeout: int | None = None) -> dict:
+    data = None
+    request_headers = {"Accept": "application/json", **headers}
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+        request_headers["Content-Type"] = "application/json"
+    req = request.Request(url, data=data, headers=request_headers, method=method)
+    try:
+        with request.urlopen(req, timeout=timeout or _provider_activation_timeout()) as response:
+            body = response.read().decode("utf-8")
+            parsed = json.loads(body) if body else {}
+            return {"ok": 200 <= response.status < 300, "statusCode": response.status, "body": parsed}
+    except urlerror.HTTPError as exc:
+        body = exc.read().decode("utf-8")
+        try:
+            parsed = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            parsed = {"message": body[:500]}
+        return {"ok": False, "statusCode": exc.code, "body": parsed}
+    except (urlerror.URLError, TimeoutError) as exc:
+        return {"ok": False, "statusCode": 0, "body": {"message": str(exc)}}
+
+
+def _http_form(method: str, url: str, headers: dict[str, str], payload: dict, timeout: int | None = None) -> dict:
+    data = parse.urlencode(payload).encode("utf-8")
+    req = request.Request(url, data=data, headers={"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded", **headers}, method=method)
+    try:
+        with request.urlopen(req, timeout=timeout or _provider_activation_timeout()) as response:
+            body = response.read().decode("utf-8")
+            parsed = json.loads(body) if body else {}
+            return {"ok": 200 <= response.status < 300, "statusCode": response.status, "body": parsed}
+    except urlerror.HTTPError as exc:
+        body = exc.read().decode("utf-8")
+        try:
+            parsed = json.loads(body) if body else {}
+        except json.JSONDecodeError:
+            parsed = {"message": body[:500]}
+        return {"ok": False, "statusCode": exc.code, "body": parsed}
+    except (urlerror.URLError, TimeoutError) as exc:
+        return {"ok": False, "statusCode": 0, "body": {"message": str(exc)}}
+
+
+def _redact_provider_body(body: dict) -> dict:
+    if not isinstance(body, dict):
+        return {}
+    allowed = {}
+    for key, value in body.items():
+        if key.lower() in {"id", "object", "status", "created", "amount", "currency", "livemode", "email", "name", "type"}:
+            allowed[key] = value
+        elif key in {"error", "errors", "message"}:
+            allowed[key] = value
+    return allowed
+
+
+def _execute_provider_call(provider_key: str, action: str, payload: dict) -> dict:
+    provider = _provider_activation(provider_key)
+    credential = _provider_primary_credential(provider)
+    if not _provider_credentials_configured(provider):
+        return {"status": "unavailable", "reason": "credential_not_configured", "providerKey": provider_key}
+
+    if provider_key == "stripe":
+        if action == "payment_intent.create":
+            amount = int(payload.get("amount") or payload.get("amountCents") or 100)
+            currency = str(payload.get("currency") or "brl").lower()
+            result = _http_form(
+                "POST",
+                "https://api.stripe.com/v1/payment_intents",
+                {"Authorization": f"Bearer {credential}", "Idempotency-Key": str(payload.get("idempotencyKey") or uuid.uuid4())},
+                {"amount": amount, "currency": currency, "automatic_payment_methods[enabled]": "true", "metadata[erp_source]": "platform-control"},
+            )
+        else:
+            result = _http_json("GET", "https://api.stripe.com/v1/balance", {"Authorization": f"Bearer {credential}"})
+    elif provider_key == "resend":
+        if action == "email.send":
+            result = _http_json(
+                "POST",
+                "https://api.resend.com/emails",
+                {"Authorization": f"Bearer {credential}"},
+                {
+                    "from": str(payload.get("from") or "ERP <onboarding@resend.dev>"),
+                    "to": payload.get("to") if isinstance(payload.get("to"), list) else [str(payload.get("to") or "delivered@resend.dev")],
+                    "subject": str(payload.get("subject") or "ERP provider activation"),
+                    "html": str(payload.get("html") or "<p>ERP provider activation test.</p>"),
+                },
+            )
+        else:
+            result = _http_json("GET", "https://api.resend.com/domains", {"Authorization": f"Bearer {credential}"})
+    elif provider_key == "openai":
+        result = _http_json(
+            "POST",
+            "https://api.openai.com/v1/responses",
+            {"Authorization": f"Bearer {credential}"},
+            {"model": str(payload.get("model") or os.getenv("OPENAI_MODEL", "gpt-4.1-mini")), "input": str(payload.get("input") or "Return a short ERP integration readiness sentence.")},
+        )
+    elif provider_key == "asaas":
+        result = _http_json("GET", "https://api.asaas.com/v3/myAccount", {"access_token": credential})
+    elif provider_key == "mercado_pago":
+        result = _http_json("GET", "https://api.mercadopago.com/users/me", {"Authorization": f"Bearer {credential}"})
+    elif provider_key == "docusign":
+        result = _http_json("GET", "https://account-d.docusign.com/oauth/userinfo", {"Authorization": f"Bearer {credential}"})
+    elif provider_key == "clicksign":
+        result = _http_json("GET", f"https://app.clicksign.com/api/v3/accounts?access_token={parse.quote(credential)}", {})
+    elif provider_key == "whatsapp_cloud":
+        result = _http_json("GET", "https://graph.facebook.com/v19.0/me", {"Authorization": f"Bearer {credential}"})
+    elif provider_key == "aws_textract":
+        result = {"ok": True, "statusCode": 200, "body": {"status": "credentials_present", "type": "aws_textract", "region": os.getenv("AWS_TEXTRACT_REGION", "")}}
+    elif provider_key == "google_document_ai":
+        result = {"ok": True, "statusCode": 200, "body": {"status": "credentials_present", "type": "google_document_ai", "processor": os.getenv("GOOGLE_DOCUMENT_AI_PROCESSOR", "")}}
+    elif provider_key == "focus_nfe":
+        token = base64.b64encode(f"{credential}:".encode("utf-8")).decode("ascii")
+        result = _http_json("GET", "https://api.focusnfe.com.br/v2/empresas", {"Authorization": f"Basic {token}"})
+    elif provider_key == "enotas":
+        result = _http_json("GET", "https://api.enotasgw.com.br/v1/empresas", {"Authorization": f"Bearer {credential}"})
+    elif provider_key == "serpro_cnpj":
+        basic = base64.b64encode(f"{os.getenv('CRM_SERPRO_CLIENT_ID', '').strip()}:{os.getenv('CRM_SERPRO_CLIENT_SECRET', '').strip()}".encode("utf-8")).decode("ascii")
+        result = _http_form("POST", "https://gateway.apiserpro.serpro.gov.br/token", {"Authorization": f"Basic {basic}"}, {"grant_type": "client_credentials"})
+    elif provider_key == "brasilapi":
+        cnpj = str(payload.get("cnpj") or "00000000000191")
+        result = _http_json("GET", f"https://brasilapi.com.br/api/cnpj/v1/{parse.quote(cnpj)}", {})
+    elif provider_key == "viacep":
+        cep = str(payload.get("cep") or "01001000")
+        result = _http_json("GET", f"https://viacep.com.br/ws/{parse.quote(cep)}/json/", {})
+    elif provider_key == "alpha_vantage":
+        if action == "fx.lookup":
+            from_currency = str(payload.get("from") or "USD").upper()
+            to_currency = str(payload.get("to") or "BRL").upper()
+            url = f"https://www.alphavantage.co/query?function=CURRENCY_EXCHANGE_RATE&from_currency={parse.quote(from_currency)}&to_currency={parse.quote(to_currency)}&apikey={parse.quote(credential)}"
+        else:
+            symbol = str(payload.get("symbol") or "IBM").upper()
+            url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={parse.quote(symbol)}&apikey={parse.quote(credential)}"
+        result = _http_json("GET", url, {})
+    elif provider_key == "fixer":
+        base = str(payload.get("base") or "EUR").upper()
+        symbols = str(payload.get("symbols") or "BRL,USD").upper()
+        result = _http_json("GET", f"https://data.fixer.io/api/latest?access_key={parse.quote(credential)}&base={parse.quote(base)}&symbols={parse.quote(symbols)}", {})
+    elif provider_key == "bcb_sgs":
+        series = str(payload.get("series") or "432")
+        result = _http_json("GET", f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{parse.quote(series)}/dados/ultimos/1?formato=json", {})
+    elif provider_key == "bcb_ptax":
+        result = _http_json("GET", "https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/Moedas?$top=5&$format=json", {})
+    elif provider_key == "newsapi":
+        query = str(payload.get("query") or "economy OR finance")
+        result = _http_json("GET", f"https://newsapi.org/v2/everything?q={parse.quote(query)}&pageSize=5&apiKey={parse.quote(credential)}", {})
+    elif provider_key == "gdelt":
+        query = str(payload.get("query") or "economy finance")
+        base_url = os.getenv("GDELT_BASE_URL", "https://api.gdeltproject.org").rstrip("/")
+        result = _http_json("GET", f"{base_url}/api/v2/doc/doc?query={parse.quote(query)}&mode=ArtList&format=json&maxrecords=5", {})
+    elif provider_key == "alpha_vantage_news":
+        tickers = str(payload.get("tickers") or "FOREX:USD")
+        topics = str(payload.get("topics") or "financial_markets")
+        result = _http_json("GET", f"https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={parse.quote(tickers)}&topics={parse.quote(topics)}&apikey={parse.quote(credential)}", {})
+    else:
+        raise ValueError("provider_activation_unsupported")
+
+    return {
+        "providerKey": provider_key,
+        "action": action,
+        "status": "succeeded" if result["ok"] else "failed",
+        "statusCode": result["statusCode"],
+        "response": _redact_provider_body(result["body"]),
+    }
+
+
+def run_provider_activation(tenant_slug: str, provider_key: str, payload: dict | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    payload = payload or {}
+    action = str(payload.get("action") or "connection_test")
+    provider = _provider_activation(provider_key)
+    if action not in provider["supportedActions"]:
+        raise ValueError("provider_action_not_supported")
+    result = _execute_provider_call(provider_key, action, payload.get("payload") if isinstance(payload.get("payload"), dict) else payload)
+    record = {
+        "publicId": str(uuid.uuid4()),
+        "tenantSlug": slug,
+        "providerKey": provider_key,
+        "domain": provider["domain"],
+        "action": action,
+        "credentialKey": provider.get("credentialKey"),
+        "requiredCredentialKeys": provider.get("requiredCredentialKeys") or ([provider.get("credentialKey")] if provider.get("credentialKey") else []),
+        "credentialConfigured": _provider_credentials_configured(provider),
+        "secretValueExposed": False,
+        "status": result["status"],
+        "statusCode": result.get("statusCode"),
+        "result": result,
+        "createdAt": utc_now(),
+    }
+    IN_MEMORY_STATE["provider_activation_runs"].append(record)
+    record_timeline_event(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "entityType": "provider.activation",
+            "entityPublicId": record["publicId"],
+            "eventType": f"provider.activation.{record['status']}",
+            "actor": str(payload.get("actor") or "system:provider-activation"),
+            "summary": f"{provider_key} {action} returned {record['status']}.",
+            "severity": "info" if record["status"] == "succeeded" else "warning",
+        },
+    )
+    register_evidence(
+        slug,
+        {
+            "sourceService": "platform-control",
+            "evidenceType": "provider-activation",
+            "entityType": "provider.activation",
+            "entityPublicId": record["publicId"],
+            "actor": str(payload.get("actor") or "system:provider-activation"),
+            "classification": "internal",
+            "payload": {k: v for k, v in record.items() if k != "result"} | {"status": record["status"], "statusCode": record.get("statusCode")},
+            "retention": "p1y",
+        },
+    )
+    return record
+
+
+def list_provider_activation_runs(tenant_slug: str, provider_key: str | None = None) -> dict:
+    slug = _tenant_slug(tenant_slug)
+    records = [item for item in IN_MEMORY_STATE["provider_activation_runs"] if item["tenantSlug"] == slug]
+    if provider_key:
+        records = [item for item in records if item["providerKey"] == provider_key]
+    return {"tenantSlug": slug, "items": sorted(records, key=lambda item: item["createdAt"], reverse=True)}
