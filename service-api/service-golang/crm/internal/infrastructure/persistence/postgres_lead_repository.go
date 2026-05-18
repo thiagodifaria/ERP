@@ -165,13 +165,13 @@ func (repository *PostgresLeadRepository) Update(lead entity.Lead) entity.Lead {
 }
 
 func parseLeadIdentifiers(lead entity.Lead) (uuid.UUID, *uuid.UUID) {
-	publicID := uuid.MustParse(lead.PublicID)
+	publicID := safeUUID(lead.PublicID)
 
 	if strings.TrimSpace(lead.OwnerUserID) == "" {
 		return publicID, nil
 	}
 
-	ownerUserID := uuid.MustParse(lead.OwnerUserID)
+	ownerUserID := safeUUID(lead.OwnerUserID)
 	return publicID, &ownerUserID
 }
 

@@ -1,4 +1,4 @@
-﻿openapi: 3.1.0
+openapi: 3.1.0
 info:
   title: Business Operating System Analytics API
   version: 0.1.0
@@ -158,7 +158,7 @@ paths:
           description: Go-live control report
   /api/analytics/reports/production-readiness:
     get:
-      summary: Read production readiness for version 1.4.6
+      summary: Read production readiness for version 1.5.0
       responses:
         "200":
           description: Production readiness report

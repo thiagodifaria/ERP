@@ -22,7 +22,7 @@ export class FailWorkflowRun {
 
     const updatedWorkflowRun = await this.repository.updateStatus(publicId, "failed", {
       failedAt: new Date().toISOString()
-    });
+    }, ["running"]);
 
     await appendWorkflowRunStatusEvent(this.eventRepository, updatedWorkflowRun);
     return updatedWorkflowRun;

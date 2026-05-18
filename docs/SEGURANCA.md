@@ -1,4 +1,4 @@
-﻿# segurança
+# segurança
 
 Este documento consolida os controles de segurança verificaveis do projeto.
 
@@ -68,7 +68,7 @@ Falhas devem ser públicas e previsíveis: `401` para credencial ausente/invalid
 | Movimento lateral | service account por workload, Pod Security restricted e egress controlado | Kubernetes manifests e secret template |
 | configuração insegura | defaults locais bloqueados em produção | `.env.production.example`, `hardening-secrets` |
 
-## Gate De segurança 1.4.6
+## Gate De segurança 1.5.0
 
 Para considerar a postura produtiva respeitavel, rode:
 
@@ -92,6 +92,9 @@ O aceite exige que:
 - cURL gerado pelo console redija Bearer Token por padrão;
 - imagens operacionais não dependam de tag `latest`;
 - auth, tenant, actor, correlation id e `traceparent` estejam documentados como contrato transversal.
+- migrations não repitam prefixo numérico dentro do mesmo domínio;
+- tabelas operacionais declarem estratégia de tenant no manifesto relacional;
+- roteadores de borda mantenham validação, auth e chamadas externas em módulos próprios quando a stack permitir.
 
 ## inventário LGPD
 
@@ -127,6 +130,9 @@ O aceite exige que:
 - provider activation BYOK e AI Governance com fallback deterministico local;
 - OCR/document intelligence, fiscal Brazil, registry enrichment, market macro risk e external risk feed;
 - static policy para `MAX(id)+1`, bearer em cURL e tag `latest`;
+- static policy para prefixo duplicado de migration;
+- manifesto relacional de tenancy em `platform_control.tenant_contract_manifest`;
+- separação de bordas transversais em request validation, auth middleware, health routes e clients externos;
 - contrato único de auth/tracing com `traceparent`, tenant, actor e correlation id;
 - risk/compliance scoring como sinal de aceite operacional;
 - SLOs/runbooks em `docs/OPERações.md`;

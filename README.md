@@ -1,10 +1,10 @@
-﻿# Business Operating System
+# Business Operating System
 
 ![Business Operating System](https://img.shields.io/badge/Business%20Operating%20System-Platform-111827?style=for-the-badge&logo=github&logoColor=white)
 
 **A complete operating ecosystem for companies that need sales, customers, billing, finance, fiscal routines, documents, reports, automated processes and external services working as one business platform.**
 
-[![Version](https://img.shields.io/badge/Version-1.4.6-2563EB?style=flat)](docs/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-1.5.0-2563EB?style=flat)](docs/CHANGELOG.md)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-contracts-6BA539?style=flat&logo=openapiinitiative&logoColor=white)](docs/contracts/http)
 [![Services](https://img.shields.io/badge/Services-26%20HTTP%20APIs-111827?style=flat)](docs/SERVICOS.md)
 [![Console](https://img.shields.io/badge/API%20Console-client--api-2563EB?style=flat)](client-web/client-api)

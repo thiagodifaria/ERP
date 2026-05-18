@@ -1,4 +1,4 @@
-﻿# API
+# API
 
 Este documento descreve a superfície HTTP do projeto: convenções, índice de contratos e regras de uso. A fonte executável dos contratos é `docs/contracts/http/*.openapi.yaml`.
 
@@ -67,7 +67,7 @@ serviços HTTP devem expor probes baratas e seguras:
 
 ### Production Readiness
 
-O gate HTTP da versão 1.4.6 fica no `analytics`:
+O gate HTTP da versão 1.5.0 fica no `analytics`:
 
 ```http
 GET /api/analytics/reports/production-readiness?tenant_slug=bootstrap-ops

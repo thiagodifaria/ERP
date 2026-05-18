@@ -40,7 +40,8 @@ export class InMemoryWorkflowRunRepository implements WorkflowRunRepository {
   public async updateStatus(
     publicId: string,
     status: WorkflowRunStatus,
-    timestamps?: Partial<Pick<WorkflowRun, "startedAt" | "completedAt" | "failedAt" | "cancelledAt">>
+    timestamps?: Partial<Pick<WorkflowRun, "startedAt" | "completedAt" | "failedAt" | "cancelledAt">>,
+    expectedStatuses?: WorkflowRunStatus[]
   ): Promise<WorkflowRun> {
     const run = await this.findByPublicId(publicId);
 
@@ -48,7 +49,12 @@ export class InMemoryWorkflowRunRepository implements WorkflowRunRepository {
       throw new Error("workflow_run_not_found");
     }
 
+    if (expectedStatuses !== undefined && !expectedStatuses.includes(run.status)) {
+      throw new Error("workflow_run_transition_invalid");
+    }
+
     run.status = status;
+    run.version += 1;
     run.startedAt = timestamps?.startedAt ?? run.startedAt;
     run.completedAt = timestamps?.completedAt ?? run.completedAt;
     run.failedAt = timestamps?.failedAt ?? run.failedAt;

@@ -435,6 +435,7 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
       execution.initiated_by,
       execution.status,
       execution.current_action_index,
+      execution.version,
       execution.waiting_until,
       execution.retry_count,
       execution.created_at,
@@ -464,6 +465,7 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
       execution.initiated_by,
       execution.status,
       execution.current_action_index,
+      execution.version,
       execution.waiting_until,
       execution.retry_count,
       execution.created_at,
@@ -605,18 +607,25 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
 
           {:ok, :updated} =
             Postgres.transaction(fn connection ->
-              Postgrex.query!(
-                connection,
-                """
-                UPDATE workflow_runtime.executions
-                SET
-                  status = $2,
-                  updated_at = timezone('utc', now())
-                  #{timestamp_update}
-                WHERE public_id = $1::uuid
-                """,
-                [uuid_bytes(public_id), next_status]
-              )
+              update_result =
+                Postgrex.query!(
+                  connection,
+                  """
+                  UPDATE workflow_runtime.executions
+                  SET
+                    status = $2,
+                    version = version + 1,
+                    updated_at = timezone('utc', now())
+                    #{timestamp_update}
+                  WHERE public_id = $1::uuid
+                    AND status = ANY($3)
+                  """,
+                  [uuid_bytes(public_id), next_status, allowed_statuses]
+                )
+
+              if update_result.num_rows != 1 do
+                raise "workflow_runtime_transition_conflict"
+              end
 
               Postgrex.query!(
                 connection,
@@ -727,14 +736,16 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
                   current_action_index = 0,
                   waiting_until = NULL,
                   retry_count = retry_count + 1,
+                  version = version + 1,
                   started_at = NULL,
                   completed_at = NULL,
                   failed_at = NULL,
                   cancelled_at = NULL,
                   updated_at = timezone('utc', now())
                 WHERE public_id = $1::uuid
+                  AND status = ANY($2)
                 """,
-                [uuid_bytes(public_id)]
+                [uuid_bytes(public_id), allowed_statuses]
               )
 
               Postgrex.query!(
@@ -794,8 +805,10 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
                           UPDATE workflow_runtime.executions
                           SET
                             waiting_until = $2::timestamptz,
+                            version = version + 1,
                             updated_at = timezone('utc', now())
                           WHERE public_id = $1::uuid
+                            AND status = 'running'
                           """,
                           [uuid_bytes(public_id), to_datetime_param(updated_execution["waitingUntil"])]
                         )
@@ -845,9 +858,11 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
                             current_action_index = $2,
                             waiting_until = $3::timestamptz,
                             status = $4::varchar,
+                            version = version + 1,
                             completed_at = CASE WHEN $4::varchar = 'completed' THEN timezone('utc', now()) ELSE completed_at END,
                             updated_at = timezone('utc', now())
                           WHERE public_id = $1::uuid
+                            AND status = 'running'
                           """,
                           [
                             uuid_bytes(public_id),
@@ -1080,13 +1095,14 @@ defmodule WorkflowRuntime.Application.ExecutionStore do
       "initiatedBy" => Enum.at(row, 6),
       "status" => Enum.at(row, 7),
       "currentActionIndex" => Enum.at(row, 8),
-      "waitingUntil" => encode_datetime(Enum.at(row, 9)),
-      "retryCount" => Enum.at(row, 10),
-      "createdAt" => encode_datetime(Enum.at(row, 11)),
-      "startedAt" => encode_datetime(Enum.at(row, 12)),
-      "completedAt" => encode_datetime(Enum.at(row, 13)),
-      "failedAt" => encode_datetime(Enum.at(row, 14)),
-      "cancelledAt" => encode_datetime(Enum.at(row, 15))
+      "version" => Enum.at(row, 9),
+      "waitingUntil" => encode_datetime(Enum.at(row, 10)),
+      "retryCount" => Enum.at(row, 11),
+      "createdAt" => encode_datetime(Enum.at(row, 12)),
+      "startedAt" => encode_datetime(Enum.at(row, 13)),
+      "completedAt" => encode_datetime(Enum.at(row, 14)),
+      "failedAt" => encode_datetime(Enum.at(row, 15)),
+      "cancelledAt" => encode_datetime(Enum.at(row, 16))
     }
   end
 

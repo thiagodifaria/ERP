@@ -1,4 +1,4 @@
-﻿# ARQUITETURA
+# ARQUITETURA
 
 Este documento descreve a arquitetura do projeto. Ele não lista endpoints, não substitui runbook operacional e não detalha padrões de código. Para esses assuntos, use `docs/API.md`, `docs/OPERações.md` e `docs/PADROES.md`.
 
@@ -67,11 +67,11 @@ client / client-api
 
 O gateway local em `infra/gateway/nginx.conf` concentra roteamento `/api/<serviço>/`, health público, cache de leituras, rate limit, timeouts, correlação de request e failover passivo por dependência. Ele não substitui um API management corporativo completo, mas torna o stack local mais próximo de um ponto único de entrada verificável.
 
-## Versão 1.4.6
+## Versão 1.5.0
 
-A arquitetura da versão 1.4.6 prova que o projeto consegue consultar, validar e classificar sinais externos em modo BYOK/public API sem embutir chaves, sem simular provider produtivo e sem esconder quando uma capacidade está indisponível por falta de credencial. A mesma versão também acrescenta hardening de raiz/env, CI, IDs transacionais, console técnico, gateway, Kubernetes e conformance de auth/observabilidade.
+A arquitetura da versão 1.5.0 prova que o projeto consegue consultar, validar e classificar sinais externos em modo BYOK/public API sem embutir chaves, sem simular provider produtivo e sem esconder quando uma capacidade está indisponível por falta de credencial. A mesma versão também acrescenta hardening de raiz/env, CI, IDs transacionais, console técnico, gateway, Kubernetes e conformance de auth/observabilidade.
 
-O pacote arquitetural de 1.4.6 inclui:
+O pacote arquitetural de 1.5.0 inclui:
 
 - `infra/docker-compose.corporate-like.yml` para validar topologia com somente gateway/edge públicados;
 - `infra/kubernetes/base` com namespace, config, secret template, service account, migration job, deployments, services, ingress TLS, NetworkPolicy e HPA;
@@ -92,6 +92,9 @@ O pacote arquitetural de 1.4.6 inclui:
 - `GET /api/analytics/fiscal-brazil/readiness` para Focus NFe, eNotas e certificado digital;
 - `GET /api/analytics/registry-enrichment/brazil`, `market-macro-risk` e `external-risk-feed` como sinais operacionais governados;
 - `./scripts/test.sh production-readiness` como validação estatica da versão;
+- `platform_control.tenant_contract_manifest` como manifesto relacional de estratégia de tenancy por tabela operacional;
+- guardrail de migrations para impedir prefixos duplicados por domínio;
+- extração de bordas transversais em `BillingHealthRoutes`, `FinanceHealthRoutes`, request schemas TypeScript, security middleware Rust e HTTP externo Python;
 - documentação operacional do aceite em `docs/OPERações.md`.
 
 O princípio é deny-by-default: serviços internos não são pontos públicos de entrada, secrets não vivem no repositório, mutações sensíveis exigem identidade/correlação, e providers sem credencial real permanecem indisponíveis ou em fallback local explicitamente declarado.

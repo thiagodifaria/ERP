@@ -11,16 +11,12 @@ import { UpdateCampaignStatusRequest } from "./dto/update-campaign-status-reques
 import { UpdateTemplateStatusRequest } from "./dto/update-template-status-request.js";
 import { UpdateTouchpointDeliveryStatusRequest } from "./dto/update-touchpoint-delivery-status-request.js";
 import { UpdateTouchpointStatusRequest } from "./dto/update-touchpoint-status-request.js";
+import { json, readJsonSchema } from "./request.js";
 import { runtime, services } from "../config/container.js";
 import { CampaignChannel, CampaignStatus } from "../domain/campaign.js";
 import { DeliveryStatus } from "../domain/delivery.js";
 import { TemplateProvider, TemplateStatus } from "../domain/template.js";
 import { TouchpointStatus } from "../domain/touchpoint.js";
-
-function json(response: ServerResponse, statusCode: number, body: unknown): void {
-  response.writeHead(statusCode, { "content-type": "application/json" });
-  response.end(JSON.stringify(body));
-}
 
 function live(): HealthResponse {
   return {
@@ -60,46 +56,6 @@ function providerSlugToInternal(value: string): string {
 async function findProviderCapability(provider: string) {
   const capabilities = await services.listProviderCapabilities.execute();
   return capabilities.find((capability) => capability.provider === provider) ?? null;
-}
-
-async function readJson<T>(request: IncomingMessage): Promise<T> {
-  const chunks: Buffer[] = [];
-  let totalBytes = 0;
-
-  for await (const chunk of request) {
-    const buffer = Buffer.from(chunk);
-    totalBytes += buffer.length;
-    if (totalBytes > 1_048_576) {
-      throw new Error("payload_too_large");
-    }
-    chunks.push(buffer);
-  }
-
-  const rawBody = Buffer.concat(chunks).toString("utf8");
-
-  if (rawBody.length === 0) {
-    throw new Error("invalid_json");
-  }
-
-  const parsed = JSON.parse(rawBody) as unknown;
-  assertSafeJson(parsed);
-  return parsed as T;
-}
-
-function assertSafeJson(value: unknown): void {
-  if (Array.isArray(value)) {
-    value.forEach(assertSafeJson);
-    return;
-  }
-
-  if (value && typeof value === "object") {
-    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-      if (key === "__proto__" || key === "prototype" || key === "constructor") {
-        throw new Error("invalid_json_key");
-      }
-      assertSafeJson(child);
-    }
-  }
 }
 
 function handleDomainError(response: ServerResponse, error: unknown): void {
@@ -242,7 +198,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
 
   if (request.method === "POST" && request.url === "/api/engagement/campaigns") {
     try {
-      const payload = await readJson<CreateCampaignRequest>(request);
+      const payload = await readJsonSchema<CreateCampaignRequest>(request);
       json(response, 201, await services.createCampaign.execute(payload));
       return;
     } catch (error) {
@@ -253,7 +209,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
 
   if (request.method === "POST" && request.url === "/api/engagement/templates") {
     try {
-      const payload = await readJson<CreateTemplateRequest>(request);
+      const payload = await readJsonSchema<CreateTemplateRequest>(request);
       json(response, 201, await services.createTemplate.execute(payload));
       return;
     } catch (error) {
@@ -340,7 +296,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
       request.url?.startsWith("/api/engagement/providers/meta-ads/leads"))
   ) {
     try {
-      const payload = await readJson<IngestProviderLeadRequest>(request);
+      const payload = await readJsonSchema<IngestProviderLeadRequest>(request);
       const normalizedProvider =
         request.url === "/api/engagement/providers/inbound-leads" ? payload.provider : "meta_ads";
       json(
@@ -365,7 +321,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
 
   if (request.method === "POST" && request.url === "/api/engagement/workflow-dispatches") {
     try {
-      const payload = await readJson<DispatchWorkflowTouchpointRequest>(request);
+      const payload = await readJsonSchema<DispatchWorkflowTouchpointRequest>(request);
       json(response, 201, await services.dispatchWorkflowTouchpoint.execute(payload));
       return;
     } catch (error) {
@@ -388,7 +344,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
       request.url?.startsWith("/api/engagement/providers/meta-ads/events"))
   ) {
     try {
-      const payload = await readJson<RegisterProviderEventRequest>(request);
+      const payload = await readJsonSchema<RegisterProviderEventRequest>(request);
       const segments = pathSegments(request);
       const provider =
         request.url === "/api/engagement/providers/events"
@@ -496,7 +452,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
 
   if (request.method === "POST" && request.url === "/api/engagement/touchpoints") {
     try {
-      const payload = await readJson<CreateTouchpointRequest>(request);
+      const payload = await readJsonSchema<CreateTouchpointRequest>(request);
       json(response, 201, await services.createTouchpoint.execute(payload));
       return;
     } catch (error) {
@@ -539,7 +495,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     segments[4] === "status"
   ) {
     try {
-      const payload = await readJson<UpdateTemplateStatusRequest>(request);
+      const payload = await readJsonSchema<UpdateTemplateStatusRequest>(request);
       const template = await services.updateTemplateStatus.execute(segments[3], payload.status);
 
       if (template === null) {
@@ -600,7 +556,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     segments[4] === "deliveries"
   ) {
     try {
-      const payload = await readJson<CreateTouchpointDeliveryRequest>(request);
+      const payload = await readJsonSchema<CreateTouchpointDeliveryRequest>(request);
       json(response, 201, await services.createTouchpointDelivery.execute(segments[3], payload));
       return;
     } catch (error) {
@@ -627,7 +583,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     segments[4] === "status"
   ) {
     try {
-      const payload = await readJson<UpdateCampaignStatusRequest>(request);
+      const payload = await readJsonSchema<UpdateCampaignStatusRequest>(request);
       const campaign = await services.updateCampaignStatus.execute(segments[3], payload.status);
 
       if (campaign === null) {
@@ -653,7 +609,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     segments[6] === "status"
   ) {
     try {
-      const payload = await readJson<UpdateTouchpointDeliveryStatusRequest>(request);
+      const payload = await readJsonSchema<UpdateTouchpointDeliveryStatusRequest>(request);
       const delivery = await services.updateTouchpointDeliveryStatus.execute(segments[5], payload);
 
       if (delivery === null) {
@@ -701,7 +657,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     segments[4] === "status"
   ) {
     try {
-      const payload = await readJson<UpdateTouchpointStatusRequest>(request);
+      const payload = await readJsonSchema<UpdateTouchpointStatusRequest>(request);
       const touchpoint = await services.updateTouchpointStatus.execute(
         segments[3],
         payload.status,

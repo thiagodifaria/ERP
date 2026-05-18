@@ -5,6 +5,7 @@ package bootstrap
 import (
 	"database/sql"
 	"net/http"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/thiagodifaria/erp/service-api/service-golang/sales/internal/api"
@@ -53,6 +54,7 @@ func buildRepositories(cfg config.Config) (repository.OpportunityRepository, rep
 	if err != nil {
 		return nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, err
 	}
+	tuneDatabasePool(database)
 
 	if err := database.Ping(); err != nil {
 		_ = database.Close()
@@ -115,4 +117,10 @@ func buildRepositories(cfg config.Config) (repository.OpportunityRepository, rep
 	}
 
 	return opportunityRepository, proposalRepository, saleRepository, invoiceRepository, installmentRepository, commissionRepository, pendingItemRepository, renegotiationRepository, eventRepository, outboxRepository, database, nil
+}
+
+func tuneDatabasePool(database *sql.DB) {
+	database.SetMaxOpenConns(20)
+	database.SetMaxIdleConns(10)
+	database.SetConnMaxLifetime(30 * time.Minute)
 }

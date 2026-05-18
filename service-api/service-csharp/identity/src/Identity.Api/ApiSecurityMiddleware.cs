@@ -8,6 +8,7 @@ namespace Identity.Api;
 public sealed class ApiSecurityMiddleware
 {
   private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+  private static readonly HttpClient OpenFgaHttpClient = new() { Timeout = TimeSpan.FromSeconds(2) };
   private readonly RequestDelegate _next;
   private readonly string _serviceName;
 
@@ -203,8 +204,7 @@ public sealed class ApiSecurityMiddleware
       payload["authorization_model_id"] = modelId;
     }
 
-    using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
-    using var response = await client.PostAsJsonAsync($"{baseUrl}/stores/{storeId}/check", payload, JsonOptions);
+    using var response = await OpenFgaHttpClient.PostAsJsonAsync($"{baseUrl}/stores/{storeId}/check", payload, JsonOptions);
     if (!response.IsSuccessStatusCode)
     {
       return OpenFgaResult.Deny(StatusCodes.Status403Forbidden, "openfga_denied", "OpenFGA denied the request.");

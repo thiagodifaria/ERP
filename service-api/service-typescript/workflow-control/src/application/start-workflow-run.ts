@@ -22,7 +22,7 @@ export class StartWorkflowRun {
 
     const updatedWorkflowRun = await this.repository.updateStatus(publicId, "running", {
       startedAt: new Date().toISOString()
-    });
+    }, ["pending"]);
 
     await appendWorkflowRunStatusEvent(this.eventRepository, updatedWorkflowRun);
     return updatedWorkflowRun;

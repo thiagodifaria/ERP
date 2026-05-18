@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS workflow_control.workflow_runs (
   id BIGSERIAL PRIMARY KEY,
   tenant_id BIGINT NOT NULL REFERENCES identity.tenants(id),
   public_id UUID NOT NULL,
+  version INTEGER NOT NULL DEFAULT 1,
   workflow_definition_id BIGINT NOT NULL REFERENCES workflow_control.workflow_definitions(id),
   workflow_definition_version_id BIGINT NOT NULL REFERENCES workflow_control.workflow_definition_versions(id),
   status VARCHAR(40) NOT NULL DEFAULT 'pending',
@@ -33,3 +34,6 @@ CREATE INDEX IF NOT EXISTS idx_workflow_control_workflow_runs_version_id
 
 CREATE INDEX IF NOT EXISTS idx_workflow_control_workflow_runs_status
   ON workflow_control.workflow_runs (status);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_control_workflow_runs_version
+  ON workflow_control.workflow_runs (version);

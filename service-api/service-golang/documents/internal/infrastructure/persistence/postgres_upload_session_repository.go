@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/thiagodifaria/erp/service-api/service-golang/documents/internal/domain/entity"
 )
 
@@ -51,9 +50,9 @@ func (repository *PostgresUploadSessionRepository) Save(session entity.UploadSes
       RETURNING public_id::text
     `,
 		tenantID,
-		uuid.MustParse(session.PublicID),
+		safeUUID(session.PublicID),
 		session.OwnerType,
-		uuid.MustParse(session.OwnerPublicID),
+		safeUUID(session.OwnerPublicID),
 		session.FileName,
 		session.ContentType,
 		session.StorageKey,

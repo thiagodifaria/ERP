@@ -14,7 +14,7 @@ class Settings:
     postgres_port: int = int(os.getenv("ANALYTICS_POSTGRES_PORT", "5432"))
     postgres_db: str = os.getenv("ANALYTICS_POSTGRES_DB", "erp")
     postgres_user: str = os.getenv("ANALYTICS_POSTGRES_USER", "erp")
-    postgres_password: str = os.getenv("ANALYTICS_POSTGRES_PASSWORD", "erp")
+    postgres_password: str = os.getenv("ANALYTICS_POSTGRES_PASSWORD", "change-me-unsafe-local-only-postgres")
     postgres_ssl_mode: str = os.getenv("ANALYTICS_POSTGRES_SSL_MODE", "disable")
     engagement_resend_api_key: str = os.getenv("ENGAGEMENT_RESEND_API_KEY", "")
     engagement_whatsapp_access_token: str = os.getenv("ENGAGEMENT_WHATSAPP_ACCESS_TOKEN", "")
@@ -55,4 +55,13 @@ class Settings:
     gdelt_base_url: str = os.getenv("GDELT_BASE_URL", "https://api.gdeltproject.org")
 
 
-settings = Settings()
+def _validate_settings(value: Settings) -> Settings:
+    environment = os.getenv("ERP_ENV", "local").strip().lower()
+    if environment not in {"", "local", "dev", "development", "test", "testing"}:
+        if value.repository_driver != "postgres":
+            raise RuntimeError(f"{value.service_name}_requires_postgres_outside_local")
+        if value.postgres_password in {"", "erp", "admin"} or value.postgres_password.startswith("change-me-unsafe-local-only"):
+            raise RuntimeError(f"{value.service_name}_requires_non_local_postgres_password")
+    return value
+
+settings = _validate_settings(Settings())

@@ -331,7 +331,39 @@ test("workflow run start should transition a pending execution to running", asyn
   assert.equal(startResponse.status, 200);
   assert.equal(payload.publicId, created.publicId);
   assert.equal(payload.status, "running");
+  assert.equal(payload.version, 2);
   assert.match(payload.startedAt, /.+/);
+});
+
+test("workflow run start should reject stale concurrent transition", async () => {
+  const createResponse = await request("/api/workflow-control/runs", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      workflowDefinitionKey: "lead-follow-up",
+      subjectType: "crm.lead",
+      subjectPublicId: "00000000-0000-0000-0000-000000008887",
+      initiatedBy: "ops-concurrency"
+    })
+  });
+  const created = await createResponse.json();
+
+  assert.equal(createResponse.status, 201);
+
+  const firstStart = await request(`/api/workflow-control/runs/${created.publicId}/start`, {
+    method: "POST"
+  });
+  assert.equal(firstStart.status, 200);
+
+  const secondStart = await request(`/api/workflow-control/runs/${created.publicId}/start`, {
+    method: "POST"
+  });
+  const payload = await secondStart.json();
+
+  assert.equal(secondStart.status, 409);
+  assert.equal(payload.code, "workflow_run_transition_invalid");
 });
 
 test("workflow run transitions should append status events to the execution ledger", async () => {

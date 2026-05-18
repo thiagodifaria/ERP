@@ -96,12 +96,12 @@ func (repository *PostgresOpportunityRepository) FindByPublicID(publicID string)
 }
 
 func (repository *PostgresOpportunityRepository) Save(opportunity entity.Opportunity) entity.Opportunity {
-	publicID := uuid.MustParse(opportunity.PublicID)
-	leadPublicID := uuid.MustParse(opportunity.LeadPublicID)
-	customerPublicID := uuid.MustParse(opportunity.CustomerPublicID)
+	publicID := safeUUID(opportunity.PublicID)
+	leadPublicID := safeUUID(opportunity.LeadPublicID)
+	customerPublicID := safeUUID(opportunity.CustomerPublicID)
 	var ownerUserID *uuid.UUID
 	if strings.TrimSpace(opportunity.OwnerUserID) != "" {
-		parsed := uuid.MustParse(opportunity.OwnerUserID)
+		parsed := safeUUID(opportunity.OwnerUserID)
 		ownerUserID = &parsed
 	}
 
@@ -131,10 +131,10 @@ func (repository *PostgresOpportunityRepository) Save(opportunity entity.Opportu
 }
 
 func (repository *PostgresOpportunityRepository) Update(opportunity entity.Opportunity) entity.Opportunity {
-	publicID := uuid.MustParse(opportunity.PublicID)
+	publicID := safeUUID(opportunity.PublicID)
 	var ownerUserID *uuid.UUID
 	if strings.TrimSpace(opportunity.OwnerUserID) != "" {
-		parsed := uuid.MustParse(opportunity.OwnerUserID)
+		parsed := safeUUID(opportunity.OwnerUserID)
 		ownerUserID = &parsed
 	}
 
@@ -154,7 +154,7 @@ func (repository *PostgresOpportunityRepository) Update(opportunity entity.Oppor
     `,
 		repository.tenantID,
 		publicID,
-		uuid.MustParse(opportunity.CustomerPublicID),
+		safeUUID(opportunity.CustomerPublicID),
 		opportunity.Title,
 		opportunity.Stage,
 		opportunity.SaleType,
@@ -245,7 +245,7 @@ func (repository *PostgresProposalRepository) FindByPublicID(publicID string) *e
 }
 
 func (repository *PostgresProposalRepository) Save(proposal entity.Proposal) entity.Proposal {
-	opportunityPublicID := uuid.MustParse(proposal.OpportunityPublicID)
+	opportunityPublicID := safeUUID(proposal.OpportunityPublicID)
 
 	row := repository.database.QueryRow(
 		`
@@ -264,7 +264,7 @@ func (repository *PostgresProposalRepository) Save(proposal entity.Proposal) ent
     `,
 		repository.tenantID,
 		opportunityPublicID,
-		uuid.MustParse(proposal.PublicID),
+		safeUUID(proposal.PublicID),
 		proposal.Title,
 		proposal.Status,
 		proposal.AmountCents,
@@ -279,7 +279,7 @@ func (repository *PostgresProposalRepository) Save(proposal entity.Proposal) ent
 }
 
 func (repository *PostgresProposalRepository) Update(proposal entity.Proposal) entity.Proposal {
-	publicID := uuid.MustParse(proposal.PublicID)
+	publicID := safeUUID(proposal.PublicID)
 
 	row := repository.database.QueryRow(
 		`
@@ -422,8 +422,8 @@ func (repository *PostgresSaleRepository) FindByProposalPublicID(proposalPublicI
 }
 
 func (repository *PostgresSaleRepository) Save(sale entity.Sale) entity.Sale {
-	opportunityPublicID := uuid.MustParse(sale.OpportunityPublicID)
-	proposalPublicID := uuid.MustParse(sale.ProposalPublicID)
+	opportunityPublicID := safeUUID(sale.OpportunityPublicID)
+	proposalPublicID := safeUUID(sale.ProposalPublicID)
 
 	row := repository.database.QueryRow(
 		`
@@ -449,8 +449,8 @@ func (repository *PostgresSaleRepository) Save(sale entity.Sale) entity.Sale {
 		repository.tenantID,
 		opportunityPublicID,
 		proposalPublicID,
-		uuid.MustParse(sale.PublicID),
-		uuid.MustParse(sale.CustomerPublicID),
+		safeUUID(sale.PublicID),
+		safeUUID(sale.CustomerPublicID),
 		sale.OwnerUserID,
 		sale.SaleType,
 		sale.Status,
@@ -466,7 +466,7 @@ func (repository *PostgresSaleRepository) Save(sale entity.Sale) entity.Sale {
 }
 
 func (repository *PostgresSaleRepository) Update(sale entity.Sale) entity.Sale {
-	publicID := uuid.MustParse(sale.PublicID)
+	publicID := safeUUID(sale.PublicID)
 
 	row := repository.database.QueryRow(
 		`
@@ -487,7 +487,7 @@ func (repository *PostgresSaleRepository) Update(sale entity.Sale) entity.Sale {
     `,
 		repository.tenantID,
 		publicID,
-		uuid.MustParse(sale.CustomerPublicID),
+		safeUUID(sale.CustomerPublicID),
 		sale.OwnerUserID,
 		sale.SaleType,
 		sale.Status,
@@ -585,8 +585,8 @@ func (repository *PostgresInvoiceRepository) FindBySalePublicID(salePublicID str
 }
 
 func (repository *PostgresInvoiceRepository) Save(invoice entity.Invoice) entity.Invoice {
-	salePublicID := uuid.MustParse(invoice.SalePublicID)
-	publicID := uuid.MustParse(invoice.PublicID)
+	salePublicID := safeUUID(invoice.SalePublicID)
+	publicID := safeUUID(invoice.PublicID)
 	var paidAt *time.Time
 	if strings.TrimSpace(invoice.PaidAt) != "" {
 		parsedPaidAt := mustParseRFC3339(invoice.PaidAt)
@@ -629,7 +629,7 @@ func (repository *PostgresInvoiceRepository) Save(invoice entity.Invoice) entity
 }
 
 func (repository *PostgresInvoiceRepository) Update(invoice entity.Invoice) entity.Invoice {
-	publicID := uuid.MustParse(invoice.PublicID)
+	publicID := safeUUID(invoice.PublicID)
 	var paidAt *time.Time
 	if strings.TrimSpace(invoice.PaidAt) != "" {
 		parsedPaidAt := mustParseRFC3339(invoice.PaidAt)

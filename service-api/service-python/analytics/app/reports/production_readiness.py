@@ -1,4 +1,4 @@
-"""Gate consolidado de aceite produtivo para a versao 1.4.x."""
+"""Gate consolidado de aceite produtivo para a versao 1.5.x."""
 
 from datetime import datetime, timezone
 
@@ -58,6 +58,21 @@ def build_production_readiness(tenant_slug: str | None = None) -> dict:
             "status": "ready",
             "evidence": ["scripts/test.sh security", ".github/workflows/quality.yml", ".github/workflows/containers.yml"],
             "requirement": "CI bloqueia MAX(id)+1, tag latest operacional, OpenFGA latest e divergencia do catalogo gerado.",
+        },
+        "migrationOrder": {
+            "status": "ready",
+            "evidence": ["scripts/test.sh security", "service-api/service-postgresql/*/migrations"],
+            "requirement": "Migrations por dominio nao podem repetir prefixo numerico e devem preservar ordem deterministica.",
+        },
+        "tenantContractManifest": {
+            "status": "ready",
+            "evidence": ["platform_control.tenant_contract_manifest", "service-api/service-postgresql/platform-control/migrations/000012_tenant_contract_manifest.sql"],
+            "requirement": "Tabelas operacionais declaram estrategia de tenant ou justificativa de referencia global/sistema.",
+        },
+        "polyglotBoundarySplit": {
+            "status": "ready",
+            "evidence": ["BillingHealthRoutes.cs", "FinanceHealthRoutes.cs", "api/request.ts", "api/schemas.ts", "api/security.rs", "app/infrastructure/external_http.py"],
+            "requirement": "Bordas transversais de health, request validation, auth e HTTP externo ficam fora dos roteadores monoliticos.",
         },
         "transactionalIdGeneration": {
             "status": "ready",
@@ -296,7 +311,7 @@ def build_production_readiness(tenant_slug: str | None = None) -> dict:
         "tenantSlug": slug,
         "generatedAt": datetime.now(timezone.utc).isoformat(),
         "release": {
-            "version": "1.4.6",
+            "version": "1.5.0",
             "releaseReady": release_ready,
             "status": "ready" if release_ready else "attention",
             "blockingGates": blocking_gates,
@@ -374,7 +389,7 @@ def build_production_readiness(tenant_slug: str | None = None) -> dict:
             "transactional-id-generation-v1.4.3",
             "api-console-security-v1.4.4",
             "runtime-infra-hardening-v1.4.5",
-            "auth-observability-conformance-v1.4.6",
+            "auth-observability-conformance-v1.5.0",
             "ops-console-v1.4",
         ],
     }

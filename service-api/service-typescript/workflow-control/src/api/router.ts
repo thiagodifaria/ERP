@@ -6,12 +6,15 @@ import { CreateWorkflowDefinitionRequest } from "./dto/create-workflow-definitio
 import { CreateWorkflowRunRequest } from "./dto/create-workflow-run-request.js";
 import { UpdateWorkflowDefinitionRequest } from "./dto/update-workflow-definition-request.js";
 import { UpdateWorkflowDefinitionStatusRequest } from "./dto/update-workflow-definition-status-request.js";
+import { json, readJsonSchema } from "./request.js";
+import {
+  createWorkflowDefinitionSchema,
+  createWorkflowRunEventSchema,
+  createWorkflowRunSchema,
+  updateWorkflowDefinitionSchema,
+  updateWorkflowDefinitionStatusSchema
+} from "./schemas.js";
 import { runtime, services } from "../config/container.js";
-
-function json(response: ServerResponse, statusCode: number, body: unknown): void {
-  response.writeHead(statusCode, { "content-type": "application/json" });
-  response.end(JSON.stringify(body));
-}
 
 function live(): HealthResponse {
   return {
@@ -42,46 +45,6 @@ function pathSegments(request: IncomingMessage): string[] {
 
 function searchParams(request: IncomingMessage): URLSearchParams {
   return new URL(request.url ?? "/", "http://workflow-control.local").searchParams;
-}
-
-async function readJson<T>(request: IncomingMessage): Promise<T> {
-  const chunks: Buffer[] = [];
-  let totalBytes = 0;
-
-  for await (const chunk of request) {
-    const buffer = Buffer.from(chunk);
-    totalBytes += buffer.length;
-    if (totalBytes > 1_048_576) {
-      throw new Error("payload_too_large");
-    }
-    chunks.push(buffer);
-  }
-
-  const rawBody = Buffer.concat(chunks).toString("utf8");
-
-  if (rawBody.length === 0) {
-    throw new Error("invalid_json");
-  }
-
-  const parsed = JSON.parse(rawBody) as unknown;
-  assertSafeJson(parsed);
-  return parsed as T;
-}
-
-function assertSafeJson(value: unknown): void {
-  if (Array.isArray(value)) {
-    value.forEach(assertSafeJson);
-    return;
-  }
-
-  if (value && typeof value === "object") {
-    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
-      if (key === "__proto__" || key === "prototype" || key === "constructor") {
-        throw new Error("invalid_json_key");
-      }
-      assertSafeJson(child);
-    }
-  }
 }
 
 export async function route(request: IncomingMessage, response: ServerResponse): Promise<void> {
@@ -298,7 +261,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     segments[4] === "events"
   ) {
     try {
-      const payload = await readJson<CreateWorkflowRunEventRequest>(request);
+      const payload = await readJsonSchema<CreateWorkflowRunEventRequest>(request, createWorkflowRunEventSchema);
       const workflowRunEvent = await services.createWorkflowRunNote.execute({
         workflowRunPublicId: segments[3],
         body: payload.body,
@@ -736,7 +699,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     segments[2] === "definitions"
   ) {
     try {
-      const payload = await readJson<UpdateWorkflowDefinitionRequest>(request);
+      const payload = await readJsonSchema<UpdateWorkflowDefinitionRequest>(request, updateWorkflowDefinitionSchema);
       const updated = await services.updateWorkflowDefinition.execute(segments[3], payload);
 
       json(response, 200, updated);
@@ -804,7 +767,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
     segments[4] === "status"
   ) {
     try {
-      const payload = await readJson<UpdateWorkflowDefinitionStatusRequest>(request);
+      const payload = await readJsonSchema<UpdateWorkflowDefinitionStatusRequest>(request, updateWorkflowDefinitionStatusSchema);
       const updated = await services.updateWorkflowDefinitionStatus.execute(segments[3], payload.status);
 
       json(response, 200, updated);
@@ -854,7 +817,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
 
   if (request.method === "POST" && request.url === "/api/workflow-control/definitions") {
     try {
-      const payload = await readJson<CreateWorkflowDefinitionRequest>(request);
+      const payload = await readJsonSchema<CreateWorkflowDefinitionRequest>(request, createWorkflowDefinitionSchema);
       const created = await services.createWorkflowDefinition.execute(payload);
 
       json(response, 201, created);
@@ -915,7 +878,7 @@ export async function route(request: IncomingMessage, response: ServerResponse):
 
   if (request.method === "POST" && request.url === "/api/workflow-control/runs") {
     try {
-      const payload = await readJson<CreateWorkflowRunRequest>(request);
+      const payload = await readJsonSchema<CreateWorkflowRunRequest>(request, createWorkflowRunSchema);
       const created = await services.createWorkflowRun.execute(payload);
 
       json(response, 201, created);

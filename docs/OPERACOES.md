@@ -1,4 +1,4 @@
-﻿# operações
+# operações
 
 Este documento descreve como executar, validar e diagnosticar O projeto localmente. Ele não explica arquitetura de domínio nem lista endpoints.
 
@@ -84,7 +84,7 @@ npm run dev
 
 Use o console para navegar documentação, explorar contratos e testar endpoints contra o backend local.
 
-## Capacidades Operacionais 1.4.6
+## Capacidades Operacionais 1.5.0
 
 Busca operacional e e-discovery:
 
@@ -117,6 +117,15 @@ curl "http://localhost:${PLATFORM_CONTROL_HTTP_PORT}/api/platform-control/tenant
 
 Esses fluxos entram no gate `production-readiness` como capacidades produtivas: busca auditada com redação, catálogo semântico com qualidade/lineage, IA limitada a ferramentas aprovadas e incidente com timeline, action items, resolução e postmortem.
 
+Hardening poliglota da versão:
+
+```bash
+./scripts/test.sh security
+./scripts/test.sh production-readiness
+```
+
+A suite bloqueia regressões de geração insegura de IDs, panic por UUID em persistência Go, alocação insegura de clients HTTP em middleware, prefixo duplicado de migration e ausência do manifesto de contrato de tenant. Se esse gate falhar, corrija a causa no domínio dono antes de tentar subir o runtime.
+
 governança operacional autonoma:
 
 ```bash
@@ -139,7 +148,7 @@ curl "http://localhost:${ANALYTICS_HTTP_PORT}/api/analytics/master-data/quality-
 curl "http://localhost:${ANALYTICS_HTTP_PORT}/api/analytics/lakehouse/datasets"
 ```
 
-Na `v1.4.6`, policy decision center, command approvals, runbook automation, audit evidence vault, event mesh, tenant runtime, contract evolution, reconciliação, fechamento financeiro, lakehouse, ativação BYOK, inteligência externa e hardening transversal entram no aceite operacional. Comandos, eventos, chamadas externas e sinais de risco devem registrar decisão, timeline, hash ou evidência antes de serem tratados como executados.
+Na `v1.5.0`, policy decision center, command approvals, runbook automation, audit evidence vault, event mesh, tenant runtime, contract evolution, reconciliação, fechamento financeiro, lakehouse, ativação BYOK, inteligência externa e hardening transversal entram no aceite operacional. Comandos, eventos, chamadas externas e sinais de risco devem registrar decisão, timeline, hash ou evidência antes de serem tratados como executados.
 
 ## Gateway Local
 
@@ -230,15 +239,15 @@ tenant-security
 | `hardening` | readiness, contratos, providers e postura operacional |
 | `security` | guardrails de auth, secrets, eventos, documents, dados pessoais e padrões |
 | `supply-chain` | secret scan de alta confiança, inventário SBOM e pinning de imagens |
-| `production-readiness` | aceite 1.4.6, manifests Kubernetes, docs oficiais e postura de ownership |
+| `production-readiness` | aceite 1.5.0, manifests Kubernetes, docs oficiais e postura de ownership |
 
 Para o hardening enterprise, o conjunto minimo de evidência operacional e formado por `contract`, `smoke`, `performance`, `backup-restore` e `hardening`. O relatório `GET /api/analytics/reports/hardening-review` consolida esse fechamento como `operationalRunbooks`, permitindo validar rápidamente se segurança operacional, observabilidade, DLQ/retry, backup/restore, SLOs, multi-tenant, failover, performance e permissões possuem cobertura operacional rastreável.
 
 Para o hardening de segurança 1.0.0, `security` valida também headers defensivos, limite de body, correlação na borda, Pod Security restricted, NetworkPolicy deny-by-default, request signature, redaction estrita, scan obrigatório de documentos e assinatura/replay de webhooks.
 
-## Production Readiness 1.4.6
+## Production Readiness 1.5.0
 
-A versão 1.4.6 preserva governança operacional, event mesh, reconciliação, fechamento financeiro, dados mestres, lakehouse, tenant runtime, ativação BYOK, OCR/document intelligence, fiscal Brasil, enriquecimento cadastral brasileiro, mercado/macro e feeds externos de risco, e acrescenta a linha de hardening `1.4.x`: raiz/env, static policy, geração transacional de IDs, console seguro, infra runtime e conformance de auth/observabilidade.
+A versão 1.5.0 preserva governança operacional, event mesh, reconciliação, fechamento financeiro, dados mestres, lakehouse, tenant runtime, ativação BYOK, OCR/document intelligence, fiscal Brasil, enriquecimento cadastral brasileiro, mercado/macro e feeds externos de risco, e acrescenta a linha de hardening `1.4.x`: raiz/env, static policy, geração transacional de IDs, console seguro, infra runtime e conformance de auth/observabilidade.
 
 O gate oficial é exposto em:
 
@@ -246,7 +255,7 @@ O gate oficial é exposto em:
 GET /api/analytics/reports/production-readiness?tenant_slug=bootstrap-ops
 ```
 
-O relatório retorna `release.version=1.4.6`, `release.releaseReady`, gates de tráfego, auth/tenant, secrets, root hardening, static policy, geração transacional de IDs, contratos, observabilidade, backup/DR, deploy, providers, provider activation, LLM BYOK, document intelligence, fiscal Brazil, registry enrichment, market macro risk, external risk feed, go-live, policies, timeline, approvals, runbooks, evidence vault, risk scoring, event mesh, financial close, master data, lakehouse, tenant runtime, contract evolution, console técnico e conformance de plataforma, além das evidências que precisam existir para aceitar a entrega.
+O relatório retorna `release.version=1.5.0`, `release.releaseReady`, gates de tráfego, auth/tenant, secrets, root hardening, static policy, geração transacional de IDs, contratos, observabilidade, backup/DR, deploy, providers, provider activation, LLM BYOK, document intelligence, fiscal Brazil, registry enrichment, market macro risk, external risk feed, go-live, policies, timeline, approvals, runbooks, evidence vault, risk scoring, event mesh, financial close, master data, lakehouse, tenant runtime, contract evolution, console técnico e conformance de plataforma, além das evidências que precisam existir para aceitar a entrega.
 
 validação completa da versão:
 

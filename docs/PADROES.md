@@ -1,4 +1,4 @@
-﻿# padrões
+# padrões
 
 Este documento define padrões de engenharia do projeto. Ele não descreve arquitetura completa, endpoints ou runbooks.
 
@@ -121,7 +121,7 @@ serviços: `edge`, `crm`, `sales`, `documents`, `rentals`.
 
 serviços: `ai-governance`, `analytics`, `catalog`, `search`, `simulation`, `platform-control`, `support`, `supplier`, `notification`, `fiscal`.
 
-Na `v1.4.6`, comandos críticos, eventos operacionais, fechamento financeiro, mudanças breaking, chamadas reais a provider externo, sinais externos de risco/verificação e mudanças de hardening devem passar por policy decision, approval quando aplicável, timeline, evidence vault, event mesh, snapshot hash, contract evolution, provider activation ou static policy antes de serem tratados como finalizados.
+Na `v1.5.0`, comandos críticos, eventos operacionais, fechamento financeiro, mudanças breaking, chamadas reais a provider externo, sinais externos de risco/verificação e mudanças de hardening devem passar por policy decision, approval quando aplicável, timeline, evidence vault, event mesh, snapshot hash, contract evolution, provider activation ou static policy antes de serem tratados como finalizados.
 
 - FastAPI com rotas claras.
 - Modelos públicos separados de estrutura interna quando necessário.
@@ -188,6 +188,8 @@ Este conteudo substitui checklists soltos que antes ficavam fora do fluxo princi
 - Dockerfile usa imagem versionada e compose recebe env comum de segurança.
 - Hooks de logs, métricas e traces propagam `X-Correlation-Id` e `traceparent`.
 - repositórios relacionais nunca calculam identificador por `MAX(id)+1`; use `BIGSERIAL`, identity column, sequence ou `RETURNING id`.
+- migrations de um mesmo domínio nunca repetem prefixo numérico; a suite `security` bloqueia duplicidade antes de runtime.
+- tabela operacional nova precisa declarar `tenant_id` ou justificativa no manifesto de contrato de tenant.
 - UI técnica nunca copia `Authorization: Bearer` real por padrão; cURL e histórico devem redigir segredo salvo ação explicita.
 - Imagem de runtime e dependência de infra devem ter versão explicita; `latest` não e artefato de deploy.
 
@@ -201,6 +203,7 @@ A linha `1.4.x` exige que todo serviço passe por conformance minima antes de se
 - Contratos: OpenAPI atualizado, security schemes declarados e catálogo do `client-api` regenerado.
 - Infra: imagem versionada, env comum, probes, resources e documentação de cobertura Kubernetes/Compose.
 - segurança: secrets locais bloqueados fora de local/test e provider BYOK nunca mascarado como real sem credencial.
+- modularidade: health, autenticação, validação de payload e clients externos devem ficar fora do roteador principal sempre que o serviço passar de uma superfície pequena.
 
 ## padrões de Nome
 

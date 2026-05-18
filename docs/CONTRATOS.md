@@ -1,4 +1,4 @@
-﻿# CONTRATOS
+# CONTRATOS
 
 Este documento define a governança de contratos do projeto. Ele cobre OpenAPI, schemas de eventos, registry, compatibilidade e revisão de mudanças públicas.
 
@@ -103,7 +103,7 @@ npm run generate
 
 Eventos atualmente vivem em `docs/contracts/events/` e cobrem domínios como catalog, CRM enrichment, documents signing, engagement provider events, fiscal consent/document events, platform-control lifecycle/go-live/quota, support cases e webhook-hub inbound/outbound. Contratos HTTP também cobrem busca operacional, e-discovery, BI semântico, governança de IA, incident command, policy decision center, approvals, runbooks, timeline, evidence vault, risk/compliance scoring, event mesh, tenant runtime, contract evolution, reconciliation, financial close, master data quality e lakehouse manifest.
 
-Na v1.4.6, mudanças breaking continuam passando pelo Contract & Schema Evolution Center: snapshot, diff, classificação de breaking change, matriz de compatibilidade e aprovação quando houver remocao de operação ou alteração incompatível de schema. Rotas de provider externo também precisam declarar quando retornam `unavailable` por ausência de credencial BYOK ou quando usam API pública, para impedir que o contrato sugira uma integração produtiva inexistente.
+Na v1.5.0, mudanças breaking continuam passando pelo Contract & Schema Evolution Center: snapshot, diff, classificação de breaking change, matriz de compatibilidade e aprovação quando houver remocao de operação ou alteração incompatível de schema. Rotas de provider externo também precisam declarar quando retornam `unavailable` por ausência de credencial BYOK ou quando usam API pública, para impedir que o contrato sugira uma integração produtiva inexistente.
 
 Ao criar evento novo:
 

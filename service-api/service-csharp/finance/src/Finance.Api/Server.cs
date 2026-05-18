@@ -11,22 +11,11 @@ using NpgsqlTypes;
 
 namespace Finance.Api;
 
-public static class Server
+public static partial class Server
 {
   public static IEndpointRouteBuilder MapFinanceRoutes(this IEndpointRouteBuilder app)
   {
-    app.MapGet("/health/live", () => TypedResults.Ok(new HealthResponse("finance", "live")));
-    app.MapGet("/health/ready", async Task<IResult> (NpgsqlDataSource dataSource) =>
-    {
-      return await CanReachDatabase(dataSource)
-        ? TypedResults.Ok(new HealthResponse("finance", "ready"))
-        : TypedResults.StatusCode(StatusCodes.Status503ServiceUnavailable);
-    });
-    app.MapGet("/health/details", async Task<IResult> (NpgsqlDataSource dataSource) =>
-    {
-      var status = await CanReachDatabase(dataSource) ? "ready" : "degraded";
-      return TypedResults.Ok(new ReadinessResponse("finance", status, [new DependencyResponse("postgresql", status)]));
-    });
+    MapFinanceHealthRoutes(app);
 
     app.MapPost("/api/finance/projections/ingest", async Task<IResult> (ProjectionIngestRequest? request, NpgsqlDataSource dataSource, IConfiguration configuration) =>
     {

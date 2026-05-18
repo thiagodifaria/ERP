@@ -406,7 +406,7 @@ def test_production_readiness_returns_1_4_version_gate() -> None:
 
     assert response.status_code == 200
     assert payload["tenantSlug"] == "bootstrap-ops"
-    assert payload["release"]["version"] == "1.4.6"
+    assert payload["release"]["version"] == "1.5.0"
     assert "name" not in payload["release"]
     assert payload["release"]["releaseReady"] is True
     assert payload["release"]["blockingGates"] == []
@@ -470,7 +470,7 @@ def test_external_intelligence_reports_return_v14_domains() -> None:
     news = client.get("/api/analytics/external-risk-feed?tenant_slug=bootstrap-ops")
 
     assert readiness.status_code == 200
-    assert readiness.json()["release"] == "1.4.6"
+    assert readiness.json()["release"] == "1.5.0"
     assert "documentIntelligence" in readiness.json()["domains"]
     assert document.status_code == 200
     assert any(item["provider"] == "aws_textract" for item in document.json()["providers"])

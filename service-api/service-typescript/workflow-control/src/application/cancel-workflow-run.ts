@@ -22,7 +22,7 @@ export class CancelWorkflowRun {
 
     const updatedWorkflowRun = await this.repository.updateStatus(publicId, "cancelled", {
       cancelledAt: new Date().toISOString()
-    });
+    }, ["pending", "running"]);
 
     await appendWorkflowRunStatusEvent(this.eventRepository, updatedWorkflowRun);
     return updatedWorkflowRun;

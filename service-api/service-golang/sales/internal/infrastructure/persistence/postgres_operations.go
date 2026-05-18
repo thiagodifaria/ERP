@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"strings"
 
-	"github.com/google/uuid"
 	"github.com/thiagodifaria/erp/service-api/service-golang/sales/internal/domain/entity"
 )
 
@@ -72,7 +71,7 @@ func (repository *PostgresInstallmentRepository) ListBySalePublicID(salePublicID
       ORDER BY installment.sequence_number
     `,
 		repository.tenantID,
-		uuid.MustParse(strings.TrimSpace(salePublicID)),
+		safeUUID(strings.TrimSpace(salePublicID)),
 	)
 	if err != nil {
 		return []entity.Installment{}
@@ -102,7 +101,7 @@ func (repository *PostgresInstallmentRepository) Save(installment entity.Install
     `,
 		repository.tenantID,
 		installment.SalePublicID,
-		uuid.MustParse(installment.PublicID),
+		safeUUID(installment.PublicID),
 		installment.SequenceNumber,
 		installment.AmountCents,
 		installment.DueDate,
@@ -153,7 +152,7 @@ func (repository *PostgresCommissionRepository) ListBySalePublicID(salePublicID 
       ORDER BY commission.created_at, commission.id
     `,
 		repository.tenantID,
-		uuid.MustParse(strings.TrimSpace(salePublicID)),
+		safeUUID(strings.TrimSpace(salePublicID)),
 	)
 	if err != nil {
 		return []entity.Commission{}
@@ -181,7 +180,7 @@ func (repository *PostgresCommissionRepository) FindByPublicID(publicID string) 
         AND commission.public_id = $2::uuid
     `,
 		repository.tenantID,
-		uuid.MustParse(strings.TrimSpace(publicID)),
+		safeUUID(strings.TrimSpace(publicID)),
 	)
 
 	commission, err := scanCommission(row)
@@ -252,7 +251,7 @@ func (repository *PostgresPendingItemRepository) ListBySalePublicID(salePublicID
       ORDER BY item.created_at, item.id
     `,
 		repository.tenantID,
-		uuid.MustParse(strings.TrimSpace(salePublicID)),
+		safeUUID(strings.TrimSpace(salePublicID)),
 	)
 	if err != nil {
 		return []entity.PendingItem{}
@@ -280,7 +279,7 @@ func (repository *PostgresPendingItemRepository) FindByPublicID(publicID string)
         AND item.public_id = $2::uuid
     `,
 		repository.tenantID,
-		uuid.MustParse(strings.TrimSpace(publicID)),
+		safeUUID(strings.TrimSpace(publicID)),
 	)
 
 	item, err := scanPendingItem(row)
@@ -352,7 +351,7 @@ func (repository *PostgresRenegotiationRepository) ListBySalePublicID(salePublic
       ORDER BY renegotiation.created_at, renegotiation.id
     `,
 		repository.tenantID,
-		uuid.MustParse(strings.TrimSpace(salePublicID)),
+		safeUUID(strings.TrimSpace(salePublicID)),
 	)
 	if err != nil {
 		return []entity.Renegotiation{}

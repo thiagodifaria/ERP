@@ -16,7 +16,8 @@ export interface WorkflowRunRepository {
   updateStatus(
     publicId: string,
     status: WorkflowRunStatus,
-    timestamps?: Partial<Pick<WorkflowRun, "startedAt" | "completedAt" | "failedAt" | "cancelledAt">>
+    timestamps?: Partial<Pick<WorkflowRun, "startedAt" | "completedAt" | "failedAt" | "cancelledAt">>,
+    expectedStatuses?: WorkflowRunStatus[]
   ): Promise<WorkflowRun>;
   nextId(): Promise<number>;
 }

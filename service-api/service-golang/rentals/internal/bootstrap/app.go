@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"database/sql"
 	"net/http"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/thiagodifaria/erp/service-api/service-golang/rentals/internal/api"
@@ -50,12 +51,19 @@ func buildRepository(cfg config.Config) (repository.ContractRepository, *sql.DB,
 	if err != nil {
 		return nil, nil, err
 	}
+	tuneDatabasePool(database)
 	if err := database.Ping(); err != nil {
 		_ = database.Close()
 		return nil, nil, err
 	}
 
 	return persistence.NewPostgresContractRepository(database, cfg.BootstrapTenantSlug), database, nil
+}
+
+func tuneDatabasePool(database *sql.DB) {
+	database.SetMaxOpenConns(20)
+	database.SetMaxIdleConns(10)
+	database.SetConnMaxLifetime(30 * time.Minute)
 }
 
 func buildDocumentsGateway(cfg config.Config) repository.AttachmentGateway {

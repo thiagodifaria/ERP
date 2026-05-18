@@ -2,6 +2,7 @@ export type WorkflowRunStatus = "pending" | "running" | "completed" | "failed" |
 
 export type WorkflowRun = {
   id: number;
+  version: number;
   publicId: string;
   workflowDefinitionId: number;
   workflowDefinitionVersionId: number;
@@ -34,6 +35,7 @@ export function ensureWorkflowRunStatus(value: string): WorkflowRunStatus {
 
 export function createWorkflowRun(input: {
   id: number;
+  version?: number;
   publicId: string;
   workflowDefinitionId: number;
   workflowDefinitionVersionId: number;
@@ -75,6 +77,7 @@ export function createWorkflowRun(input: {
 
   return {
     id: input.id,
+    version: input.version ?? 1,
     publicId,
     workflowDefinitionId: input.workflowDefinitionId,
     workflowDefinitionVersionId: input.workflowDefinitionVersionId,

@@ -71,8 +71,8 @@ func (repository *PostgresLeadNoteRepository) ListByLeadPublicID(leadPublicID st
 }
 
 func (repository *PostgresLeadNoteRepository) Save(note entity.LeadNote) entity.LeadNote {
-	publicID := uuid.MustParse(note.PublicID)
-	leadPublicID := uuid.MustParse(note.LeadPublicID)
+	publicID := safeUUID(note.PublicID)
+	leadPublicID := safeUUID(note.LeadPublicID)
 
 	row := repository.database.QueryRow(
 		`

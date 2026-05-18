@@ -1,4 +1,4 @@
-﻿# integrações
+# integrações
 
 Este documento descreve como O projeto integra contextos internos, providers externos, eventos e webhooks. Ele não e catálogo de endpoints; para rotas, use `docs/API.md`.
 
@@ -67,7 +67,7 @@ Sem chave, a resposta esperada e `status=unavailable` com `reason=credential_not
 
 ## inteligência Externa e Verificação
 
-A `v1.4.6` organiza sinais externos em cinco blocos:
+A `v1.5.0` organiza sinais externos em cinco blocos:
 
 - OCR/document intelligence para documentos, contratos, invoices e evidências de matching;
 - Fiscal Brasil para emissão, homologação, certificado e contingência;

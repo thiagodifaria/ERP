@@ -26,9 +26,18 @@ def load_settings() -> Settings:
         postgres_port=int(os.getenv("FISCAL_POSTGRES_PORT", "5432")),
         postgres_db=os.getenv("ERP_POSTGRES_DB", "erp"),
         postgres_user=os.getenv("ERP_POSTGRES_USER", "erp"),
-        postgres_password=os.getenv("ERP_POSTGRES_PASSWORD", "erp"),
+        postgres_password=os.getenv("ERP_POSTGRES_PASSWORD", "change-me-unsafe-local-only-postgres"),
         postgres_ssl_mode=os.getenv("FISCAL_POSTGRES_SSL_MODE", "disable"),
     )
 
 
-settings = load_settings()
+def _validate_settings(value: Settings) -> Settings:
+    environment = os.getenv("ERP_ENV", "local").strip().lower()
+    if environment not in {"", "local", "dev", "development", "test", "testing"}:
+        if value.repository_driver != "postgres":
+            raise RuntimeError(f"{value.service_name}_requires_postgres_outside_local")
+        if value.postgres_password in {"", "erp", "admin"} or value.postgres_password.startswith("change-me-unsafe-local-only"):
+            raise RuntimeError(f"{value.service_name}_requires_non_local_postgres_password")
+    return value
+
+settings = _validate_settings(load_settings())

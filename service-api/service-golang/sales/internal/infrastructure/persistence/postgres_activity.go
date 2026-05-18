@@ -85,9 +85,9 @@ func (repository *PostgresCommercialEventRepository) Save(event entity.Commercia
       RETURNING public_id::text, aggregate_type, aggregate_public_id::text, event_code, actor, summary, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
     `,
 		repository.tenantID,
-		uuid.MustParse(event.PublicID),
+		safeUUID(event.PublicID),
 		event.AggregateType,
-		uuid.MustParse(event.AggregatePublicID),
+		safeUUID(event.AggregatePublicID),
 		event.EventCode,
 		event.Actor,
 		event.Summary,
@@ -168,9 +168,9 @@ func (repository *PostgresOutboxEventRepository) Save(event entity.OutboxEvent) 
       RETURNING public_id::text, aggregate_type, aggregate_public_id::text, event_type, payload, status, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), COALESCE(to_char(processed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), '')
     `,
 		repository.tenantID,
-		uuid.MustParse(event.PublicID),
+		safeUUID(event.PublicID),
 		event.AggregateType,
-		uuid.MustParse(event.AggregatePublicID),
+		safeUUID(event.AggregatePublicID),
 		event.EventType,
 		event.Payload,
 		event.Status,
@@ -196,7 +196,7 @@ func (repository *PostgresOutboxEventRepository) Update(event entity.OutboxEvent
       RETURNING public_id::text, aggregate_type, aggregate_public_id::text, event_type, payload, status, to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), COALESCE(to_char(processed_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'), '')
     `,
 		repository.tenantID,
-		uuid.MustParse(event.PublicID),
+		safeUUID(event.PublicID),
 		event.Status,
 		event.ProcessedAt,
 	)

@@ -5,11 +5,11 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import os
-from urllib import error as urlerror
-from urllib import parse, request
+from urllib import parse
 import uuid
 
 from app.config.settings import settings
+from app.infrastructure.external_http import http_form, http_json
 from app.infrastructure.postgres import connect
 
 
@@ -3483,7 +3483,7 @@ def _public_provider_activation_item(item: dict) -> dict:
 def list_provider_activation_catalog() -> dict:
     items = [_public_provider_activation_item(item) for item in PROVIDER_ACTIVATION_CATALOG]
     return {
-        "version": "1.3.0",
+        "version": "1.5.0",
         "policy": "BYOK: external calls are enabled only when the tenant/operator provides credentials through environment or secret manager.",
         "items": items,
         "summary": {
@@ -3522,48 +3522,6 @@ def _provider_primary_credential(provider: dict) -> str:
     return os.getenv(credential_key, "").strip()
 
 
-def _http_json(method: str, url: str, headers: dict[str, str], payload: dict | None = None, timeout: int | None = None) -> dict:
-    data = None
-    request_headers = {"Accept": "application/json", **headers}
-    if payload is not None:
-        data = json.dumps(payload).encode("utf-8")
-        request_headers["Content-Type"] = "application/json"
-    req = request.Request(url, data=data, headers=request_headers, method=method)
-    try:
-        with request.urlopen(req, timeout=timeout or _provider_activation_timeout()) as response:
-            body = response.read().decode("utf-8")
-            parsed = json.loads(body) if body else {}
-            return {"ok": 200 <= response.status < 300, "statusCode": response.status, "body": parsed}
-    except urlerror.HTTPError as exc:
-        body = exc.read().decode("utf-8")
-        try:
-            parsed = json.loads(body) if body else {}
-        except json.JSONDecodeError:
-            parsed = {"message": body[:500]}
-        return {"ok": False, "statusCode": exc.code, "body": parsed}
-    except (urlerror.URLError, TimeoutError) as exc:
-        return {"ok": False, "statusCode": 0, "body": {"message": str(exc)}}
-
-
-def _http_form(method: str, url: str, headers: dict[str, str], payload: dict, timeout: int | None = None) -> dict:
-    data = parse.urlencode(payload).encode("utf-8")
-    req = request.Request(url, data=data, headers={"Accept": "application/json", "Content-Type": "application/x-www-form-urlencoded", **headers}, method=method)
-    try:
-        with request.urlopen(req, timeout=timeout or _provider_activation_timeout()) as response:
-            body = response.read().decode("utf-8")
-            parsed = json.loads(body) if body else {}
-            return {"ok": 200 <= response.status < 300, "statusCode": response.status, "body": parsed}
-    except urlerror.HTTPError as exc:
-        body = exc.read().decode("utf-8")
-        try:
-            parsed = json.loads(body) if body else {}
-        except json.JSONDecodeError:
-            parsed = {"message": body[:500]}
-        return {"ok": False, "statusCode": exc.code, "body": parsed}
-    except (urlerror.URLError, TimeoutError) as exc:
-        return {"ok": False, "statusCode": 0, "body": {"message": str(exc)}}
-
-
 def _redact_provider_body(body: dict) -> dict:
     if not isinstance(body, dict):
         return {}
@@ -3586,17 +3544,17 @@ def _execute_provider_call(provider_key: str, action: str, payload: dict) -> dic
         if action == "payment_intent.create":
             amount = int(payload.get("amount") or payload.get("amountCents") or 100)
             currency = str(payload.get("currency") or "brl").lower()
-            result = _http_form(
+            result = http_form(
                 "POST",
                 "https://api.stripe.com/v1/payment_intents",
                 {"Authorization": f"Bearer {credential}", "Idempotency-Key": str(payload.get("idempotencyKey") or uuid.uuid4())},
                 {"amount": amount, "currency": currency, "automatic_payment_methods[enabled]": "true", "metadata[erp_source]": "platform-control"},
             )
         else:
-            result = _http_json("GET", "https://api.stripe.com/v1/balance", {"Authorization": f"Bearer {credential}"})
+            result = http_json("GET", "https://api.stripe.com/v1/balance", {"Authorization": f"Bearer {credential}"})
     elif provider_key == "resend":
         if action == "email.send":
-            result = _http_json(
+            result = http_json(
                 "POST",
                 "https://api.resend.com/emails",
                 {"Authorization": f"Bearer {credential}"},
@@ -3608,42 +3566,42 @@ def _execute_provider_call(provider_key: str, action: str, payload: dict) -> dic
                 },
             )
         else:
-            result = _http_json("GET", "https://api.resend.com/domains", {"Authorization": f"Bearer {credential}"})
+            result = http_json("GET", "https://api.resend.com/domains", {"Authorization": f"Bearer {credential}"})
     elif provider_key == "openai":
-        result = _http_json(
+        result = http_json(
             "POST",
             "https://api.openai.com/v1/responses",
             {"Authorization": f"Bearer {credential}"},
             {"model": str(payload.get("model") or os.getenv("OPENAI_MODEL", "gpt-4.1-mini")), "input": str(payload.get("input") or "Return a short ERP integration readiness sentence.")},
         )
     elif provider_key == "asaas":
-        result = _http_json("GET", "https://api.asaas.com/v3/myAccount", {"access_token": credential})
+        result = http_json("GET", "https://api.asaas.com/v3/myAccount", {"access_token": credential})
     elif provider_key == "mercado_pago":
-        result = _http_json("GET", "https://api.mercadopago.com/users/me", {"Authorization": f"Bearer {credential}"})
+        result = http_json("GET", "https://api.mercadopago.com/users/me", {"Authorization": f"Bearer {credential}"})
     elif provider_key == "docusign":
-        result = _http_json("GET", "https://account-d.docusign.com/oauth/userinfo", {"Authorization": f"Bearer {credential}"})
+        result = http_json("GET", "https://account-d.docusign.com/oauth/userinfo", {"Authorization": f"Bearer {credential}"})
     elif provider_key == "clicksign":
-        result = _http_json("GET", f"https://app.clicksign.com/api/v3/accounts?access_token={parse.quote(credential)}", {})
+        result = http_json("GET", f"https://app.clicksign.com/api/v3/accounts?access_token={parse.quote(credential)}", {})
     elif provider_key == "whatsapp_cloud":
-        result = _http_json("GET", "https://graph.facebook.com/v19.0/me", {"Authorization": f"Bearer {credential}"})
+        result = http_json("GET", "https://graph.facebook.com/v19.0/me", {"Authorization": f"Bearer {credential}"})
     elif provider_key == "aws_textract":
         result = {"ok": True, "statusCode": 200, "body": {"status": "credentials_present", "type": "aws_textract", "region": os.getenv("AWS_TEXTRACT_REGION", "")}}
     elif provider_key == "google_document_ai":
         result = {"ok": True, "statusCode": 200, "body": {"status": "credentials_present", "type": "google_document_ai", "processor": os.getenv("GOOGLE_DOCUMENT_AI_PROCESSOR", "")}}
     elif provider_key == "focus_nfe":
         token = base64.b64encode(f"{credential}:".encode("utf-8")).decode("ascii")
-        result = _http_json("GET", "https://api.focusnfe.com.br/v2/empresas", {"Authorization": f"Basic {token}"})
+        result = http_json("GET", "https://api.focusnfe.com.br/v2/empresas", {"Authorization": f"Basic {token}"})
     elif provider_key == "enotas":
-        result = _http_json("GET", "https://api.enotasgw.com.br/v1/empresas", {"Authorization": f"Bearer {credential}"})
+        result = http_json("GET", "https://api.enotasgw.com.br/v1/empresas", {"Authorization": f"Bearer {credential}"})
     elif provider_key == "serpro_cnpj":
         basic = base64.b64encode(f"{os.getenv('CRM_SERPRO_CLIENT_ID', '').strip()}:{os.getenv('CRM_SERPRO_CLIENT_SECRET', '').strip()}".encode("utf-8")).decode("ascii")
-        result = _http_form("POST", "https://gateway.apiserpro.serpro.gov.br/token", {"Authorization": f"Basic {basic}"}, {"grant_type": "client_credentials"})
+        result = http_form("POST", "https://gateway.apiserpro.serpro.gov.br/token", {"Authorization": f"Basic {basic}"}, {"grant_type": "client_credentials"})
     elif provider_key == "brasilapi":
         cnpj = str(payload.get("cnpj") or "00000000000191")
-        result = _http_json("GET", f"https://brasilapi.com.br/api/cnpj/v1/{parse.quote(cnpj)}", {})
+        result = http_json("GET", f"https://brasilapi.com.br/api/cnpj/v1/{parse.quote(cnpj)}", {})
     elif provider_key == "viacep":
         cep = str(payload.get("cep") or "01001000")
-        result = _http_json("GET", f"https://viacep.com.br/ws/{parse.quote(cep)}/json/", {})
+        result = http_json("GET", f"https://viacep.com.br/ws/{parse.quote(cep)}/json/", {})
     elif provider_key == "alpha_vantage":
         if action == "fx.lookup":
             from_currency = str(payload.get("from") or "USD").upper()
@@ -3652,27 +3610,27 @@ def _execute_provider_call(provider_key: str, action: str, payload: dict) -> dic
         else:
             symbol = str(payload.get("symbol") or "IBM").upper()
             url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={parse.quote(symbol)}&apikey={parse.quote(credential)}"
-        result = _http_json("GET", url, {})
+        result = http_json("GET", url, {})
     elif provider_key == "fixer":
         base = str(payload.get("base") or "EUR").upper()
         symbols = str(payload.get("symbols") or "BRL,USD").upper()
-        result = _http_json("GET", f"https://data.fixer.io/api/latest?access_key={parse.quote(credential)}&base={parse.quote(base)}&symbols={parse.quote(symbols)}", {})
+        result = http_json("GET", f"https://data.fixer.io/api/latest?access_key={parse.quote(credential)}&base={parse.quote(base)}&symbols={parse.quote(symbols)}", {})
     elif provider_key == "bcb_sgs":
         series = str(payload.get("series") or "432")
-        result = _http_json("GET", f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{parse.quote(series)}/dados/ultimos/1?formato=json", {})
+        result = http_json("GET", f"https://api.bcb.gov.br/dados/serie/bcdata.sgs.{parse.quote(series)}/dados/ultimos/1?formato=json", {})
     elif provider_key == "bcb_ptax":
-        result = _http_json("GET", "https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/Moedas?$top=5&$format=json", {})
+        result = http_json("GET", "https://olinda.bcb.gov.br/olinda/servico/PTAX/versao/v1/odata/Moedas?$top=5&$format=json", {})
     elif provider_key == "newsapi":
         query = str(payload.get("query") or "economy OR finance")
-        result = _http_json("GET", f"https://newsapi.org/v2/everything?q={parse.quote(query)}&pageSize=5&apiKey={parse.quote(credential)}", {})
+        result = http_json("GET", f"https://newsapi.org/v2/everything?q={parse.quote(query)}&pageSize=5", {"X-Api-Key": credential})
     elif provider_key == "gdelt":
         query = str(payload.get("query") or "economy finance")
         base_url = os.getenv("GDELT_BASE_URL", "https://api.gdeltproject.org").rstrip("/")
-        result = _http_json("GET", f"{base_url}/api/v2/doc/doc?query={parse.quote(query)}&mode=ArtList&format=json&maxrecords=5", {})
+        result = http_json("GET", f"{base_url}/api/v2/doc/doc?query={parse.quote(query)}&mode=ArtList&format=json&maxrecords=5", {})
     elif provider_key == "alpha_vantage_news":
         tickers = str(payload.get("tickers") or "FOREX:USD")
         topics = str(payload.get("topics") or "financial_markets")
-        result = _http_json("GET", f"https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={parse.quote(tickers)}&topics={parse.quote(topics)}&apikey={parse.quote(credential)}", {})
+        result = http_json("GET", f"https://www.alphavantage.co/query?function=NEWS_SENTIMENT&tickers={parse.quote(tickers)}&topics={parse.quote(topics)}&apikey={parse.quote(credential)}", {})
     else:
         raise ValueError("provider_activation_unsupported")
 

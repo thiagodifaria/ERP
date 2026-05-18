@@ -110,11 +110,11 @@ func (repository *PostgresCustomerRepository) FindByEmail(email string) *entity.
 }
 
 func (repository *PostgresCustomerRepository) Save(customer entity.Customer) entity.Customer {
-	publicID := uuid.MustParse(customer.PublicID)
-	leadPublicID := uuid.MustParse(customer.LeadPublicID)
+	publicID := safeUUID(customer.PublicID)
+	leadPublicID := safeUUID(customer.LeadPublicID)
 	var ownerUserID *uuid.UUID
 	if strings.TrimSpace(customer.OwnerUserID) != "" {
-		parsed := uuid.MustParse(customer.OwnerUserID)
+		parsed := safeUUID(customer.OwnerUserID)
 		ownerUserID = &parsed
 	}
 

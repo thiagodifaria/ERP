@@ -22,7 +22,7 @@ export class CompleteWorkflowRun {
 
     const updatedWorkflowRun = await this.repository.updateStatus(publicId, "completed", {
       completedAt: new Date().toISOString()
-    });
+    }, ["running"]);
 
     await appendWorkflowRunStatusEvent(this.eventRepository, updatedWorkflowRun);
     return updatedWorkflowRun;

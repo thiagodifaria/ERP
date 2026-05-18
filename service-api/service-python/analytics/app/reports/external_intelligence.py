@@ -24,7 +24,7 @@ def build_external_intelligence_readiness(tenant_slug: str | None = None) -> dic
     return {
         "tenantSlug": tenant_slug or "global",
         "generatedAt": datetime.now(timezone.utc).isoformat(),
-        "release": "1.4.6",
+        "release": "1.5.0",
         "readiness": {
             "status": "ready",
             "configuredProviders": configured,

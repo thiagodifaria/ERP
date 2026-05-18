@@ -612,7 +612,7 @@ security_files = [
     "service-api/service-golang/rentals/internal/api/security.go",
     "service-api/service-typescript/workflow-control/src/api/security.ts",
     "service-api/service-typescript/engagement/src/api/security.ts",
-    "service-api/service-rust/webhook-hub/src/api/router.rs",
+    "service-api/service-rust/webhook-hub/src/api/security.rs",
     "service-api/service-elixir/workflow-runtime/lib/workflow_runtime/api/router.ex",
 ]
 for service in ["analytics", "banking", "accounting", "ai-governance", "catalog", "fiscal", "inventory", "notification", "platform-control", "procurement", "search", "simulation", "supplier", "support"]:
@@ -648,6 +648,7 @@ require_file("infra/kubernetes/base/namespace.yaml", "pod-security.kubernetes.io
 require_file("infra/kubernetes/base/network-policy.yaml", "erp-default-deny", "policyTypes", "Ingress", "Egress")
 require_file("infra/kubernetes/base/deployability-matrix.yaml", "fullyManaged", "composeManaged", "requiredPerService")
 require_file("infra/kubernetes/base/configmap.yaml", "ERP_SECURITY_LEVEL", "ERP_REQUIRE_REQUEST_SIGNATURE", "ERP_AUDIT_LOG_REDACTION")
+require_file("service-api/service-postgresql/platform-control/migrations/000012_tenant_contract_manifest.sql", "tenant_contract_manifest", "tenant_strategy", "derived_by_join")
 
 registry = json.loads((root / "docs/contracts/registry.json").read_text(encoding="utf-8-sig"))
 schema_registry = json.loads((root / "docs/contracts/schema-registry.json").read_text(encoding="utf-8-sig"))
@@ -682,6 +683,21 @@ for source_path in list((root / "service-api").rglob("*")):
     text = source_path.read_text(encoding="utf-8", errors="ignore")
     if "COALESCE(MAX(id)" in text or "MAX(id), 0) + 1" in text:
         errors.append(f"unsafe id generation with MAX(id)+1: {source_path.relative_to(root)}")
+    if "uuid.MustParse" in text:
+        errors.append(f"panic-prone uuid.MustParse in request/persistence path: {source_path.relative_to(root)}")
+    if "new HttpClient { Timeout" in text:
+        errors.append(f"per-request HttpClient allocation is forbidden: {source_path.relative_to(root)}")
+    if "reqwest::Client::new()" in text and "OnceLock" not in text:
+        errors.append(f"per-request reqwest client allocation is forbidden: {source_path.relative_to(root)}")
+
+for migration_dir in (root / "service-api/service-postgresql").glob("*/migrations"):
+    prefixes = {}
+    for migration in migration_dir.glob("*.sql"):
+        prefix = migration.name.split("_", 1)[0]
+        prefixes.setdefault(prefix, []).append(migration.name)
+    for prefix, names in prefixes.items():
+        if len(names) > 1:
+            errors.append(f"duplicate migration prefix {prefix} in {migration_dir.relative_to(root)}: {', '.join(sorted(names))}")
 
 http_client = (root / "client-web/client-api/src/lib/httpClient.ts").read_text(encoding="utf-8-sig")
 if "Bearer ${options.environment.bearerToken.trim()}" in http_client:
@@ -763,15 +779,15 @@ require_file("infra/kubernetes/base/ingress.yaml", "tls:", "erp-edge", "ingressC
 require_file("infra/kubernetes/base/postgres-migration-job.yaml", "kind: Job", "erp-postgres-migrations", "readOnlyRootFilesystem")
 require_file("infra/kubernetes/base/edge-deployment.yaml", "readinessProbe", "livenessProbe", "allowPrivilegeEscalation: false")
 require_file("infra/kubernetes/base/hpa.yaml", "HorizontalPodAutoscaler", "maxReplicas")
-require_file("service-api/service-python/analytics/app/reports/production_readiness.py", "version\": \"1.4.6", "blockingGates", "externalProviderActivation", "documentIntelligence", "externalRiskFeed", "staticPolicy", "transactionalIdGeneration", "authConformance", "apiConsoleSecurity")
+require_file("service-api/service-python/analytics/app/reports/production_readiness.py", "version\": \"1.5.0", "blockingGates", "externalProviderActivation", "documentIntelligence", "externalRiskFeed", "staticPolicy", "migrationOrder", "tenantContractManifest", "polyglotBoundarySplit", "transactionalIdGeneration", "authConformance", "apiConsoleSecurity")
 require_file("service-api/service-python/analytics/app/server.py", "/api/analytics/reports/production-readiness", "/api/analytics/metrics", "/api/analytics/data-quality", "/api/analytics/lineage", "/api/analytics/risk/tenant-score", "/api/analytics/financial-close/readiness", "/api/analytics/lakehouse/datasets", "/api/analytics/external-intelligence/readiness")
 require_file("service-api/service-python/analytics/tests/unit/test_server.py", "test_production_readiness_returns_1_4_version_gate", "test_external_intelligence_reports_return_v14_domains")
 require_file("service-api/service-python/search/app/server.py", "/api/search/query", "/api/search/legal-holds", "/api/search/exports")
 require_file("service-api/service-python/ai-governance/app/server.py", "/api/ai-governance/tools", "/api/ai-governance/runs", "/api/ai-governance/audit-events")
 require_file("service-api/service-python/ai-governance/app/runtime.py", "OPENAI_API_KEY", "https://api.openai.com/v1/responses", "deterministic-local")
 require_file("service-api/service-python/platform-control/app/server.py", "/api/platform-control/tenants/{tenant_slug}/incident-command/readiness", "/api/platform-control/tenants/{tenant_slug}/policies/evaluate", "/api/platform-control/tenants/{tenant_slug}/enterprise-runtime/readiness", "/api/platform-control/event-mesh/catalog", "/api/platform-control/providers/activation/catalog")
-require_file("docs/OPERACOES.md", "Production Readiness 1.4.6", "production-readiness")
-require_file("docs/ARQUITETURA.md", "Versão 1.4.6", "infra/kubernetes")
+require_file("docs/OPERACOES.md", "Production Readiness 1.5.0", "production-readiness")
+require_file("docs/ARQUITETURA.md", "Versão 1.5.0", "infra/kubernetes")
 require_file("docs/API.md", "production-readiness")
 require_file("docs/PADROES.md", "Controle Interno De mudança")
 require_file("docs/CONTRATOS.md", "Controle Interno De Contratos")
@@ -821,7 +837,7 @@ if errors:
         print(f"[production-readiness] {error}")
     sys.exit(1)
 
-print("[production-readiness] release 1.4.6 external intelligence hardening gate, contracts, docs and ownership posture validated")
+print("[production-readiness] release 1.5.0 external intelligence hardening gate, contracts, docs and ownership posture validated")
 PY
 }
 

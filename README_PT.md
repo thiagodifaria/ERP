@@ -4,7 +4,7 @@
 
 **Um sistema completo para organizar as operações de uma empresa em um só ecossistema, conectando vendas, clientes, cobranças, financeiro, fiscal, documentos, análises, automações e integrações com serviços externos.**
 
-[![Versão](https://img.shields.io/badge/Versão-1.4.6-2563EB?style=flat)](docs/CHANGELOG.md)
+[![Versão](https://img.shields.io/badge/Versão-1.5.0-2563EB?style=flat)](docs/CHANGELOG.md)
 [![OpenAPI](https://img.shields.io/badge/OpenAPI-contratos-6BA539?style=flat&logo=openapiinitiative&logoColor=white)](docs/contracts/http)
 [![Serviços](https://img.shields.io/badge/Serviços-26%20HTTP%20APIs-111827?style=flat)](docs/SERVICOS.md)
 [![Console](https://img.shields.io/badge/API%20Console-client--api-2563EB?style=flat)](client-web/client-api)

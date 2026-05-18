@@ -6,6 +6,7 @@ const { Pool } = pg;
 
 type WorkflowRunRow = {
   id: number;
+  version: number;
   public_id: string;
   workflow_definition_id: number;
   workflow_definition_version_id: number;
@@ -67,6 +68,7 @@ export class PostgresWorkflowRunRepository implements WorkflowRunRepository {
       `
         SELECT
           id,
+          version,
           public_id::text,
           workflow_definition_id,
           workflow_definition_version_id,
@@ -95,6 +97,7 @@ export class PostgresWorkflowRunRepository implements WorkflowRunRepository {
       `
         SELECT
           id,
+          version,
           public_id::text,
           workflow_definition_id,
           workflow_definition_version_id,
@@ -156,6 +159,7 @@ export class PostgresWorkflowRunRepository implements WorkflowRunRepository {
         )
         RETURNING
           id,
+          version,
           public_id::text,
           workflow_definition_id,
           workflow_definition_version_id,
@@ -193,7 +197,8 @@ export class PostgresWorkflowRunRepository implements WorkflowRunRepository {
   public async updateStatus(
     publicId: string,
     status: WorkflowRunStatus,
-    timestamps?: Partial<Pick<WorkflowRun, "startedAt" | "completedAt" | "failedAt" | "cancelledAt">>
+    timestamps?: Partial<Pick<WorkflowRun, "startedAt" | "completedAt" | "failedAt" | "cancelledAt">>,
+    expectedStatuses?: WorkflowRunStatus[]
   ): Promise<WorkflowRun> {
     const tenantId = await this.resolveTenantId();
     const result = await this.pool.query<WorkflowRunRow>(
@@ -203,11 +208,14 @@ export class PostgresWorkflowRunRepository implements WorkflowRunRepository {
             started_at = COALESCE($4, started_at),
             completed_at = COALESCE($5, completed_at),
             failed_at = COALESCE($6, failed_at),
-            cancelled_at = COALESCE($7, cancelled_at)
+            cancelled_at = COALESCE($7, cancelled_at),
+            version = version + 1
         WHERE tenant_id = $1
           AND public_id = $2::uuid
+          AND ($8::text[] IS NULL OR status = ANY($8::text[]))
         RETURNING
           id,
+          version,
           public_id::text,
           workflow_definition_id,
           workflow_definition_version_id,
@@ -228,12 +236,13 @@ export class PostgresWorkflowRunRepository implements WorkflowRunRepository {
         timestamps?.startedAt ?? null,
         timestamps?.completedAt ?? null,
         timestamps?.failedAt ?? null,
-        timestamps?.cancelledAt ?? null
+        timestamps?.cancelledAt ?? null,
+        expectedStatuses ?? null
       ]
     );
 
     if (result.rowCount === 0) {
-      throw new Error("workflow_run_not_found");
+      throw new Error("workflow_run_transition_invalid");
     }
 
     return this.mapRow(result.rows[0]);
@@ -275,6 +284,7 @@ export class PostgresWorkflowRunRepository implements WorkflowRunRepository {
   private mapRow(row: WorkflowRunRow): WorkflowRun {
     return createWorkflowRun({
       id: Number(row.id),
+      version: Number(row.version),
       publicId: row.public_id,
       workflowDefinitionId: Number(row.workflow_definition_id),
       workflowDefinitionVersionId: Number(row.workflow_definition_version_id),
